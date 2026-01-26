@@ -4,15 +4,15 @@ public class DataCarrier : MonoBehaviour
 {
     public static DataCarrier Instance;
 
-    // 保存したい赤ちゃんのデータ
+    [Header("Baby Stats")]
     public int babyAtk;
+    public int babyDef;      // これが足りなかった！
     public int babyHp;
-    public string babyName = "Baby Hero";
-    // ...他に必要なステータス
+    public int babyAcademic; // これが足りなかった！
+    public int babyWeight;   // これが足りなかった！
 
     void Awake()
     {
-        // シーンを切り替えてもこのオブジェクトを消さない設定（超重要！）
         if (Instance == null)
         {
             Instance = this;
