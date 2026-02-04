@@ -20,9 +20,15 @@ public class BirthSystem : MonoBehaviour
     public Image babyEyeImage;
     public Image babyMouthImage;
 
+    [Header("Button Controls")]
+    // ★追加：最初の「Generate Life」ボタン
+    public GameObject generateLifeButton; 
+    // ★追加：「この子で決める/違う子にする」をまとめたパネル
+    public GameObject decisionPanel; 
+
     public void SpinRoulette()
     {
-        // --- 1. 両親のステータス生成 (省略なし) ---
+        // --- 1. 両親のステータス生成 ---
         int f_atk = Random.Range(20, 80);
         int f_def = Random.Range(20, 80);
         int f_hp = Random.Range(100, 200);
@@ -63,7 +69,7 @@ public class BirthSystem : MonoBehaviour
 
         childStatusText.text = result;
 
-        // ★ここが「データを書き込む」重要な処理です
+        // --- 5. データの書き込み ---
         if (DataCarrier.Instance != null)
         {
             DataCarrier.Instance.babyAtk = c_atk;
@@ -78,9 +84,19 @@ public class BirthSystem : MonoBehaviour
         {
             Debug.LogError("DataCarrier.Instance is null! Make sure DataCarrier is in the Hierarchy.");
         }
+
+        // ★追加：ボタンの表示切り替え処理
+        if (generateLifeButton != null) generateLifeButton.SetActive(false);
+        if (decisionPanel != null) decisionPanel.SetActive(true);
     }
 
-    // シーン移動用
+    public void ResetParents()
+    {
+        // 再度ルーレットを回す（SpinRoulette内でUI切り替えも完結）
+        SpinRoulette();
+        Debug.Log("別の両親でやり直します");
+    }
+
     public void GoToBattle()
     {
         SceneManager.LoadScene("BattleScene");
@@ -88,15 +104,20 @@ public class BirthSystem : MonoBehaviour
 
     void ApplyVisuals(int weight, int academic)
     {
+        if (babyFace == null) return;
+
         // 体重で顔の横幅を変える
         float faceWidth = 1.0f + (weight - 3000) * 0.0002f;
         babyFace.localScale = new Vector3(faceWidth, 1.0f, 1.0f);
 
         // 学力で目の色を変える
-        float iqFactor = Mathf.Clamp01(academic / 100f);
-        babyEyes.color = Color.Lerp(Color.red, Color.cyan, iqFactor);
+        if (babyEyes != null)
+        {
+            float iqFactor = Mathf.Clamp01(academic / 100f);
+            babyEyes.color = Color.Lerp(Color.red, Color.cyan, iqFactor);
+        }
 
-        // ランダムな目の画像差し替え (配列に画像がある場合)
+        // ランダムな目の画像差し替え
         if (eyeSprites.Length > 0 && babyEyeImage != null)
         {
             babyEyeImage.sprite = eyeSprites[Random.Range(0, eyeSprites.Length)];
