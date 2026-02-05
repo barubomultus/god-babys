@@ -10,6 +10,14 @@ public class DataCarrier : MonoBehaviour
     public int babyHp;
     public int babyAcademic; // これが足りなかった！
     public int babyWeight;   // これが足りなかった！
+    public int babyAthletic;
+    public int babyHeight;
+
+    [Header("Traits & Parents")]
+    public string trait1;
+    public string trait2;
+    public string fatherName;
+    public string motherName;
 
     void Awake()
     {
