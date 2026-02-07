@@ -8,10 +8,13 @@ public class TitleManager : MonoBehaviour
 {
     private readonly string[] introLines = new string[]
     {
-        "あなたは──「神」である。",
-        "この世界では、選ばれし父と母の遺伝子が交わり\n新たな命が誕生する。",
-        "生まれてくる赤ちゃんの能力は\n両親のDNAと、運命のルーレットで決まる。",
-        "最強の赤ちゃんを生み出し\nバトルに勝利せよ。"
+        "「この世界、ハズレばっかりだと思わないか？」\n",
+
+"悪魔に支配された、クソゲーみたいなこの世界。\n 逆転の鍵は、最強の遺伝子を掛け合わせた「究極の親ガチャ」にある。\n\n",
+
+"父の力、母の知恵。\nそこに運命のダイスが振られた瞬間、\n 天をも恐れぬ**『GOD BABY』**が誕生する。\n\n",
+
+"凡才で終わるか、神の嬰児となるか。\n\n 育てろ、最強の赤子を。"
     };
 
     private const float slideDuration = 1.5f;
@@ -19,14 +22,416 @@ public class TitleManager : MonoBehaviour
     private const float endWaitTime = 2.0f;
     private const float startOffsetX = -800f;
 
+    // セーブデータUI
+    private GameObject saveDataButton;
+    private GameObject saveDataListPanel;
+    private Canvas mainCanvas;
+
+    void Start()
+    {
+        mainCanvas = FindObjectOfType<Canvas>();
+        if (DataCarrier.HasAnySaveData())
+        {
+            CreateSaveDataButton();
+        }
+    }
+
     public void StartGame()
     {
+        // 新規ゲーム開始時はスロットをリセット
+        if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.currentSlot = -1;
+        }
         StartCoroutine(IntroSequence());
+    }
+
+    void CreateSaveDataButton()
+    {
+        if (mainCanvas == null) return;
+
+        saveDataButton = new GameObject("SaveDataButton");
+        saveDataButton.transform.SetParent(mainCanvas.transform, false);
+
+        var btnRect = saveDataButton.AddComponent<RectTransform>();
+        btnRect.anchorMin = new Vector2(0.5f, 0);
+        btnRect.anchorMax = new Vector2(0.5f, 0);
+        btnRect.anchoredPosition = new Vector2(0, 100);
+        btnRect.sizeDelta = new Vector2(280, 60);
+
+        var btnBg = saveDataButton.AddComponent<Image>();
+        btnBg.color = new Color(0.3f, 0.5f, 0.7f);
+
+        var btn = saveDataButton.AddComponent<Button>();
+        btn.targetGraphic = btnBg;
+        btn.onClick.AddListener(ShowSaveDataList);
+
+        var textObj = new GameObject("Text");
+        textObj.transform.SetParent(saveDataButton.transform, false);
+        var textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+        var text = textObj.AddComponent<TextMeshProUGUI>();
+        text.text = "セーブデータ";
+        text.fontSize = 28;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = Color.white;
+        text.fontStyle = FontStyles.Bold;
+        text.raycastTarget = false;
+    }
+
+    void ShowSaveDataList()
+    {
+        if (saveDataListPanel != null)
+        {
+            Destroy(saveDataListPanel);
+            saveDataListPanel = null;
+            return;
+        }
+
+        saveDataListPanel = new GameObject("SaveDataListPanel");
+        saveDataListPanel.transform.SetParent(mainCanvas.transform, false);
+
+        var panelRect = saveDataListPanel.AddComponent<RectTransform>();
+        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+        panelRect.anchoredPosition = Vector2.zero;
+        panelRect.sizeDelta = new Vector2(500, 450);
+
+        var panelBg = saveDataListPanel.AddComponent<Image>();
+        panelBg.color = new Color(0.1f, 0.1f, 0.2f, 0.98f);
+
+        // タイトル
+        var titleObj = new GameObject("Title");
+        titleObj.transform.SetParent(saveDataListPanel.transform, false);
+        var titleRect = titleObj.AddComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0, 1);
+        titleRect.anchorMax = new Vector2(1, 1);
+        titleRect.anchoredPosition = new Vector2(0, -25);
+        titleRect.sizeDelta = new Vector2(0, 50);
+        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        titleText.text = "セーブデータ一覧";
+        titleText.fontSize = 30;
+        titleText.alignment = TextAlignmentOptions.Center;
+        titleText.color = Color.white;
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.raycastTarget = false;
+
+        // スロット一覧
+        float slotStartY = -70;
+        float slotHeight = 70;
+
+        for (int i = 0; i < DataCarrier.MAX_SAVE_SLOTS; i++)
+        {
+            CreateSlotEntry(i, slotStartY - (i * slotHeight));
+        }
+
+        // 閉じるボタン
+        var closeBtn = new GameObject("CloseButton");
+        closeBtn.transform.SetParent(saveDataListPanel.transform, false);
+        var closeRect = closeBtn.AddComponent<RectTransform>();
+        closeRect.anchorMin = new Vector2(0.5f, 0);
+        closeRect.anchorMax = new Vector2(0.5f, 0);
+        closeRect.anchoredPosition = new Vector2(0, 35);
+        closeRect.sizeDelta = new Vector2(150, 45);
+
+        var closeBg = closeBtn.AddComponent<Image>();
+        closeBg.color = new Color(0.5f, 0.5f, 0.5f);
+
+        var closeBtnComp = closeBtn.AddComponent<Button>();
+        closeBtnComp.targetGraphic = closeBg;
+        closeBtnComp.onClick.AddListener(CloseSaveDataList);
+
+        var closeTextObj = new GameObject("Text");
+        closeTextObj.transform.SetParent(closeBtn.transform, false);
+        var closeTextRect = closeTextObj.AddComponent<RectTransform>();
+        closeTextRect.anchorMin = Vector2.zero;
+        closeTextRect.anchorMax = Vector2.one;
+        closeTextRect.offsetMin = Vector2.zero;
+        closeTextRect.offsetMax = Vector2.zero;
+        var closeText = closeTextObj.AddComponent<TextMeshProUGUI>();
+        closeText.text = "とじる";
+        closeText.fontSize = 22;
+        closeText.alignment = TextAlignmentOptions.Center;
+        closeText.color = Color.white;
+        closeText.raycastTarget = false;
+    }
+
+    void CreateSlotEntry(int slot, float yPos)
+    {
+        bool exists = DataCarrier.SlotExists(slot);
+
+        var slotObj = new GameObject($"Slot{slot}");
+        slotObj.transform.SetParent(saveDataListPanel.transform, false);
+        var slotRect = slotObj.AddComponent<RectTransform>();
+        slotRect.anchorMin = new Vector2(0, 1);
+        slotRect.anchorMax = new Vector2(1, 1);
+        slotRect.anchoredPosition = new Vector2(0, yPos);
+        slotRect.sizeDelta = new Vector2(-40, 60);
+
+        var slotBg = slotObj.AddComponent<Image>();
+        slotBg.color = exists ? new Color(0.2f, 0.25f, 0.35f) : new Color(0.15f, 0.15f, 0.2f);
+
+        if (exists)
+        {
+            string babyName = DataCarrier.GetSlotBabyName(slot);
+            int age = DataCarrier.GetSlotAge(slot);
+            string fatherName = DataCarrier.GetSlotFatherName(slot);
+            string motherName = DataCarrier.GetSlotMotherName(slot);
+            bool isGodBaby = DataCarrier.GetSlotIsGodBaby(slot);
+
+            // 赤ちゃん情報
+            var infoObj = new GameObject("Info");
+            infoObj.transform.SetParent(slotObj.transform, false);
+            var infoRect = infoObj.AddComponent<RectTransform>();
+            infoRect.anchorMin = new Vector2(0, 0);
+            infoRect.anchorMax = new Vector2(0.6f, 1);
+            infoRect.offsetMin = new Vector2(15, 5);
+            infoRect.offsetMax = new Vector2(0, -5);
+            var infoText = infoObj.AddComponent<TextMeshProUGUI>();
+
+            string nameColor = isGodBaby ? "#FFD700" : "#FFFFFF";
+            infoText.text = $"<color={nameColor}>{babyName}</color> ({age}さい)\n<size=70%>父:{fatherName} 母:{motherName}</size>";
+            infoText.fontSize = 20;
+            infoText.alignment = TextAlignmentOptions.Left;
+            infoText.color = Color.white;
+            infoText.raycastTarget = false;
+
+            // ロードボタン
+            var loadBtn = new GameObject("LoadBtn");
+            loadBtn.transform.SetParent(slotObj.transform, false);
+            var loadRect = loadBtn.AddComponent<RectTransform>();
+            loadRect.anchorMin = new Vector2(1, 0.5f);
+            loadRect.anchorMax = new Vector2(1, 0.5f);
+            loadRect.anchoredPosition = new Vector2(-100, 0);
+            loadRect.sizeDelta = new Vector2(70, 40);
+
+            var loadBg = loadBtn.AddComponent<Image>();
+            loadBg.color = new Color(0.3f, 0.6f, 0.4f);
+
+            int slotIndex = slot; // キャプチャ用
+            var loadBtnComp = loadBtn.AddComponent<Button>();
+            loadBtnComp.targetGraphic = loadBg;
+            loadBtnComp.onClick.AddListener(() => LoadSlot(slotIndex));
+
+            var loadTextObj = new GameObject("Text");
+            loadTextObj.transform.SetParent(loadBtn.transform, false);
+            var loadTextRect = loadTextObj.AddComponent<RectTransform>();
+            loadTextRect.anchorMin = Vector2.zero;
+            loadTextRect.anchorMax = Vector2.one;
+            loadTextRect.offsetMin = Vector2.zero;
+            loadTextRect.offsetMax = Vector2.zero;
+            var loadText = loadTextObj.AddComponent<TextMeshProUGUI>();
+            loadText.text = "ロード";
+            loadText.fontSize = 18;
+            loadText.alignment = TextAlignmentOptions.Center;
+            loadText.color = Color.white;
+            loadText.raycastTarget = false;
+
+            // 削除ボタン
+            var delBtn = new GameObject("DeleteBtn");
+            delBtn.transform.SetParent(slotObj.transform, false);
+            var delRect = delBtn.AddComponent<RectTransform>();
+            delRect.anchorMin = new Vector2(1, 0.5f);
+            delRect.anchorMax = new Vector2(1, 0.5f);
+            delRect.anchoredPosition = new Vector2(-25, 0);
+            delRect.sizeDelta = new Vector2(40, 40);
+
+            var delBg = delBtn.AddComponent<Image>();
+            delBg.color = new Color(0.7f, 0.3f, 0.3f);
+
+            var delBtnComp = delBtn.AddComponent<Button>();
+            delBtnComp.targetGraphic = delBg;
+            delBtnComp.onClick.AddListener(() => ConfirmDeleteSlot(slotIndex));
+
+            var delTextObj = new GameObject("Text");
+            delTextObj.transform.SetParent(delBtn.transform, false);
+            var delTextRect = delTextObj.AddComponent<RectTransform>();
+            delTextRect.anchorMin = Vector2.zero;
+            delTextRect.anchorMax = Vector2.one;
+            delTextRect.offsetMin = Vector2.zero;
+            delTextRect.offsetMax = Vector2.zero;
+            var delText = delTextObj.AddComponent<TextMeshProUGUI>();
+            delText.text = "×";
+            delText.fontSize = 24;
+            delText.alignment = TextAlignmentOptions.Center;
+            delText.color = Color.white;
+            delText.fontStyle = FontStyles.Bold;
+            delText.raycastTarget = false;
+        }
+        else
+        {
+            // 空スロット表示
+            var emptyObj = new GameObject("Empty");
+            emptyObj.transform.SetParent(slotObj.transform, false);
+            var emptyRect = emptyObj.AddComponent<RectTransform>();
+            emptyRect.anchorMin = Vector2.zero;
+            emptyRect.anchorMax = Vector2.one;
+            emptyRect.offsetMin = new Vector2(15, 0);
+            emptyRect.offsetMax = new Vector2(-15, 0);
+            var emptyText = emptyObj.AddComponent<TextMeshProUGUI>();
+            emptyText.text = $"スロット {slot + 1}: 空き";
+            emptyText.fontSize = 20;
+            emptyText.alignment = TextAlignmentOptions.Left;
+            emptyText.color = new Color(0.5f, 0.5f, 0.5f);
+            emptyText.raycastTarget = false;
+        }
+    }
+
+    void LoadSlot(int slot)
+    {
+        if (DataCarrier.Instance == null)
+        {
+            GameObject carrierObj = new GameObject("DataCarrier");
+            carrierObj.AddComponent<DataCarrier>();
+        }
+
+        DataCarrier.Instance.LoadFromSlot(slot);
+
+        // 最初のボスを倒済み（defeatedEnemies > 0）→ マップへ復帰
+        // まだ倒していない → バトルシーンへ
+        if (DataCarrier.Instance.defeatedEnemies > 0)
+        {
+            DataCarrier.Instance.cameFromMap = false;
+            SceneManager.LoadScene("MapScene");
+        }
+        else
+        {
+            SceneManager.LoadScene("BattleScene");
+        }
+    }
+
+    void ConfirmDeleteSlot(int slot)
+    {
+        // 削除確認パネル
+        var confirmPanel = new GameObject("ConfirmDelete");
+        confirmPanel.transform.SetParent(mainCanvas.transform, false);
+
+        var panelRect = confirmPanel.AddComponent<RectTransform>();
+        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+        panelRect.anchoredPosition = Vector2.zero;
+        panelRect.sizeDelta = new Vector2(350, 150);
+
+        var panelBg = confirmPanel.AddComponent<Image>();
+        panelBg.color = new Color(0.15f, 0.1f, 0.1f, 0.98f);
+
+        // メッセージ
+        var msgObj = new GameObject("Message");
+        msgObj.transform.SetParent(confirmPanel.transform, false);
+        var msgRect = msgObj.AddComponent<RectTransform>();
+        msgRect.anchorMin = new Vector2(0, 0.5f);
+        msgRect.anchorMax = new Vector2(1, 1);
+        msgRect.offsetMin = new Vector2(10, 10);
+        msgRect.offsetMax = new Vector2(-10, -10);
+        var msgText = msgObj.AddComponent<TextMeshProUGUI>();
+        msgText.text = $"スロット{slot + 1}を削除しますか？\n<size=70%>この操作は取り消せません</size>";
+        msgText.fontSize = 22;
+        msgText.alignment = TextAlignmentOptions.Center;
+        msgText.color = Color.white;
+        msgText.raycastTarget = false;
+
+        // はいボタン
+        var yesBtn = new GameObject("YesBtn");
+        yesBtn.transform.SetParent(confirmPanel.transform, false);
+        var yesRect = yesBtn.AddComponent<RectTransform>();
+        yesRect.anchorMin = new Vector2(0.5f, 0);
+        yesRect.anchorMax = new Vector2(0.5f, 0);
+        yesRect.anchoredPosition = new Vector2(-60, 35);
+        yesRect.sizeDelta = new Vector2(90, 40);
+
+        var yesBg = yesBtn.AddComponent<Image>();
+        yesBg.color = new Color(0.7f, 0.3f, 0.3f);
+
+        var yesBtnComp = yesBtn.AddComponent<Button>();
+        yesBtnComp.targetGraphic = yesBg;
+        yesBtnComp.onClick.AddListener(() => {
+            DataCarrier.DeleteSlot(slot);
+            Destroy(confirmPanel);
+            RefreshSaveDataList();
+        });
+
+        var yesTextObj = new GameObject("Text");
+        yesTextObj.transform.SetParent(yesBtn.transform, false);
+        var yesTextRect = yesTextObj.AddComponent<RectTransform>();
+        yesTextRect.anchorMin = Vector2.zero;
+        yesTextRect.anchorMax = Vector2.one;
+        yesTextRect.offsetMin = Vector2.zero;
+        yesTextRect.offsetMax = Vector2.zero;
+        var yesText = yesTextObj.AddComponent<TextMeshProUGUI>();
+        yesText.text = "削除";
+        yesText.fontSize = 20;
+        yesText.alignment = TextAlignmentOptions.Center;
+        yesText.color = Color.white;
+        yesText.raycastTarget = false;
+
+        // いいえボタン
+        var noBtn = new GameObject("NoBtn");
+        noBtn.transform.SetParent(confirmPanel.transform, false);
+        var noRect = noBtn.AddComponent<RectTransform>();
+        noRect.anchorMin = new Vector2(0.5f, 0);
+        noRect.anchorMax = new Vector2(0.5f, 0);
+        noRect.anchoredPosition = new Vector2(60, 35);
+        noRect.sizeDelta = new Vector2(90, 40);
+
+        var noBg = noBtn.AddComponent<Image>();
+        noBg.color = new Color(0.4f, 0.4f, 0.5f);
+
+        var noBtnComp = noBtn.AddComponent<Button>();
+        noBtnComp.targetGraphic = noBg;
+        noBtnComp.onClick.AddListener(() => Destroy(confirmPanel));
+
+        var noTextObj = new GameObject("Text");
+        noTextObj.transform.SetParent(noBtn.transform, false);
+        var noTextRect = noTextObj.AddComponent<RectTransform>();
+        noTextRect.anchorMin = Vector2.zero;
+        noTextRect.anchorMax = Vector2.one;
+        noTextRect.offsetMin = Vector2.zero;
+        noTextRect.offsetMax = Vector2.zero;
+        var noText = noTextObj.AddComponent<TextMeshProUGUI>();
+        noText.text = "キャンセル";
+        noText.fontSize = 20;
+        noText.alignment = TextAlignmentOptions.Center;
+        noText.color = Color.white;
+        noText.raycastTarget = false;
+    }
+
+    void RefreshSaveDataList()
+    {
+        if (saveDataListPanel != null)
+        {
+            Destroy(saveDataListPanel);
+            saveDataListPanel = null;
+        }
+
+        // セーブデータがなくなったらボタンも消す
+        if (!DataCarrier.HasAnySaveData())
+        {
+            if (saveDataButton != null)
+            {
+                Destroy(saveDataButton);
+                saveDataButton = null;
+            }
+        }
+        else
+        {
+            ShowSaveDataList();
+        }
+    }
+
+    void CloseSaveDataList()
+    {
+        if (saveDataListPanel != null)
+        {
+            Destroy(saveDataListPanel);
+            saveDataListPanel = null;
+        }
     }
 
     private IEnumerator IntroSequence()
     {
-        // キャンバスを探すか、なければ生成
         Canvas canvas = FindObjectOfType<Canvas>();
         if (canvas == null)
         {
@@ -37,7 +442,6 @@ public class TitleManager : MonoBehaviour
             canvasObj.AddComponent<GraphicRaycaster>();
         }
 
-        // 暗い背景パネルを動的生成
         GameObject panel = new GameObject("IntroPanel");
         panel.transform.SetParent(canvas.transform, false);
         RectTransform panelRect = panel.AddComponent<RectTransform>();
@@ -48,7 +452,6 @@ public class TitleManager : MonoBehaviour
         Image panelImage = panel.AddComponent<Image>();
         panelImage.color = new Color(0f, 0f, 0f, 0f);
 
-        // パネルのフェードイン
         float fadeInDuration = 0.5f;
         float elapsed = 0f;
         while (elapsed < fadeInDuration)
@@ -60,7 +463,6 @@ public class TitleManager : MonoBehaviour
         }
         panelImage.color = new Color(0f, 0f, 0f, 0.9f);
 
-        // 各行を順番にスライドイン表示
         float verticalStart = 100f;
         float lineSpacing = 120f;
 
@@ -81,7 +483,6 @@ public class TitleManager : MonoBehaviour
             textRect.sizeDelta = new Vector2(800f, 100f);
             textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
 
-            // 左からスライドイン (Lerp)
             float slideElapsed = 0f;
             Vector2 startPos = new Vector2(startOffsetX, yPos);
             Vector2 endPos = new Vector2(0f, yPos);
@@ -95,17 +496,14 @@ public class TitleManager : MonoBehaviour
             }
             textRect.anchoredPosition = endPos;
 
-            // 次の行までの間隔
             if (i < introLines.Length - 1)
             {
                 yield return new WaitForSeconds(lineInterval);
             }
         }
 
-        // 全行表示後、少し待つ
         yield return new WaitForSeconds(endWaitTime);
 
-        // フェードアウトしてシーン遷移
         float fadeOutDuration = 1.0f;
         CanvasGroup canvasGroup = panel.AddComponent<CanvasGroup>();
         canvasGroup.alpha = 1f;
