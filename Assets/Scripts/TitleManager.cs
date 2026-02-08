@@ -6,16 +6,7 @@ using System.Collections;
 
 public class TitleManager : MonoBehaviour
 {
-    private readonly string[] introLines = new string[]
-    {
-        "「この世界、ハズレばっかりだと思わないか？」\n",
-
-"悪魔に支配された、クソゲーみたいなこの世界。\n 逆転の鍵は、最強の遺伝子を掛け合わせた「究極の親ガチャ」にある。\n\n",
-
-"父の力、母の知恵。\nそこに運命のダイスが振られた瞬間、\n 天をも恐れぬ**『GOD BABY』**が誕生する。\n\n",
-
-"凡才で終わるか、神の嬰児となるか。\n\n 育てろ、最強の赤子を。"
-    };
+    private string[] introLines;
 
     private const float slideDuration = 1.5f;
     private const float lineInterval = 1.0f;
@@ -26,14 +17,115 @@ public class TitleManager : MonoBehaviour
     private GameObject saveDataButton;
     private GameObject saveDataListPanel;
     private Canvas mainCanvas;
+    private GameObject langPanel;
 
     void Start()
     {
         mainCanvas = FindObjectOfType<Canvas>();
+
+        if (!Localization.HasLanguageSet())
+        {
+            ShowLanguageSelection();
+        }
+        else
+        {
+            InitTitle();
+        }
+    }
+
+    void InitTitle()
+    {
+        introLines = new string[]
+        {
+            Localization.Get("intro_line1"),
+            Localization.Get("intro_line2"),
+            Localization.Get("intro_line3"),
+            Localization.Get("intro_line4")
+        };
+
         if (DataCarrier.HasAnySaveData())
         {
             CreateSaveDataButton();
         }
+    }
+
+    void ShowLanguageSelection()
+    {
+        langPanel = new GameObject("LanguagePanel");
+        langPanel.transform.SetParent(mainCanvas.transform, false);
+
+        var panelRect = langPanel.AddComponent<RectTransform>();
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
+
+        var panelBg = langPanel.AddComponent<Image>();
+        panelBg.color = new Color(0.05f, 0.05f, 0.15f, 0.95f);
+
+        // Title
+        var titleObj = new GameObject("LangTitle");
+        titleObj.transform.SetParent(langPanel.transform, false);
+        var titleRect = titleObj.AddComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0.5f, 0.5f);
+        titleRect.anchorMax = new Vector2(0.5f, 0.5f);
+        titleRect.anchoredPosition = new Vector2(0, 100);
+        titleRect.sizeDelta = new Vector2(500, 60);
+        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        titleText.text = "Select Language / 言語を選択";
+        titleText.fontSize = 32;
+        titleText.alignment = TextAlignmentOptions.Center;
+        titleText.color = Color.white;
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.raycastTarget = false;
+
+        // Japanese button
+        CreateLangButton(langPanel, "日本語", new Vector2(-100, -20), () => {
+            Localization.SetLanguage("ja");
+            Destroy(langPanel);
+            InitTitle();
+        });
+
+        // English button
+        CreateLangButton(langPanel, "English", new Vector2(100, -20), () => {
+            Localization.SetLanguage("en");
+            Destroy(langPanel);
+            InitTitle();
+        });
+    }
+
+    void CreateLangButton(GameObject parent, string label, Vector2 pos, UnityEngine.Events.UnityAction action)
+    {
+        var btnObj = new GameObject("LangBtn_" + label);
+        btnObj.transform.SetParent(parent.transform, false);
+
+        var btnRect = btnObj.AddComponent<RectTransform>();
+        btnRect.anchorMin = new Vector2(0.5f, 0.5f);
+        btnRect.anchorMax = new Vector2(0.5f, 0.5f);
+        btnRect.anchoredPosition = pos;
+        btnRect.sizeDelta = new Vector2(180, 60);
+
+        var btnBg = btnObj.AddComponent<Image>();
+        btnBg.color = new Color(0.2f, 0.3f, 0.5f);
+
+        var btn = btnObj.AddComponent<Button>();
+        btn.targetGraphic = btnBg;
+        btn.onClick.AddListener(action);
+
+        var textObj = new GameObject("Text");
+        textObj.transform.SetParent(btnObj.transform, false);
+        var textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+        var text = textObj.AddComponent<TextMeshProUGUI>();
+        text.text = label;
+        text.fontSize = 28;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = Color.white;
+        text.fontStyle = FontStyles.Bold;
+        text.raycastTarget = false;
     }
 
     public void StartGame()
@@ -74,7 +166,7 @@ public class TitleManager : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
         var text = textObj.AddComponent<TextMeshProUGUI>();
-        text.text = "セーブデータ";
+        text.text = Localization.Get("title_save_data");
         text.fontSize = 28;
         text.alignment = TextAlignmentOptions.Center;
         text.color = Color.white;
@@ -112,7 +204,7 @@ public class TitleManager : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, -25);
         titleRect.sizeDelta = new Vector2(0, 50);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        titleText.text = "セーブデータ一覧";
+        titleText.text = Localization.Get("title_save_data_list");
         titleText.fontSize = 30;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.color = Color.white;
@@ -152,7 +244,7 @@ public class TitleManager : MonoBehaviour
         closeTextRect.offsetMin = Vector2.zero;
         closeTextRect.offsetMax = Vector2.zero;
         var closeText = closeTextObj.AddComponent<TextMeshProUGUI>();
-        closeText.text = "とじる";
+        closeText.text = Localization.Get("ui_close");
         closeText.fontSize = 22;
         closeText.alignment = TextAlignmentOptions.Center;
         closeText.color = Color.white;
@@ -193,7 +285,9 @@ public class TitleManager : MonoBehaviour
             var infoText = infoObj.AddComponent<TextMeshProUGUI>();
 
             string nameColor = isGodBaby ? "#FFD700" : "#FFFFFF";
-            infoText.text = $"<color={nameColor}>{babyName}</color> ({age}さい)\n<size=70%>父:{fatherName} 母:{motherName}</size>";
+            string fatherDisplay = Localization.GetParent(fatherName);
+            string motherDisplay = Localization.GetParent(motherName);
+            infoText.text = Localization.Get("title_slot_info", nameColor, babyName, age, fatherDisplay, motherDisplay);
             infoText.fontSize = 20;
             infoText.alignment = TextAlignmentOptions.Left;
             infoText.color = Color.white;
@@ -224,7 +318,7 @@ public class TitleManager : MonoBehaviour
             loadTextRect.offsetMin = Vector2.zero;
             loadTextRect.offsetMax = Vector2.zero;
             var loadText = loadTextObj.AddComponent<TextMeshProUGUI>();
-            loadText.text = "ロード";
+            loadText.text = Localization.Get("ui_load");
             loadText.fontSize = 18;
             loadText.alignment = TextAlignmentOptions.Center;
             loadText.color = Color.white;
@@ -272,7 +366,7 @@ public class TitleManager : MonoBehaviour
             emptyRect.offsetMin = new Vector2(15, 0);
             emptyRect.offsetMax = new Vector2(-15, 0);
             var emptyText = emptyObj.AddComponent<TextMeshProUGUI>();
-            emptyText.text = $"スロット {slot + 1}: 空き";
+            emptyText.text = Localization.Get("title_slot_empty", slot + 1);
             emptyText.fontSize = 20;
             emptyText.alignment = TextAlignmentOptions.Left;
             emptyText.color = new Color(0.5f, 0.5f, 0.5f);
@@ -327,7 +421,7 @@ public class TitleManager : MonoBehaviour
         msgRect.offsetMin = new Vector2(10, 10);
         msgRect.offsetMax = new Vector2(-10, -10);
         var msgText = msgObj.AddComponent<TextMeshProUGUI>();
-        msgText.text = $"スロット{slot + 1}を削除しますか？\n<size=70%>この操作は取り消せません</size>";
+        msgText.text = Localization.Get("title_confirm_delete", slot + 1);
         msgText.fontSize = 22;
         msgText.alignment = TextAlignmentOptions.Center;
         msgText.color = Color.white;
@@ -361,7 +455,7 @@ public class TitleManager : MonoBehaviour
         yesTextRect.offsetMin = Vector2.zero;
         yesTextRect.offsetMax = Vector2.zero;
         var yesText = yesTextObj.AddComponent<TextMeshProUGUI>();
-        yesText.text = "削除";
+        yesText.text = Localization.Get("ui_delete");
         yesText.fontSize = 20;
         yesText.alignment = TextAlignmentOptions.Center;
         yesText.color = Color.white;
@@ -391,7 +485,7 @@ public class TitleManager : MonoBehaviour
         noTextRect.offsetMin = Vector2.zero;
         noTextRect.offsetMax = Vector2.zero;
         var noText = noTextObj.AddComponent<TextMeshProUGUI>();
-        noText.text = "キャンセル";
+        noText.text = Localization.Get("ui_cancel");
         noText.fontSize = 20;
         noText.alignment = TextAlignmentOptions.Center;
         noText.color = Color.white;

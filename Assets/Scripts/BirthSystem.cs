@@ -94,7 +94,8 @@ public class BirthSystem : MonoBehaviour
     {
         "天才肌", "努力家", "頑丈", "すばしっこい", "おだやか",
         "あまえんぼう", "なきむし", "くいしんぼう", "好奇心旺盛", "マイペース",
-        "負けず嫌い", "やさしい", "ワイルド", "ミステリアス",
+        "負けず嫌い", "やさしい", "ワイルド", "ミステリアス", "あばれんぼう",
+        "覇王色",
     };
 
     // 36通りの恋愛ストーリー（父親名_母親名 → ストーリー）
@@ -154,6 +155,11 @@ public class BirthSystem : MonoBehaviour
     TextMeshProUGUI storyText;
     bool waitingForStoryConfirm;
 
+    // ストーリー画面の親カード用
+    Image storyFatherFace, storyMotherFace;
+    TextMeshProUGUI storyFatherName, storyMotherName;
+    TextMeshProUGUI storyFatherIntro, storyMotherIntro;
+
     void Start()
     {
         Debug.Log("[BirthSystem] Start() called");
@@ -177,9 +183,9 @@ public class BirthSystem : MonoBehaviour
         }
         if (childStatusText != null)
             childStatusText.richText = true;
-        SetButtonText(generateLifeButton, "いでよ、GOD BABY!!!");
-        SetButtonText(anotherGalButton, "もう一度うむ");
-        SetButtonText(gotoBattleButton, "名前をつける");
+        SetButtonText(generateLifeButton, Localization.Get("birth_summon_button"));
+        SetButtonText(anotherGalButton, Localization.Get("birth_reroll_button"));
+        SetButtonText(gotoBattleButton, Localization.Get("birth_name_button"));
         CreateStatusTextBackground();
         CreateParentUI();
         CreateBabyFaceUI(); // babyFaceを作成
@@ -281,7 +287,7 @@ public class BirthSystem : MonoBehaviour
         {
             enteredName = nameInputField.text;
             if (string.IsNullOrEmpty(enteredName))
-                enteredName = "名無しベイビー";
+                enteredName = Localization.Get("birth_default_name");
         }
         waitingForNameInput = false;
     }
@@ -371,10 +377,7 @@ public class BirthSystem : MonoBehaviour
             c_weight *= 2;
         }
 
-        string trait1 = DetermineTrait(c_atk, c_def, c_hp, c_academic, c_athletic);
-        string trait2 = Traits[Random.Range(0, Traits.Length)];
-        while (trait2 == trait1)
-            trait2 = Traits[Random.Range(0, Traits.Length)];
+        string trait1 = Traits[Random.Range(0, Traits.Length)];
 
         // ── フェーズ1: パネル表示、母親側は「???」で伏せる ──
         if (parentPanel != null) parentPanel.SetActive(true);
@@ -391,7 +394,7 @@ public class BirthSystem : MonoBehaviour
             motherFaceImage.color = new Color(0.3f, 0.3f, 0.4f);
         }
         if (motherNameText != null)
-            motherNameText.text = "母: ???";
+            motherNameText.text = Localization.Get("birth_mother_unknown");
 
         // ── フェーズ2: 父親ルーレット ──
         // 高速シャッフル（15回×0.06秒）
@@ -414,7 +417,7 @@ public class BirthSystem : MonoBehaviour
         // 紹介文表示
         if (fatherIntroText != null)
         {
-            fatherIntroText.text = father.intro;
+            fatherIntroText.text = Localization.GetParentIntro(father.name).Replace(" / ", "\n");
             fatherIntroText.gameObject.SetActive(true);
         }
         yield return new WaitForSeconds(1.5f);
@@ -440,7 +443,7 @@ public class BirthSystem : MonoBehaviour
         // 紹介文表示
         if (motherIntroText != null)
         {
-            motherIntroText.text = mother.intro;
+            motherIntroText.text = Localization.GetParentIntro(mother.name).Replace(" / ", "\n");
             motherIntroText.gameObject.SetActive(true);
         }
         yield return new WaitForSeconds(1.5f);
@@ -480,7 +483,7 @@ public class BirthSystem : MonoBehaviour
         }
 
         // ── フェーズ4.5: 恋愛ストーリー表示 ──
-        yield return StartCoroutine(ShowLoveStory(father.name, mother.name));
+        yield return StartCoroutine(ShowLoveStory(father, mother, fIdx, mIdx));
 
         // ── フェーズ4.6: ルナの場合80%で子供に恵まれない ──
         if (mother.name == "ルナ")
@@ -555,25 +558,26 @@ public class BirthSystem : MonoBehaviour
         if (isGodBaby)
         {
             // 上位1%: GOD BABY演出（金屏風）
-            line1 = "<color=#FFD700><size=120%><b>天からのお恵みだ。</b></size></color>";
-            line2 = "<color=#FFD700><size=150%><b>GOD BABY 爆誕！</b></size></color>";
+            line1 = Localization.Get("birth_god_line1");
+            line2 = Localization.Get("birth_god_line2");
         }
         else if (isPromisingBaby)
         {
             // 上位10%: 大物演出（赤屏風）
-            line1 = "<color=#FF6B6B><size=120%><b>大物になりそうな赤ちゃんだ！</b></size></color>";
-            line2 = "──────────────────────────────────────";
+            line1 = Localization.Get("birth_promising_line1");
+            line2 = Localization.Get("birth_separator");
         }
         else
         {
-            line1 = "<color=#FFFF00><size=130%><b>【 新しい命が誕生！ 】</b></size></color>";
-            line2 = "──────────────────────────────────────";
+            line1 = Localization.Get("birth_normal_line1");
+            line2 = Localization.Get("birth_separator");
         }
 
-        string line3 = $"<b>性別:</b> <color={genderColor}>{selectedGender}</color>    <b>身長:</b> {c_height} cm    <b>体重:</b> {c_weight} g";
-        string line4 = $"<b>HP:</b> {c_hp}    <b>攻撃:</b> {c_atk}    <b>防御:</b> {c_def}";
-        string line5 = $"<b>学力:</b> {c_academic}    <b>運動:</b> {c_athletic}";
-        string line6 = $"<b>特徴:</b>  <color=#FFA500>{trait1}</color>    <color=#00FF00>{trait2}</color>";
+        string displayGender = Localization.GetGender(selectedGender);
+        string line3 = $"{Localization.Get("birth_stat_gender")} <color={genderColor}>{displayGender}</color>    {Localization.Get("birth_stat_height")} {c_height} cm    {Localization.Get("birth_stat_weight")} {c_weight} g";
+        string line4 = $"{Localization.Get("birth_stat_hp")} {c_hp}    {Localization.Get("birth_stat_atk")} {c_atk}    {Localization.Get("birth_stat_def")} {c_def}";
+        string line5 = $"{Localization.Get("birth_stat_academic")} {c_academic}    {Localization.Get("birth_stat_athletic")} {c_athletic}";
+        string line6 = $"{Localization.Get("birth_stat_trait")}  <color=#FFA500>{Localization.GetTrait(trait1)}</color>";
 
         childStatusText.text = line1;
         yield return new WaitForSeconds(isGodBaby ? 1.0f : (isPromisingBaby ? 0.6f : 0.3f));
@@ -598,7 +602,6 @@ public class BirthSystem : MonoBehaviour
             DataCarrier.Instance.babyAthletic = c_athletic;
             DataCarrier.Instance.babyHeight = c_height;
             DataCarrier.Instance.trait1 = trait1;
-            DataCarrier.Instance.trait2 = trait2;
             DataCarrier.Instance.fatherName = father.name;
             DataCarrier.Instance.motherName = mother.name;
             DataCarrier.Instance.babyGender = selectedGender;
@@ -757,7 +760,7 @@ public class BirthSystem : MonoBehaviour
         Image faceImage = isFather ? fatherFaceImage : motherFaceImage;
         TextMeshProUGUI nameT = isFather ? fatherNameText : motherNameText;
         Sprite[] sprites = isFather ? fatherSprites : motherSprites;
-        string prefix = isFather ? "父" : "母";
+        string prefix = isFather ? Localization.Get("birth_father_prefix") : Localization.Get("birth_mother_prefix");
 
         if (faceImage != null)
         {
@@ -775,21 +778,12 @@ public class BirthSystem : MonoBehaviour
             }
         }
         if (nameT != null)
-            nameT.text = $"{prefix}: {data.name}";
+            nameT.text = $"{prefix}: {Localization.GetParent(data.name)}";
     }
 
     // ===== ステータス判定 =====
 
-    string DetermineTrait(int atk, int def, int hp, int academic, int athletic)
-    {
-        int max = Mathf.Max(atk, def, hp, academic, athletic);
-        if (max == academic && academic > 80) return "天才肌";
-        if (max == atk && atk > 70)           return "ワイルド";
-        if (max == def && def > 70)            return "頑丈";
-        if (max == athletic && athletic > 80)  return "すばしっこい";
-        if (max == hp && hp > 180)             return "タフ";
-        return Traits[Random.Range(0, Traits.Length)];
-    }
+    // DetermineTrait は廃止 — 16種からランダムに選ばれる
 
     /// <summary>
     /// 上位1%の「GOD BABY」判定
@@ -1362,11 +1356,11 @@ public class BirthSystem : MonoBehaviour
         var panelRect = parentPanel.AddComponent<RectTransform>();
         panelRect.anchorMin = new Vector2(0, 0.5f);
         panelRect.anchorMax = new Vector2(1, 0.5f);
-        panelRect.anchoredPosition = new Vector2(0, 280);
-        panelRect.sizeDelta = new Vector2(0, 420);
+        panelRect.anchoredPosition = new Vector2(0, 150);
+        panelRect.sizeDelta = new Vector2(0, 560);
 
-        CreateParentCard(parentPanel.transform, -450, out fatherFaceImage, out fatherNameText, out fatherIntroText);
-        CreateParentCard(parentPanel.transform, 450, out motherFaceImage, out motherNameText, out motherIntroText);
+        CreateParentCard(parentPanel.transform, -600, out fatherFaceImage, out fatherNameText, out fatherIntroText);
+        CreateParentCard(parentPanel.transform, 600, out motherFaceImage, out motherNameText, out motherIntroText);
     }
 
     void CreateParentCard(Transform parent, float xPos, out Image faceImage, out TextMeshProUGUI nameText, out TextMeshProUGUI introText)
@@ -1378,30 +1372,21 @@ public class BirthSystem : MonoBehaviour
         cardRect.anchorMin = new Vector2(0.5f, 0.5f);
         cardRect.anchorMax = new Vector2(0.5f, 0.5f);
         cardRect.anchoredPosition = new Vector2(xPos, 0);
-        cardRect.sizeDelta = new Vector2(280, 380);
+        cardRect.sizeDelta = new Vector2(400, 560);
 
         var bg = card.AddComponent<Image>();
+        bg.sprite = GetRoundedRectSprite(32);
+        bg.type = Image.Type.Sliced;
         bg.color = new Color(0.2f, 0.2f, 0.3f, 0.8f);
         bg.raycastTarget = false;
 
-        var faceObj = new GameObject("Face");
-        faceObj.transform.SetParent(card.transform, false);
-        var faceRect = faceObj.AddComponent<RectTransform>();
-        faceRect.anchorMin = new Vector2(0.5f, 1f);
-        faceRect.anchorMax = new Vector2(0.5f, 1f);
-        faceRect.anchoredPosition = new Vector2(0, -120);
-        faceRect.sizeDelta = new Vector2(200, 200);
-        faceImage = faceObj.AddComponent<Image>();
-        faceImage.color = Color.white;
-        faceImage.raycastTarget = false;
-        faceImage.preserveAspect = true;
-
+        // 名前テキスト (画像の上)
         var nameObj = new GameObject("Name");
         nameObj.transform.SetParent(card.transform, false);
         var nameRect = nameObj.AddComponent<RectTransform>();
-        nameRect.anchorMin = new Vector2(0, 0);
-        nameRect.anchorMax = new Vector2(1, 0);
-        nameRect.anchoredPosition = new Vector2(0, 70);
+        nameRect.anchorMin = new Vector2(0, 1f);
+        nameRect.anchorMax = new Vector2(1, 1f);
+        nameRect.anchoredPosition = new Vector2(0, -25);
         nameRect.sizeDelta = new Vector2(0, 50);
         nameText = nameObj.AddComponent<TextMeshProUGUI>();
         nameText.fontSize = 32;
@@ -1409,15 +1394,29 @@ public class BirthSystem : MonoBehaviour
         nameText.color = Color.white;
         nameText.raycastTarget = false;
 
+        // 顔画像 (360x360)
+        var faceObj = new GameObject("Face");
+        faceObj.transform.SetParent(card.transform, false);
+        var faceRect = faceObj.AddComponent<RectTransform>();
+        faceRect.anchorMin = new Vector2(0.5f, 0.5f);
+        faceRect.anchorMax = new Vector2(0.5f, 0.5f);
+        faceRect.anchoredPosition = new Vector2(0, 20);
+        faceRect.sizeDelta = new Vector2(360, 360);
+        faceImage = faceObj.AddComponent<Image>();
+        faceImage.color = Color.white;
+        faceImage.raycastTarget = false;
+        faceImage.preserveAspect = true;
+
+        // 紹介文テキスト (画像の下)
         var introObj = new GameObject("Intro");
         introObj.transform.SetParent(card.transform, false);
         var introRect = introObj.AddComponent<RectTransform>();
         introRect.anchorMin = new Vector2(0, 0);
         introRect.anchorMax = new Vector2(1, 0);
-        introRect.anchoredPosition = new Vector2(0, 25);
-        introRect.sizeDelta = new Vector2(0, 50);
+        introRect.anchoredPosition = new Vector2(0, 40);
+        introRect.sizeDelta = new Vector2(0, 80);
         introText = introObj.AddComponent<TextMeshProUGUI>();
-        introText.fontSize = 18;
+        introText.fontSize = 32;
         introText.alignment = TextAlignmentOptions.Center;
         introText.color = new Color(1f, 0.9f, 0.5f);
         introText.raycastTarget = false;
@@ -1618,10 +1617,12 @@ public class BirthSystem : MonoBehaviour
         panelRect.anchorMin = new Vector2(0.5f, 0.5f);
         panelRect.anchorMax = new Vector2(0.5f, 0.5f);
         panelRect.anchoredPosition = new Vector2(0, -50);
-        panelRect.sizeDelta = new Vector2(400, 200);
+        panelRect.sizeDelta = new Vector2(464, 200);
 
         var panelBg = genderSelectPanel.AddComponent<Image>();
-        panelBg.color = new Color(0.15f, 0.15f, 0.25f, 0.95f);
+        panelBg.sprite = GetRoundedRectSprite(32);
+        panelBg.type = Image.Type.Sliced;
+        panelBg.color = new Color(0.2f, 0.2f, 0.3f, 0.8f);
 
         // タイトルテキスト
         var titleObj = new GameObject("Title");
@@ -1630,9 +1631,9 @@ public class BirthSystem : MonoBehaviour
         titleRect.anchorMin = new Vector2(0, 1);
         titleRect.anchorMax = new Vector2(1, 1);
         titleRect.anchoredPosition = new Vector2(0, -30);
-        titleRect.sizeDelta = new Vector2(0, 50);
+        titleRect.sizeDelta = new Vector2(-64, 50);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        titleText.text = "どちらでプレイする？";
+        titleText.text = Localization.Get("birth_gender_title");
         titleText.fontSize = 32;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.color = Color.white;
@@ -1640,10 +1641,10 @@ public class BirthSystem : MonoBehaviour
         titleText.raycastTarget = false;
 
         // 男の子ボタン
-        CreateGenderButton(genderSelectPanel.transform, -90, "男の子", new Color(0.4f, 0.6f, 1f), SelectMale);
+        CreateGenderButton(genderSelectPanel.transform, -90, Localization.Get("birth_male"), new Color(0.4f, 0.6f, 1f), SelectMale);
 
         // 女の子ボタン
-        CreateGenderButton(genderSelectPanel.transform, 90, "女の子", new Color(1f, 0.5f, 0.7f), SelectFemale);
+        CreateGenderButton(genderSelectPanel.transform, 90, Localization.Get("birth_female"), new Color(1f, 0.5f, 0.7f), SelectFemale);
 
         genderSelectPanel.SetActive(false);
     }
@@ -1656,7 +1657,7 @@ public class BirthSystem : MonoBehaviour
         var btnRect = btnObj.AddComponent<RectTransform>();
         btnRect.anchorMin = new Vector2(0.5f, 0);
         btnRect.anchorMax = new Vector2(0.5f, 0);
-        btnRect.anchoredPosition = new Vector2(xPos, 70);
+        btnRect.anchoredPosition = new Vector2(xPos, 55);
         btnRect.sizeDelta = new Vector2(140, 80);
 
         var btnImg = btnObj.AddComponent<Image>();
@@ -1708,7 +1709,7 @@ public class BirthSystem : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, -30);
         titleRect.sizeDelta = new Vector2(0, 50);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        titleText.text = "赤ちゃんの名前を入力してください";
+        titleText.text = Localization.Get("birth_name_input_title");
         titleText.fontSize = 26;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.color = Color.white;
@@ -1779,7 +1780,7 @@ public class BirthSystem : MonoBehaviour
         confirmTextRect.offsetMin = Vector2.zero;
         confirmTextRect.offsetMax = Vector2.zero;
         var confirmText = confirmTextObj.AddComponent<TextMeshProUGUI>();
-        confirmText.text = "決定";
+        confirmText.text = Localization.Get("ui_confirm");
         confirmText.fontSize = 26;
         confirmText.alignment = TextAlignmentOptions.Center;
         confirmText.color = Color.white;
@@ -1814,7 +1815,7 @@ public class BirthSystem : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, -40);
         titleRect.sizeDelta = new Vector2(0, 60);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        titleText.text = "セーブしますか？";
+        titleText.text = Localization.Get("birth_save_confirm");
         titleText.fontSize = 32;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.color = Color.white;
@@ -1845,7 +1846,7 @@ public class BirthSystem : MonoBehaviour
         yesTextRect.offsetMin = Vector2.zero;
         yesTextRect.offsetMax = Vector2.zero;
         var yesText = yesTextObj.AddComponent<TextMeshProUGUI>();
-        yesText.text = "はい";
+        yesText.text = Localization.Get("ui_yes");
         yesText.fontSize = 26;
         yesText.alignment = TextAlignmentOptions.Center;
         yesText.color = Color.white;
@@ -1876,7 +1877,7 @@ public class BirthSystem : MonoBehaviour
         noTextRect.offsetMin = Vector2.zero;
         noTextRect.offsetMax = Vector2.zero;
         var noText = noTextObj.AddComponent<TextMeshProUGUI>();
-        noText.text = "いいえ";
+        noText.text = Localization.Get("ui_no");
         noText.fontSize = 26;
         noText.alignment = TextAlignmentOptions.Center;
         noText.color = Color.white;
@@ -1914,9 +1915,9 @@ public class BirthSystem : MonoBehaviour
         listBg.raycastTarget = false;
 
         // 父親行
-        CreateCharacterRow(listPanel.transform, "父親", Fathers, fatherSprites, 25);
+        CreateCharacterRow(listPanel.transform, Localization.Get("label_fathers"), Fathers, fatherSprites, 25);
         // 母親行
-        CreateCharacterRow(listPanel.transform, "母親", Mothers, motherSprites, -25);
+        CreateCharacterRow(listPanel.transform, Localization.Get("label_mothers"), Mothers, motherSprites, -25);
     }
 
     void CreateCharacterRow(Transform parent, string label, ParentData[] parents, Sprite[] sprites, float yCards)
@@ -1988,7 +1989,7 @@ public class BirthSystem : MonoBehaviour
         nameRect.anchoredPosition = new Vector2(15, 0);
         nameRect.sizeDelta = new Vector2(0, 20);
         var nameText = nameObj.AddComponent<TextMeshProUGUI>();
-        nameText.text = data.name;
+        nameText.text = Localization.GetParent(data.name);
         nameText.fontSize = 12;
         nameText.alignment = TextAlignmentOptions.Center;
         nameText.color = new Color(1f, 1f, 1f, 0.9f);
@@ -2022,19 +2023,29 @@ public class BirthSystem : MonoBehaviour
         titleRect.offsetMin = new Vector2(20, 0);
         titleRect.offsetMax = new Vector2(-20, 0);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        titleText.text = "<color=#FF69B4>♥</color> 二人の出会い <color=#FF69B4>♥</color>";
+        titleText.text = Localization.Get("birth_story_title");
         titleText.fontSize = 42;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.color = new Color(1f, 0.85f, 0.9f);
         titleText.fontStyle = FontStyles.Bold;
         titleText.raycastTarget = false;
 
-        // ストーリーテキスト
+        // ── 左側: 父親カード (5-25%) ──
+        CreateStoryParentCard(storyPanel.transform, true,
+            new Vector2(0.05f, 0.15f), new Vector2(0.25f, 0.80f),
+            out storyFatherFace, out storyFatherName, out storyFatherIntro);
+
+        // ── 右側: 母親カード (75-95%) ──
+        CreateStoryParentCard(storyPanel.transform, false,
+            new Vector2(0.75f, 0.15f), new Vector2(0.95f, 0.80f),
+            out storyMotherFace, out storyMotherName, out storyMotherIntro);
+
+        // ストーリーテキスト（中央 27-73%）
         var storyObj = new GameObject("StoryText");
         storyObj.transform.SetParent(storyPanel.transform, false);
         var storyRect = storyObj.AddComponent<RectTransform>();
-        storyRect.anchorMin = new Vector2(0.1f, 0.35f);
-        storyRect.anchorMax = new Vector2(0.9f, 0.7f);
+        storyRect.anchorMin = new Vector2(0.27f, 0.35f);
+        storyRect.anchorMax = new Vector2(0.73f, 0.7f);
         storyRect.offsetMin = Vector2.zero;
         storyRect.offsetMax = Vector2.zero;
         storyText = storyObj.AddComponent<TextMeshProUGUI>();
@@ -2052,7 +2063,7 @@ public class BirthSystem : MonoBehaviour
         hintRect.offsetMin = Vector2.zero;
         hintRect.offsetMax = Vector2.zero;
         var hintText = hintObj.AddComponent<TextMeshProUGUI>();
-        hintText.text = "▼ タップで続ける ▼";
+        hintText.text = Localization.Get("birth_story_tap");
         hintText.fontSize = 24;
         hintText.alignment = TextAlignmentOptions.Center;
         hintText.color = new Color(1f, 1f, 1f, 0.6f);
@@ -2071,20 +2082,108 @@ public class BirthSystem : MonoBehaviour
         waitingForStoryConfirm = false;
     }
 
-    IEnumerator ShowLoveStory(string fatherName, string motherName)
+    void CreateStoryParentCard(Transform parent, bool isFather,
+        Vector2 anchorMin, Vector2 anchorMax,
+        out Image faceImg, out TextMeshProUGUI nameLabel, out TextMeshProUGUI introLabel)
     {
-        string key = $"{fatherName}_{motherName}";
-        string story = "運命の出会いから\n愛が芽生えた...";
+        string side = isFather ? "Father" : "Mother";
 
-        if (LoveStories.TryGetValue(key, out string foundStory))
-        {
-            story = foundStory;
-        }
+        // カードコンテナ
+        var card = new GameObject($"Story{side}Card");
+        card.transform.SetParent(parent, false);
+        var cardRect = card.AddComponent<RectTransform>();
+        cardRect.anchorMin = anchorMin;
+        cardRect.anchorMax = anchorMax;
+        cardRect.offsetMin = Vector2.zero;
+        cardRect.offsetMax = Vector2.zero;
+
+        // 名前テキスト (画像の上)
+        var nameObj = new GameObject("Name");
+        nameObj.transform.SetParent(card.transform, false);
+        var nameRect = nameObj.AddComponent<RectTransform>();
+        nameRect.anchorMin = new Vector2(0f, 0.5f);
+        nameRect.anchorMax = new Vector2(1f, 0.5f);
+        nameRect.pivot = new Vector2(0.5f, 0.5f);
+        nameRect.anchoredPosition = new Vector2(0, 280);
+        nameRect.sizeDelta = new Vector2(0, 40);
+        nameLabel = nameObj.AddComponent<TextMeshProUGUI>();
+        nameLabel.fontSize = 32;
+        nameLabel.alignment = TextAlignmentOptions.Center;
+        nameLabel.color = new Color(1f, 0.95f, 0.8f);
+        nameLabel.fontStyle = FontStyles.Bold;
+        nameLabel.raycastTarget = false;
+
+        // 顔画像 (360x360、カード中央)
+        var faceObj = new GameObject("Face");
+        faceObj.transform.SetParent(card.transform, false);
+        var faceRect = faceObj.AddComponent<RectTransform>();
+        faceRect.anchorMin = new Vector2(0.5f, 0.5f);
+        faceRect.anchorMax = new Vector2(0.5f, 0.5f);
+        faceRect.pivot = new Vector2(0.5f, 0.5f);
+        faceRect.anchoredPosition = new Vector2(0, 60);
+        faceRect.sizeDelta = new Vector2(360, 360);
+        faceImg = faceObj.AddComponent<Image>();
+        faceImg.color = Color.gray;
+        faceImg.raycastTarget = false;
+
+        // 紹介文テキスト (画像の下)
+        var introObj = new GameObject("Intro");
+        introObj.transform.SetParent(card.transform, false);
+        var introRect = introObj.AddComponent<RectTransform>();
+        introRect.anchorMin = new Vector2(0f, 0.5f);
+        introRect.anchorMax = new Vector2(1f, 0.5f);
+        introRect.pivot = new Vector2(0.5f, 0.5f);
+        introRect.anchoredPosition = new Vector2(0, -200);
+        introRect.sizeDelta = new Vector2(0, 80);
+        introLabel = introObj.AddComponent<TextMeshProUGUI>();
+        introLabel.fontSize = 32;
+        introLabel.alignment = TextAlignmentOptions.Center;
+        introLabel.color = new Color(1f, 1f, 1f, 0.7f);
+        introLabel.raycastTarget = false;
+    }
+
+    IEnumerator ShowLoveStory(ParentData father, ParentData mother, int fIdx, int mIdx)
+    {
+        string story = Localization.GetLoveStory(father.name, mother.name);
 
         if (storyPanel != null && storyText != null)
         {
             // 親パネルを一時的に隠す
             if (parentPanel != null) parentPanel.SetActive(false);
+
+            // 父親カードを設定
+            if (storyFatherFace != null)
+            {
+                if (fatherSprites != null && fIdx < fatherSprites.Length && fatherSprites[fIdx] != null)
+                {
+                    storyFatherFace.sprite = fatherSprites[fIdx];
+                    storyFatherFace.color = Color.white;
+                }
+                else
+                {
+                    storyFatherFace.sprite = null;
+                    storyFatherFace.color = father.faceColor;
+                }
+            }
+            if (storyFatherName != null) storyFatherName.text = Localization.GetParent(father.name);
+            if (storyFatherIntro != null) storyFatherIntro.text = Localization.GetParentIntro(father.name).Replace(" / ", "\n");
+
+            // 母親カードを設定
+            if (storyMotherFace != null)
+            {
+                if (motherSprites != null && mIdx < motherSprites.Length && motherSprites[mIdx] != null)
+                {
+                    storyMotherFace.sprite = motherSprites[mIdx];
+                    storyMotherFace.color = Color.white;
+                }
+                else
+                {
+                    storyMotherFace.sprite = null;
+                    storyMotherFace.color = mother.faceColor;
+                }
+            }
+            if (storyMotherName != null) storyMotherName.text = Localization.GetParent(mother.name);
+            if (storyMotherIntro != null) storyMotherIntro.text = Localization.GetParentIntro(mother.name).Replace(" / ", "\n");
 
             storyText.text = "";
             storyPanel.SetActive(true);
@@ -2093,19 +2192,15 @@ public class BirthSystem : MonoBehaviour
             foreach (char c in story)
             {
                 storyText.text += c;
-                yield return new WaitForSeconds(0.03f);
+                yield return new WaitForSeconds(0.05f);
             }
 
-            // タップ待ち（最大3秒でタイムアウト、またはOnStoryTapで進む）
+            // タップ待ち（タップするまで進まない）
             waitingForStoryConfirm = true;
-            float timeout = 3f;
-            float elapsed = 0f;
-            while (waitingForStoryConfirm && elapsed < timeout)
+            while (waitingForStoryConfirm)
             {
-                elapsed += Time.deltaTime;
                 yield return null;
             }
-            waitingForStoryConfirm = false;
 
             storyPanel.SetActive(false);
 
@@ -2113,7 +2208,7 @@ public class BirthSystem : MonoBehaviour
             if (parentPanel != null) parentPanel.SetActive(true);
         }
 
-        yield return new WaitForSeconds(0.3f);
+        yield return new WaitForSeconds(0.6f);
     }
 
     IEnumerator ShowLunaFailure()
@@ -2151,17 +2246,17 @@ public class BirthSystem : MonoBehaviour
 
         // スライドインパラメータ（タイトルと同じ）
         float slideDuration = 1.5f;
-        float lineInterval = 1.0f;
+        float lineInterval = 2.0f;
         float startOffsetX = -800f;
         float verticalStart = 100f;
         float lineSpacing = 120f;
 
         string[] sadLines = new string[]
         {
-            "「この世界、ハズレばっかりだと思わないか？」\n",
-            "二人は何年も待ち続けた。\nだが、コウノトリは訪れなかった。\n",
-            "ルナは世界一美しかったが、\n神は全てを与えはしなかった...\n",
-            "<color=#AADDFF>もう一度運命に挑戦しよう。</color>",
+            Localization.Get("birth_luna_line1"),
+            Localization.Get("birth_luna_line2"),
+            Localization.Get("birth_luna_line3"),
+            Localization.Get("birth_luna_line4"),
         };
 
         for (int i = 0; i < sadLines.Length; i++)
@@ -2202,7 +2297,7 @@ public class BirthSystem : MonoBehaviour
             }
         }
 
-        yield return new WaitForSeconds(2.0f);
+        yield return new WaitForSeconds(4.0f);
 
         // フェードアウト
         CanvasGroup canvasGroup = panel.AddComponent<CanvasGroup>();
@@ -2252,7 +2347,7 @@ public class BirthSystem : MonoBehaviour
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = true;
 
-        CreateMenuButton(bar.transform, "トップへ", () => SceneManager.LoadScene("TitleScene"));
+        CreateMenuButton(bar.transform, Localization.Get("ui_back_to_title"), () => SceneManager.LoadScene("TitleScene"));
     }
 
     void CreateMenuButton(Transform parent, string label, UnityEngine.Events.UnityAction action)
@@ -2288,6 +2383,53 @@ public class BirthSystem : MonoBehaviour
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
         tmp.raycastTarget = false;
+    }
+
+    // ===== 角丸スプライト生成 =====
+
+    static Sprite _roundedRectSprite;
+
+    static Sprite GetRoundedRectSprite(int radius = 32)
+    {
+        if (_roundedRectSprite != null) return _roundedRectSprite;
+
+        int size = radius * 2 + 2;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        Color clear = new Color(0, 0, 0, 0);
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                // 四隅の角丸判定
+                float dx = 0, dy = 0;
+                if (x < radius) dx = radius - x;
+                else if (x >= size - radius) dx = x - (size - radius - 1);
+                if (y < radius) dy = radius - y;
+                else if (y >= size - radius) dy = y - (size - radius - 1);
+
+                if (dx > 0 && dy > 0)
+                {
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (dist > radius)
+                        tex.SetPixel(x, y, clear);
+                    else if (dist > radius - 1)
+                        tex.SetPixel(x, y, new Color(1, 1, 1, radius - dist));
+                    else
+                        tex.SetPixel(x, y, Color.white);
+                }
+                else
+                {
+                    tex.SetPixel(x, y, Color.white);
+                }
+            }
+        }
+        tex.Apply();
+
+        var border = new Vector4(radius, radius, radius, radius);
+        _roundedRectSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        return _roundedRectSprite;
     }
 }
 

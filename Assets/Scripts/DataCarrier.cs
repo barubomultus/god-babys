@@ -22,7 +22,6 @@ public class DataCarrier : MonoBehaviour
     [Header("Traits & Parents")]
     public string babyName;
     public string trait1;
-    public string trait2;
     public string fatherName;
     public string motherName;
     public string babyGender;
@@ -73,7 +72,6 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.SetInt(p + "defeatedEnemies", defeatedEnemies);
         PlayerPrefs.SetString(p + "babyName", babyName);
         PlayerPrefs.SetString(p + "trait1", trait1);
-        PlayerPrefs.SetString(p + "trait2", trait2);
         PlayerPrefs.SetString(p + "fatherName", fatherName);
         PlayerPrefs.SetString(p + "motherName", motherName);
         PlayerPrefs.SetString(p + "babyGender", babyGender);
@@ -103,7 +101,6 @@ public class DataCarrier : MonoBehaviour
         defeatedEnemies = PlayerPrefs.GetInt(p + "defeatedEnemies", 0);
         babyName = PlayerPrefs.GetString(p + "babyName", "");
         trait1 = PlayerPrefs.GetString(p + "trait1", "");
-        trait2 = PlayerPrefs.GetString(p + "trait2", "");
         fatherName = PlayerPrefs.GetString(p + "fatherName", "");
         motherName = PlayerPrefs.GetString(p + "motherName", "");
         babyGender = PlayerPrefs.GetString(p + "babyGender", "");
@@ -158,7 +155,6 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.DeleteKey(p + "defeatedEnemies");
         PlayerPrefs.DeleteKey(p + "babyName");
         PlayerPrefs.DeleteKey(p + "trait1");
-        PlayerPrefs.DeleteKey(p + "trait2");
         PlayerPrefs.DeleteKey(p + "fatherName");
         PlayerPrefs.DeleteKey(p + "motherName");
         PlayerPrefs.DeleteKey(p + "babyGender");
@@ -198,24 +194,23 @@ public class DataCarrier : MonoBehaviour
         return inventory.Split(',');
     }
 
-    // 次の年齢に必要な累計経験値
+    // 次の月齢に必要な経験値
     public static int ExpForNextAge(int age)
     {
-        return 300 + age * 250;
+        return 50 + age * 30;
     }
 
-    // 年齢アップ時のステータス成長
+    // 月齢アップ時のステータス成長
     public void AgeUp()
     {
         babyAge++;
-        float growthRate = 1.0f + (babyAge * 0.1f);
-        babyAtk += Mathf.RoundToInt(5 * growthRate);
-        babyDef += Mathf.RoundToInt(3 * growthRate);
-        babyHp += Mathf.RoundToInt(20 * growthRate);
-        babyAcademic += Mathf.RoundToInt(4 * growthRate);
-        babyAthletic += Mathf.RoundToInt(4 * growthRate);
-        babyHeight += Mathf.RoundToInt(8 + Random.Range(0, 5));
-        babyWeight += Mathf.RoundToInt(2000 + Random.Range(0, 1000));
+        float growthRate = 1.0f + (babyAge * 0.05f);
+        babyAtk += Mathf.RoundToInt(2 * growthRate);
+        babyDef += Mathf.RoundToInt(1 * growthRate);
+        babyHp += Mathf.RoundToInt(8 * growthRate);
+        // babyAcademic は生まれつきの値で変化しない
+        babyAthletic += Mathf.RoundToInt(2 * growthRate);
+        // babyHeight, babyWeight は生まれつきの値で変化しない（回避率に影響）
     }
 
     // ===== スロット情報取得（静的メソッド） =====

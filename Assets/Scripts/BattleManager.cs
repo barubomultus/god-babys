@@ -28,8 +28,82 @@ public class BattleManager : MonoBehaviour
     int playerEvasion; // 回避率(身長・体重で変動)
 
     // 固有技データ
-    string normalAttackName;   // 通常攻撃名
+    string normalAttackName;   // 通常攻撃名(父ベース)
     string specialAttackName;  // 必殺技名
+    string motherAttackName;   // 第2攻撃名(母ベース)
+    string normalAttackDesc;   // 通常攻撃説明
+    string specialAttackDesc;  // 必殺技説明
+    string motherAttackDesc;   // 第2攻撃説明
+    string defendDesc;
+    string playerFatherName;   // アイコン決定用
+    string playerMotherName;   // アイコン決定用
+    string motherAttackEffect; // 第2攻撃の効果タイプ
+
+    // 状態効果
+    int enemyDefDebuffTurns;   // 敵DEFデバフ残りターン
+    int enemyAtkDebuffTurns;   // 敵ATKデバフ残りターン
+    int enemyPoisonTurns;      // 毒残りターン
+    int playerEvasionBuffTurns;// 回避バフ残りターン
+
+    // 技情報ポップアップ
+    GameObject skillInfoPopup;
+
+    // 母親ベースの第2攻撃データ（母親名 → [技名, 説明, 効果タイプ]）
+    static readonly System.Collections.Generic.Dictionary<string, string[]> MotherSkillData = new System.Collections.Generic.Dictionary<string, string[]>
+    {
+        {"サクラ", new[]{"ヒーリングストライク", "攻撃しつつ自分のHPを回復する医療の技", "heal"}},
+        {"ヒナタ", new[]{"毒霧", "敵に毒を浴びせ、3ターンの間じわじわダメージを与える", "poison"}},
+        {"アキラ", new[]{"疾風ステップ", "素早い動きで攻撃し、2ターンの間回避率が上がる", "evasion"}},
+        {"ミサト", new[]{"分析波動", "敵の弱点を解析し、2ターンの間敵の防御を下げる", "defdown"}},
+        {"カエデ", new[]{"威圧のオーラ", "圧倒的な威圧感で、2ターンの間敵の攻撃力を下げる", "atkdown"}},
+        {"ルナ", new[]{"スターダスト", "星屑をまとった攻撃。与ダメージの一部をHPとして吸収する", "drain"}},
+    };
+
+    // 36通りの固有技説明（父親名_母親名 → [通常技説明, 必殺技説明]）
+    static readonly System.Collections.Generic.Dictionary<string, string[]> SkillDescData = new System.Collections.Generic.Dictionary<string, string[]>
+    {
+        {"タケシ_サクラ", new[]{"外科の精密さで急所を突くパンチ", "父の拳と母のメスが融合した一撃必殺の手術パンチ"}},
+        {"タケシ_ヒナタ", new[]{"暗殺術を応用した見えないキック", "闇に溶ける格闘技の奥義。回避不能"}},
+        {"タケシ_アキラ", new[]{"黄金に輝く連続パンチ", "オリンピック級の破壊力で叩き潰す"}},
+        {"タケシ_ミサト", new[]{"量子力学で軌道を読めないパンチ", "重力すら歪める究極の一撃"}},
+        {"タケシ_カエデ", new[]{"華麗なフォームの美しい一撃", "全財産を込めた黄金に輝く鉄拳"}},
+        {"タケシ_ルナ", new[]{"カリスマ性を纏った蹴り", "見る者全てを魅了し打ち砕く衝撃波"}},
+
+        {"ユウキ_サクラ", new[]{"電子メスで敵のデータを切り裂く", "完全なるサイバー手術で敵を分解する"}},
+        {"ユウキ_ヒナタ", new[]{"痕跡を残さないハッキング攻撃", "対象のシステムを完全に暗殺するプログラム"}},
+        {"ユウキ_アキラ", new[]{"高速データ転送のような連続攻撃", "電脳空間でのオリンピック級演算攻撃"}},
+        {"ユウキ_ミサト", new[]{"量子コンピュータで弱点を解析", "技術的特異点を超えた破壊コード"}},
+        {"ユウキ_カエデ", new[]{"敵の資産データを食い荒らすウイルス", "全世界の資産をハックする究極ウイルス"}},
+        {"ユウキ_ルナ", new[]{"仮想空間から放つ光線", "デジタルとリアルを超越したオーラ攻撃"}},
+
+        {"ゴウ_サクラ", new[]{"戦場仕込みの精密な切開攻撃", "戦場で命を救い命を奪う天使の一撃"}},
+        {"ゴウ_ヒナタ", new[]{"傭兵と暗殺者の合わせ技", "影から影へ、姿なき暗殺者の最終奥義"}},
+        {"ゴウ_アキラ", new[]{"軍事訓練で鍛えた突進攻撃", "戦場を駆け抜ける全力スプリント攻撃"}},
+        {"ゴウ_ミサト", new[]{"戦術的量子機動による奇襲", "核融合エネルギーを戦術転用した究極兵器"}},
+        {"ゴウ_カエデ", new[]{"金で雇った傭兵団の一斉攻撃", "黄金の弾丸で全てを制圧する"}},
+        {"ゴウ_ルナ", new[]{"美しさで敵を油断させる迷彩術", "完全透明化からの奇襲攻撃"}},
+
+        {"シンジ_サクラ", new[]{"論理的に最適な切開ポイントを突く", "ノーベル賞級の完璧な外科手術攻撃"}},
+        {"シンジ_ヒナタ", new[]{"計算し尽くされた正確なキック", "IQ300の頭脳が導く暗殺の方程式"}},
+        {"シンジ_アキラ", new[]{"物理法則を最大活用した攻撃", "科学の全てを結集したオリンピック級攻撃"}},
+        {"シンジ_ミサト", new[]{"量子もつれで離れた敵にもダメージ", "二つの天才頭脳が融合した究極の知性攻撃"}},
+        {"シンジ_カエデ", new[]{"経済理論に基づく効率的な攻撃", "ノーベル経済学賞の理論を破壊力に変換"}},
+        {"シンジ_ルナ", new[]{"美の黄金比を計算した攻撃", "相対性理論で時空を歪めるオーラ"}},
+
+        {"リョウマ_サクラ", new[]{"札束を投げつけて攻撃", "医療ビジネスの全資産を投入した一撃"}},
+        {"リョウマ_ヒナタ", new[]{"金の力で繰り出すキック", "暗殺ビジネスの全てを賭けた攻撃"}},
+        {"リョウマ_アキラ", new[]{"投資のように確実にリターンを得る攻撃", "金メダルごと買収する圧倒的資金力攻撃"}},
+        {"リョウマ_ミサト", new[]{"量子投資理論に基づく攻撃", "無限の資産を生む理論の破壊的応用"}},
+        {"リョウマ_カエデ", new[]{"財閥の力を見せつける連続攻撃", "兆を超える資産で全てを支配する"}},
+        {"リョウマ_ルナ", new[]{"セレブの品格で圧倒する", "世界最高峰の富と美の融合攻撃"}},
+
+        {"テツヤ_サクラ", new[]{"ロックのリズムで切り刻む", "ライブ会場が手術室になる究極パフォーマンス"}},
+        {"テツヤ_ヒナタ", new[]{"静寂から放つロックの衝撃波", "音のない暗殺メロディ"}},
+        {"テツヤ_アキラ", new[]{"高速ビートのような連続攻撃", "オリンピック級のライブパフォーマンス攻撃"}},
+        {"テツヤ_ミサト", new[]{"量子力学的な音波攻撃", "観測するまで生死不明な究極の歌"}},
+        {"テツヤ_カエデ", new[]{"プラチナディスク級の衝撃を与える", "音楽史に刻まれる究極のアンセム攻撃"}},
+        {"テツヤ_ルナ", new[]{"スターのオーラで圧倒する", "超新星のように全てを飲み込むハーモニー"}},
+    };
 
     // 36通りの固有技データ（父親名_母親名 → [通常技, 必殺技]）
     static readonly System.Collections.Generic.Dictionary<string, string[]> SkillData = new System.Collections.Generic.Dictionary<string, string[]>
@@ -84,7 +158,7 @@ public class BattleManager : MonoBehaviour
     };
 
     // 敵ステータス
-    int enemyHp, enemyMaxHp, enemyAtk, enemyDef;
+    int enemyHp, enemyMaxHp, enemyAtk, enemyDef, enemySpeed;
     string enemyName;
 
     // UI要素
@@ -112,6 +186,11 @@ public class BattleManager : MonoBehaviour
     bool isPlayerTurn;
     bool waitingForAction;
     int battleTurnCount;
+
+    // 演出用
+    Image battleFlashOverlay;
+    RectTransform playerPanelRect;
+    RectTransform enemyPanelRect;
 
     void Start()
     {
@@ -165,14 +244,16 @@ public class BattleManager : MonoBehaviour
             isGodBaby = DataCarrier.Instance.isGodBaby;
             if (isGodBaby)
             {
-                // GOD BABYボーナス: 全ステータス+20%、必殺技命中率100%
-                playerAtk = (int)(playerAtk * 1.2f);
-                playerDef = (int)(playerDef * 1.2f);
-                playerMaxHp = (int)(playerMaxHp * 1.2f);
+                // GOD BABYボーナス: 全ステータス+12%、必殺技命中率100%
+                playerAtk = (int)(playerAtk * 1.12f);
+                playerDef = (int)(playerDef * 1.12f);
+                playerMaxHp = (int)(playerMaxHp * 1.12f);
                 playerHp = playerMaxHp;
             }
 
             // 親の組み合わせから固有技を取得
+            playerFatherName = DataCarrier.Instance.fatherName ?? "";
+            playerMotherName = DataCarrier.Instance.motherName ?? "";
             string parentKey = $"{DataCarrier.Instance.fatherName}_{DataCarrier.Instance.motherName}";
             if (SkillData.TryGetValue(parentKey, out string[] skills))
             {
@@ -181,9 +262,32 @@ public class BattleManager : MonoBehaviour
             }
             else
             {
-                // デフォルト技
-                normalAttackName = "パンチ";
-                specialAttackName = "GOD SMASH";
+                normalAttackName = Localization.Get("battle_default_attack");
+                specialAttackName = Localization.Get("battle_default_special");
+            }
+            if (SkillDescData.TryGetValue(parentKey, out string[] descs))
+            {
+                normalAttackDesc = descs[0];
+                specialAttackDesc = descs[1];
+            }
+            else
+            {
+                normalAttackDesc = Localization.Get("battle_default_attack_desc");
+                specialAttackDesc = Localization.Get("battle_default_special_desc");
+            }
+            defendDesc = Localization.Get("battle_defend_desc");
+            // 母親ベースの第2攻撃
+            if (MotherSkillData.TryGetValue(playerMotherName, out string[] mSkill))
+            {
+                motherAttackName = Localization.GetMotherSkillName(playerMotherName);
+                motherAttackDesc = Localization.GetMotherSkillDesc(playerMotherName);
+                motherAttackEffect = mSkill[2];
+            }
+            else
+            {
+                motherAttackName = Localization.Get("battle_default_mother_attack");
+                motherAttackDesc = Localization.Get("battle_default_mother_desc");
+                motherAttackEffect = "none";
             }
         }
         else
@@ -198,8 +302,16 @@ public class BattleManager : MonoBehaviour
             isMale = true;
             isGodBaby = false;
             playerEvasion = 5;
-            normalAttackName = "パンチ";
-            specialAttackName = "GOD SMASH";
+            normalAttackName = Localization.Get("battle_default_attack");
+            specialAttackName = Localization.Get("battle_default_special");
+            normalAttackDesc = Localization.Get("battle_default_attack_desc");
+            specialAttackDesc = Localization.Get("battle_default_special_desc");
+            defendDesc = Localization.Get("battle_defend_desc");
+            motherAttackName = Localization.Get("battle_default_mother_attack");
+            motherAttackDesc = Localization.Get("battle_default_mother_desc");
+            motherAttackEffect = "none";
+            playerFatherName = "";
+            playerMotherName = "";
         }
     }
 
@@ -216,6 +328,7 @@ public class BattleManager : MonoBehaviour
             enemyHp = enemyMaxHp;
             enemyAtk = 80;
             enemyDef = 45;
+            enemySpeed = 70;
             loadedEnemySprite = Resources.Load<Sprite>("EnemyBabys/first-boss-shiba");
         }
         else if (fromMap)
@@ -232,14 +345,15 @@ public class BattleManager : MonoBehaviour
             enemyHp = enemyMaxHp;
             enemyAtk = 45;
             enemyDef = 25;
+            enemySpeed = 40;
             loadedEnemySprite = Resources.Load<Sprite>("EnemyBabys/frist-enemy");
         }
     }
 
     void InitializeRandomEnemy(int playerAge)
     {
-        // 年齢に応じてスケーリング
-        float scale = 1.0f + (playerAge - 1) * 0.3f;
+        // 月齢に応じてスケーリング
+        float scale = 1.0f + (playerAge - 1) * 0.08f;
 
         // 敵名とスプライトの対応
         string[][] enemyTable = {
@@ -258,6 +372,7 @@ public class BattleManager : MonoBehaviour
         enemyHp = enemyMaxHp;
         enemyAtk = Mathf.RoundToInt(25 * scale + Random.Range(0, 10));
         enemyDef = Mathf.RoundToInt(15 * scale + Random.Range(0, 8));
+        enemySpeed = Mathf.RoundToInt(30 * scale + Random.Range(0, 20));
     }
 
     // ===== バトルUI作成 =====
@@ -272,22 +387,36 @@ public class BattleManager : MonoBehaviour
         panelRect.anchorMin = new Vector2(0.5f, 0.5f);
         panelRect.anchorMax = new Vector2(0.5f, 0.5f);
         panelRect.anchoredPosition = new Vector2(0, 100);
-        panelRect.sizeDelta = new Vector2(800, 350);
+        panelRect.sizeDelta = new Vector2(900, 420);
 
         // プレイヤー側（左）
-        CreateCharacterPanel(battlePanel.transform, -200, true, out playerFaceImage, out playerNameText, out playerHpBar, out playerHpText);
+        CreateCharacterPanel(battlePanel.transform, -220, true, out playerFaceImage, out playerNameText, out playerHpBar, out playerHpText);
+        playerPanelRect = playerFaceImage.transform.parent.GetComponent<RectTransform>();
 
         // VS テキスト
         CreateVsText(battlePanel.transform);
 
         // 敵側（右）
-        CreateCharacterPanel(battlePanel.transform, 200, false, out enemyFaceImage, out enemyNameText, out enemyHpBar, out enemyHpText);
+        CreateCharacterPanel(battlePanel.transform, 220, false, out enemyFaceImage, out enemyNameText, out enemyHpBar, out enemyHpText);
+        enemyPanelRect = enemyFaceImage.transform.parent.GetComponent<RectTransform>();
 
         // バトルログ
         CreateBattleLog();
 
         // アクションボタン
         CreateActionButtons();
+
+        // 演出用フラッシュオーバーレイ
+        var flashObj = new GameObject("BattleFlash");
+        flashObj.transform.SetParent(canvas.transform, false);
+        var flashRect = flashObj.AddComponent<RectTransform>();
+        flashRect.anchorMin = Vector2.zero;
+        flashRect.anchorMax = Vector2.one;
+        flashRect.offsetMin = Vector2.zero;
+        flashRect.offsetMax = Vector2.zero;
+        battleFlashOverlay = flashObj.AddComponent<Image>();
+        battleFlashOverlay.color = new Color(1f, 1f, 1f, 0f);
+        battleFlashOverlay.raycastTarget = false;
 
         // 初期表示
         UpdatePlayerDisplay();
@@ -303,9 +432,11 @@ public class BattleManager : MonoBehaviour
         panelRect.anchorMin = new Vector2(0.5f, 0.5f);
         panelRect.anchorMax = new Vector2(0.5f, 0.5f);
         panelRect.anchoredPosition = new Vector2(xPos, 0);
-        panelRect.sizeDelta = new Vector2(280, 380);
+        panelRect.sizeDelta = new Vector2(340, 440);
 
         var panelBg = panel.AddComponent<Image>();
+        panelBg.sprite = CreateRoundedRectSprite(64, 64, 16);
+        panelBg.type = Image.Type.Sliced;
         panelBg.color = new Color(0.2f, 0.2f, 0.3f, 0.8f);
         panelBg.raycastTarget = false;
 
@@ -332,7 +463,7 @@ public class BattleManager : MonoBehaviour
         faceRect.anchorMin = new Vector2(0.5f, 0.5f);
         faceRect.anchorMax = new Vector2(0.5f, 0.5f);
         faceRect.anchoredPosition = new Vector2(0, 15);
-        faceRect.sizeDelta = new Vector2(200, 200);
+        faceRect.sizeDelta = new Vector2(260, 260);
         faceImage = faceObj.AddComponent<Image>();
         faceImage.color = Color.white;
         faceImage.raycastTarget = false;
@@ -346,6 +477,8 @@ public class BattleManager : MonoBehaviour
         hpBgRect.anchoredPosition = new Vector2(0, 55);
         hpBgRect.sizeDelta = new Vector2(-30, 20);
         var hpBgImage = hpBgObj.AddComponent<Image>();
+        hpBgImage.sprite = CreateRoundedRectSprite(32, 32, 6);
+        hpBgImage.type = Image.Type.Sliced;
         hpBgImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
         hpBgImage.raycastTarget = false;
 
@@ -408,6 +541,8 @@ public class BattleManager : MonoBehaviour
         logRect.sizeDelta = new Vector2(600, 100);
 
         var logBg = logPanel.AddComponent<Image>();
+        logBg.sprite = CreateRoundedRectSprite(64, 64, 12);
+        logBg.type = Image.Type.Sliced;
         logBg.color = new Color(0.1f, 0.1f, 0.15f, 0.9f);
         logBg.raycastTarget = false;
 
@@ -435,56 +570,208 @@ public class BattleManager : MonoBehaviour
         panelRect.anchorMin = new Vector2(0.5f, 0);
         panelRect.anchorMax = new Vector2(0.5f, 0);
         panelRect.anchoredPosition = new Vector2(0, 80);
-        panelRect.sizeDelta = new Vector2(500, 80);
+        panelRect.sizeDelta = new Vector2(700, 100);
 
         var layout = actionPanel.AddComponent<HorizontalLayoutGroup>();
-        layout.spacing = 20;
+        layout.spacing = 12;
         layout.childAlignment = TextAnchor.MiddleCenter;
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = true;
 
-        attackButton = CreateActionButton(actionPanel.transform, normalAttackName, new Color(0.8f, 0.3f, 0.3f), OnAttack, out attackButtonText);
-        defendButton = CreateActionButton(actionPanel.transform, "ぼうぎょ", new Color(0.3f, 0.5f, 0.8f), OnDefend, out _);
-        specialButton = CreateActionButton(actionPanel.transform, specialAttackName, new Color(0.8f, 0.6f, 0.2f), OnSpecial, out specialButtonText);
+        attackButton = CreateActionButton(actionPanel.transform, Localization.Get("battle_normal_attack"), normalAttackName, normalAttackDesc, new Color(0.8f, 0.3f, 0.3f), OnAttack, out attackButtonText);
+        CreateActionButton(actionPanel.transform, Localization.Get("battle_special_attack"), motherAttackName, motherAttackDesc, new Color(0.3f, 0.7f, 0.5f), OnMotherAttack, out _);
+        defendButton = CreateActionButton(actionPanel.transform, Localization.Get("battle_defend"), Localization.Get("battle_defend_name"), defendDesc, new Color(0.3f, 0.5f, 0.8f), OnDefend, out _);
+        specialButton = CreateActionButton(actionPanel.transform, Localization.Get("battle_special_skill"), specialAttackName, specialAttackDesc, new Color(0.8f, 0.6f, 0.2f), OnSpecial, out specialButtonText);
 
         actionPanel.SetActive(false);
     }
 
-    Button CreateActionButton(Transform parent, string label, Color bgColor, UnityEngine.Events.UnityAction onClick, out TextMeshProUGUI buttonText)
+    Button CreateActionButton(Transform parent, string categoryLabel, string skillName, string description, Color bgColor, UnityEngine.Events.UnityAction onClick, out TextMeshProUGUI buttonText)
     {
-        var btnObj = new GameObject(label + "Button");
+        var btnObj = new GameObject(skillName + "Button");
         btnObj.transform.SetParent(parent, false);
 
         var btnImg = btnObj.AddComponent<Image>();
+        btnImg.sprite = CreateRoundedRectSprite(64, 64, 14);
+        btnImg.type = Image.Type.Sliced;
         btnImg.color = bgColor;
 
         var btn = btnObj.AddComponent<Button>();
         btn.targetGraphic = btnImg;
         btn.onClick.AddListener(onClick);
 
+        // カテゴリラベル（上部）
+        var labelObj = new GameObject("Label");
+        labelObj.transform.SetParent(btnObj.transform, false);
+        var labelRect = labelObj.AddComponent<RectTransform>();
+        labelRect.anchorMin = new Vector2(0, 0.6f);
+        labelRect.anchorMax = new Vector2(1, 1);
+        labelRect.offsetMin = new Vector2(4, 0);
+        labelRect.offsetMax = new Vector2(-4, -4);
+        var labelTmp = labelObj.AddComponent<TextMeshProUGUI>();
+        labelTmp.text = categoryLabel;
+        labelTmp.fontSize = 14;
+        labelTmp.alignment = TextAlignmentOptions.Center;
+        labelTmp.color = new Color(1f, 1f, 1f, 0.7f);
+        labelTmp.raycastTarget = false;
+
+        // 技名（下部）
         var textObj = new GameObject("Text");
         textObj.transform.SetParent(btnObj.transform, false);
         var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
+        textRect.anchorMin = new Vector2(0, 0);
+        textRect.anchorMax = new Vector2(1, 0.65f);
+        textRect.offsetMin = new Vector2(4, 4);
+        textRect.offsetMax = new Vector2(-4, 0);
         buttonText = textObj.AddComponent<TextMeshProUGUI>();
-        buttonText.text = label;
-        buttonText.fontSize = 22;
+        buttonText.text = skillName;
+        buttonText.fontSize = 20;
         buttonText.alignment = TextAlignmentOptions.Center;
         buttonText.color = Color.white;
         buttonText.fontStyle = FontStyles.Bold;
         buttonText.raycastTarget = false;
 
+        // infoボタン（右上）
+        var infoObj = new GameObject("InfoButton");
+        infoObj.transform.SetParent(btnObj.transform, false);
+        var infoRect = infoObj.AddComponent<RectTransform>();
+        infoRect.anchorMin = new Vector2(1, 1);
+        infoRect.anchorMax = new Vector2(1, 1);
+        infoRect.pivot = new Vector2(1, 1);
+        infoRect.anchoredPosition = new Vector2(-2, -2);
+        infoRect.sizeDelta = new Vector2(24, 24);
+
+        var infoBg = infoObj.AddComponent<Image>();
+        infoBg.sprite = CreateRoundedRectSprite(32, 32, 16);
+        infoBg.type = Image.Type.Sliced;
+        infoBg.color = new Color(1f, 1f, 1f, 0.3f);
+
+        var infoBtn = infoObj.AddComponent<Button>();
+        infoBtn.targetGraphic = infoBg;
+        string descCapture = description;
+        string nameCapture = skillName;
+        string catCapture = categoryLabel;
+        infoBtn.onClick.AddListener(() => ShowSkillInfo(catCapture, nameCapture, descCapture));
+
+        var infoTextObj = new GameObject("InfoText");
+        infoTextObj.transform.SetParent(infoObj.transform, false);
+        var infoTextRect = infoTextObj.AddComponent<RectTransform>();
+        infoTextRect.anchorMin = Vector2.zero;
+        infoTextRect.anchorMax = Vector2.one;
+        infoTextRect.offsetMin = Vector2.zero;
+        infoTextRect.offsetMax = Vector2.zero;
+        var infoTmp = infoTextObj.AddComponent<TextMeshProUGUI>();
+        infoTmp.text = "i";
+        infoTmp.fontSize = 16;
+        infoTmp.alignment = TextAlignmentOptions.Center;
+        infoTmp.color = Color.white;
+        infoTmp.fontStyle = FontStyles.Bold | FontStyles.Italic;
+        infoTmp.raycastTarget = false;
+
         return btn;
+    }
+
+    void ShowSkillInfo(string category, string skillName, string description)
+    {
+        // 既に開いていたら閉じる
+        if (skillInfoPopup != null)
+        {
+            Destroy(skillInfoPopup);
+            skillInfoPopup = null;
+            return;
+        }
+
+        skillInfoPopup = new GameObject("SkillInfoPopup");
+        skillInfoPopup.transform.SetParent(canvas.transform, false);
+
+        // 背景タップで閉じるオーバーレイ
+        var overlayObj = new GameObject("Overlay");
+        overlayObj.transform.SetParent(skillInfoPopup.transform, false);
+        var overlayRect = overlayObj.AddComponent<RectTransform>();
+        overlayRect.anchorMin = Vector2.zero;
+        overlayRect.anchorMax = Vector2.one;
+        overlayRect.offsetMin = Vector2.zero;
+        overlayRect.offsetMax = Vector2.zero;
+        var overlayImg = overlayObj.AddComponent<Image>();
+        overlayImg.color = new Color(0, 0, 0, 0.4f);
+        var overlayBtn = overlayObj.AddComponent<Button>();
+        overlayBtn.targetGraphic = overlayImg;
+        overlayBtn.onClick.AddListener(() => { Destroy(skillInfoPopup); skillInfoPopup = null; });
+
+        // ポップアップパネル
+        var popupObj = new GameObject("PopupPanel");
+        popupObj.transform.SetParent(skillInfoPopup.transform, false);
+        var popupRect = popupObj.AddComponent<RectTransform>();
+        popupRect.anchorMin = new Vector2(0.5f, 0.5f);
+        popupRect.anchorMax = new Vector2(0.5f, 0.5f);
+        popupRect.anchoredPosition = new Vector2(0, -50);
+        popupRect.sizeDelta = new Vector2(420, 260);
+
+        var popupBg = popupObj.AddComponent<Image>();
+        popupBg.sprite = CreateRoundedRectSprite(64, 64, 16);
+        popupBg.type = Image.Type.Sliced;
+        popupBg.color = new Color(0.12f, 0.12f, 0.22f, 0.95f);
+
+        // アイコン表示エリア（上部）
+        var iconArea = new GameObject("IconArea");
+        iconArea.transform.SetParent(popupObj.transform, false);
+        var iconRect = iconArea.AddComponent<RectTransform>();
+        iconRect.anchorMin = new Vector2(0.5f, 1);
+        iconRect.anchorMax = new Vector2(0.5f, 1);
+        iconRect.anchoredPosition = new Vector2(0, -60);
+        iconRect.sizeDelta = new Vector2(90, 90);
+        // アイコン背景円
+        var iconBg = iconArea.AddComponent<Image>();
+        iconBg.sprite = CreateRoundedRectSprite(64, 64, 32);
+        iconBg.type = Image.Type.Sliced;
+        iconBg.color = new Color(0.08f, 0.08f, 0.15f, 0.8f);
+        iconBg.raycastTarget = false;
+        // アイコン描画
+        bool isSpecialSkill = category == Localization.Get("battle_special_skill");
+        if (category == Localization.Get("battle_defend"))
+            DrawShieldIcon(iconArea.transform, 80);
+        else if (category == Localization.Get("battle_special_attack"))
+            DrawMotherIcon(iconArea.transform, playerMotherName, 80);
+        else
+            GenerateSkillIcon(iconArea.transform, playerFatherName, isSpecialSkill, 70);
+
+        // カテゴリ + 技名
+        var titleObj = new GameObject("Title");
+        titleObj.transform.SetParent(popupObj.transform, false);
+        var titleRect = titleObj.AddComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0, 1);
+        titleRect.anchorMax = new Vector2(1, 1);
+        titleRect.anchoredPosition = new Vector2(0, -115);
+        titleRect.sizeDelta = new Vector2(-30, 40);
+        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        titleText.text = $"<color=#AAAAAA><size=70%>{category}</size></color>  <color=#FFDD44>{skillName}</color>";
+        titleText.fontSize = 26;
+        titleText.alignment = TextAlignmentOptions.Center;
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.raycastTarget = false;
+
+        // 説明文
+        var descObj = new GameObject("Desc");
+        descObj.transform.SetParent(popupObj.transform, false);
+        var descRect = descObj.AddComponent<RectTransform>();
+        descRect.anchorMin = new Vector2(0, 0);
+        descRect.anchorMax = new Vector2(1, 1);
+        descRect.offsetMin = new Vector2(20, 20);
+        descRect.offsetMax = new Vector2(-20, -140);
+        var descText = descObj.AddComponent<TextMeshProUGUI>();
+        descText.text = description;
+        descText.fontSize = 20;
+        descText.alignment = TextAlignmentOptions.Center;
+        descText.color = Color.white;
+        descText.enableWordWrapping = true;
+        descText.raycastTarget = false;
     }
 
     // ===== 表示更新 =====
 
     void UpdatePlayerDisplay()
     {
-        string babyName = "名無しベイビー";
+        string babyName = Localization.Get("birth_default_name");
         int babyAge = 0;
         if (DataCarrier.Instance != null)
         {
@@ -504,7 +791,7 @@ public class BattleManager : MonoBehaviour
         }
 
         // 名前と年齢を表示（GOD BABYは金色）
-        string ageText = $"({babyAge}さい)";
+        string ageText = $"({Localization.GetAge(babyAge)})";
         if (isGodBaby)
         {
             playerNameText.text = $"<color=#FFD700>{babyName}</color> <size=70%>{ageText}</size>";
@@ -515,8 +802,8 @@ public class BattleManager : MonoBehaviour
         }
         string sizeInfo = $"{playerHeight}cm/{playerWeight}g";
         string bonusText = isMale
-            ? $"<color=#66ccff>ATK:{playerAtk}</color> 回避:{playerEvasion}%"
-            : $"<color=#ff99cc>回避:{playerEvasion}%</color> ({sizeInfo})";
+            ? $"<color=#66ccff>ATK:{playerAtk}</color> EVA:{playerEvasion}%"
+            : $"<color=#ff99cc>EVA:{playerEvasion}%</color> ({sizeInfo})";
         playerHpText.text = $"HP:{playerHp}/{playerMaxHp}\n{bonusText}";
 
         float hpRatio = (float)playerHp / playerMaxHp;
@@ -723,6 +1010,455 @@ public class BattleManager : MonoBehaviour
         return obj;
     }
 
+    Sprite CreateRoundedRectSprite(int width, int height, int radius)
+    {
+        var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        Color32 white = new Color32(255, 255, 255, 255);
+        Color32 clear = new Color32(0, 0, 0, 0);
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                // 四隅の角丸判定
+                bool inside = true;
+                if (x < radius && y < radius)
+                    inside = (radius - x) * (radius - x) + (radius - y) * (radius - y) <= radius * radius;
+                else if (x >= width - radius && y < radius)
+                    inside = (x - (width - radius - 1)) * (x - (width - radius - 1)) + (radius - y) * (radius - y) <= radius * radius;
+                else if (x < radius && y >= height - radius)
+                    inside = (radius - x) * (radius - x) + (y - (height - radius - 1)) * (y - (height - radius - 1)) <= radius * radius;
+                else if (x >= width - radius && y >= height - radius)
+                    inside = (x - (width - radius - 1)) * (x - (width - radius - 1)) + (y - (height - radius - 1)) * (y - (height - radius - 1)) <= radius * radius;
+
+                tex.SetPixel(x, y, inside ? white : clear);
+            }
+        }
+
+        tex.Apply();
+        var sprite = Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f,
+            0, SpriteMeshType.FullRect, new Vector4(radius, radius, radius, radius));
+        return sprite;
+    }
+
+    // ===== 技アイコン生成 =====
+
+    void GenerateSkillIcon(Transform parent, string fatherName, bool isSpecial, float size)
+    {
+        float s = size / 120f;
+        Color mainColor, accentColor;
+
+        // 父親の職業でアイコンテーマを決定
+        switch (fatherName)
+        {
+            case "タケシ": // 格闘家 → 拳
+                mainColor = new Color(0.9f, 0.3f, 0.2f);
+                accentColor = new Color(1f, 0.6f, 0.2f);
+                DrawFistIcon(parent, s, mainColor, accentColor, isSpecial);
+                break;
+            case "ユウキ": // ハッカー → 回路
+                mainColor = new Color(0.1f, 0.8f, 0.9f);
+                accentColor = new Color(0.3f, 1f, 0.5f);
+                DrawCircuitIcon(parent, s, mainColor, accentColor, isSpecial);
+                break;
+            case "ゴウ": // 傭兵 → 剣
+                mainColor = new Color(0.4f, 0.6f, 0.3f);
+                accentColor = new Color(0.8f, 0.8f, 0.8f);
+                DrawBladeIcon(parent, s, mainColor, accentColor, isSpecial);
+                break;
+            case "シンジ": // 天才科学者 → 原子
+                mainColor = new Color(0.5f, 0.3f, 0.9f);
+                accentColor = new Color(0.8f, 0.5f, 1f);
+                DrawAtomIcon(parent, s, mainColor, accentColor, isSpecial);
+                break;
+            case "リョウマ": // 実業家 → コイン
+                mainColor = new Color(1f, 0.84f, 0f);
+                accentColor = new Color(1f, 0.95f, 0.5f);
+                DrawCoinIcon(parent, s, mainColor, accentColor, isSpecial);
+                break;
+            case "テツヤ": // ロックスター → 音符
+                mainColor = new Color(0.9f, 0.3f, 0.7f);
+                accentColor = new Color(1f, 0.5f, 0.9f);
+                DrawMusicIcon(parent, s, mainColor, accentColor, isSpecial);
+                break;
+            default:
+                mainColor = new Color(1f, 1f, 1f);
+                accentColor = new Color(0.8f, 0.8f, 0.8f);
+                DrawFistIcon(parent, s, mainColor, accentColor, isSpecial);
+                break;
+        }
+
+        // 必殺技は外側に放射エフェクト
+        if (isSpecial)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                float angle = i * 45f;
+                float rad = angle * Mathf.Deg2Rad;
+                float dist = 48 * s;
+                var ray = BPart($"Ray{i}", parent,
+                    new Vector2(Mathf.Cos(rad) * dist, Mathf.Sin(rad) * dist),
+                    new Vector2(6 * s, 22 * s));
+                ray.transform.localRotation = Quaternion.Euler(0, 0, angle - 90);
+                ray.AddComponent<Image>().color = new Color(accentColor.r, accentColor.g, accentColor.b, 0.5f);
+            }
+        }
+    }
+
+    void DrawFistIcon(Transform p, float s, Color main, Color accent, bool sp)
+    {
+        // 拳の影
+        BPart("Shadow", p, new Vector2(2*s, -2*s), new Vector2(50*s, 55*s)).AddComponent<Image>().color = new Color(0,0,0,0.3f);
+        // 拳ベース
+        BPart("Palm", p, Vector2.zero, new Vector2(45*s, 50*s)).AddComponent<Image>().color = main;
+        // 指の関節（4本）
+        for (int i = 0; i < 4; i++)
+        {
+            float fx = -14*s + i * 9*s;
+            BPart($"Knuckle{i}", p, new Vector2(fx, 22*s), new Vector2(8*s, 16*s)).AddComponent<Image>().color = new Color(main.r*0.8f, main.g*0.8f, main.b*0.8f);
+        }
+        // 親指
+        BPart("Thumb", p, new Vector2(-20*s, 0), new Vector2(12*s, 20*s)).AddComponent<Image>().color = new Color(main.r*0.9f, main.g*0.85f, main.b*0.85f);
+        // ハイライト
+        BPart("HL", p, new Vector2(5*s, 8*s), new Vector2(15*s, 20*s)).AddComponent<Image>().color = new Color(1,1,1,0.2f);
+        // 衝撃線
+        if (sp)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                float lx = 28*s + i*8*s;
+                BPart($"Impact{i}", p, new Vector2(lx, (10 - i*8)*s), new Vector2(12*s, 3*s)).AddComponent<Image>().color = accent;
+            }
+        }
+    }
+
+    void DrawCircuitIcon(Transform p, float s, Color main, Color accent, bool sp)
+    {
+        // 基盤背景
+        BPart("Board", p, Vector2.zero, new Vector2(50*s, 50*s)).AddComponent<Image>().color = new Color(0.08f, 0.12f, 0.18f);
+        // 横線
+        for (int i = 0; i < 3; i++)
+        {
+            BPart($"HLine{i}", p, new Vector2(0, (15 - i*15)*s), new Vector2(46*s, 2*s)).AddComponent<Image>().color = main;
+        }
+        // 縦線
+        for (int i = 0; i < 3; i++)
+        {
+            BPart($"VLine{i}", p, new Vector2((-15 + i*15)*s, 0), new Vector2(2*s, 46*s)).AddComponent<Image>().color = main;
+        }
+        // ノード
+        float[] nx = {-15, 0, 15, -15, 15};
+        float[] ny = {15, 0, 15, -15, -15};
+        for (int i = 0; i < nx.Length; i++)
+        {
+            BPart($"Node{i}", p, new Vector2(nx[i]*s, ny[i]*s), new Vector2(7*s, 7*s)).AddComponent<Image>().color = accent;
+        }
+        // 中央チップ
+        BPart("Chip", p, Vector2.zero, new Vector2(14*s, 14*s)).AddComponent<Image>().color = sp ? accent : main;
+    }
+
+    void DrawBladeIcon(Transform p, float s, Color main, Color accent, bool sp)
+    {
+        // 刀身影
+        BPart("Shadow", p, new Vector2(2*s, -2*s), new Vector2(12*s, 60*s)).AddComponent<Image>().color = new Color(0,0,0,0.3f);
+        // 刀身
+        BPart("Blade", p, new Vector2(0, 8*s), new Vector2(10*s, 55*s)).AddComponent<Image>().color = accent;
+        // 刀身ハイライト
+        BPart("BladeHL", p, new Vector2(-2*s, 8*s), new Vector2(3*s, 50*s)).AddComponent<Image>().color = new Color(1,1,1,0.3f);
+        // 鍔
+        BPart("Guard", p, new Vector2(0, -18*s), new Vector2(24*s, 6*s)).AddComponent<Image>().color = main;
+        // 柄
+        BPart("Hilt", p, new Vector2(0, -30*s), new Vector2(7*s, 20*s)).AddComponent<Image>().color = new Color(main.r*0.6f, main.g*0.5f, main.b*0.3f);
+        // 切れ味エフェクト
+        if (sp)
+        {
+            var slash = BPart("Slash", p, new Vector2(0, 10*s), new Vector2(50*s, 4*s));
+            slash.transform.localRotation = Quaternion.Euler(0, 0, 35);
+            slash.AddComponent<Image>().color = new Color(1, 1, 1, 0.6f);
+        }
+    }
+
+    void DrawAtomIcon(Transform p, float s, Color main, Color accent, bool sp)
+    {
+        // 核
+        BPart("Nucleus", p, Vector2.zero, new Vector2(14*s, 14*s)).AddComponent<Image>().color = accent;
+        // 軌道（3本 楕円を矩形で近似）
+        float[] angles = {0, 60, -60};
+        foreach (float a in angles)
+        {
+            var orbit = BPart("Orbit", p, Vector2.zero, new Vector2(50*s, 18*s));
+            orbit.transform.localRotation = Quaternion.Euler(0, 0, a);
+            var img = orbit.AddComponent<Image>();
+            img.color = new Color(main.r, main.g, main.b, 0.4f);
+        }
+        // 電子（3個）
+        float[] ea = {30, 150, 270};
+        for (int i = 0; i < 3; i++)
+        {
+            float rad = ea[i] * Mathf.Deg2Rad;
+            float ex = Mathf.Cos(rad) * 22 * s;
+            float ey = Mathf.Sin(rad) * 22 * s;
+            BPart($"Electron{i}", p, new Vector2(ex, ey), new Vector2(6*s, 6*s)).AddComponent<Image>().color = sp ? accent : main;
+        }
+    }
+
+    void DrawCoinIcon(Transform p, float s, Color main, Color accent, bool sp)
+    {
+        // コイン影
+        BPart("Shadow", p, new Vector2(2*s, -2*s), new Vector2(48*s, 48*s)).AddComponent<Image>().color = new Color(0,0,0,0.3f);
+        // コイン外側
+        BPart("Outer", p, Vector2.zero, new Vector2(46*s, 46*s)).AddComponent<Image>().color = main;
+        // コイン内側
+        BPart("Inner", p, Vector2.zero, new Vector2(36*s, 36*s)).AddComponent<Image>().color = new Color(main.r*0.85f, main.g*0.75f, main.b*0.1f);
+        // ¥マーク用テキスト
+        var yenObj = BPart("Yen", p, Vector2.zero, new Vector2(30*s, 30*s));
+        var yenText = yenObj.AddComponent<TextMeshProUGUI>();
+        yenText.text = "¥";
+        yenText.fontSize = Mathf.RoundToInt(24 * s);
+        yenText.alignment = TextAlignmentOptions.Center;
+        yenText.color = accent;
+        yenText.fontStyle = FontStyles.Bold;
+        yenText.raycastTarget = false;
+        // キラキラ
+        if (sp)
+        {
+            float[] sx = {20, -18, 5};
+            float[] sy = {18, 20, -22};
+            for (int i = 0; i < 3; i++)
+            {
+                BPart($"Spark{i}", p, new Vector2(sx[i]*s, sy[i]*s), new Vector2(5*s, 5*s)).AddComponent<Image>().color = new Color(1,1,1,0.8f);
+            }
+        }
+    }
+
+    void DrawMusicIcon(Transform p, float s, Color main, Color accent, bool sp)
+    {
+        // 音符の頭
+        BPart("NoteHead1", p, new Vector2(-8*s, -12*s), new Vector2(16*s, 12*s)).AddComponent<Image>().color = main;
+        BPart("NoteHead2", p, new Vector2(12*s, -6*s), new Vector2(16*s, 12*s)).AddComponent<Image>().color = main;
+        // 棒
+        BPart("Stem1", p, new Vector2(-1*s, 10*s), new Vector2(3*s, 38*s)).AddComponent<Image>().color = main;
+        BPart("Stem2", p, new Vector2(19*s, 16*s), new Vector2(3*s, 38*s)).AddComponent<Image>().color = main;
+        // 連結旗
+        BPart("Flag", p, new Vector2(9*s, 28*s), new Vector2(22*s, 4*s)).AddComponent<Image>().color = accent;
+        BPart("Flag2", p, new Vector2(9*s, 22*s), new Vector2(22*s, 4*s)).AddComponent<Image>().color = accent;
+        // 音波エフェクト
+        if (sp)
+        {
+            for (int i = 1; i <= 3; i++)
+            {
+                var wave = BPart($"Wave{i}", p, new Vector2(28*s, (12 - i*6)*s), new Vector2(4*s, (10+i*4)*s));
+                wave.AddComponent<Image>().color = new Color(accent.r, accent.g, accent.b, 0.7f - i*0.15f);
+            }
+        }
+    }
+
+    // 防御アイコン（盾）
+    void DrawShieldIcon(Transform parent, float size)
+    {
+        float s = size / 120f;
+        Color main = new Color(0.3f, 0.5f, 0.8f);
+        // 盾影
+        BPart("Shadow", parent, new Vector2(2*s, -2*s), new Vector2(42*s, 50*s)).AddComponent<Image>().color = new Color(0,0,0,0.3f);
+        // 盾ベース
+        BPart("Shield", parent, Vector2.zero, new Vector2(40*s, 48*s)).AddComponent<Image>().color = main;
+        // 盾内側
+        BPart("Inner", parent, new Vector2(0, 2*s), new Vector2(30*s, 36*s)).AddComponent<Image>().color = new Color(main.r*0.7f, main.g*0.7f, main.b*0.9f);
+        // 十字
+        BPart("CrossH", parent, Vector2.zero, new Vector2(20*s, 5*s)).AddComponent<Image>().color = new Color(1,1,1,0.5f);
+        BPart("CrossV", parent, Vector2.zero, new Vector2(5*s, 20*s)).AddComponent<Image>().color = new Color(1,1,1,0.5f);
+        // 下部の尖り
+        BPart("Tip", parent, new Vector2(0, -22*s), new Vector2(16*s, 10*s)).AddComponent<Image>().color = main;
+    }
+
+    // 攻撃時に画面中央にアイコンをカットイン表示
+    IEnumerator ShowSkillCutIn(bool isSpecial)
+    {
+        var cutIn = new GameObject("SkillCutIn");
+        cutIn.transform.SetParent(canvas.transform, false);
+
+        var bgRect = cutIn.AddComponent<RectTransform>();
+        bgRect.anchorMin = new Vector2(0.5f, 0.5f);
+        bgRect.anchorMax = new Vector2(0.5f, 0.5f);
+        bgRect.anchoredPosition = Vector2.zero;
+        float iconSize = isSpecial ? 160f : 120f;
+        bgRect.sizeDelta = new Vector2(iconSize, iconSize);
+
+        // 背景円
+        var bgImg = cutIn.AddComponent<Image>();
+        bgImg.sprite = CreateRoundedRectSprite(64, 64, 32);
+        bgImg.type = Image.Type.Sliced;
+        bgImg.color = new Color(0, 0, 0, 0.5f);
+        bgImg.raycastTarget = false;
+
+        // アイコン生成
+        GenerateSkillIcon(cutIn.transform, playerFatherName, isSpecial, iconSize * 0.8f);
+
+        // フェードイン
+        CanvasGroup cg = cutIn.AddComponent<CanvasGroup>();
+        cg.alpha = 0f;
+        float fadeIn = 0.15f;
+        float elapsed = 0f;
+        // スケールアニメーション
+        cutIn.transform.localScale = Vector3.one * 0.5f;
+        while (elapsed < fadeIn)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / fadeIn;
+            cg.alpha = t;
+            cutIn.transform.localScale = Vector3.one * Mathf.Lerp(0.5f, 1f, t);
+            yield return null;
+        }
+        cg.alpha = 1f;
+        cutIn.transform.localScale = Vector3.one;
+
+        // 表示時間
+        yield return new WaitForSeconds(isSpecial ? 0.6f : 0.4f);
+
+        // フェードアウト
+        float fadeOut = 0.2f;
+        elapsed = 0f;
+        while (elapsed < fadeOut)
+        {
+            elapsed += Time.deltaTime;
+            cg.alpha = 1f - elapsed / fadeOut;
+            yield return null;
+        }
+
+        Destroy(cutIn);
+    }
+
+    // 母ベース技のカットイン
+    IEnumerator ShowMotherSkillCutIn()
+    {
+        var cutIn = new GameObject("MotherCutIn");
+        cutIn.transform.SetParent(canvas.transform, false);
+
+        var bgRect = cutIn.AddComponent<RectTransform>();
+        bgRect.anchorMin = new Vector2(0.5f, 0.5f);
+        bgRect.anchorMax = new Vector2(0.5f, 0.5f);
+        bgRect.anchoredPosition = Vector2.zero;
+        bgRect.sizeDelta = new Vector2(130, 130);
+
+        var bgImg = cutIn.AddComponent<Image>();
+        bgImg.sprite = CreateRoundedRectSprite(64, 64, 32);
+        bgImg.type = Image.Type.Sliced;
+        bgImg.color = new Color(0, 0, 0, 0.5f);
+        bgImg.raycastTarget = false;
+
+        DrawMotherIcon(cutIn.transform, playerMotherName, 100);
+
+        CanvasGroup cg = cutIn.AddComponent<CanvasGroup>();
+        cg.alpha = 0f;
+        cutIn.transform.localScale = Vector3.one * 0.5f;
+        float elapsed = 0f;
+        float fadeIn = 0.15f;
+        while (elapsed < fadeIn)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / fadeIn;
+            cg.alpha = t;
+            cutIn.transform.localScale = Vector3.one * Mathf.Lerp(0.5f, 1f, t);
+            yield return null;
+        }
+        cg.alpha = 1f;
+        cutIn.transform.localScale = Vector3.one;
+        yield return new WaitForSeconds(0.4f);
+
+        elapsed = 0f;
+        float fadeOut = 0.2f;
+        while (elapsed < fadeOut)
+        {
+            elapsed += Time.deltaTime;
+            cg.alpha = 1f - elapsed / fadeOut;
+            yield return null;
+        }
+        Destroy(cutIn);
+    }
+
+    // 母親別アイコン
+    void DrawMotherIcon(Transform parent, string motherName, float size)
+    {
+        float s = size / 120f;
+        switch (motherName)
+        {
+            case "サクラ": // 外科医 → 十字
+                BPart("CrossH", parent, Vector2.zero, new Vector2(45*s, 15*s)).AddComponent<Image>().color = new Color(0.2f, 0.9f, 0.4f);
+                BPart("CrossV", parent, Vector2.zero, new Vector2(15*s, 45*s)).AddComponent<Image>().color = new Color(0.2f, 0.9f, 0.4f);
+                BPart("Heart", parent, new Vector2(0, 15*s), new Vector2(10*s, 10*s)).AddComponent<Image>().color = new Color(1f, 0.3f, 0.4f);
+                break;
+            case "ヒナタ": // 暗殺者 → 毒瓶
+                BPart("Bottle", parent, new Vector2(0, -5*s), new Vector2(20*s, 30*s)).AddComponent<Image>().color = new Color(0.3f, 0.1f, 0.4f);
+                BPart("Neck", parent, new Vector2(0, 12*s), new Vector2(10*s, 12*s)).AddComponent<Image>().color = new Color(0.3f, 0.1f, 0.4f);
+                BPart("Cork", parent, new Vector2(0, 20*s), new Vector2(14*s, 6*s)).AddComponent<Image>().color = new Color(0.6f, 0.4f, 0.2f);
+                BPart("Skull", parent, new Vector2(0, -4*s), new Vector2(10*s, 10*s)).AddComponent<Image>().color = new Color(0.8f, 0.2f, 1f);
+                // 煙
+                BPart("Smoke1", parent, new Vector2(-6*s, 26*s), new Vector2(6*s, 8*s)).AddComponent<Image>().color = new Color(0.6f, 0f, 0.8f, 0.4f);
+                BPart("Smoke2", parent, new Vector2(4*s, 30*s), new Vector2(8*s, 6*s)).AddComponent<Image>().color = new Color(0.6f, 0f, 0.8f, 0.3f);
+                break;
+            case "アキラ": // アスリート → 風/稲妻
+                var bolt1 = BPart("Bolt1", parent, new Vector2(-4*s, 12*s), new Vector2(18*s, 6*s));
+                bolt1.transform.localRotation = Quaternion.Euler(0, 0, 30);
+                bolt1.AddComponent<Image>().color = new Color(0f, 0.9f, 1f);
+                var bolt2 = BPart("Bolt2", parent, new Vector2(4*s, 0), new Vector2(18*s, 6*s));
+                bolt2.transform.localRotation = Quaternion.Euler(0, 0, -30);
+                bolt2.AddComponent<Image>().color = new Color(0f, 0.9f, 1f);
+                var bolt3 = BPart("Bolt3", parent, new Vector2(-4*s, -12*s), new Vector2(18*s, 6*s));
+                bolt3.transform.localRotation = Quaternion.Euler(0, 0, 30);
+                bolt3.AddComponent<Image>().color = new Color(0f, 0.9f, 1f);
+                // 風線
+                for (int i = 0; i < 3; i++)
+                {
+                    BPart($"Wind{i}", parent, new Vector2(22*s, (10-i*10)*s), new Vector2(14*s, 2*s)).AddComponent<Image>().color = new Color(0.5f, 1f, 1f, 0.5f);
+                }
+                break;
+            case "ミサト": // 量子科学者 → 波動
+                for (int i = 1; i <= 3; i++)
+                {
+                    float sz = i * 16 * s;
+                    var ring = BPart($"Ring{i}", parent, Vector2.zero, new Vector2(sz, sz));
+                    ring.AddComponent<Image>().color = new Color(0.4f, 0.2f, 1f, 0.5f - i*0.1f);
+                }
+                BPart("Core", parent, Vector2.zero, new Vector2(10*s, 10*s)).AddComponent<Image>().color = new Color(0.8f, 0.5f, 1f);
+                break;
+            case "カエデ": // 実業家 → 威圧の目
+                BPart("EyeWhite", parent, Vector2.zero, new Vector2(40*s, 22*s)).AddComponent<Image>().color = new Color(0.95f, 0.9f, 0.8f);
+                BPart("Iris", parent, Vector2.zero, new Vector2(18*s, 18*s)).AddComponent<Image>().color = new Color(0.8f, 0.6f, 0.1f);
+                BPart("Pupil", parent, Vector2.zero, new Vector2(8*s, 8*s)).AddComponent<Image>().color = new Color(0.1f, 0.05f, 0f);
+                BPart("HL", parent, new Vector2(-3*s, 3*s), new Vector2(4*s, 4*s)).AddComponent<Image>().color = Color.white;
+                // 威圧線
+                for (int i = 0; i < 6; i++)
+                {
+                    float a = i * 60f * Mathf.Deg2Rad;
+                    var line = BPart($"Pressure{i}", parent, new Vector2(Mathf.Cos(a)*28*s, Mathf.Sin(a)*28*s), new Vector2(10*s, 3*s));
+                    line.transform.localRotation = Quaternion.Euler(0, 0, i*60);
+                    line.AddComponent<Image>().color = new Color(1f, 0.7f, 0.1f, 0.5f);
+                }
+                break;
+            case "ルナ": // モデル → 星屑
+                float[] starAngles = {0, 72, 144, 216, 288};
+                for (int i = 0; i < 5; i++)
+                {
+                    float rad = starAngles[i] * Mathf.Deg2Rad;
+                    float dist = 18 * s;
+                    BPart($"Star{i}", parent, new Vector2(Mathf.Cos(rad)*dist, Mathf.Sin(rad)*dist), new Vector2(8*s, 8*s))
+                        .AddComponent<Image>().color = new Color(1f, 0.9f, 0.5f);
+                }
+                BPart("Center", parent, Vector2.zero, new Vector2(14*s, 14*s)).AddComponent<Image>().color = new Color(1f, 0.7f, 0.9f);
+                // きらきら
+                for (int i = 0; i < 4; i++)
+                {
+                    float a2 = (i * 90 + 45) * Mathf.Deg2Rad;
+                    BPart($"Sparkle{i}", parent, new Vector2(Mathf.Cos(a2)*30*s, Mathf.Sin(a2)*30*s), new Vector2(4*s, 4*s))
+                        .AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.6f);
+                }
+                break;
+            default:
+                BPart("Default", parent, Vector2.zero, new Vector2(30*s, 30*s)).AddComponent<Image>().color = Color.white;
+                break;
+        }
+    }
+
     void Create3DBattleEye(Transform parent, float x, float y, float s, bool isFemale, Color skin)
     {
         float sz = 9 * s;
@@ -761,7 +1497,7 @@ public class BattleManager : MonoBehaviour
 
     void UpdateEnemyDisplay()
     {
-        enemyNameText.text = enemyName;
+        enemyNameText.text = Localization.GetEnemy(enemyName);
         enemyHpText.text = $"HP:{enemyHp}/{enemyMaxHp} <color=#FF0000>ATK:{enemyAtk}</color>";
 
         float hpRatio = (float)enemyHp / enemyMaxHp;
@@ -782,36 +1518,127 @@ public class BattleManager : MonoBehaviour
         }
     }
 
+    // ===== 演出ヘルパー =====
+
+    IEnumerator ShakeEffect(RectTransform target, float duration, float magnitude)
+    {
+        if (target == null) yield break;
+        Vector2 originalPos = target.anchoredPosition;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            float x = originalPos.x + Random.Range(-magnitude, magnitude);
+            float y = originalPos.y + Random.Range(-magnitude, magnitude);
+            target.anchoredPosition = new Vector2(x, y);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        target.anchoredPosition = originalPos;
+    }
+
+    IEnumerator FlashEffect(Color color, float duration)
+    {
+        if (battleFlashOverlay == null) yield break;
+        battleFlashOverlay.color = new Color(color.r, color.g, color.b, 0.6f);
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float alpha = Mathf.Lerp(0.6f, 0f, elapsed / duration);
+            battleFlashOverlay.color = new Color(color.r, color.g, color.b, alpha);
+            yield return null;
+        }
+        battleFlashOverlay.color = new Color(1f, 1f, 1f, 0f);
+    }
+
+    IEnumerator AttackAnimation(RectTransform attacker, RectTransform target, bool isSpecial)
+    {
+        if (attacker == null || target == null) yield break;
+
+        // 突進アニメーション
+        Vector2 originalPos = attacker.anchoredPosition;
+        Vector2 direction = (target.anchoredPosition - attacker.anchoredPosition).normalized;
+        Vector2 lungePos = originalPos + direction * 40f;
+
+        // 前方に突進
+        float lungeDuration = 0.1f;
+        float elapsed = 0f;
+        while (elapsed < lungeDuration)
+        {
+            elapsed += Time.deltaTime;
+            attacker.anchoredPosition = Vector2.Lerp(originalPos, lungePos, elapsed / lungeDuration);
+            yield return null;
+        }
+
+        // ヒットフラッシュ + シェイク
+        Color flashColor = isSpecial ? new Color(1f, 0.8f, 0f) : Color.white;
+        float shakeMagnitude = isSpecial ? 20f : 10f;
+        float shakeDuration = isSpecial ? 0.4f : 0.25f;
+        StartCoroutine(FlashEffect(flashColor, isSpecial ? 0.4f : 0.2f));
+        StartCoroutine(ShakeEffect(target, shakeDuration, shakeMagnitude));
+
+        // 元に戻る
+        elapsed = 0f;
+        while (elapsed < lungeDuration)
+        {
+            elapsed += Time.deltaTime;
+            attacker.anchoredPosition = Vector2.Lerp(lungePos, originalPos, elapsed / lungeDuration);
+            yield return null;
+        }
+        attacker.anchoredPosition = originalPos;
+
+        yield return new WaitForSeconds(shakeDuration);
+    }
+
+    IEnumerator DamageFlash(Image faceImage)
+    {
+        if (faceImage == null) yield break;
+        Color originalColor = faceImage.color;
+        for (int i = 0; i < 3; i++)
+        {
+            faceImage.color = new Color(1f, 0.3f, 0.3f, originalColor.a);
+            yield return new WaitForSeconds(0.08f);
+            faceImage.color = originalColor;
+            yield return new WaitForSeconds(0.08f);
+        }
+    }
+
     // ===== バトルフロー =====
 
     IEnumerator BattleStart()
     {
         isBattleActive = true;
-        battleLogText.text = $"<color=#FF0000>{enemyName}</color> があらわれた！";
-        yield return new WaitForSeconds(1.5f);
-
-        // GOD BABY特別演出
-        if (isGodBaby)
-        {
-            battleLogText.text = "<color=#FFD700><size=120%>GOD BABY 降臨！</size></color>\n全ステータス +20%！ 必殺技 必中！";
-            yield return new WaitForSeconds(2.0f);
-        }
+        battleLogText.text = Localization.Get("battle_enemy_appeared", Localization.GetEnemy(enemyName));
+        yield return new WaitForSeconds(3.0f);
 
         // 性別・サイズボーナス表示
         if (isMale)
         {
-            battleLogText.text = $"<color=#66ccff>おとこのこパワー！</color>\nこうげきりょく UP！ (ATK:{playerAtk})";
+            battleLogText.text = Localization.Get("battle_boy_power", playerAtk);
         }
         else
         {
-            battleLogText.text = $"<color=#ff99cc>ちいさくて すばしっこい！</color>\nかいひりょく {playerEvasion}%！";
+            battleLogText.text = Localization.Get("battle_girl_power", playerEvasion);
         }
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(3.0f);
 
-        battleLogText.text = "バトル スタート！";
-        yield return new WaitForSeconds(1.0f);
+        battleLogText.text = Localization.Get("battle_start");
+        yield return new WaitForSeconds(2.0f);
 
-        StartCoroutine(PlayerTurn());
+        // 運動値 vs 敵の素早さで先攻判定
+        int playerSpeed = DataCarrier.Instance != null ? DataCarrier.Instance.babyAthletic : 50;
+        if (playerSpeed >= enemySpeed)
+        {
+            battleLogText.text = Localization.Get("battle_player_first");
+            yield return new WaitForSeconds(1.5f);
+            StartCoroutine(PlayerTurn());
+        }
+        else
+        {
+            battleLogText.text = Localization.Get("battle_enemy_first", Localization.GetEnemy(enemyName));
+            yield return new WaitForSeconds(1.5f);
+            StartCoroutine(EnemyTurn());
+        }
     }
 
     IEnumerator PlayerTurn()
@@ -820,7 +1647,7 @@ public class BattleManager : MonoBehaviour
 
         isPlayerTurn = true;
         playerDefending = false;
-        battleLogText.text = "あなたのターン！ 行動を選んでください";
+        battleLogText.text = Localization.Get("battle_your_turn");
         actionPanel.SetActive(true);
         waitingForAction = true;
 
@@ -837,33 +1664,61 @@ public class BattleManager : MonoBehaviour
         if (!isBattleActive) yield break;
 
         isPlayerTurn = false;
-        yield return new WaitForSeconds(0.8f);
+        yield return new WaitForSeconds(0.5f);
 
-        battleLogText.text = $"{enemyName} のこうげき！";
+        // 毒ダメージ処理
+        if (enemyPoisonTurns > 0)
+        {
+            int poisonDmg = Mathf.Max(3, enemyMaxHp / 12);
+            enemyHp = Mathf.Max(0, enemyHp - poisonDmg);
+            enemyPoisonTurns--;
+            UpdateEnemyDisplay();
+            battleLogText.text = Localization.Get("battle_poison_damage", Localization.GetEnemy(enemyName), poisonDmg);
+            yield return new WaitForSeconds(0.8f);
+            if (enemyHp <= 0)
+            {
+                StartCoroutine(BattleWin());
+                yield break;
+            }
+        }
+
+        // デバフターン減衰
+        if (enemyDefDebuffTurns > 0) enemyDefDebuffTurns--;
+        if (enemyAtkDebuffTurns > 0) enemyAtkDebuffTurns--;
+        if (playerEvasionBuffTurns > 0) playerEvasionBuffTurns--;
+
+        battleLogText.text = Localization.Get("battle_enemy_attack", Localization.GetEnemy(enemyName));
         yield return new WaitForSeconds(0.6f);
 
-        // 回避判定（女の子は回避率が高い）
-        bool evaded = Random.Range(0, 100) < playerEvasion;
+        // 敵の突進演出
+        yield return StartCoroutine(AttackAnimation(enemyPanelRect, playerPanelRect, false));
+
+        // 回避判定（バフ中は+20%）
+        int effectiveEvasion = playerEvasion + (playerEvasionBuffTurns > 0 ? 20 : 0);
+        bool evaded = Random.Range(0, 100) < effectiveEvasion;
 
         if (evaded)
         {
-            battleLogText.text = "<color=#00FFFF>ひらりとかわした！</color>";
+            battleLogText.text = Localization.Get("battle_evaded");
             yield return new WaitForSeconds(1.0f);
             StartCoroutine(PlayerTurn());
             yield break;
         }
 
-        int damage = CalculateDamage(enemyAtk, playerDef, playerDefending);
+        // ATKデバフ中の敵は攻撃力低下
+        int effectiveEnemyAtk = enemyAtkDebuffTurns > 0 ? (int)(enemyAtk * 0.6f) : enemyAtk;
+        int damage = CalculateDamage(effectiveEnemyAtk, playerDef, playerDefending);
         playerHp = Mathf.Max(0, playerHp - damage);
         UpdatePlayerDisplay();
+        StartCoroutine(DamageFlash(playerFaceImage));
 
         if (playerDefending)
         {
-            battleLogText.text = $"ぼうぎょした！ {damage} ダメージ！";
+            battleLogText.text = Localization.Get("battle_defended", damage);
         }
         else
         {
-            battleLogText.text = $"{damage} ダメージをうけた！";
+            battleLogText.text = Localization.Get("battle_took_damage", damage);
         }
 
         yield return new WaitForSeconds(1.0f);
@@ -871,8 +1726,20 @@ public class BattleManager : MonoBehaviour
         // プレイヤー敗北チェック
         if (playerHp <= 0)
         {
-            StartCoroutine(BattleLose());
-            yield break;
+            // 覇王色の特徴: 1/3の確率でHP300回復
+            if (DataCarrier.Instance != null && DataCarrier.Instance.trait1 == "覇王色" && Random.Range(0, 3) == 0)
+            {
+                playerHp = 300;
+                float hpRatio = Mathf.Clamp01((float)playerHp / playerMaxHp);
+                playerHpBar.rectTransform.anchorMax = new Vector2(hpRatio, 1);
+                battleLogText.text = Localization.Get("battle_conqueror_revive");
+                yield return new WaitForSeconds(1.5f);
+            }
+            else
+            {
+                StartCoroutine(BattleLose());
+                yield break;
+            }
         }
 
         StartCoroutine(PlayerTurn());
@@ -888,8 +1755,14 @@ public class BattleManager : MonoBehaviour
 
     // ===== アクション =====
 
+    void CloseSkillInfo()
+    {
+        if (skillInfoPopup != null) { Destroy(skillInfoPopup); skillInfoPopup = null; }
+    }
+
     void OnAttack()
     {
+        CloseSkillInfo();
         if (!waitingForAction) return;
         waitingForAction = false;
         battleTurnCount++;
@@ -898,14 +1771,25 @@ public class BattleManager : MonoBehaviour
 
     void OnDefend()
     {
+        CloseSkillInfo();
         if (!waitingForAction) return;
         waitingForAction = false;
         battleTurnCount++;
         StartCoroutine(DoDefend());
     }
 
+    void OnMotherAttack()
+    {
+        CloseSkillInfo();
+        if (!waitingForAction) return;
+        waitingForAction = false;
+        battleTurnCount++;
+        StartCoroutine(DoMotherAttack());
+    }
+
     void OnSpecial()
     {
+        CloseSkillInfo();
         if (!waitingForAction) return;
         waitingForAction = false;
         battleTurnCount++;
@@ -915,14 +1799,22 @@ public class BattleManager : MonoBehaviour
     IEnumerator DoAttack()
     {
         // パンチ + 固有技を表示
-        battleLogText.text = $"パンチ！ <color=#FFA500>{normalAttackName}</color>！";
-        yield return new WaitForSeconds(0.6f);
+        battleLogText.text = Localization.Get("battle_punch", normalAttackName);
+        yield return new WaitForSeconds(0.3f);
 
-        int damage = CalculateDamage(playerAtk, enemyDef, false);
+        // カットイン
+        yield return StartCoroutine(ShowSkillCutIn(false));
+
+        // 突進 + ヒット演出
+        yield return StartCoroutine(AttackAnimation(playerPanelRect, enemyPanelRect, false));
+
+        int effectiveDef = enemyDefDebuffTurns > 0 ? (int)(enemyDef * 0.6f) : enemyDef;
+        int damage = CalculateDamage(playerAtk, effectiveDef, false);
         enemyHp = Mathf.Max(0, enemyHp - damage);
         UpdateEnemyDisplay();
+        StartCoroutine(DamageFlash(enemyFaceImage));
 
-        battleLogText.text = $"<color=#FFA500>{normalAttackName}</color> が きまった！\n{enemyName} に {damage} ダメージ！";
+        battleLogText.text = Localization.Get("battle_attack_hit", normalAttackName, Localization.GetEnemy(enemyName), damage);
         yield return new WaitForSeconds(1.0f);
 
         if (enemyHp <= 0)
@@ -937,8 +1829,79 @@ public class BattleManager : MonoBehaviour
     IEnumerator DoDefend()
     {
         playerDefending = true;
-        battleLogText.text = "ぼうぎょ体勢をとった！";
+        battleLogText.text = Localization.Get("battle_defend_stance");
         yield return new WaitForSeconds(1.0f);
+
+        StartCoroutine(EnemyTurn());
+    }
+
+    IEnumerator DoMotherAttack()
+    {
+        battleLogText.text = Localization.Get("battle_mother_skill", motherAttackName);
+        yield return new WaitForSeconds(0.3f);
+
+        // 母アイコンカットイン
+        yield return StartCoroutine(ShowMotherSkillCutIn());
+
+        // ダメージ計算（通常攻撃の70%威力）
+        int baseDamage = CalculateDamage((int)(playerAtk * 0.7f), enemyDef, false);
+        // デバフ中の敵はDEF低下
+        int effectiveDef = enemyDefDebuffTurns > 0 ? (int)(enemyDef * 0.6f) : enemyDef;
+        int damage = CalculateDamage((int)(playerAtk * 0.7f), effectiveDef, false);
+
+        yield return StartCoroutine(AttackAnimation(playerPanelRect, enemyPanelRect, false));
+
+        enemyHp = Mathf.Max(0, enemyHp - damage);
+        UpdateEnemyDisplay();
+        StartCoroutine(DamageFlash(enemyFaceImage));
+
+        battleLogText.text = Localization.Get("battle_mother_damage", motherAttackName, damage);
+        yield return new WaitForSeconds(0.8f);
+
+        // 特殊効果
+        switch (motherAttackEffect)
+        {
+            case "heal":
+                int healAmt = Mathf.Max(5, playerMaxHp / 8);
+                playerHp = Mathf.Min(playerMaxHp, playerHp + healAmt);
+                UpdatePlayerDisplay();
+                battleLogText.text = Localization.Get("battle_heal", healAmt);
+                yield return new WaitForSeconds(0.8f);
+                break;
+            case "poison":
+                enemyPoisonTurns = 3;
+                battleLogText.text = Localization.Get("battle_poison", Localization.GetEnemy(enemyName));
+                yield return new WaitForSeconds(0.8f);
+                break;
+            case "evasion":
+                playerEvasionBuffTurns = 2;
+                battleLogText.text = Localization.Get("battle_evasion_up");
+                yield return new WaitForSeconds(0.8f);
+                break;
+            case "defdown":
+                enemyDefDebuffTurns = 2;
+                battleLogText.text = Localization.Get("battle_def_down", Localization.GetEnemy(enemyName));
+                yield return new WaitForSeconds(0.8f);
+                break;
+            case "atkdown":
+                enemyAtkDebuffTurns = 2;
+                battleLogText.text = Localization.Get("battle_atk_down", Localization.GetEnemy(enemyName));
+                yield return new WaitForSeconds(0.8f);
+                break;
+            case "drain":
+                int drainAmt = damage / 3;
+                playerHp = Mathf.Min(playerMaxHp, playerHp + drainAmt);
+                UpdatePlayerDisplay();
+                battleLogText.text = Localization.Get("battle_drain", drainAmt);
+                yield return new WaitForSeconds(0.8f);
+                break;
+        }
+
+        if (enemyHp <= 0)
+        {
+            StartCoroutine(BattleWin());
+            yield break;
+        }
 
         StartCoroutine(EnemyTurn());
     }
@@ -947,38 +1910,51 @@ public class BattleManager : MonoBehaviour
     {
         if (isGodBaby)
         {
-            battleLogText.text = $"<color=#FFD700>GOD BABY の ひっさつわざ！</color>\n<color=#FFD700>神・{specialAttackName}！</color>";
+            battleLogText.text = Localization.Get("battle_god_special", specialAttackName);
         }
         else
         {
-            battleLogText.text = $"ひっさつわざ！\n<color=#FFFF00>{specialAttackName}！</color>";
+            battleLogText.text = Localization.Get("battle_special", specialAttackName);
         }
-        yield return new WaitForSeconds(0.8f);
+        yield return new WaitForSeconds(0.4f);
 
-        // 必殺技: GOD BABYは100%命中＆威力2.5倍、通常は75%命中＆威力2倍
-        bool hit = isGodBaby ? true : Random.Range(0, 100) < 75;
+        // カットイン（必殺技）
+        yield return StartCoroutine(ShowSkillCutIn(true));
+
+        bool hit = Random.Range(0, 100) < (isGodBaby ? 66 : 40);
         if (hit)
         {
+            // 必殺技はスペシャル演出（大きいシェイク + 金色フラッシュ）
+            yield return StartCoroutine(AttackAnimation(playerPanelRect, enemyPanelRect, true));
+
             float multiplier = isGodBaby ? 2.5f : 2.0f;
             int damage = (int)(playerAtk * multiplier) + Random.Range(5, 15);
             enemyHp = Mathf.Max(0, enemyHp - damage);
             UpdateEnemyDisplay();
+            StartCoroutine(DamageFlash(enemyFaceImage));
 
             if (isGodBaby)
             {
-                battleLogText.text = $"<color=#FFD700>神・{specialAttackName}</color> が さくれつ！\n{damage} ダメージ！";
+                battleLogText.text = Localization.Get("battle_god_special_hit", specialAttackName, damage);
             }
             else
             {
-                battleLogText.text = $"<color=#FFFF00>{specialAttackName}</color> が さくれつ！\n{damage} ダメージ！";
+                battleLogText.text = Localization.Get("battle_special_hit", specialAttackName, damage);
             }
         }
         else
         {
-            battleLogText.text = $"{specialAttackName}...\nしかし はずれてしまった...";
+            battleLogText.text = Localization.Get("battle_special_miss", specialAttackName);
         }
 
         yield return new WaitForSeconds(1.2f);
+
+        // 必殺技追加効果: 命中/外れに関わらず、闘志で全デバフ解除 + 一時的にATK上昇
+        battleLogText.text = Localization.Get("battle_fighting_spirit");
+        playerAtk = (int)(playerAtk * 1.15f);
+        // 自分のデバフ解除
+        playerEvasionBuffTurns = 0;
+        yield return new WaitForSeconds(0.8f);
 
         if (enemyHp <= 0)
         {
@@ -994,10 +1970,10 @@ public class BattleManager : MonoBehaviour
     IEnumerator BattleWin()
     {
         isBattleActive = false;
-        battleLogText.text = $"<color=#FFFF00>{enemyName} をたおした！</color>";
+        battleLogText.text = Localization.Get("battle_enemy_defeated", Localization.GetEnemy(enemyName));
         yield return new WaitForSeconds(1.5f);
 
-        battleLogText.text = "<color=#00FF00><size=130%>しょうり！</size></color>";
+        battleLogText.text = Localization.Get("battle_victory");
         yield return new WaitForSeconds(1.5f);
 
         // 経験値獲得と年齢アップ演出
@@ -1030,8 +2006,11 @@ public class BattleManager : MonoBehaviour
     {
         if (DataCarrier.Instance == null) yield break;
 
-        // 経験値計算: 敵ステータスベース + ターン数ボーナス
-        int expGained = (enemyMaxHp + enemyAtk * 3 + enemyDef * 2) / 4 + battleTurnCount * 3;
+        // 経験値計算: 敵ステータスベース + ターン数ボーナス + 学力ボーナス
+        int baseExp = (enemyMaxHp + enemyAtk * 3 + enemyDef * 2) / 4 + battleTurnCount * 3;
+        int academic = DataCarrier.Instance.babyAcademic;
+        float academicBonus = 1.0f + academic * 0.005f; // 学力100で+50%
+        int expGained = Mathf.RoundToInt(baseExp * academicBonus);
         DataCarrier.Instance.babyExp += expGained;
         DataCarrier.Instance.defeatedEnemies++;
 
@@ -1039,7 +2018,7 @@ public class BattleManager : MonoBehaviour
         int needed = DataCarrier.ExpForNextAge(currentAge);
         int currentExp = DataCarrier.Instance.babyExp;
 
-        battleLogText.text = $"<color=#00FFFF>けいけんち {expGained} をかくとく！</color>";
+        battleLogText.text = Localization.Get("battle_exp_gained", expGained);
         yield return new WaitForSeconds(1.2f);
 
         if (currentExp >= needed)
@@ -1059,7 +2038,7 @@ public class BattleManager : MonoBehaviour
             int newAge = DataCarrier.Instance.babyAge;
 
             // 年齢アップ演出
-            battleLogText.text = $"<color=#FFD700><size=150%>\ud83c\udf82 {newAge}さいになった！ \ud83c\udf82</size></color>";
+            battleLogText.text = Localization.Get("battle_age_up", newAge);
             yield return new WaitForSeconds(1.5f);
 
             // ステータスアップ演出パネルを表示
@@ -1088,9 +2067,9 @@ public class BattleManager : MonoBehaviour
             // GOD BABYボーナス再計算
             if (isGodBaby)
             {
-                playerAtk = (int)(playerAtk * 1.2f);
-                playerDef = (int)(playerDef * 1.2f);
-                playerMaxHp = (int)(playerMaxHp * 1.2f);
+                playerAtk = (int)(playerAtk * 1.12f);
+                playerDef = (int)(playerDef * 1.12f);
+                playerMaxHp = (int)(playerMaxHp * 1.12f);
                 playerHp = playerMaxHp;
             }
 
@@ -1100,7 +2079,7 @@ public class BattleManager : MonoBehaviour
         {
             // レベルアップまで足りない — 経験値状況を表示
             int remaining = needed - currentExp;
-            battleLogText.text = $"つぎのせいちょうまで あと <color=#FFFF00>{remaining}</color> けいけんち\n({currentExp}/{needed})";
+            battleLogText.text = Localization.Get("battle_exp_remaining", remaining, currentExp, needed);
             yield return new WaitForSeconds(1.5f);
         }
     }
@@ -1130,7 +2109,7 @@ public class BattleManager : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, -25);
         titleRect.sizeDelta = new Vector2(0, 50);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        titleText.text = "<color=#FFD700>✨ せいちょう！ ✨</color>";
+        titleText.text = Localization.Get("battle_growth_title");
         titleText.fontSize = 32;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.fontStyle = FontStyles.Bold;
@@ -1152,13 +2131,10 @@ public class BattleManager : MonoBehaviour
         // ステータスを1行ずつ表示
         string[] statLines = new string[]
         {
-            $"こうげき: {oldAtk} → <color=#00FF00>{newAtk}</color> <color=#FFFF00>(+{newAtk - oldAtk})</color>",
-            $"ぼうぎょ: {oldDef} → <color=#00FF00>{newDef}</color> <color=#FFFF00>(+{newDef - oldDef})</color>",
-            $"HP: {oldHp} → <color=#00FF00>{newHp}</color> <color=#FFFF00>(+{newHp - oldHp})</color>",
-            $"がくりょく: {oldAcademic} → <color=#00FF00>{newAcademic}</color> <color=#FFFF00>(+{newAcademic - oldAcademic})</color>",
-            $"うんどう: {oldAthletic} → <color=#00FF00>{newAthletic}</color> <color=#FFFF00>(+{newAthletic - oldAthletic})</color>",
-            $"しんちょう: {oldHeight}cm → <color=#00FFFF>{newHeight}cm</color> <color=#FFFF00>(+{newHeight - oldHeight})</color>",
-            $"たいじゅう: {oldWeight}g → <color=#00FFFF>{newWeight}g</color> <color=#FFFF00>(+{newWeight - oldWeight})</color>"
+            $"{Localization.Get("battle_stat_atk")}: {oldAtk} → <color=#00FF00>{newAtk}</color> <color=#FFFF00>(+{newAtk - oldAtk})</color>",
+            $"{Localization.Get("battle_stat_def")}: {oldDef} → <color=#00FF00>{newDef}</color> <color=#FFFF00>(+{newDef - oldDef})</color>",
+            $"{Localization.Get("battle_stat_hp_label")}: {oldHp} → <color=#00FF00>{newHp}</color> <color=#FFFF00>(+{newHp - oldHp})</color>",
+            $"{Localization.Get("battle_stat_athletic")}: {oldAthletic} → <color=#00FF00>{newAthletic}</color> <color=#FFFF00>(+{newAthletic - oldAthletic})</color>"
         };
 
         string displayText = "";
@@ -1174,14 +2150,14 @@ public class BattleManager : MonoBehaviour
         // パネルを削除
         Destroy(growthPanel);
 
-        battleLogText.text = "<color=#00FF00>HPがぜんかいふく！</color>";
+        battleLogText.text = Localization.Get("battle_hp_full_heal");
         yield return new WaitForSeconds(1.0f);
     }
 
     IEnumerator BattleLose()
     {
         isBattleActive = false;
-        battleLogText.text = "<color=#FF0000>たおれてしまった...</color>";
+        battleLogText.text = Localization.Get("battle_defeat");
         yield return new WaitForSeconds(2.0f);
 
         ShowGameOverPanel();
@@ -1209,7 +2185,7 @@ public class BattleManager : MonoBehaviour
         textRect.offsetMin = new Vector2(20, 20);
         textRect.offsetMax = new Vector2(-20, -20);
         var resultText = textObj.AddComponent<TextMeshProUGUI>();
-        resultText.text = "<color=#FF0000>GAME OVER</color>";
+        resultText.text = Localization.Get("battle_game_over");
         resultText.fontSize = 48;
         resultText.alignment = TextAlignmentOptions.Center;
         resultText.fontStyle = FontStyles.Bold;
@@ -1236,7 +2212,7 @@ public class BattleManager : MonoBehaviour
         retryTextRect.offsetMin = Vector2.zero;
         retryTextRect.offsetMax = Vector2.zero;
         var retryTmp = retryTextObj.AddComponent<TextMeshProUGUI>();
-        retryTmp.text = "もういちど";
+        retryTmp.text = Localization.Get("ui_try_again");
         retryTmp.fontSize = 28;
         retryTmp.alignment = TextAlignmentOptions.Center;
         retryTmp.color = Color.white;
@@ -1249,10 +2225,10 @@ public class BattleManager : MonoBehaviour
     {
         string[] bossLines = new string[]
         {
-            "村の王シバ が たおれた...\n",
-            "「これは 試練に すぎなかった。」\n",
-            "村の外には さらに強大な 敵が待っている。\nおまえの ちからは まだ 足りない。\n",
-            "成長し、すべての 敵を 打ち砕け。\n世界は おまえを 待っている。\n",
+            Localization.Get("boss_defeat_line1"),
+            Localization.Get("boss_defeat_line2"),
+            Localization.Get("boss_defeat_line3"),
+            Localization.Get("boss_defeat_line4"),
         };
 
         float slideDuration = 1.5f;
@@ -1384,10 +2360,10 @@ public class BattleManager : MonoBehaviour
         string babyName = DataCarrier.Instance != null ? DataCarrier.Instance.babyName : "ベイビー";
         int currentAge = DataCarrier.Instance != null ? DataCarrier.Instance.babyAge : 0;
 
-        victoryText.text = $"<color=#FFD700>{babyName}({currentAge}さい)</color>\n<color=#00FF00>セーブしました！</color>";
+        victoryText.text = Localization.Get("battle_saved_return", babyName, currentAge);
         yield return new WaitForSeconds(1.5f);
 
-        victoryText.text = "むらに もどります...";
+        victoryText.text = Localization.Get("battle_returning");
         yield return new WaitForSeconds(1.0f);
 
         // フラグをリセット
@@ -1425,8 +2401,8 @@ public class BattleManager : MonoBehaviour
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = true;
 
-        CreateMenuButton(bar.transform, "セーブ", OnSave);
-        CreateMenuButton(bar.transform, "トップへ", OnGoTop);
+        CreateMenuButton(bar.transform, Localization.Get("battle_save_button"), OnSave);
+        CreateMenuButton(bar.transform, Localization.Get("battle_top_button"), OnGoTop);
     }
 
     void CreateMenuButton(Transform parent, string label, UnityEngine.Events.UnityAction action)
@@ -1481,7 +2457,6 @@ public class BattleManager : MonoBehaviour
         PlayerPrefs.SetInt("babyAthletic", dc.babyAthletic);
         PlayerPrefs.SetInt("babyHeight", dc.babyHeight);
         PlayerPrefs.SetString("trait1", dc.trait1 ?? "");
-        PlayerPrefs.SetString("trait2", dc.trait2 ?? "");
         PlayerPrefs.SetString("fatherName", dc.fatherName ?? "");
         PlayerPrefs.SetString("motherName", dc.motherName ?? "");
         PlayerPrefs.SetString("babyGender", dc.babyGender ?? "");
@@ -1495,7 +2470,7 @@ public class BattleManager : MonoBehaviour
     IEnumerator ShowSaveMessage()
     {
         string original = battleLogText.text;
-        battleLogText.text = "<color=#00FF00>セーブしました！</color>";
+        battleLogText.text = Localization.Get("ui_saved");
         yield return new WaitForSeconds(1.2f);
         battleLogText.text = original;
     }

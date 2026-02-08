@@ -75,6 +75,8 @@ public class MapManager : MonoBehaviour
 
     // 持ち物パネル
     GameObject inventoryPanel;
+    GameObject statusPanel;
+    GameObject savePanel;
 
     void Start()
     {
@@ -409,7 +411,7 @@ public class MapManager : MonoBehaviour
         signTextRect.offsetMax = Vector2.zero;
 
         var signText = signTextObj.AddComponent<TextMeshProUGUI>();
-        signText.text = "<color=#FF4444>ボスのやかた</color>";
+        signText.text = Localization.Get("map_boss_sign");
         signText.fontSize = 18;
         signText.alignment = TextAlignmentOptions.Center;
         signText.color = Color.white;
@@ -433,7 +435,12 @@ public class MapManager : MonoBehaviour
         var img = tileObj.AddComponent<Image>();
         img.raycastTarget = false;
 
-        if (tileSprites.ContainsKey(tileType) && tileSprites[tileType] != null)
+        // 草タイルはモダンな見た目をプログラムで生成
+        if (tileType == TILE_GRASS)
+        {
+            CreateModernGrassTile(tileObj.transform, img, x, y);
+        }
+        else if (tileSprites.ContainsKey(tileType) && tileSprites[tileType] != null)
         {
             img.sprite = tileSprites[tileType];
             img.color = Color.white;
@@ -442,6 +449,71 @@ public class MapManager : MonoBehaviour
         {
             img.color = GetTileColor(tileType);
         }
+    }
+
+    void CreateModernGrassTile(Transform parent, Image baseImg, int tileX, int tileY)
+    {
+        // タイルごとに固定シードでランダム感を出す（再現性あり）
+        Random.State oldState = Random.state;
+        Random.InitState(tileX * 100 + tileY);
+
+        // ベースカラー: 深めの緑にタイルごとの微妙な色ムラ
+        float hueShift = Random.Range(-0.02f, 0.02f);
+        float brightShift = Random.Range(-0.04f, 0.04f);
+        Color baseColor = new Color(0.28f + hueShift, 0.62f + brightShift, 0.25f + hueShift);
+        baseImg.color = baseColor;
+
+        // グラデーションオーバーレイ（上部を少し明るく）
+        var gradTop = FacePart("GradTop", parent, new Vector2(0, DISPLAY_TILE * 0.2f),
+            new Vector2(DISPLAY_TILE, DISPLAY_TILE * 0.5f));
+        var gradImg = gradTop.AddComponent<Image>();
+        gradImg.color = new Color(0.4f, 0.75f, 0.35f, 0.25f);
+        gradImg.raycastTarget = false;
+
+        // 下部の影
+        var gradBot = FacePart("GradBot", parent, new Vector2(0, -DISPLAY_TILE * 0.25f),
+            new Vector2(DISPLAY_TILE, DISPLAY_TILE * 0.4f));
+        var gradBotImg = gradBot.AddComponent<Image>();
+        gradBotImg.color = new Color(0.1f, 0.3f, 0.1f, 0.15f);
+        gradBotImg.raycastTarget = false;
+
+        // 草のブレード（小さな明るい縦線を3〜5本ランダムに配置）
+        int bladeCount = Random.Range(3, 6);
+        for (int i = 0; i < bladeCount; i++)
+        {
+            float bx = Random.Range(-DISPLAY_TILE * 0.35f, DISPLAY_TILE * 0.35f);
+            float by = Random.Range(-DISPLAY_TILE * 0.1f, DISPLAY_TILE * 0.2f);
+            float bw = Random.Range(2f, 4f);
+            float bh = Random.Range(8f, 16f);
+            float angle = Random.Range(-15f, 15f);
+
+            var blade = FacePart($"Blade{i}", parent, new Vector2(bx, by), new Vector2(bw, bh));
+            blade.transform.localRotation = Quaternion.Euler(0, 0, angle);
+            var bladeImg = blade.AddComponent<Image>();
+            float bladeAlpha = Random.Range(0.15f, 0.35f);
+            bladeImg.color = new Color(0.45f, 0.82f, 0.38f, bladeAlpha);
+            bladeImg.raycastTarget = false;
+        }
+
+        // アクセントドット（花や小石）をまばらに
+        if (Random.Range(0f, 1f) < 0.3f)
+        {
+            float dx = Random.Range(-DISPLAY_TILE * 0.3f, DISPLAY_TILE * 0.3f);
+            float dy = Random.Range(-DISPLAY_TILE * 0.3f, DISPLAY_TILE * 0.1f);
+            float dotSize = Random.Range(3f, 6f);
+            var dot = FacePart("Accent", parent, new Vector2(dx, dy), new Vector2(dotSize, dotSize));
+            var dotImg = dot.AddComponent<Image>();
+            // ランダムで白い花 or 黄色い花
+            Color[] accentColors = {
+                new Color(1f, 1f, 0.9f, 0.5f),
+                new Color(1f, 0.9f, 0.4f, 0.5f),
+                new Color(0.9f, 0.8f, 1f, 0.4f)
+            };
+            dotImg.color = accentColors[Random.Range(0, accentColors.Length)];
+            dotImg.raycastTarget = false;
+        }
+
+        Random.state = oldState;
     }
 
     Color GetTileColor(int tileType)
@@ -705,7 +777,7 @@ public class MapManager : MonoBehaviour
         helpTextRect.offsetMax = new Vector2(-10, -5);
 
         var helpText = helpTextObj.AddComponent<TextMeshProUGUI>();
-        helpText.text = "矢印キー / WASD: 移動　　スペース: 調べる　　ESC: メニュー";
+        helpText.text = Localization.Get("map_help_text");
         helpText.fontSize = 18;
         helpText.alignment = TextAlignmentOptions.Center;
         helpText.color = new Color(0.8f, 0.8f, 0.8f);
@@ -764,13 +836,27 @@ public class MapManager : MonoBehaviour
         string nameColor = isGod ? "<color=#FFD700>" : "<color=#FFFFFF>";
         string godLabel = isGod ? " <color=#FFD700>GOD BABY</color>" : "";
 
-        statusText.text = $"{nameColor}{babyName}</color>  {age}さい{godLabel}\n" +
+        statusText.text = $"{nameColor}{babyName}</color>  {Localization.GetAge(age)}{godLabel}\n" +
                           $"HP:<color=#00FF00>{hp}</color>  ATK:<color=#FF6666>{atk}</color>  DEF:<color=#6699FF>{def}</color>";
     }
 
     void Update()
     {
-        // ESCで持ち物パネルを閉じる
+        // ESCでパネルを閉じる
+        if (savePanel != null)
+        {
+            var kb = Keyboard.current;
+            if (kb != null && kb.escapeKey.wasPressedThisFrame)
+                CloseSavePanel();
+            return;
+        }
+        if (statusPanel != null)
+        {
+            var kb = Keyboard.current;
+            if (kb != null && kb.escapeKey.wasPressedThisFrame)
+                CloseStatusPanel();
+            return;
+        }
         if (inventoryPanel != null)
         {
             var kb = Keyboard.current;
@@ -938,7 +1024,7 @@ public class MapManager : MonoBehaviour
         textRect.sizeDelta = new Vector2(600, 100);
 
         var tmpText = textObj.AddComponent<TextMeshProUGUI>();
-        tmpText.text = "<color=#FF0000>てきが あらわれた！</color>";
+        tmpText.text = Localization.Get("map_encounter");
         tmpText.fontSize = 42;
         tmpText.alignment = TextAlignmentOptions.Center;
         tmpText.color = Color.white;
@@ -974,23 +1060,23 @@ public class MapManager : MonoBehaviour
         switch (tileType)
         {
             case TILE_FLOWER:
-                ShowMessage("きれいな はなが さいている。");
+                ShowMessage(Localization.Get("map_flower"));
                 break;
             case TILE_PATH:
-                ShowMessage("むらの みちだ。");
+                ShowMessage(Localization.Get("map_path"));
                 break;
             case TILE_DARK_DIRT:
-                ShowMessage("あやしい きはいが する...");
+                ShowMessage(Localization.Get("map_dark_dirt"));
                 break;
             default:
                 if (IsAdjacentTo(TILE_WATER))
-                    ShowMessage("きれいな いけだ。さかなが おいでる。");
+                    ShowMessage(Localization.Get("map_water"));
                 else if (IsAdjacentTo(TILE_HOUSE_RED) || IsAdjacentTo(TILE_HOUSE_GREEN) || IsAdjacentTo(TILE_HOUSE_BLUE))
-                    ShowMessage("だれかの おうちだ。");
+                    ShowMessage(Localization.Get("map_house"));
                 else if (IsAdjacentTo(TILE_ROCK))
-                    ShowMessage("おおきな いわだ。どかせない...");
+                    ShowMessage(Localization.Get("map_rock"));
                 else
-                    ShowMessage("...");
+                    ShowMessage(Localization.Get("map_nothing"));
                 break;
         }
     }
@@ -1032,7 +1118,7 @@ public class MapManager : MonoBehaviour
         textRect.sizeDelta = new Vector2(700, 200);
 
         var tmpText = textObj.AddComponent<TextMeshProUGUI>();
-        tmpText.text = "<color=#FF2222><size=130%>ボスのやかた に はいった！</size></color>\n\n<size=80%>つよい てきの けはいがする...</size>";
+        tmpText.text = Localization.Get("map_boss_enter");
         tmpText.fontSize = 36;
         tmpText.alignment = TextAlignmentOptions.Center;
         tmpText.color = Color.white;
@@ -1092,7 +1178,7 @@ public class MapManager : MonoBehaviour
         panelRect.anchorMin = new Vector2(0.5f, 0.5f);
         panelRect.anchorMax = new Vector2(0.5f, 0.5f);
         panelRect.anchoredPosition = Vector2.zero;
-        panelRect.sizeDelta = new Vector2(350, 360);
+        panelRect.sizeDelta = new Vector2(350, 420);
 
         var panelBg = menuPanel.AddComponent<Image>();
         panelBg.color = new Color(0.08f, 0.08f, 0.18f, 0.95f);
@@ -1115,13 +1201,15 @@ public class MapManager : MonoBehaviour
 
         // ボタン群
         float btnY = -70;
-        CreateMenuItemButton(menuPanel.transform, "もちもの", btnY, () => { CloseMenu(); OpenInventoryPanel(); });
+        CreateMenuItemButton(menuPanel.transform, Localization.Get("map_menu_status"), btnY, () => { CloseMenu(); OpenStatusPanel(); });
         btnY -= 60;
-        CreateMenuItemButton(menuPanel.transform, "セーブ", btnY, OnSave);
+        CreateMenuItemButton(menuPanel.transform, Localization.Get("map_menu_inventory"), btnY, () => { CloseMenu(); OpenInventoryPanel(); });
         btnY -= 60;
-        CreateMenuItemButton(menuPanel.transform, "タイトルへ戻る", btnY, OnGoTitle);
+        CreateMenuItemButton(menuPanel.transform, Localization.Get("map_menu_save"), btnY, OnSave);
         btnY -= 60;
-        CreateMenuItemButton(menuPanel.transform, "とじる", btnY, () => CloseMenu());
+        CreateMenuItemButton(menuPanel.transform, Localization.Get("map_menu_title"), btnY, OnGoTitle);
+        btnY -= 60;
+        CreateMenuItemButton(menuPanel.transform, Localization.Get("map_menu_close"), btnY, () => CloseMenu());
     }
 
     void CreateMenuItemButton(Transform parent, string label, float yPos, UnityEngine.Events.UnityAction action)
@@ -1173,21 +1261,180 @@ public class MapManager : MonoBehaviour
 
     void OnSave()
     {
+        CloseMenu();
+        OpenSavePanel();
+    }
+
+    void OpenSavePanel()
+    {
+        if (savePanel != null) return;
+        menuOpen = true;
+
+        savePanel = new GameObject("SavePanel");
+        savePanel.transform.SetParent(canvas.transform, false);
+        var panelRect = savePanel.AddComponent<RectTransform>();
+        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+        panelRect.anchoredPosition = Vector2.zero;
+        panelRect.sizeDelta = new Vector2(400, 480);
+
+        var panelBg = savePanel.AddComponent<Image>();
+        panelBg.color = new Color(0.08f, 0.08f, 0.18f, 0.95f);
+
+        // タイトル
+        var titleObj = new GameObject("SaveTitle");
+        titleObj.transform.SetParent(savePanel.transform, false);
+        var titleRect = titleObj.AddComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0, 1);
+        titleRect.anchorMax = new Vector2(1, 1);
+        titleRect.anchoredPosition = new Vector2(0, -25);
+        titleRect.sizeDelta = new Vector2(0, 50);
+        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        titleText.text = Localization.Get("map_save_title");
+        titleText.fontSize = 24;
+        titleText.alignment = TextAlignmentOptions.Center;
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.color = new Color(0.9f, 0.9f, 0.5f);
+        titleText.raycastTarget = false;
+
+        // スロット一覧
+        float slotY = -70;
+        for (int i = 0; i < DataCarrier.MAX_SAVE_SLOTS; i++)
+        {
+            CreateSaveSlotEntry(i, slotY);
+            slotY -= 70;
+        }
+
+        // とじる
+        CreateMenuItemButton(savePanel.transform, Localization.Get("ui_close"), slotY - 10, () => CloseSavePanel());
+    }
+
+    void CreateSaveSlotEntry(int slot, float yPos)
+    {
+        bool exists = DataCarrier.SlotExists(slot);
+
+        var slotObj = new GameObject($"SaveSlot{slot}");
+        slotObj.transform.SetParent(savePanel.transform, false);
+        var slotRect = slotObj.AddComponent<RectTransform>();
+        slotRect.anchorMin = new Vector2(0.5f, 1);
+        slotRect.anchorMax = new Vector2(0.5f, 1);
+        slotRect.anchoredPosition = new Vector2(0, yPos);
+        slotRect.sizeDelta = new Vector2(340, 60);
+
+        var slotBg = slotObj.AddComponent<Image>();
+        slotBg.color = exists ? new Color(0.2f, 0.25f, 0.35f) : new Color(0.15f, 0.15f, 0.2f);
+
+        // スロット情報テキスト
+        var infoObj = new GameObject("Info");
+        infoObj.transform.SetParent(slotObj.transform, false);
+        var infoRect = infoObj.AddComponent<RectTransform>();
+        infoRect.anchorMin = Vector2.zero;
+        infoRect.anchorMax = Vector2.one;
+        infoRect.offsetMin = new Vector2(10, 5);
+        infoRect.offsetMax = new Vector2(-10, -5);
+        var infoText = infoObj.AddComponent<TextMeshProUGUI>();
+        infoText.fontSize = 18;
+        infoText.alignment = TextAlignmentOptions.MidlineLeft;
+        infoText.color = Color.white;
+        infoText.richText = true;
+        infoText.raycastTarget = false;
+
+        if (exists)
+        {
+            string babyName = DataCarrier.GetSlotBabyName(slot);
+            int age = DataCarrier.GetSlotAge(slot);
+            bool isGod = DataCarrier.GetSlotIsGodBaby(slot);
+            string godMark = isGod ? " <color=#FFD700>★</color>" : "";
+            infoText.text = $"{Localization.Get("map_save_slot", slot + 1)}{babyName}{godMark}  ({Localization.GetAge(age)})";
+        }
+        else
+        {
+            infoText.text = $"{Localization.Get("map_save_slot", slot + 1)}{Localization.Get("map_save_slot_empty")}";
+        }
+
+        // スロット全体をボタンにする
+        var btn = slotObj.AddComponent<Button>();
+        btn.targetGraphic = slotBg;
+        var colors = btn.colors;
+        colors.highlightedColor = new Color(0.35f, 0.35f, 0.55f);
+        colors.pressedColor = new Color(0.15f, 0.15f, 0.3f);
+        btn.colors = colors;
+
+        int idx = slot;
+        btn.onClick.AddListener(() => OnSaveSlotSelected(idx));
+    }
+
+    void OnSaveSlotSelected(int slot)
+    {
+        if (DataCarrier.SlotExists(slot))
+        {
+            // 上書き確認
+            ShowOverwriteConfirm(slot);
+        }
+        else
+        {
+            // 空きスロット → そのままセーブ
+            DoSaveToSlot(slot);
+        }
+    }
+
+    void ShowOverwriteConfirm(int slot)
+    {
+        // セーブパネルの中身を消して確認UIに差し替え
+        foreach (Transform child in savePanel.transform)
+            Destroy(child.gameObject);
+
+        string babyName = DataCarrier.GetSlotBabyName(slot);
+
+        // 確認メッセージ
+        var msgObj = new GameObject("ConfirmMsg");
+        msgObj.transform.SetParent(savePanel.transform, false);
+        var msgRect = msgObj.AddComponent<RectTransform>();
+        msgRect.anchorMin = new Vector2(0, 0.5f);
+        msgRect.anchorMax = new Vector2(1, 0.5f);
+        msgRect.anchoredPosition = new Vector2(0, 40);
+        msgRect.sizeDelta = new Vector2(-40, 100);
+        var msgText = msgObj.AddComponent<TextMeshProUGUI>();
+        msgText.text = Localization.Get("map_save_overwrite_msg", slot + 1, babyName);
+        msgText.fontSize = 22;
+        msgText.alignment = TextAlignmentOptions.Center;
+        msgText.color = Color.white;
+        msgText.richText = true;
+        msgText.raycastTarget = false;
+
+        // はい
+        CreateMenuItemButton(savePanel.transform, Localization.Get("map_save_overwrite"), -30, () => DoSaveToSlot(slot));
+        CreateMenuItemButton(savePanel.transform, Localization.Get("map_save_cancel"), -90, () => { CloseSavePanel(); OpenSavePanel(); });
+    }
+
+    void DoSaveToSlot(int slot)
+    {
         if (DataCarrier.Instance != null)
         {
-            DataCarrier.Instance.SaveData();
+            DataCarrier.Instance.SaveToSlot(slot);
         }
-        CloseMenu();
-        ShowMessage("<color=#00FF00>セーブしました！</color>");
+        CloseSavePanel();
+        ShowMessage(Localization.Get("ui_saved"));
+    }
+
+    void CloseSavePanel()
+    {
+        if (savePanel != null)
+        {
+            Destroy(savePanel);
+            savePanel = null;
+            menuOpen = false;
+        }
     }
 
     void OnGoTitle()
     {
-        // セーブしてからタイトルへ
-        if (DataCarrier.Instance != null)
+        // スロットが決まっている場合のみ自動セーブ
+        if (DataCarrier.Instance != null && DataCarrier.Instance.currentSlot >= 0)
         {
-            DataCarrier.Instance.SaveData();
+            DataCarrier.Instance.SaveToSlot(DataCarrier.Instance.currentSlot);
         }
+        CloseMenu();
         SceneManager.LoadScene("TitleScene");
     }
 
@@ -1237,7 +1484,92 @@ public class MapManager : MonoBehaviour
         Destroy(goldenEggObj);
         goldenEggObj = null;
 
-        ShowMessage("<color=#FFD700>★ 金のたまご を てにいれた！★</color>");
+        ShowMessage(Localization.Get("map_golden_egg"));
+    }
+
+    // ===== ステータスパネル =====
+
+    void OpenStatusPanel()
+    {
+        if (statusPanel != null) return;
+        menuOpen = true;
+
+        var dc = DataCarrier.Instance;
+        if (dc == null) return;
+
+        statusPanel = new GameObject("StatusPanel");
+        statusPanel.transform.SetParent(canvas.transform, false);
+        var panelRect = statusPanel.AddComponent<RectTransform>();
+        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+        panelRect.anchoredPosition = Vector2.zero;
+        panelRect.sizeDelta = new Vector2(400, 480);
+
+        var panelBg = statusPanel.AddComponent<Image>();
+        panelBg.color = new Color(0.08f, 0.08f, 0.18f, 0.95f);
+
+        // タイトル
+        var titleObj = new GameObject("StatusTitle");
+        titleObj.transform.SetParent(statusPanel.transform, false);
+        var titleRect = titleObj.AddComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0, 1);
+        titleRect.anchorMax = new Vector2(1, 1);
+        titleRect.anchoredPosition = new Vector2(0, -25);
+        titleRect.sizeDelta = new Vector2(0, 50);
+        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        titleText.text = Localization.Get("map_status_title");
+        titleText.fontSize = 28;
+        titleText.alignment = TextAlignmentOptions.Center;
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.color = new Color(0.9f, 0.9f, 0.5f);
+        titleText.raycastTarget = false;
+
+        // ステータス内容
+        string genderColor = dc.babyGender == "男の子" ? "#00BFFF" : "#FF69B4";
+        string traitColor = dc.trait1 == "覇王色" ? "#FF4500" : "#FFA500";
+        string godLabel = dc.isGodBaby ? "  <color=#FFD700>★GOD BABY★</color>" : "";
+
+        string content = $"<b>{dc.babyName}</b>{godLabel}\n" +
+            $"<color={genderColor}>{Localization.GetGender(dc.babyGender)}</color>　　{Localization.GetAge(dc.babyAge)}\n" +
+            "\n" +
+            $"{Localization.Get("map_status_hp")} {dc.babyHp}　　{Localization.Get("map_status_atk")} {dc.babyAtk}　　{Localization.Get("map_status_def")} {dc.babyDef}\n" +
+            $"{Localization.Get("map_status_academic")} {dc.babyAcademic}　　{Localization.Get("map_status_athletic")} {dc.babyAthletic}\n" +
+            $"{Localization.Get("map_status_height")} {dc.babyHeight} cm　　{Localization.Get("map_status_weight")} {dc.babyWeight} g\n" +
+            "\n" +
+            $"{Localization.Get("map_status_trait")} <color={traitColor}>{Localization.GetTrait(dc.trait1)}</color>\n" +
+            "\n" +
+            $"{Localization.Get("map_status_exp")} {dc.babyExp} / {DataCarrier.ExpForNextAge(dc.babyAge)}\n" +
+            $"{Localization.Get("map_status_enemies")} {dc.defeatedEnemies}";
+
+        var contentObj = new GameObject("StatusContent");
+        contentObj.transform.SetParent(statusPanel.transform, false);
+        var contentRect = contentObj.AddComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0, 1);
+        contentRect.anchorMax = new Vector2(1, 1);
+        contentRect.anchoredPosition = new Vector2(0, -80);
+        contentRect.sizeDelta = new Vector2(-40, 300);
+        contentRect.pivot = new Vector2(0.5f, 1);
+        var contentText = contentObj.AddComponent<TextMeshProUGUI>();
+        contentText.text = content;
+        contentText.fontSize = 22;
+        contentText.alignment = TextAlignmentOptions.TopLeft;
+        contentText.color = Color.white;
+        contentText.richText = true;
+        contentText.lineSpacing = 8;
+        contentText.raycastTarget = false;
+
+        // とじるボタン
+        CreateMenuItemButton(statusPanel.transform, Localization.Get("ui_close"), -430, () => CloseStatusPanel());
+    }
+
+    void CloseStatusPanel()
+    {
+        if (statusPanel != null)
+        {
+            Destroy(statusPanel);
+            statusPanel = null;
+            menuOpen = false;
+        }
     }
 
     // ===== 持ち物パネル =====
@@ -1267,7 +1599,7 @@ public class MapManager : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, -25);
         titleRect.sizeDelta = new Vector2(0, 50);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        titleText.text = "もちもの";
+        titleText.text = Localization.Get("map_inventory_title");
         titleText.fontSize = 28;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.fontStyle = FontStyles.Bold;
@@ -1288,7 +1620,7 @@ public class MapManager : MonoBehaviour
             emptyRect.anchoredPosition = new Vector2(0, itemY);
             emptyRect.sizeDelta = new Vector2(0, 40);
             var emptyText = emptyObj.AddComponent<TextMeshProUGUI>();
-            emptyText.text = "なにも もっていない";
+            emptyText.text = Localization.Get("map_inventory_empty");
             emptyText.fontSize = 22;
             emptyText.alignment = TextAlignmentOptions.Center;
             emptyText.color = new Color(0.6f, 0.6f, 0.6f);
@@ -1306,7 +1638,7 @@ public class MapManager : MonoBehaviour
                 itemRect.anchoredPosition = new Vector2(0, itemY);
                 itemRect.sizeDelta = new Vector2(0, 40);
                 var itemText = itemObj.AddComponent<TextMeshProUGUI>();
-                itemText.text = item == "金のたまご" ? "<color=#FFD700>★ " + item + "</color>" : item;
+                itemText.text = item == "金のたまご" ? "<color=#FFD700>★ " + Localization.Get("map_item_golden_egg") + "</color>" : item;
                 itemText.fontSize = 22;
                 itemText.alignment = TextAlignmentOptions.Center;
                 itemText.color = Color.white;
@@ -1317,7 +1649,7 @@ public class MapManager : MonoBehaviour
         }
 
         // とじるボタン
-        CreateMenuItemButton(inventoryPanel.transform, "とじる", -240, () => CloseInventoryPanel());
+        CreateMenuItemButton(inventoryPanel.transform, Localization.Get("ui_close"), -240, () => CloseInventoryPanel());
     }
 
     void CloseInventoryPanel()
