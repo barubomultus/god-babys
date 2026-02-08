@@ -81,11 +81,11 @@ public class BirthSystem : MonoBehaviour
     // 母親6パターン
     static readonly ParentData[] Mothers = new[]
     {
-        new ParentData("サクラ",   "sakura",  25, 70, 130, 158, 85, 50, 40, new Color(1.0f, 0.7f, 0.8f), "天才外科医 / 手術成功率: 100%"),
-        new ParentData("ヒナタ",   "hinata",  40, 60, 150, 162, 60, 55, 65, new Color(0.8f, 0.6f, 1.0f), "暗殺拳の継承者 / 全戦全勝"),
+        new ParentData("サクラ",   "sakura",  40, 60, 150, 162, 60, 55, 65, new Color(1.0f, 0.7f, 0.8f), "暗殺拳の継承者 / 全戦全勝"),
+        new ParentData("ヒナタ",   "hinata",  50, 50, 145, 165, 70, 52, 60, new Color(0.8f, 0.6f, 1.0f), "総資産: 28兆円 / 美容帝国CEO"),
         new ParentData("アキラ",   "akira",   65, 30, 160, 170, 45, 58, 80, new Color(1.0f, 0.6f, 0.4f), "五輪金メダル7個 / 100m走: 10.1秒"),
         new ParentData("ミサト",   "misato",  35, 55, 140, 155, 90, 48, 30, new Color(0.6f, 0.9f, 1.0f), "量子物理学者 / IQ: 270"),
-        new ParentData("カエデ",   "kaede",   50, 50, 145, 165, 70, 52, 60, new Color(0.5f, 1.0f, 0.7f), "総資産: 28兆円 / 美容帝国CEO"),
+        new ParentData("カエデ",   "kaede",   25, 70, 130, 158, 85, 50, 40, new Color(0.5f, 1.0f, 0.7f), "天才外科医 / 手術成功率: 100%"),
         new ParentData("ルナ",     "luna",    55, 40, 135, 160, 50, 46, 70, new Color(1.0f, 1.0f, 0.6f), "世界的スーパーモデル / 身長: 180cm"),
     };
 
@@ -102,51 +102,51 @@ public class BirthSystem : MonoBehaviour
     static readonly System.Collections.Generic.Dictionary<string, string> LoveStories = new System.Collections.Generic.Dictionary<string, string>
     {
         // タケシ（格闘家）× 各母親
-        {"タケシ_サクラ", "世界格闘技選手権の決勝戦。\nタケシは宿敵との死闘の末、\n右腕を複雑骨折した。\n\n「二度と戦えない」と宣告される中、\n唯一の希望は天才外科医サクラだった。\n\n12時間に及ぶ手術。\n目覚めたタケシの最初の言葉は\n「俺の腕を救ってくれた君を、\n俺の人生に迎えたい」だった。"},
-        {"タケシ_ヒナタ", "裏格闘技界の頂点を決める戦い。\nタケシとヒナタは決勝で激突した。\n\n拳と暗殺拳が交錯する中、\n二人は互いの強さに惹かれていく。\n\n死闘は引き分けに終わり、\n「決着は別の形でつけよう」と\nタケシが差し出した手を、\nヒナタは静かに握り返した。\n最強の血統がここに誕生する。"},
+        {"タケシ_サクラ", "裏格闘技界の頂点を決める戦い。\nタケシとサクラは決勝で激突した。\n\n拳と暗殺拳が交錯する中、\n二人は互いの強さに惹かれていく。\n\n死闘は引き分けに終わり、\n「決着は別の形でつけよう」と\nタケシが差し出した手を、\nサクラは静かに握り返した。\n最強の血統がここに誕生する。"},
+        {"タケシ_ヒナタ", "「格闘家専用コスメを作りたい」\nヒナタからの突然の依頼。\n\nビジネスミーティングのはずが、\nタケシの素朴な優しさに触れ、\nヒナタの心は揺れ始める。\n\n「数字じゃ測れないものがある」\nタケシの言葉に、\n28兆円の帝国を築いた女は\n初めて涙を流した。\n愛は最高の投資だと知った日。"},
         {"タケシ_アキラ", "オリンピック選手村での出会い。\n格闘技代表のタケシと\n陸上代表のアキラ。\n\n食堂で偶然隣り合わせになり、\n互いの鍛え抜かれた肉体に\n目を奪われた。\n\n「一緒にトレーニングしないか？」\nその一言から始まった朝練は、\nいつしか二人だけの時間に変わり、\n閉会式の夜、二人は結ばれた。"},
         {"タケシ_ミサト", "「筋肉の収縮は量子力学で\n説明できるんですよ」\n\n学会に招かれたタケシに、\nミサトは熱心に語りかけた。\n\n「難しいことはわからねえが、\nあんたの目は本気だな」\n\n理論と実践、正反対の二人。\nだが夜通し語り合ううちに、\n科学者の心は格闘家に奪われ、\n最強の頭脳と肉体が融合した。"},
-        {"タケシ_カエデ", "「格闘家専用コスメを作りたい」\nカエデからの突然の依頼。\n\nビジネスミーティングのはずが、\nタケシの素朴な優しさに触れ、\nカエデの心は揺れ始める。\n\n「数字じゃ測れないものがある」\nタケシの言葉に、\n28兆円の帝国を築いた女は\n初めて涙を流した。\n愛は最高の投資だと知った日。"},
+        {"タケシ_カエデ", "世界格闘技選手権の決勝戦。\nタケシは宿敵との死闘の末、\n右腕を複雑骨折した。\n\n「二度と戦えない」と宣告される中、\n唯一の希望は天才外科医カエデだった。\n\n12時間に及ぶ手術。\n目覚めたタケシの最初の言葉は\n「俺の腕を救ってくれた君を、\n俺の人生に迎えたい」だった。"},
         {"タケシ_ルナ", "スポーツ雑誌の表紙撮影。\n格闘家とスーパーモデルの共演。\n\nカメラの前で火花が散り、\n「もっと近づいて」という\nカメラマンの指示に、\n二人の心臓が高鳴る。\n\n撮影後、ルナが言った。\n「あなたの隣にいると、\n自分が美しく見える気がする」\nスポットライトの下で恋が始まった。"},
 
         // ユウキ（ハッカー）× 各母親
-        {"ユウキ_サクラ", "大病院のシステムがハッキングされた。\n犯人を追うサクラの前に現れたのは、\nセキュリティ専門家のユウキだった。\n\n夜通しの作業、\nコードを書く指とメスを握る指が\n偶然触れ合った瞬間、\n二人は目を合わせた。\n\n「君の手は人を救う手だ」\n「あなたの手もよ」\n異なる世界の天才が、\n同じ未来を見つめ始めた。"},
-        {"ユウキ_ヒナタ", "暗殺組織のサーバーに侵入した夜、\nユウキは追手に囲まれた。\n\nその中にいたのがヒナタ。\n「殺すつもりはない。\nあなたの腕が必要なの」\n\n組織を裏切り、共に逃亡する日々。\n追われる中で芽生えた信頼は、\nいつしか愛に変わっていた。\n\n「俺のファイアウォールは\n君だけ通過できる」\n不器用な告白だった。"},
+        {"ユウキ_サクラ", "暗殺組織のサーバーに侵入した夜、\nユウキは追手に囲まれた。\n\nその中にいたのがサクラ。\n「殺すつもりはない。\nあなたの腕が必要なの」\n\n組織を裏切り、共に逃亡する日々。\n追われる中で芽生えた信頼は、\nいつしか愛に変わっていた。\n\n「俺のファイアウォールは\n君だけ通過できる」\n不器用な告白だった。"},
+        {"ユウキ_ヒナタ", "美容帝国のDX化プロジェクト。\n億単位の契約書を前に、\nユウキは言った。\n\n「報酬はいらない。\nその代わり、週に一度\n食事に付き合ってほしい」\n\n最初は呆れていたヒナタも、\n彼の純粋さに惹かれていく。\n\n「私に値段をつけない人は\n初めてよ」\n28兆円より価値ある愛を知った。"},
         {"ユウキ_アキラ", "アスリート向けAIトレーナーの開発中、\nテストランナーとして\nアキラが研究所に現れた。\n\n「データが全然取れない...\n君は規格外すぎる」\n困惑するユウキに、\nアキラは笑って言った。\n\n「じゃあ毎日来てあげる」\n\nデータ収集という名目の\nデートが始まり、\n数値では測れない感情が芽生えた。"},
         {"ユウキ_ミサト", "量子コンピュータの共同研究。\n世界最高峰の頭脳が二つ、\n同じ研究室に集まった。\n\n夜通しのプログラミング、\nコーヒーカップが触れ合う音、\n「この暗号、解ける？」\n「君となら、どんな問題でも」\n\n二人だけの言語で愛を語り、\n論文より大切な答えを見つけた。\nそれは「共に生きる」という\nシンプルな真実だった。"},
-        {"ユウキ_カエデ", "美容帝国のDX化プロジェクト。\n億単位の契約書を前に、\nユウキは言った。\n\n「報酬はいらない。\nその代わり、週に一度\n食事に付き合ってほしい」\n\n最初は呆れていたカエデも、\n彼の純粋さに惹かれていく。\n\n「私に値段をつけない人は\n初めてよ」\n28兆円より価値ある愛を知った。"},
+        {"ユウキ_カエデ", "大病院のシステムがハッキングされた。\n犯人を追うカエデの前に現れたのは、\nセキュリティ専門家のユウキだった。\n\n夜通しの作業、\nコードを書く指とメスを握る指が\n偶然触れ合った瞬間、\n二人は目を合わせた。\n\n「君の手は人を救う手だ」\n「あなたの手もよ」\n異なる世界の天才が、\n同じ未来を見つめ始めた。"},
         {"ユウキ_ルナ", "SNSで炎上したルナ。\n誹謗中傷の嵐の中、\n匿名の誰かが彼女を守り続けた。\n\n悪質な投稿を消し、\n真実を広め、\n見えない騎士のように戦った。\n\nある日、IPアドレスを辿ったルナは\nユウキを見つけた。\n「なぜ私のために？」\n「君の笑顔を守りたかった」\nその日、二人は恋人になった。"},
 
         // ゴウ（傭兵）× 各母親
-        {"ゴウ_サクラ", "戦場で倒れた仲間を救うため、\nゴウは国境を越えて\n天才外科医を探した。\n\n「報酬はいくらでも払う」\n「お金じゃないの。\nあなたが連れてきて」\n\n危険な戦地に飛び込んだサクラ。\n命がけの手術を終えた夜、\nゴウは初めて泣いた。\n\n「俺の人生を守ってくれないか」\n傭兵の不器用なプロポーズだった。"},
-        {"ゴウ_ヒナタ", "暗殺任務で鉢合わせた二人。\n互いに銃口を向けながら、\n奇妙な沈黙が流れた。\n\n「お前を殺す理由がない」\n「私もよ」\n\n銃を下ろした瞬間、\n組織に追われる身となった。\n\n「一緒に逃げないか」\n「どこまでも」\n\n世界中を逃げ回る日々が、\n二人を離れられない関係にした。"},
+        {"ゴウ_サクラ", "暗殺任務で鉢合わせた二人。\n互いに銃口を向けながら、\n奇妙な沈黙が流れた。\n\n「お前を殺す理由がない」\n「私もよ」\n\n銃を下ろした瞬間、\n組織に追われる身となった。\n\n「一緒に逃げないか」\n「どこまでも」\n\n世界中を逃げ回る日々が、\n二人を離れられない関係にした。"},
+        {"ゴウ_ヒナタ", "要人警護の任務。\n標的にされたのはヒナタだった。\n\n三度の暗殺未遂、\nその全てからゴウは彼女を守った。\n三発目の銃弾を\n自らの体で受け止めた時、\nヒナタは悟った。\n\n「お金じゃ買えないものがある」\n\n病室で目覚めたゴウに、\n彼女は涙ながらに言った。\n「私の人生を守って」"},
         {"ゴウ_アキラ", "紛争地帯でのスポーツ親善大使。\nアキラの警護を任されたゴウは、\n彼女の無邪気さに戸惑った。\n\n「怖くないのか？」\n「あなたがいるから」\n\n銃声の中でも笑顔を絶やさない彼女。\n守るべき存在が、\nいつしか愛する人に変わっていた。\n\n任務終了の日、\nゴウは傭兵を辞める決意をした。"},
         {"ゴウ_ミサト", "軍事衛星のデータ解析依頼。\n冷徹な傭兵ゴウと、\n純粋な物理学者ミサト。\n\n「なぜ人を殺すの？」\n直球の質問に、\nゴウは言葉を失った。\n\n「...答えが見つからない」\n「一緒に探しましょう」\n\nミサトの純粋さが、\n凍った心を少しずつ溶かしていく。\n戦場の狼が愛を知った瞬間だった。"},
-        {"ゴウ_カエデ", "要人警護の任務。\n標的にされたのはカエデだった。\n\n三度の暗殺未遂、\nその全てからゴウは彼女を守った。\n三発目の銃弾を\n自らの体で受け止めた時、\nカエデは悟った。\n\n「お金じゃ買えないものがある」\n\n病室で目覚めたゴウに、\n彼女は涙ながらに言った。\n「私の人生を守って」"},
+        {"ゴウ_カエデ", "戦場で倒れた仲間を救うため、\nゴウは国境を越えて\n天才外科医を探した。\n\n「報酬はいくらでも払う」\n「お金じゃないの。\nあなたが連れてきて」\n\n危険な戦地に飛び込んだカエデ。\n命がけの手術を終えた夜、\nゴウは初めて泣いた。\n\n「俺の人生を守ってくれないか」\n傭兵の不器用なプロポーズだった。"},
         {"ゴウ_ルナ", "戦場カメラマンとして同行したルナ。\n「真実を伝えたい」という\n彼女の覚悟に、ゴウは驚いた。\n\n砲撃の夜、塹壕で肩を寄せ合い、\n生と死の狭間で\n二人は唇を重ねた。\n\n「生きて帰ろう」\n「ああ、一緒にな」\n\n戦場で誓った愛は、\nどんな平和な恋より強く、\n深く結ばれていた。"},
 
         // シンジ（天才科学者）× 各母親
-        {"シンジ_サクラ", "ノーベル医学賞授賞式。\n偶然隣り合わせになった二人は、\n授賞式そっちのけで議論を始めた。\n\n「君の論文、3箇所間違ってる」\n「あなたこそ、5箇所よ」\n\n火花を散らす天才同士。\nだがパーティーが終わる頃には、\n互いを認め合っていた。\n\n「共同研究しないか」\n「いいわ、人生のパートナーとして」\n人類最高の遺伝子が誕生した。"},
-        {"シンジ_ヒナタ", "「暗殺拳の科学的解明」\nその研究テーマに、\nヒナタは協力を申し出た。\n\n動きを解析するうちに、\nシンジの目は彼女自身に向いていた。\n\n「論文より君を研究したい」\n「それ、口説いてる？」\n「...多分」\n\n世界一不器用な告白に、\n暗殺者は初めて頬を染めた。\n愛は科学で証明できないと知った。"},
+        {"シンジ_サクラ", "「暗殺拳の科学的解明」\nその研究テーマに、\nサクラは協力を申し出た。\n\n動きを解析するうちに、\nシンジの目は彼女自身に向いていた。\n\n「論文より君を研究したい」\n「それ、口説いてる？」\n「...多分」\n\n世界一不器用な告白に、\n暗殺者は初めて頬を染めた。\n愛は科学で証明できないと知った。"},
+        {"シンジ_ヒナタ", "「美の方程式」を共著で出版したい。\nヒナタからの依頼に、\nシンジは興味を持った。\n\n数式とビジネス、\n異色のコラボレーション。\n\nグラフを描くうちに、\n二人の線は一点で交わった。\n\n「この交点が僕たちの未来だ」\n「ロマンチストね、意外と」\n\n28兆円の女帝が、\n数式に恋をした日だった。"},
         {"シンジ_アキラ", "「人体の限界」を科学する研究。\n被験者として現れたアキラの\n笑顔を見た瞬間、\nシンジの心拍データは乱れた。\n\n「先生、大丈夫？」\n「い、異常値が出ている...\n僕の心臓に」\n\n「それ、恋って言うんですよ」\nアキラの言葉に、\n天才科学者は顔を真っ赤にした。\n答えは最初から出ていたのだ。"},
         {"シンジ_ミサト", "国際物理学会での激論。\n「あなたの理論は穴だらけよ」\n「君こそ基礎が甘い」\n\n壇上で火花を散らした二人は、\nなぜかホテルのバーで再会した。\n\nIQ250とIQ270。\n合わせて520の恋が始まる。\n\n「数式より美しいものを見つけた」\n「何？」\n「君だよ」\n天才にしては陳腐な台詞だった。"},
-        {"シンジ_カエデ", "「美の方程式」を共著で出版したい。\nカエデからの依頼に、\nシンジは興味を持った。\n\n数式とビジネス、\n異色のコラボレーション。\n\nグラフを描くうちに、\n二人の線は一点で交わった。\n\n「この交点が僕たちの未来だ」\n「ロマンチストね、意外と」\n\n28兆円の女帝が、\n数式に恋をした日だった。"},
+        {"シンジ_カエデ", "ノーベル医学賞授賞式。\n偶然隣り合わせになった二人は、\n授賞式そっちのけで議論を始めた。\n\n「君の論文、3箇所間違ってる」\n「あなたこそ、5箇所よ」\n\n火花を散らす天才同士。\nだがパーティーが終わる頃には、\n互いを認め合っていた。\n\n「共同研究しないか」\n「いいわ、人生のパートナーとして」\n人類最高の遺伝子が誕生した。"},
         {"シンジ_ルナ", "「完璧な顔の数学的定義」\nその研究のため、\nルナがモデルとして協力した。\n\n何百枚もの写真、\n何千ものデータポイント。\n\n「結論が出たよ」\n「どんな顔が完璧なの？」\n「君だ。君以外にない」\n\n論文には書けない結論だった。\n美しさの究極の答えは、\n愛する人の顔だと気づいた。"},
 
         // リョウマ（実業家）× 各母親
-        {"リョウマ_サクラ", "病院チェーンのM&A交渉。\nビジネスランチのはずが、\n話は医療の未来へと広がった。\n\n「君の理想を実現するには\nいくら必要だ？」\n「お金の問題じゃないの」\n\nその言葉に、リョウマは衝撃を受けた。\n43兆円の資産が無意味に思えた。\n\n「なら、僕の人生を投資させてくれ」\n契約書にない想いを込めた。"},
-        {"リョウマ_ヒナタ", "ボディガードとして雇った暗殺者。\n命を預けた相手に、\n心まで奪われるとは思わなかった。\n\n「金で動く女か」\n「いいえ、あなたを守りたいから」\n\n嘘のない瞳だった。\n\n43兆円あっても買えないもの。\nそれは信頼と愛だと、\nリョウマは初めて知った。\n「俺の傍にいてくれ、永遠に」"},
+        {"リョウマ_サクラ", "ボディガードとして雇った暗殺者。\n命を預けた相手に、\n心まで奪われるとは思わなかった。\n\n「金で動く女か」\n「いいえ、あなたを守りたいから」\n\n嘘のない瞳だった。\n\n43兆円あっても買えないもの。\nそれは信頼と愛だと、\nリョウマは初めて知った。\n「俺の傍にいてくれ、永遠に」"},
+        {"リョウマ_ヒナタ", "美容帝国との合併話。\n二つの巨大企業、\n最初は敵対から始まった。\n\n「あなたには負けないわ」\n「俺もだ」\n\n激しい交渉の末、\n二人は互いを認め合った。\n\n「合併より、\n結婚しないか」\n「...それ、逆じゃない？」\n\n71兆円の帝国が誕生した。\n株式より価値ある絆と共に。"},
         {"リョウマ_アキラ", "スポーツ球団買収の記者会見。\n看板選手アキラとの握手の瞬間、\n世界一の資産家は恋に落ちた。\n\n「君をチームの顔にしたい」\n「顔じゃなくて、\n私を見てほしいな」\n\n真っ直ぐな言葉が胸を打った。\n\n株価より大切なもの。\n利益より価値あるもの。\nそれは彼女の笑顔だった。"},
         {"リョウマ_ミサト", "研究所への100億円の投資。\nその見返りに求めたのは、\n論文でも特許でもなかった。\n\n「週に一度、\n一緒に星を見てほしい」\n\nミサトは驚きながらも頷いた。\n\n屋上で星を眺める夜が続き、\n宇宙の話から人生の話へ。\n\n「君という星を見つけた」\n物理学者は、\nその方程式を解けなかった。"},
-        {"リョウマ_カエデ", "美容帝国との合併話。\n二つの巨大企業、\n最初は敵対から始まった。\n\n「あなたには負けないわ」\n「俺もだ」\n\n激しい交渉の末、\n二人は互いを認め合った。\n\n「合併より、\n結婚しないか」\n「...それ、逆じゃない？」\n\n71兆円の帝国が誕生した。\n株式より価値ある絆と共に。"},
+        {"リョウマ_カエデ", "病院チェーンのM&A交渉。\nビジネスランチのはずが、\n話は医療の未来へと広がった。\n\n「君の理想を実現するには\nいくら必要だ？」\n「お金の問題じゃないの」\n\nその言葉に、リョウマは衝撃を受けた。\n43兆円の資産が無意味に思えた。\n\n「なら、僕の人生を投資させてくれ」\n契約書にない想いを込めた。"},
         {"リョウマ_ルナ", "プライベートジェットで偶然の隣席。\nパリへ向かう12時間、\n二人は語り合った。\n\n仕事のこと、夢のこと、\n誰にも言えない弱さのこと。\n\n雲の上、地上から離れた空間で、\n肩書きも資産も意味を失った。\n\n着陸した時、\n二人は恋人になっていた。\n「地上に降りても、この気持ちは変わらない」"},
 
         // テツヤ（ロックスター）× 各母親
-        {"テツヤ_サクラ", "ライブ中に声が出なくなった。\n「二度と歌えない」\n絶望するテツヤを救ったのは、\n天才外科医サクラだった。\n\n奇跡の手術から3ヶ月、\n声を取り戻した日、\nテツヤは病院でゲリラライブを開いた。\n\n「最初の歌は君に捧げる」\nそれは愛の歌だった。\nサクラは涙を流しながら聴いていた。"},
-        {"テツヤ_ヒナタ", "新曲MVの殺陣シーン。\n指導者として現れたヒナタの\n鋭い動きに、テツヤは見惚れた。\n\n「もっと本気で来て」\n「怪我させるぞ」\n「それくらいが丁度いい」\n\nステージで刃を交えるうちに、\n二人の距離は縮まっていった。\n\n撮影終了後の楽屋で、\n二人は激しく唇を重ねた。"},
+        {"テツヤ_サクラ", "新曲MVの殺陣シーン。\n指導者として現れたサクラの\n鋭い動きに、テツヤは見惚れた。\n\n「もっと本気で来て」\n「怪我させるぞ」\n「それくらいが丁度いい」\n\nステージで刃を交えるうちに、\n二人の距離は縮まっていった。\n\n撮影終了後の楽屋で、\n二人は激しく唇を重ねた。"},
+        {"テツヤ_ヒナタ", "化粧品CMソングの打ち合わせ。\n譜面を見るふりをして、\nテツヤはヒナタを見つめていた。\n\n「曲より私を見てない？」\n「バレた？」\n「わかりやすいのよ、あなた」\n\nスタジオに響く笑い声。\nその日、二人は朝まで語り合った。\n\n「君のための歌を書きたい」\n「それ、プロポーズ？」\n「かもしれない」"},
         {"テツヤ_アキラ", "オリンピック応援ソングの依頼。\n「勝利の歌を書いてほしい」\n\nアキラの走る姿を見て、\nテツヤのペンが走り出した。\n\nスタジアムに響く歌声、\n金メダルを取った瞬間、\nアキラはテツヤのもとへ走った。\n\n「この歌があったから勝てた」\n「君がいたから書けた」\n\n金メダルより輝く愛が生まれた。"},
         {"テツヤ_ミサト", "「音楽と物理学の共通点」\n雑誌のインタビューで出会った二人。\n\n「音は波でしょ？\n愛も波かもしれない」\n「周波数が合えば共鳴する...」\n「そう、今の僕たちみたいに」\n\n理屈っぽい会話が心地よかった。\n\nインタビューは終わっても、\n二人の会話は終わらなかった。\n共鳴した心は離れられない。"},
-        {"テツヤ_カエデ", "化粧品CMソングの打ち合わせ。\n譜面を見るふりをして、\nテツヤはカエデを見つめていた。\n\n「曲より私を見てない？」\n「バレた？」\n「わかりやすいのよ、あなた」\n\nスタジオに響く笑い声。\nその日、二人は朝まで語り合った。\n\n「君のための歌を書きたい」\n「それ、プロポーズ？」\n「かもしれない」"},
+        {"テツヤ_カエデ", "ライブ中に声が出なくなった。\n「二度と歌えない」\n絶望するテツヤを救ったのは、\n天才外科医カエデだった。\n\n奇跡の手術から3ヶ月、\n声を取り戻した日、\nテツヤは病院でゲリラライブを開いた。\n\n「最初の歌は君に捧げる」\nそれは愛の歌だった。\nカエデは涙を流しながら聴いていた。"},
         {"テツヤ_ルナ", "ワールドツアー、50都市。\n同じ夢を追う二人は、\n世界中を一緒に回った。\n\n「疲れないか？」\n「あなたがいるから平気」\n\nステージの上と、ランウェイの上。\n輝く場所は違っても、\n見つめ合う瞳は同じだった。\n\n最後の公演、アンコール。\nテツヤはステージ上で跪いた。\n「結婚してくれ」\n8億人のファンが証人となった。"},
     };
 
@@ -506,6 +506,87 @@ public class BirthSystem : MonoBehaviour
                 c_athletic = Mathf.RoundToInt(c_athletic * 1.2f);
                 c_height = Mathf.RoundToInt(c_height * 1.1f);
                 c_weight = Mathf.RoundToInt(c_weight * 1.1f);
+            }
+        }
+
+        // ── フェーズ4.7: サクラ（暗殺拳）の場合20%で子供に恵まれない ──
+        if (mother.name == "サクラ")
+        {
+            bool sakuraSuccess = Random.Range(0, 100) < 80; // 80%で成功
+            if (!sakuraSuccess)
+            {
+                yield return StartCoroutine(ShowSakuraFailure());
+                isAnimating = false;
+                yield break;
+            }
+        }
+
+        // ── フェーズ4.8: ミサトの場合30%で子供に恵まれない ──
+        if (mother.name == "ミサト")
+        {
+            bool misatoSuccess = Random.Range(0, 100) < 70; // 70%で成功
+            if (!misatoSuccess)
+            {
+                yield return StartCoroutine(ShowMisatoFailure());
+                isAnimating = false;
+                yield break;
+            }
+            else
+            {
+                // 成功時はステータスボーナス（+3%）
+                c_atk = Mathf.RoundToInt(c_atk * 1.03f);
+                c_def = Mathf.RoundToInt(c_def * 1.03f);
+                c_hp = Mathf.RoundToInt(c_hp * 1.03f);
+                c_academic = Mathf.RoundToInt(c_academic * 1.03f);
+                c_athletic = Mathf.RoundToInt(c_athletic * 1.03f);
+                c_height = Mathf.RoundToInt(c_height * 1.03f);
+                c_weight = Mathf.RoundToInt(c_weight * 1.03f);
+            }
+        }
+
+        // ── フェーズ4.9: ヒナタ（美容帝国CEO）の場合50%で子供に恵まれない ──
+        if (mother.name == "ヒナタ")
+        {
+            bool hinataSuccess = Random.Range(0, 100) < 50; // 50%で成功
+            if (!hinataSuccess)
+            {
+                yield return StartCoroutine(ShowHinataFailure());
+                isAnimating = false;
+                yield break;
+            }
+            else
+            {
+                // 成功時はステータスボーナス（+5%）
+                c_atk = Mathf.RoundToInt(c_atk * 1.05f);
+                c_def = Mathf.RoundToInt(c_def * 1.05f);
+                c_hp = Mathf.RoundToInt(c_hp * 1.05f);
+                c_academic = Mathf.RoundToInt(c_academic * 1.05f);
+                c_athletic = Mathf.RoundToInt(c_athletic * 1.05f);
+                c_height = Mathf.RoundToInt(c_height * 1.05f);
+                c_weight = Mathf.RoundToInt(c_weight * 1.05f);
+            }
+        }
+
+        // ── フェーズ4.10: カエデの場合10%で子供に恵まれない ──
+        if (mother.name == "カエデ")
+        {
+            bool kaedeSuccess = Random.Range(0, 100) < 90; // 90%で成功
+            if (!kaedeSuccess)
+            {
+                yield return StartCoroutine(ShowKaedeFailure());
+                isAnimating = false;
+                yield break;
+            }
+            else
+            {
+                // 成功時はステータスボーナス（+5%）
+                c_atk = Mathf.RoundToInt(c_atk * 1.05f);
+                c_def = Mathf.RoundToInt(c_def * 1.05f);
+                c_hp = Mathf.RoundToInt(c_hp * 1.05f);
+                c_academic = Mathf.RoundToInt(c_academic * 1.05f);
+                c_athletic = Mathf.RoundToInt(c_athletic * 1.05f);
+                c_height = Mathf.RoundToInt(c_height * 1.05f);
+                c_weight = Mathf.RoundToInt(c_weight * 1.05f);
             }
         }
 
@@ -2314,6 +2395,410 @@ public class BirthSystem : MonoBehaviour
         Destroy(panel);
 
         // やり直しボタンのみ表示
+        childStatusText.text = "";
+        if (generateLifeButton != null) generateLifeButton.SetActive(true);
+        if (anotherGalButton != null) anotherGalButton.SetActive(false);
+        if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
+    }
+
+    IEnumerator ShowSakuraFailure()
+    {
+        if (parentPanel != null) parentPanel.SetActive(false);
+        if (statusTextBackground != null) statusTextBackground.SetActive(false);
+        childStatusText.text = "";
+
+        Canvas canvas = FindObjectOfType<Canvas>();
+
+        var panel = new GameObject("SakuraFailPanel");
+        panel.transform.SetParent(canvas.transform, false);
+        var panelRect = panel.AddComponent<RectTransform>();
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
+        var panelImage = panel.AddComponent<Image>();
+        panelImage.color = new Color(0f, 0f, 0f, 0f);
+        panelImage.raycastTarget = true;
+
+        float fadeInDuration = 0.5f;
+        float elapsed = 0f;
+        while (elapsed < fadeInDuration)
+        {
+            elapsed += Time.deltaTime;
+            panelImage.color = new Color(0f, 0f, 0f, Mathf.Lerp(0f, 0.9f, elapsed / fadeInDuration));
+            yield return null;
+        }
+        panelImage.color = new Color(0f, 0f, 0f, 0.9f);
+
+        float slideDuration = 1.5f;
+        float lineInterval = 2.0f;
+        float startOffsetX = -800f;
+        float verticalStart = 100f;
+        float lineSpacing = 120f;
+
+        string[] sadLines = new string[]
+        {
+            Localization.Get("birth_sakura_line1"),
+            Localization.Get("birth_sakura_line2"),
+            Localization.Get("birth_sakura_line3"),
+            Localization.Get("birth_sakura_line4"),
+        };
+
+        for (int i = 0; i < sadLines.Length; i++)
+        {
+            var textObj = new GameObject("SakuraLine_" + i);
+            textObj.transform.SetParent(panel.transform, false);
+            var textRect = textObj.AddComponent<RectTransform>();
+            var tmp = textObj.AddComponent<TextMeshProUGUI>();
+
+            tmp.text = sadLines[i];
+            tmp.fontSize = i == 0 ? 36 : 32;
+            tmp.color = i == 0 ? Color.white : new Color(1f, 0.8f, 0.85f);
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.enableWordWrapping = true;
+            tmp.raycastTarget = false;
+
+            float yPos = verticalStart - (i * lineSpacing);
+            textRect.sizeDelta = new Vector2(800f, 100f);
+            textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
+
+            float slideElapsed = 0f;
+            Vector2 startPos = new Vector2(startOffsetX, yPos);
+            Vector2 endPos = new Vector2(0f, yPos);
+
+            while (slideElapsed < slideDuration)
+            {
+                slideElapsed += Time.deltaTime;
+                float t = Mathf.SmoothStep(0f, 1f, slideElapsed / slideDuration);
+                textRect.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
+                yield return null;
+            }
+            textRect.anchoredPosition = endPos;
+
+            if (i < sadLines.Length - 1)
+            {
+                yield return new WaitForSeconds(lineInterval);
+            }
+        }
+
+        yield return new WaitForSeconds(4.0f);
+
+        CanvasGroup canvasGroup = panel.AddComponent<CanvasGroup>();
+        canvasGroup.alpha = 1f;
+        elapsed = 0f;
+        float fadeOutDuration = 1.0f;
+        while (elapsed < fadeOutDuration)
+        {
+            elapsed += Time.deltaTime;
+            canvasGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeOutDuration);
+            yield return null;
+        }
+
+        Destroy(panel);
+
+        childStatusText.text = "";
+        if (generateLifeButton != null) generateLifeButton.SetActive(true);
+        if (anotherGalButton != null) anotherGalButton.SetActive(false);
+        if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
+    }
+
+    IEnumerator ShowMisatoFailure()
+    {
+        if (parentPanel != null) parentPanel.SetActive(false);
+        if (statusTextBackground != null) statusTextBackground.SetActive(false);
+        childStatusText.text = "";
+
+        Canvas canvas = FindObjectOfType<Canvas>();
+
+        var panel = new GameObject("MisatoFailPanel");
+        panel.transform.SetParent(canvas.transform, false);
+        var panelRect = panel.AddComponent<RectTransform>();
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
+        var panelImage = panel.AddComponent<Image>();
+        panelImage.color = new Color(0f, 0f, 0f, 0f);
+        panelImage.raycastTarget = true;
+
+        float fadeInDuration = 0.5f;
+        float elapsed = 0f;
+        while (elapsed < fadeInDuration)
+        {
+            elapsed += Time.deltaTime;
+            panelImage.color = new Color(0f, 0f, 0f, Mathf.Lerp(0f, 0.9f, elapsed / fadeInDuration));
+            yield return null;
+        }
+        panelImage.color = new Color(0f, 0f, 0f, 0.9f);
+
+        float slideDuration = 1.5f;
+        float lineInterval = 2.0f;
+        float startOffsetX = -800f;
+        float verticalStart = 100f;
+        float lineSpacing = 120f;
+
+        string[] sadLines = new string[]
+        {
+            Localization.Get("birth_misato_line1"),
+            Localization.Get("birth_misato_line2"),
+            Localization.Get("birth_misato_line3"),
+            Localization.Get("birth_misato_line4"),
+        };
+
+        for (int i = 0; i < sadLines.Length; i++)
+        {
+            var textObj = new GameObject("MisatoLine_" + i);
+            textObj.transform.SetParent(panel.transform, false);
+            var textRect = textObj.AddComponent<RectTransform>();
+            var tmp = textObj.AddComponent<TextMeshProUGUI>();
+
+            tmp.text = sadLines[i];
+            tmp.fontSize = i == 0 ? 36 : 32;
+            tmp.color = i == 0 ? Color.white : new Color(0.7f, 0.9f, 1f);
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.enableWordWrapping = true;
+            tmp.raycastTarget = false;
+
+            float yPos = verticalStart - (i * lineSpacing);
+            textRect.sizeDelta = new Vector2(800f, 100f);
+            textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
+
+            float slideElapsed = 0f;
+            Vector2 startPos = new Vector2(startOffsetX, yPos);
+            Vector2 endPos = new Vector2(0f, yPos);
+
+            while (slideElapsed < slideDuration)
+            {
+                slideElapsed += Time.deltaTime;
+                float t = Mathf.SmoothStep(0f, 1f, slideElapsed / slideDuration);
+                textRect.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
+                yield return null;
+            }
+            textRect.anchoredPosition = endPos;
+
+            if (i < sadLines.Length - 1)
+            {
+                yield return new WaitForSeconds(lineInterval);
+            }
+        }
+
+        yield return new WaitForSeconds(4.0f);
+
+        CanvasGroup canvasGroup = panel.AddComponent<CanvasGroup>();
+        canvasGroup.alpha = 1f;
+        elapsed = 0f;
+        float fadeOutDuration = 1.0f;
+        while (elapsed < fadeOutDuration)
+        {
+            elapsed += Time.deltaTime;
+            canvasGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeOutDuration);
+            yield return null;
+        }
+
+        Destroy(panel);
+
+        childStatusText.text = "";
+        if (generateLifeButton != null) generateLifeButton.SetActive(true);
+        if (anotherGalButton != null) anotherGalButton.SetActive(false);
+        if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
+    }
+
+    IEnumerator ShowHinataFailure()
+    {
+        if (parentPanel != null) parentPanel.SetActive(false);
+        if (statusTextBackground != null) statusTextBackground.SetActive(false);
+        childStatusText.text = "";
+
+        Canvas canvas = FindObjectOfType<Canvas>();
+
+        var panel = new GameObject("HinataFailPanel");
+        panel.transform.SetParent(canvas.transform, false);
+        var panelRect = panel.AddComponent<RectTransform>();
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
+        var panelImage = panel.AddComponent<Image>();
+        panelImage.color = new Color(0f, 0f, 0f, 0f);
+        panelImage.raycastTarget = true;
+
+        float fadeInDuration = 0.5f;
+        float elapsed = 0f;
+        while (elapsed < fadeInDuration)
+        {
+            elapsed += Time.deltaTime;
+            panelImage.color = new Color(0f, 0f, 0f, Mathf.Lerp(0f, 0.9f, elapsed / fadeInDuration));
+            yield return null;
+        }
+        panelImage.color = new Color(0f, 0f, 0f, 0.9f);
+
+        float slideDuration = 1.5f;
+        float lineInterval = 2.0f;
+        float startOffsetX = -800f;
+        float verticalStart = 100f;
+        float lineSpacing = 120f;
+
+        string[] sadLines = new string[]
+        {
+            Localization.Get("birth_hinata_line1"),
+            Localization.Get("birth_hinata_line2"),
+            Localization.Get("birth_hinata_line3"),
+            Localization.Get("birth_hinata_line4"),
+        };
+
+        for (int i = 0; i < sadLines.Length; i++)
+        {
+            var textObj = new GameObject("HinataLine_" + i);
+            textObj.transform.SetParent(panel.transform, false);
+            var textRect = textObj.AddComponent<RectTransform>();
+            var tmp = textObj.AddComponent<TextMeshProUGUI>();
+
+            tmp.text = sadLines[i];
+            tmp.fontSize = i == 0 ? 36 : 32;
+            tmp.color = i == 0 ? Color.white : new Color(0.8f, 0.7f, 1f);
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.enableWordWrapping = true;
+            tmp.raycastTarget = false;
+
+            float yPos = verticalStart - (i * lineSpacing);
+            textRect.sizeDelta = new Vector2(800f, 100f);
+            textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
+
+            float slideElapsed = 0f;
+            Vector2 startPos = new Vector2(startOffsetX, yPos);
+            Vector2 endPos = new Vector2(0f, yPos);
+
+            while (slideElapsed < slideDuration)
+            {
+                slideElapsed += Time.deltaTime;
+                float t = Mathf.SmoothStep(0f, 1f, slideElapsed / slideDuration);
+                textRect.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
+                yield return null;
+            }
+            textRect.anchoredPosition = endPos;
+
+            if (i < sadLines.Length - 1)
+            {
+                yield return new WaitForSeconds(lineInterval);
+            }
+        }
+
+        yield return new WaitForSeconds(4.0f);
+
+        CanvasGroup canvasGroup = panel.AddComponent<CanvasGroup>();
+        canvasGroup.alpha = 1f;
+        elapsed = 0f;
+        float fadeOutDuration = 1.0f;
+        while (elapsed < fadeOutDuration)
+        {
+            elapsed += Time.deltaTime;
+            canvasGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeOutDuration);
+            yield return null;
+        }
+
+        Destroy(panel);
+
+        childStatusText.text = "";
+        if (generateLifeButton != null) generateLifeButton.SetActive(true);
+        if (anotherGalButton != null) anotherGalButton.SetActive(false);
+        if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
+    }
+
+    IEnumerator ShowKaedeFailure()
+    {
+        if (parentPanel != null) parentPanel.SetActive(false);
+        if (statusTextBackground != null) statusTextBackground.SetActive(false);
+        childStatusText.text = "";
+
+        Canvas canvas = FindObjectOfType<Canvas>();
+
+        var panel = new GameObject("KaedeFailPanel");
+        panel.transform.SetParent(canvas.transform, false);
+        var panelRect = panel.AddComponent<RectTransform>();
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
+        var panelImage = panel.AddComponent<Image>();
+        panelImage.color = new Color(0f, 0f, 0f, 0f);
+        panelImage.raycastTarget = true;
+
+        float fadeInDuration = 0.5f;
+        float elapsed = 0f;
+        while (elapsed < fadeInDuration)
+        {
+            elapsed += Time.deltaTime;
+            panelImage.color = new Color(0f, 0f, 0f, Mathf.Lerp(0f, 0.9f, elapsed / fadeInDuration));
+            yield return null;
+        }
+        panelImage.color = new Color(0f, 0f, 0f, 0.9f);
+
+        float slideDuration = 1.5f;
+        float lineInterval = 2.0f;
+        float startOffsetX = -800f;
+        float verticalStart = 100f;
+        float lineSpacing = 120f;
+
+        string[] sadLines = new string[]
+        {
+            Localization.Get("birth_kaede_line1"),
+            Localization.Get("birth_kaede_line2"),
+            Localization.Get("birth_kaede_line3"),
+            Localization.Get("birth_kaede_line4"),
+        };
+
+        for (int i = 0; i < sadLines.Length; i++)
+        {
+            var textObj = new GameObject("KaedeLine_" + i);
+            textObj.transform.SetParent(panel.transform, false);
+            var textRect = textObj.AddComponent<RectTransform>();
+            var tmp = textObj.AddComponent<TextMeshProUGUI>();
+
+            tmp.text = sadLines[i];
+            tmp.fontSize = i == 0 ? 36 : 32;
+            tmp.color = i == 0 ? Color.white : new Color(0.6f, 1f, 0.8f);
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.enableWordWrapping = true;
+            tmp.raycastTarget = false;
+
+            float yPos = verticalStart - (i * lineSpacing);
+            textRect.sizeDelta = new Vector2(800f, 100f);
+            textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
+
+            float slideElapsed = 0f;
+            Vector2 startPos = new Vector2(startOffsetX, yPos);
+            Vector2 endPos = new Vector2(0f, yPos);
+
+            while (slideElapsed < slideDuration)
+            {
+                slideElapsed += Time.deltaTime;
+                float t = Mathf.SmoothStep(0f, 1f, slideElapsed / slideDuration);
+                textRect.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
+                yield return null;
+            }
+            textRect.anchoredPosition = endPos;
+
+            if (i < sadLines.Length - 1)
+            {
+                yield return new WaitForSeconds(lineInterval);
+            }
+        }
+
+        yield return new WaitForSeconds(4.0f);
+
+        CanvasGroup canvasGroup = panel.AddComponent<CanvasGroup>();
+        canvasGroup.alpha = 1f;
+        elapsed = 0f;
+        float fadeOutDuration = 1.0f;
+        while (elapsed < fadeOutDuration)
+        {
+            elapsed += Time.deltaTime;
+            canvasGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeOutDuration);
+            yield return null;
+        }
+
+        Destroy(panel);
+
         childStatusText.text = "";
         if (generateLifeButton != null) generateLifeButton.SetActive(true);
         if (anotherGalButton != null) anotherGalButton.SetActive(false);

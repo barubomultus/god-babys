@@ -18,19 +18,22 @@ public class TitleManager : MonoBehaviour
     private GameObject saveDataListPanel;
     private Canvas mainCanvas;
     private GameObject langPanel;
+    private TextMeshProUGUI jaText;
+    private TextMeshProUGUI enText;
+    private Image jaBg;
+    private Image enBg;
 
     void Start()
     {
         mainCanvas = FindObjectOfType<Canvas>();
 
+        // デフォルト言語を設定（未設定の場合）
         if (!Localization.HasLanguageSet())
         {
-            ShowLanguageSelection();
+            Localization.SetLanguage("ja");
         }
-        else
-        {
-            InitTitle();
-        }
+
+        InitTitle();
     }
 
     void InitTitle()
@@ -47,85 +50,108 @@ public class TitleManager : MonoBehaviour
         {
             CreateSaveDataButton();
         }
+
+        CreateLanguageButtons();
     }
 
-    void ShowLanguageSelection()
+    void CreateLanguageButtons()
     {
         langPanel = new GameObject("LanguagePanel");
         langPanel.transform.SetParent(mainCanvas.transform, false);
 
         var panelRect = langPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = Vector2.zero;
-        panelRect.anchorMax = Vector2.one;
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
-
-        var panelBg = langPanel.AddComponent<Image>();
-        panelBg.color = new Color(0.05f, 0.05f, 0.15f, 0.95f);
-
-        // Title
-        var titleObj = new GameObject("LangTitle");
-        titleObj.transform.SetParent(langPanel.transform, false);
-        var titleRect = titleObj.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0.5f, 0.5f);
-        titleRect.anchorMax = new Vector2(0.5f, 0.5f);
-        titleRect.anchoredPosition = new Vector2(0, 100);
-        titleRect.sizeDelta = new Vector2(500, 60);
-        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        titleText.text = "Select Language / 言語を選択";
-        titleText.fontSize = 32;
-        titleText.alignment = TextAlignmentOptions.Center;
-        titleText.color = Color.white;
-        titleText.fontStyle = FontStyles.Bold;
-        titleText.raycastTarget = false;
+        panelRect.anchorMin = new Vector2(0.5f, 0);
+        panelRect.anchorMax = new Vector2(0.5f, 0);
+        panelRect.anchoredPosition = new Vector2(0, 40);
+        panelRect.sizeDelta = new Vector2(200, 36);
 
         // Japanese button
-        CreateLangButton(langPanel, "日本語", new Vector2(-100, -20), () => {
-            Localization.SetLanguage("ja");
-            Destroy(langPanel);
-            InitTitle();
-        });
+        var jaBtn = new GameObject("LangBtn_JA");
+        jaBtn.transform.SetParent(langPanel.transform, false);
+        var jaRect = jaBtn.AddComponent<RectTransform>();
+        jaRect.anchorMin = new Vector2(0.5f, 0.5f);
+        jaRect.anchorMax = new Vector2(0.5f, 0.5f);
+        jaRect.anchoredPosition = new Vector2(-52, 0);
+        jaRect.sizeDelta = new Vector2(90, 36);
+        jaBg = jaBtn.AddComponent<Image>();
+        var jaBtnComp = jaBtn.AddComponent<Button>();
+        jaBtnComp.targetGraphic = jaBg;
+        jaBtnComp.onClick.AddListener(() => SwitchLanguage("ja"));
+        var jaTextObj = new GameObject("Text");
+        jaTextObj.transform.SetParent(jaBtn.transform, false);
+        var jaTextRect = jaTextObj.AddComponent<RectTransform>();
+        jaTextRect.anchorMin = Vector2.zero;
+        jaTextRect.anchorMax = Vector2.one;
+        jaTextRect.offsetMin = Vector2.zero;
+        jaTextRect.offsetMax = Vector2.zero;
+        jaText = jaTextObj.AddComponent<TextMeshProUGUI>();
+        jaText.text = "日本語";
+        jaText.fontSize = 20;
+        jaText.alignment = TextAlignmentOptions.Center;
+        jaText.fontStyle = FontStyles.Bold;
+        jaText.raycastTarget = false;
 
         // English button
-        CreateLangButton(langPanel, "English", new Vector2(100, -20), () => {
-            Localization.SetLanguage("en");
-            Destroy(langPanel);
-            InitTitle();
-        });
+        var enBtn = new GameObject("LangBtn_EN");
+        enBtn.transform.SetParent(langPanel.transform, false);
+        var enRect = enBtn.AddComponent<RectTransform>();
+        enRect.anchorMin = new Vector2(0.5f, 0.5f);
+        enRect.anchorMax = new Vector2(0.5f, 0.5f);
+        enRect.anchoredPosition = new Vector2(52, 0);
+        enRect.sizeDelta = new Vector2(90, 36);
+        enBg = enBtn.AddComponent<Image>();
+        var enBtnComp = enBtn.AddComponent<Button>();
+        enBtnComp.targetGraphic = enBg;
+        enBtnComp.onClick.AddListener(() => SwitchLanguage("en"));
+        var enTextObj = new GameObject("Text");
+        enTextObj.transform.SetParent(enBtn.transform, false);
+        var enTextRect = enTextObj.AddComponent<RectTransform>();
+        enTextRect.anchorMin = Vector2.zero;
+        enTextRect.anchorMax = Vector2.one;
+        enTextRect.offsetMin = Vector2.zero;
+        enTextRect.offsetMax = Vector2.zero;
+        enText = enTextObj.AddComponent<TextMeshProUGUI>();
+        enText.text = "English";
+        enText.fontSize = 20;
+        enText.alignment = TextAlignmentOptions.Center;
+        enText.fontStyle = FontStyles.Bold;
+        enText.raycastTarget = false;
+
+        UpdateLanguageButtonColors();
     }
 
-    void CreateLangButton(GameObject parent, string label, Vector2 pos, UnityEngine.Events.UnityAction action)
+    void SwitchLanguage(string lang)
     {
-        var btnObj = new GameObject("LangBtn_" + label);
-        btnObj.transform.SetParent(parent.transform, false);
+        Localization.SetLanguage(lang);
+        UpdateLanguageButtonColors();
 
-        var btnRect = btnObj.AddComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(0.5f, 0.5f);
-        btnRect.anchorMax = new Vector2(0.5f, 0.5f);
-        btnRect.anchoredPosition = pos;
-        btnRect.sizeDelta = new Vector2(180, 60);
+        // introLinesを更新
+        introLines = new string[]
+        {
+            Localization.Get("intro_line1"),
+            Localization.Get("intro_line2"),
+            Localization.Get("intro_line3"),
+            Localization.Get("intro_line4")
+        };
 
-        var btnBg = btnObj.AddComponent<Image>();
-        btnBg.color = new Color(0.2f, 0.3f, 0.5f);
+        // セーブデータボタンのテキスト更新
+        if (saveDataButton != null)
+        {
+            var txt = saveDataButton.GetComponentInChildren<TextMeshProUGUI>();
+            if (txt != null) txt.text = Localization.Get("title_save_data");
+        }
+    }
 
-        var btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnBg;
-        btn.onClick.AddListener(action);
+    void UpdateLanguageButtonColors()
+    {
+        string current = Localization.CurrentLanguage;
+        Color activeColor = new Color(0.3f, 0.5f, 0.8f);
+        Color inactiveColor = new Color(0.25f, 0.25f, 0.3f);
 
-        var textObj = new GameObject("Text");
-        textObj.transform.SetParent(btnObj.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-        var text = textObj.AddComponent<TextMeshProUGUI>();
-        text.text = label;
-        text.fontSize = 28;
-        text.alignment = TextAlignmentOptions.Center;
-        text.color = Color.white;
-        text.fontStyle = FontStyles.Bold;
-        text.raycastTarget = false;
+        jaBg.color = (current == "ja") ? activeColor : inactiveColor;
+        jaText.color = (current == "ja") ? Color.white : new Color(0.6f, 0.6f, 0.6f);
+        enBg.color = (current == "en") ? activeColor : inactiveColor;
+        enText.color = (current == "en") ? Color.white : new Color(0.6f, 0.6f, 0.6f);
     }
 
     public void StartGame()
