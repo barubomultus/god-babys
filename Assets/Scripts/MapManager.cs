@@ -1538,6 +1538,8 @@ public class MapManager : MonoBehaviour
             "\n" +
             $"{Localization.Get("map_status_trait")} <color={traitColor}>{Localization.GetTrait(dc.trait1)}</color>\n" +
             "\n" +
+            $"{Localization.Get("map_status_father")} {dc.fatherName}　　{Localization.Get("map_status_mother")} {dc.motherName}\n" +
+            "\n" +
             $"{Localization.Get("map_status_exp")} {dc.babyExp} / {DataCarrier.ExpForNextAge(dc.babyAge)}\n" +
             $"{Localization.Get("map_status_enemies")} {dc.defeatedEnemies}";
 

@@ -22,7 +22,7 @@ public static class Localization
         Add("ui_back_to_title", "トップへ", "Title");
         Add("ui_back_to_title_long", "タイトルへ戻る", "Back to Title");
         Add("ui_saved", "<color=#00FF00>セーブしました！</color>", "<color=#00FF00>Saved!</color>");
-        Add("ui_try_again", "もういちど", "Try Again");
+        Add("ui_try_again", "{0}はちからつきた", "{0} lost all strength");
 
         // ===== Title Scene =====
         Add("title_save_data", "セーブデータ", "Save Data");
@@ -466,6 +466,8 @@ public static class Localization
         Add("map_status_trait", "<b>特徴:</b>", "<b>Trait:</b>");
         Add("map_status_exp", "<b>経験値:</b>", "<b>EXP:</b>");
         Add("map_status_enemies", "<b>倒した敵:</b>", "<b>Defeated:</b>");
+        Add("map_status_father", "<b>父:</b>", "<b>Father:</b>");
+        Add("map_status_mother", "<b>母:</b>", "<b>Mother:</b>");
 
         // Map inventory panel
         Add("map_inventory_title", "もちもの", "Inventory");

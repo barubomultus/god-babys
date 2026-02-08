@@ -340,13 +340,13 @@ public class BattleManager : MonoBehaviour
         else
         {
             // 初回ボス
-            enemyName = "わるいベイビー";
+            enemyName = "あばれんぼうベイビー";
             enemyMaxHp = 150;
             enemyHp = enemyMaxHp;
             enemyAtk = 45;
             enemyDef = 25;
             enemySpeed = 40;
-            loadedEnemySprite = Resources.Load<Sprite>("EnemyBabys/frist-enemy");
+            loadedEnemySprite = Resources.Load<Sprite>("EnemyBabys/common-abarennbou");
         }
     }
 
@@ -390,14 +390,14 @@ public class BattleManager : MonoBehaviour
         panelRect.sizeDelta = new Vector2(900, 420);
 
         // プレイヤー側（左）
-        CreateCharacterPanel(battlePanel.transform, -220, true, out playerFaceImage, out playerNameText, out playerHpBar, out playerHpText);
+        CreateCharacterPanel(battlePanel.transform, -300, true, out playerFaceImage, out playerNameText, out playerHpBar, out playerHpText);
         playerPanelRect = playerFaceImage.transform.parent.GetComponent<RectTransform>();
 
         // VS テキスト
         CreateVsText(battlePanel.transform);
 
         // 敵側（右）
-        CreateCharacterPanel(battlePanel.transform, 220, false, out enemyFaceImage, out enemyNameText, out enemyHpBar, out enemyHpText);
+        CreateCharacterPanel(battlePanel.transform, 300, false, out enemyFaceImage, out enemyNameText, out enemyHpBar, out enemyHpText);
         enemyPanelRect = enemyFaceImage.transform.parent.GetComponent<RectTransform>();
 
         // バトルログ
@@ -1294,12 +1294,15 @@ public class BattleManager : MonoBehaviour
         // アイコン生成
         GenerateSkillIcon(cutIn.transform, playerFatherName, isSpecial, iconSize * 0.8f);
 
-        // フェードイン
+        // プレイヤー側から敵側へスライド
         CanvasGroup cg = cutIn.AddComponent<CanvasGroup>();
         cg.alpha = 0f;
-        float fadeIn = 0.15f;
+        float startX = playerPanelRect != null ? playerPanelRect.anchoredPosition.x : -300f;
+        float endX = enemyPanelRect != null ? enemyPanelRect.anchoredPosition.x : 300f;
+        bgRect.anchoredPosition = new Vector2(startX, 0);
+
+        float fadeIn = 0.1f;
         float elapsed = 0f;
-        // スケールアニメーション
         cutIn.transform.localScale = Vector3.one * 0.5f;
         while (elapsed < fadeIn)
         {
@@ -1312,11 +1315,20 @@ public class BattleManager : MonoBehaviour
         cg.alpha = 1f;
         cutIn.transform.localScale = Vector3.one;
 
-        // 表示時間
-        yield return new WaitForSeconds(isSpecial ? 0.6f : 0.4f);
+        // プレイヤー→敵へスライド
+        float slideDuration = isSpecial ? 0.5f : 0.35f;
+        elapsed = 0f;
+        while (elapsed < slideDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / slideDuration);
+            bgRect.anchoredPosition = new Vector2(Mathf.Lerp(startX, endX, t), 0);
+            yield return null;
+        }
+        bgRect.anchoredPosition = new Vector2(endX, 0);
 
         // フェードアウト
-        float fadeOut = 0.2f;
+        float fadeOut = 0.15f;
         elapsed = 0f;
         while (elapsed < fadeOut)
         {
@@ -1350,9 +1362,13 @@ public class BattleManager : MonoBehaviour
 
         CanvasGroup cg = cutIn.AddComponent<CanvasGroup>();
         cg.alpha = 0f;
+        float startX = playerPanelRect != null ? playerPanelRect.anchoredPosition.x : -300f;
+        float endX = enemyPanelRect != null ? enemyPanelRect.anchoredPosition.x : 300f;
+        bgRect.anchoredPosition = new Vector2(startX, 0);
+
         cutIn.transform.localScale = Vector3.one * 0.5f;
         float elapsed = 0f;
-        float fadeIn = 0.15f;
+        float fadeIn = 0.1f;
         while (elapsed < fadeIn)
         {
             elapsed += Time.deltaTime;
@@ -1363,10 +1379,20 @@ public class BattleManager : MonoBehaviour
         }
         cg.alpha = 1f;
         cutIn.transform.localScale = Vector3.one;
-        yield return new WaitForSeconds(0.4f);
+
+        float slideDuration = 0.35f;
+        elapsed = 0f;
+        while (elapsed < slideDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / slideDuration);
+            bgRect.anchoredPosition = new Vector2(Mathf.Lerp(startX, endX, t), 0);
+            yield return null;
+        }
+        bgRect.anchoredPosition = new Vector2(endX, 0);
 
         elapsed = 0f;
-        float fadeOut = 0.2f;
+        float fadeOut = 0.15f;
         while (elapsed < fadeOut)
         {
             elapsed += Time.deltaTime;
@@ -1382,12 +1408,7 @@ public class BattleManager : MonoBehaviour
         float s = size / 120f;
         switch (motherName)
         {
-            case "サクラ": // 外科医 → 十字
-                BPart("CrossH", parent, Vector2.zero, new Vector2(45*s, 15*s)).AddComponent<Image>().color = new Color(0.2f, 0.9f, 0.4f);
-                BPart("CrossV", parent, Vector2.zero, new Vector2(15*s, 45*s)).AddComponent<Image>().color = new Color(0.2f, 0.9f, 0.4f);
-                BPart("Heart", parent, new Vector2(0, 15*s), new Vector2(10*s, 10*s)).AddComponent<Image>().color = new Color(1f, 0.3f, 0.4f);
-                break;
-            case "ヒナタ": // 暗殺者 → 毒瓶
+            case "サクラ": // 暗殺拳 → 毒瓶
                 BPart("Bottle", parent, new Vector2(0, -5*s), new Vector2(20*s, 30*s)).AddComponent<Image>().color = new Color(0.3f, 0.1f, 0.4f);
                 BPart("Neck", parent, new Vector2(0, 12*s), new Vector2(10*s, 12*s)).AddComponent<Image>().color = new Color(0.3f, 0.1f, 0.4f);
                 BPart("Cork", parent, new Vector2(0, 20*s), new Vector2(14*s, 6*s)).AddComponent<Image>().color = new Color(0.6f, 0.4f, 0.2f);
@@ -1395,6 +1416,20 @@ public class BattleManager : MonoBehaviour
                 // 煙
                 BPart("Smoke1", parent, new Vector2(-6*s, 26*s), new Vector2(6*s, 8*s)).AddComponent<Image>().color = new Color(0.6f, 0f, 0.8f, 0.4f);
                 BPart("Smoke2", parent, new Vector2(4*s, 30*s), new Vector2(8*s, 6*s)).AddComponent<Image>().color = new Color(0.6f, 0f, 0.8f, 0.3f);
+                break;
+            case "ヒナタ": // 美容帝国CEO → 威圧の目
+                BPart("EyeWhite", parent, Vector2.zero, new Vector2(40*s, 22*s)).AddComponent<Image>().color = new Color(0.95f, 0.9f, 0.8f);
+                BPart("Iris", parent, Vector2.zero, new Vector2(18*s, 18*s)).AddComponent<Image>().color = new Color(0.8f, 0.6f, 0.1f);
+                BPart("Pupil", parent, Vector2.zero, new Vector2(8*s, 8*s)).AddComponent<Image>().color = new Color(0.1f, 0.05f, 0f);
+                BPart("HL", parent, new Vector2(-3*s, 3*s), new Vector2(4*s, 4*s)).AddComponent<Image>().color = Color.white;
+                // 威圧線
+                for (int i = 0; i < 6; i++)
+                {
+                    float a = i * 60f * Mathf.Deg2Rad;
+                    var line = BPart($"Pressure{i}", parent, new Vector2(Mathf.Cos(a)*28*s, Mathf.Sin(a)*28*s), new Vector2(10*s, 3*s));
+                    line.transform.localRotation = Quaternion.Euler(0, 0, i*60);
+                    line.AddComponent<Image>().color = new Color(1f, 0.7f, 0.1f, 0.5f);
+                }
                 break;
             case "アキラ": // アスリート → 風/稲妻
                 var bolt1 = BPart("Bolt1", parent, new Vector2(-4*s, 12*s), new Vector2(18*s, 6*s));
@@ -1421,19 +1456,10 @@ public class BattleManager : MonoBehaviour
                 }
                 BPart("Core", parent, Vector2.zero, new Vector2(10*s, 10*s)).AddComponent<Image>().color = new Color(0.8f, 0.5f, 1f);
                 break;
-            case "カエデ": // 実業家 → 威圧の目
-                BPart("EyeWhite", parent, Vector2.zero, new Vector2(40*s, 22*s)).AddComponent<Image>().color = new Color(0.95f, 0.9f, 0.8f);
-                BPart("Iris", parent, Vector2.zero, new Vector2(18*s, 18*s)).AddComponent<Image>().color = new Color(0.8f, 0.6f, 0.1f);
-                BPart("Pupil", parent, Vector2.zero, new Vector2(8*s, 8*s)).AddComponent<Image>().color = new Color(0.1f, 0.05f, 0f);
-                BPart("HL", parent, new Vector2(-3*s, 3*s), new Vector2(4*s, 4*s)).AddComponent<Image>().color = Color.white;
-                // 威圧線
-                for (int i = 0; i < 6; i++)
-                {
-                    float a = i * 60f * Mathf.Deg2Rad;
-                    var line = BPart($"Pressure{i}", parent, new Vector2(Mathf.Cos(a)*28*s, Mathf.Sin(a)*28*s), new Vector2(10*s, 3*s));
-                    line.transform.localRotation = Quaternion.Euler(0, 0, i*60);
-                    line.AddComponent<Image>().color = new Color(1f, 0.7f, 0.1f, 0.5f);
-                }
+            case "カエデ": // 天才外科医 → 十字
+                BPart("CrossH", parent, Vector2.zero, new Vector2(45*s, 15*s)).AddComponent<Image>().color = new Color(0.2f, 0.9f, 0.4f);
+                BPart("CrossV", parent, Vector2.zero, new Vector2(15*s, 45*s)).AddComponent<Image>().color = new Color(0.2f, 0.9f, 0.4f);
+                BPart("Heart", parent, new Vector2(0, 15*s), new Vector2(10*s, 10*s)).AddComponent<Image>().color = new Color(1f, 0.3f, 0.4f);
                 break;
             case "ルナ": // モデル → 星屑
                 float[] starAngles = {0, 72, 144, 216, 288};
@@ -2212,7 +2238,7 @@ public class BattleManager : MonoBehaviour
         retryTextRect.offsetMin = Vector2.zero;
         retryTextRect.offsetMax = Vector2.zero;
         var retryTmp = retryTextObj.AddComponent<TextMeshProUGUI>();
-        retryTmp.text = Localization.Get("ui_try_again");
+        retryTmp.text = string.Format(Localization.Get("ui_try_again"), DataCarrier.Instance.babyName);
         retryTmp.fontSize = 28;
         retryTmp.alignment = TextAlignmentOptions.Center;
         retryTmp.color = Color.white;
