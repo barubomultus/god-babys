@@ -197,6 +197,11 @@ public class BattleManager : MonoBehaviour
         if (canvas == null)
             canvas = FindAnyObjectByType<Canvas>();
 
+        // CanvasScaler調整: 横向きでは高さ基準
+        var canvasScaler = canvas.GetComponent<CanvasScaler>();
+        if (canvasScaler != null)
+            canvasScaler.matchWidthOrHeight = 1f;
+
         InitializePlayer();
         InitializeEnemy();
         CreateBattleUI();
@@ -563,13 +568,15 @@ public class BattleManager : MonoBehaviour
 
     void CreateActionButtons()
     {
+        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
+
         actionPanel = new GameObject("ActionPanel");
         actionPanel.transform.SetParent(canvas.transform, false);
 
         var panelRect = actionPanel.AddComponent<RectTransform>();
         panelRect.anchorMin = new Vector2(0.5f, 0);
         panelRect.anchorMax = new Vector2(0.5f, 0);
-        panelRect.anchoredPosition = new Vector2(0, 80);
+        panelRect.anchoredPosition = new Vector2(0, 80 + safeBottom);
         panelRect.sizeDelta = new Vector2(700, 100);
 
         var layout = actionPanel.AddComponent<HorizontalLayoutGroup>();
@@ -2406,6 +2413,8 @@ public class BattleManager : MonoBehaviour
 
     void CreateMenuBar()
     {
+        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
+
         var bar = new GameObject("MenuBar");
         bar.transform.SetParent(canvas.transform, false);
 
@@ -2413,7 +2422,7 @@ public class BattleManager : MonoBehaviour
         barRect.anchorMin = new Vector2(1, 1);
         barRect.anchorMax = new Vector2(1, 1);
         barRect.pivot = new Vector2(1, 1);
-        barRect.anchoredPosition = new Vector2(-20, -20);
+        barRect.anchoredPosition = new Vector2(-20 - safeRight, -20 - safeTop);
         barRect.sizeDelta = new Vector2(360, 60);
 
         var barBg = bar.AddComponent<Image>();

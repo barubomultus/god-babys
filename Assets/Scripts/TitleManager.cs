@@ -27,6 +27,11 @@ public class TitleManager : MonoBehaviour
     {
         mainCanvas = FindObjectOfType<Canvas>();
 
+        // CanvasScaler調整: 横向きでは高さ基準
+        var canvasScaler = mainCanvas.GetComponent<CanvasScaler>();
+        if (canvasScaler != null)
+            canvasScaler.matchWidthOrHeight = 1f;
+
         // デフォルト言語を設定（未設定の場合）
         if (!Localization.HasLanguageSet())
         {
@@ -56,13 +61,15 @@ public class TitleManager : MonoBehaviour
 
     void CreateLanguageButtons()
     {
+        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(mainCanvas);
+
         langPanel = new GameObject("LanguagePanel");
         langPanel.transform.SetParent(mainCanvas.transform, false);
 
         var panelRect = langPanel.AddComponent<RectTransform>();
         panelRect.anchorMin = new Vector2(0.5f, 0);
         panelRect.anchorMax = new Vector2(0.5f, 0);
-        panelRect.anchoredPosition = new Vector2(0, 40);
+        panelRect.anchoredPosition = new Vector2(0, 40 + safeBottom);
         panelRect.sizeDelta = new Vector2(200, 36);
 
         // Japanese button
@@ -168,13 +175,15 @@ public class TitleManager : MonoBehaviour
     {
         if (mainCanvas == null) return;
 
+        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(mainCanvas);
+
         saveDataButton = new GameObject("SaveDataButton");
         saveDataButton.transform.SetParent(mainCanvas.transform, false);
 
         var btnRect = saveDataButton.AddComponent<RectTransform>();
         btnRect.anchorMin = new Vector2(0.5f, 0);
         btnRect.anchorMax = new Vector2(0.5f, 0);
-        btnRect.anchoredPosition = new Vector2(0, 100);
+        btnRect.anchoredPosition = new Vector2(0, 100 + safeBottom);
         btnRect.sizeDelta = new Vector2(280, 60);
 
         var btnBg = saveDataButton.AddComponent<Image>();

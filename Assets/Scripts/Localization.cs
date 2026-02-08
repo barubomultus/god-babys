@@ -497,6 +497,12 @@ public static class Localization
         Add("mskill_name_ルナ", "スターダスト", "Stardust");
         Add("mskill_desc_ルナ", "星屑をまとった攻撃。与ダメージの一部をHPとして吸収する", "An attack wrapped in stardust. Absorb part of damage dealt as HP");
 
+        // ===== Touch UI =====
+        Add("touch_interact", "調べる", "Interact");
+        Add("touch_menu", "メニュー", "Menu");
+        Add("map_help_text_touch", "D-pad: 移動　[調べる]: タイル調査　[メニュー]: メニュー",
+            "D-pad: Move  [Interact]: Investigate  [Menu]: Menu");
+
         // ===== Labels for character row =====
         Add("label_fathers", "父親", "Fathers");
         Add("label_mothers", "母親", "Mothers");

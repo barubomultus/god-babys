@@ -166,6 +166,11 @@ public class BirthSystem : MonoBehaviour
         if (canvas == null)
             canvas = FindAnyObjectByType<Canvas>();
 
+        // CanvasScaler調整: 横向きでは高さ基準
+        var canvasScaler = canvas.GetComponent<CanvasScaler>();
+        if (canvasScaler != null)
+            canvasScaler.matchWidthOrHeight = 1f;
+
         // childStatusText が未設定なら自動生成
         if (childStatusText == null && canvas != null)
         {
@@ -2811,6 +2816,8 @@ public class BirthSystem : MonoBehaviour
     {
         if (canvas == null) return;
 
+        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
+
         var bar = new GameObject("MenuBar");
         bar.transform.SetParent(canvas.transform, false);
 
@@ -2818,7 +2825,7 @@ public class BirthSystem : MonoBehaviour
         barRect.anchorMin = new Vector2(1, 1);
         barRect.anchorMax = new Vector2(1, 1);
         barRect.pivot = new Vector2(1, 1);
-        barRect.anchoredPosition = new Vector2(-20, -20);
+        barRect.anchoredPosition = new Vector2(-20 - safeRight, -20 - safeTop);
         barRect.sizeDelta = new Vector2(180, 60);
 
         var barBg = bar.AddComponent<Image>();

@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 using TMPro;
 using System.Collections;
 using System.Collections.Generic;
@@ -78,10 +79,21 @@ public class MapManager : MonoBehaviour
     GameObject statusPanel;
     GameObject savePanel;
 
+    // タッチ操作
+    GameObject touchControlsObj;
+    int touchDx, touchDy;
+    bool touchInteract;
+    bool touchMenuPressed;
+
     void Start()
     {
         if (canvas == null)
             canvas = FindAnyObjectByType<Canvas>();
+
+        // CanvasScaler調整: 横向きでは高さ基準
+        var canvasScaler = canvas.GetComponent<CanvasScaler>();
+        if (canvasScaler != null)
+            canvasScaler.matchWidthOrHeight = 1f;
 
         // DataCarrierからマップ位置を復元
         if (DataCarrier.Instance != null)
@@ -97,6 +109,9 @@ public class MapManager : MonoBehaviour
         CreateStatusUI();
         CreateMenuButton();
         CreateGoldenEgg();
+
+        if (SafeAreaHelper.IsTouchDevice())
+            CreateTouchControls();
 
         // プレイヤーを最前面に
         if (playerObj != null)
@@ -723,6 +738,8 @@ public class MapManager : MonoBehaviour
     {
         if (canvas == null) return;
 
+        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
+
         // ステータスパネル（上部）
         var statusPanel = new GameObject("StatusPanel");
         statusPanel.transform.SetParent(canvas.transform, false);
@@ -730,7 +747,7 @@ public class MapManager : MonoBehaviour
         statusRect.anchorMin = new Vector2(0, 1);
         statusRect.anchorMax = new Vector2(1, 1);
         statusRect.pivot = new Vector2(0.5f, 1);
-        statusRect.anchoredPosition = Vector2.zero;
+        statusRect.anchoredPosition = new Vector2(0, -safeTop);
         statusRect.sizeDelta = new Vector2(0, 70);
 
         var statusBg = statusPanel.AddComponent<Image>();
@@ -754,39 +771,44 @@ public class MapManager : MonoBehaviour
 
         UpdateStatusText();
 
-        // 操作説明（下部）
-        var helpPanel = new GameObject("HelpPanel");
-        helpPanel.transform.SetParent(canvas.transform, false);
-        var helpRect = helpPanel.AddComponent<RectTransform>();
-        helpRect.anchorMin = new Vector2(0, 0);
-        helpRect.anchorMax = new Vector2(1, 0);
-        helpRect.pivot = new Vector2(0.5f, 0);
-        helpRect.anchoredPosition = Vector2.zero;
-        helpRect.sizeDelta = new Vector2(0, 40);
+        // 操作説明（下部） - タッチデバイスでは非表示
+        if (!SafeAreaHelper.IsTouchDevice())
+        {
+            var helpPanel = new GameObject("HelpPanel");
+            helpPanel.transform.SetParent(canvas.transform, false);
+            var helpRect = helpPanel.AddComponent<RectTransform>();
+            helpRect.anchorMin = new Vector2(0, 0);
+            helpRect.anchorMax = new Vector2(1, 0);
+            helpRect.pivot = new Vector2(0.5f, 0);
+            helpRect.anchoredPosition = new Vector2(0, safeBottom);
+            helpRect.sizeDelta = new Vector2(0, 40);
 
-        var helpBg = helpPanel.AddComponent<Image>();
-        helpBg.color = new Color(0, 0, 0, 0.5f);
-        helpBg.raycastTarget = false;
+            var helpBg = helpPanel.AddComponent<Image>();
+            helpBg.color = new Color(0, 0, 0, 0.5f);
+            helpBg.raycastTarget = false;
 
-        var helpTextObj = new GameObject("HelpText");
-        helpTextObj.transform.SetParent(helpPanel.transform, false);
-        var helpTextRect = helpTextObj.AddComponent<RectTransform>();
-        helpTextRect.anchorMin = Vector2.zero;
-        helpTextRect.anchorMax = Vector2.one;
-        helpTextRect.offsetMin = new Vector2(10, 5);
-        helpTextRect.offsetMax = new Vector2(-10, -5);
+            var helpTextObj = new GameObject("HelpText");
+            helpTextObj.transform.SetParent(helpPanel.transform, false);
+            var helpTextRect = helpTextObj.AddComponent<RectTransform>();
+            helpTextRect.anchorMin = Vector2.zero;
+            helpTextRect.anchorMax = Vector2.one;
+            helpTextRect.offsetMin = new Vector2(10, 5);
+            helpTextRect.offsetMax = new Vector2(-10, -5);
 
-        var helpText = helpTextObj.AddComponent<TextMeshProUGUI>();
-        helpText.text = Localization.Get("map_help_text");
-        helpText.fontSize = 18;
-        helpText.alignment = TextAlignmentOptions.Center;
-        helpText.color = new Color(0.8f, 0.8f, 0.8f);
-        helpText.raycastTarget = false;
+            var helpText = helpTextObj.AddComponent<TextMeshProUGUI>();
+            helpText.text = Localization.Get("map_help_text");
+            helpText.fontSize = 18;
+            helpText.alignment = TextAlignmentOptions.Center;
+            helpText.color = new Color(0.8f, 0.8f, 0.8f);
+            helpText.raycastTarget = false;
+        }
     }
 
     void CreateMenuButton()
     {
         if (canvas == null) return;
+
+        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
 
         // 右上のメニューボタン
         var btnObj = new GameObject("MenuButton");
@@ -795,7 +817,7 @@ public class MapManager : MonoBehaviour
         btnRect.anchorMin = new Vector2(1, 1);
         btnRect.anchorMax = new Vector2(1, 1);
         btnRect.pivot = new Vector2(1, 1);
-        btnRect.anchoredPosition = new Vector2(-15, -12);
+        btnRect.anchoredPosition = new Vector2(-15 - safeRight, -12 - safeTop);
         btnRect.sizeDelta = new Vector2(90, 46);
 
         var btnImg = btnObj.AddComponent<Image>();
@@ -842,26 +864,23 @@ public class MapManager : MonoBehaviour
 
     void Update()
     {
+        var kb = Keyboard.current;
+        bool escPressed = (kb != null && kb.escapeKey.wasPressedThisFrame) || touchMenuPressed;
+
         // ESCでパネルを閉じる
         if (savePanel != null)
         {
-            var kb = Keyboard.current;
-            if (kb != null && kb.escapeKey.wasPressedThisFrame)
-                CloseSavePanel();
+            if (escPressed) { touchMenuPressed = false; CloseSavePanel(); }
             return;
         }
         if (statusPanel != null)
         {
-            var kb = Keyboard.current;
-            if (kb != null && kb.escapeKey.wasPressedThisFrame)
-                CloseStatusPanel();
+            if (escPressed) { touchMenuPressed = false; CloseStatusPanel(); }
             return;
         }
         if (inventoryPanel != null)
         {
-            var kb = Keyboard.current;
-            if (kb != null && kb.escapeKey.wasPressedThisFrame)
-                CloseInventoryPanel();
+            if (escPressed) { touchMenuPressed = false; CloseInventoryPanel(); }
             return;
         }
 
@@ -875,32 +894,47 @@ public class MapManager : MonoBehaviour
     {
         if (isMoving) return;
 
-        var kb = Keyboard.current;
-        if (kb == null) return;
-
         int dx = 0, dy = 0;
 
-        if (kb.upArrowKey.isPressed || kb.wKey.isPressed)
-            dy = 1;
-        else if (kb.downArrowKey.isPressed || kb.sKey.isPressed)
-            dy = -1;
-        else if (kb.leftArrowKey.isPressed || kb.aKey.isPressed)
-            dx = -1;
-        else if (kb.rightArrowKey.isPressed || kb.dKey.isPressed)
-            dx = 1;
+        // キーボード入力
+        var kb = Keyboard.current;
+        if (kb != null)
+        {
+            if (kb.upArrowKey.isPressed || kb.wKey.isPressed)
+                dy = 1;
+            else if (kb.downArrowKey.isPressed || kb.sKey.isPressed)
+                dy = -1;
+            else if (kb.leftArrowKey.isPressed || kb.aKey.isPressed)
+                dx = -1;
+            else if (kb.rightArrowKey.isPressed || kb.dKey.isPressed)
+                dx = 1;
+        }
+
+        // タッチ入力（D-padホールド）
+        if (dx == 0 && dy == 0)
+        {
+            dx = touchDx;
+            dy = touchDy;
+        }
 
         if (dx != 0 || dy != 0)
         {
             TryMove(dx, dy);
         }
 
-        if (kb.spaceKey.wasPressedThisFrame)
+        // インタラクト
+        bool kbInteract = kb != null && kb.spaceKey.wasPressedThisFrame;
+        if (kbInteract || touchInteract)
         {
+            touchInteract = false;
             Interact();
         }
 
-        if (kb.escapeKey.wasPressedThisFrame)
+        // メニュー
+        bool kbMenu = kb != null && kb.escapeKey.wasPressedThisFrame;
+        if (kbMenu || touchMenuPressed)
         {
+            touchMenuPressed = false;
             ToggleMenu();
         }
     }
@@ -1171,6 +1205,7 @@ public class MapManager : MonoBehaviour
     void OpenMenu()
     {
         menuOpen = true;
+        SetTouchControlsVisible(false);
 
         menuPanel = new GameObject("MenuPanel");
         menuPanel.transform.SetParent(canvas.transform, false);
@@ -1257,6 +1292,7 @@ public class MapManager : MonoBehaviour
             Destroy(menuPanel);
             menuPanel = null;
         }
+        SetTouchControlsVisible(true);
     }
 
     void OnSave()
@@ -1269,6 +1305,7 @@ public class MapManager : MonoBehaviour
     {
         if (savePanel != null) return;
         menuOpen = true;
+        SetTouchControlsVisible(false);
 
         savePanel = new GameObject("SavePanel");
         savePanel.transform.SetParent(canvas.transform, false);
@@ -1424,6 +1461,7 @@ public class MapManager : MonoBehaviour
             Destroy(savePanel);
             savePanel = null;
             menuOpen = false;
+            SetTouchControlsVisible(true);
         }
     }
 
@@ -1493,6 +1531,7 @@ public class MapManager : MonoBehaviour
     {
         if (statusPanel != null) return;
         menuOpen = true;
+        SetTouchControlsVisible(false);
 
         var dc = DataCarrier.Instance;
         if (dc == null) return;
@@ -1571,6 +1610,7 @@ public class MapManager : MonoBehaviour
             Destroy(statusPanel);
             statusPanel = null;
             menuOpen = false;
+            SetTouchControlsVisible(true);
         }
     }
 
@@ -1580,6 +1620,7 @@ public class MapManager : MonoBehaviour
     {
         if (inventoryPanel != null) return;
         menuOpen = true;
+        SetTouchControlsVisible(false);
 
         inventoryPanel = new GameObject("InventoryPanel");
         inventoryPanel.transform.SetParent(canvas.transform, false);
@@ -1661,6 +1702,7 @@ public class MapManager : MonoBehaviour
             Destroy(inventoryPanel);
             inventoryPanel = null;
             menuOpen = false;
+            SetTouchControlsVisible(true);
         }
     }
 
@@ -1705,5 +1747,138 @@ public class MapManager : MonoBehaviour
         yield return new WaitForSeconds(2f);
 
         Destroy(msgBox);
+    }
+
+    // ===== タッチコントロール =====
+
+    void CreateTouchControls()
+    {
+        if (canvas == null) return;
+
+        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
+
+        touchControlsObj = new GameObject("TouchControls");
+        touchControlsObj.transform.SetParent(canvas.transform, false);
+        var touchRect = touchControlsObj.AddComponent<RectTransform>();
+        touchRect.anchorMin = Vector2.zero;
+        touchRect.anchorMax = Vector2.one;
+        touchRect.offsetMin = Vector2.zero;
+        touchRect.offsetMax = Vector2.zero;
+
+        // === D-pad（左下） ===
+        float dpadCenterX = -280 + safeLeft;
+        float dpadCenterY = 120 + safeBottom;
+        float dpadBtnSize = 70f;
+        float dpadSpacing = 72f;
+
+        // 上
+        CreateDpadButton(touchControlsObj.transform, new Vector2(dpadCenterX, dpadCenterY + dpadSpacing),
+            new Vector2(dpadBtnSize, dpadBtnSize), "\u25B2", 0, 1);
+        // 下
+        CreateDpadButton(touchControlsObj.transform, new Vector2(dpadCenterX, dpadCenterY - dpadSpacing),
+            new Vector2(dpadBtnSize, dpadBtnSize), "\u25BC", 0, -1);
+        // 左
+        CreateDpadButton(touchControlsObj.transform, new Vector2(dpadCenterX - dpadSpacing, dpadCenterY),
+            new Vector2(dpadBtnSize, dpadBtnSize), "\u25C0", -1, 0);
+        // 右
+        CreateDpadButton(touchControlsObj.transform, new Vector2(dpadCenterX + dpadSpacing, dpadCenterY),
+            new Vector2(dpadBtnSize, dpadBtnSize), "\u25B6", 1, 0);
+
+        // === 調べるボタン（右下） ===
+        float rightBtnX = 220 - safeRight;
+        float rightBtnBaseY = 120 + safeBottom;
+
+        var interactBtn = CreateTouchButton(touchControlsObj.transform,
+            new Vector2(rightBtnX, rightBtnBaseY),
+            new Vector2(100, 60),
+            Localization.Get("touch_interact"),
+            new Color(0.3f, 0.6f, 0.4f));
+        interactBtn.GetComponent<Button>().onClick.AddListener(() => { touchInteract = true; });
+
+        // === メニューボタン（右下、調べるの上） ===
+        var menuBtn = CreateTouchButton(touchControlsObj.transform,
+            new Vector2(rightBtnX, rightBtnBaseY + 80),
+            new Vector2(100, 60),
+            Localization.Get("touch_menu"),
+            new Color(0.4f, 0.35f, 0.55f));
+        menuBtn.GetComponent<Button>().onClick.AddListener(() => { touchMenuPressed = true; });
+    }
+
+    void CreateDpadButton(Transform parent, Vector2 pos, Vector2 size, string label, int dx, int dy)
+    {
+        var btnObj = new GameObject($"Dpad_{label}");
+        btnObj.transform.SetParent(parent, false);
+        var rect = btnObj.AddComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0);
+        rect.anchorMax = new Vector2(0.5f, 0);
+        rect.anchoredPosition = pos;
+        rect.sizeDelta = size;
+
+        var img = btnObj.AddComponent<Image>();
+        img.color = new Color(0.2f, 0.2f, 0.3f, 0.7f);
+
+        // EventTrigger でホールド移動対応
+        var trigger = btnObj.AddComponent<EventTrigger>();
+
+        var pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        pointerDown.callback.AddListener((_) => { touchDx = dx; touchDy = dy; });
+        trigger.triggers.Add(pointerDown);
+
+        var pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        pointerUp.callback.AddListener((_) => { if (touchDx == dx && touchDy == dy) { touchDx = 0; touchDy = 0; } });
+        trigger.triggers.Add(pointerUp);
+
+        var textObj = new GameObject("Text");
+        textObj.transform.SetParent(btnObj.transform, false);
+        var textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+        var tmp = textObj.AddComponent<TextMeshProUGUI>();
+        tmp.text = label;
+        tmp.fontSize = 28;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = Color.white;
+        tmp.raycastTarget = false;
+    }
+
+    GameObject CreateTouchButton(Transform parent, Vector2 pos, Vector2 size, string label, Color bgColor)
+    {
+        var btnObj = new GameObject($"Touch_{label}");
+        btnObj.transform.SetParent(parent, false);
+        var rect = btnObj.AddComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0);
+        rect.anchorMax = new Vector2(0.5f, 0);
+        rect.anchoredPosition = pos;
+        rect.sizeDelta = size;
+
+        var img = btnObj.AddComponent<Image>();
+        img.color = new Color(bgColor.r, bgColor.g, bgColor.b, 0.7f);
+
+        var btn = btnObj.AddComponent<Button>();
+        btn.targetGraphic = img;
+
+        var textObj = new GameObject("Text");
+        textObj.transform.SetParent(btnObj.transform, false);
+        var textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+        var tmp = textObj.AddComponent<TextMeshProUGUI>();
+        tmp.text = label;
+        tmp.fontSize = 20;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = Color.white;
+        tmp.raycastTarget = false;
+
+        return btnObj;
+    }
+
+    void SetTouchControlsVisible(bool visible)
+    {
+        if (touchControlsObj != null)
+            touchControlsObj.SetActive(visible);
     }
 }
