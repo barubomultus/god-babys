@@ -9,6 +9,9 @@ EditorBuildSettings:
     path: Assets/Scenes/TitleScene.unity
     guid: 2b354570744b844dfbce699fde3c1c82
   - enabled: 1
+    path: Assets/Scenes/ProfileScene.unity
+    guid: c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0
+  - enabled: 1
     path: Assets/Scenes/BirthScene.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
   - enabled: 1
@@ -17,6 +20,15 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/MapScene.unity
     guid: 76c39d2b32724b22a29ac8fca34b86eb
+  - enabled: 1
+    path: Assets/Scenes/HomeScene.unity
+    guid: d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6
+  - enabled: 1
+    path: Assets/Scenes/BabysScene.unity
+    guid: fb72e2fd74e8c4b65a2eabbf36e64969
+  - enabled: 1
+    path: Assets/Scenes/EnishiScene.unity
+    guid: a8a9e410d5894c1193e8588d496661db
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0

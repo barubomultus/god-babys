@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 using System.Collections;
 
@@ -13,7 +14,7 @@ public class TitleManager : MonoBehaviour
     private const float endWaitTime = 2.0f;
     private const float startOffsetX = -800f;
 
-    // セーブデータUI
+    // UI
     private GameObject saveDataButton;
     private GameObject saveDataListPanel;
     private Canvas mainCanvas;
@@ -22,15 +23,27 @@ public class TitleManager : MonoBehaviour
     private TextMeshProUGUI enText;
     private Image jaBg;
     private Image enBg;
+    private TextMeshProUGUI startButtonText;
+    private TextMeshProUGUI saveDataButtonText;
+    private bool hasProfile;
+
+    private const float BTN_WIDTH = 700f;
+    private const float BTN_HEIGHT = 120f;
+    private const int BTN_BLUR = 20;
+    private static Sprite _pillSprite;
+    private static Sprite _shadowSprite;
 
     void Start()
     {
         mainCanvas = FindObjectOfType<Canvas>();
 
-        // CanvasScaler調整: 横向きでは高さ基準
+        // CanvasScaler調整: 縦向き9:16、幅基準
         var canvasScaler = mainCanvas.GetComponent<CanvasScaler>();
         if (canvasScaler != null)
-            canvasScaler.matchWidthOrHeight = 1f;
+        {
+            canvasScaler.referenceResolution = new Vector2(1080, 1920);
+            canvasScaler.matchWidthOrHeight = 0f;
+        }
 
         // デフォルト言語を設定（未設定の場合）
         if (!Localization.HasLanguageSet())
@@ -51,12 +64,61 @@ public class TitleManager : MonoBehaviour
             Localization.Get("intro_line4")
         };
 
-        if (DataCarrier.HasAnySaveData())
+        // 全画面背景 #f3f7f8
+        var bgObj = new GameObject("Background");
+        bgObj.transform.SetParent(mainCanvas.transform, false);
+        bgObj.transform.SetAsFirstSibling();
+        var bgRect = bgObj.AddComponent<RectTransform>();
+        bgRect.anchorMin = Vector2.zero;
+        bgRect.anchorMax = Vector2.one;
+        bgRect.offsetMin = Vector2.zero;
+        bgRect.offsetMax = Vector2.zero;
+        var bgImg = bgObj.AddComponent<Image>();
+        bgImg.color = new Color(0.953f, 0.969f, 0.973f); // #f3f7f8
+        bgImg.raycastTarget = false;
+
+        // タイトルロゴ
+        var logoSprite = Resources.Load<Sprite>("UI/title-logo");
+        if (logoSprite != null)
         {
-            CreateSaveDataButton();
+            var logoObj = new GameObject("TitleLogo");
+            logoObj.transform.SetParent(mainCanvas.transform, false);
+            var logoRect = logoObj.AddComponent<RectTransform>();
+            logoRect.anchorMin = new Vector2(0.5f, 0.5f);
+            logoRect.anchorMax = new Vector2(0.5f, 0.5f);
+            logoRect.anchoredPosition = new Vector2(0, 200);
+            logoRect.sizeDelta = new Vector2(1040, 498);
+            var logoImg = logoObj.AddComponent<Image>();
+            logoImg.sprite = logoSprite;
+            logoImg.preserveAspect = true;
+            logoImg.raycastTarget = false;
+        }
+
+        int pillRadius = (int)(BTN_HEIGHT / 2);
+
+        hasProfile = DataCarrier.HasProfile();
+
+        if (hasProfile)
+        {
+            // プロフィール済み → 「タップでスタート」のみ表示
+            StyleStartButton(-270, pillRadius);
+        }
+        else
+        {
+            // 未設定 → 「はじめから」表示、セーブがあれば「つづきから」も
+            bool hasSave = DataCarrier.HasAnySaveData();
+            float startY = hasSave ? -220 : -270;
+            StyleStartButton(startY, pillRadius);
+
+            if (hasSave)
+            {
+                float continueY = startY - BTN_HEIGHT - 40;
+                CreateSaveDataButton(continueY, pillRadius);
+            }
         }
 
         CreateLanguageButtons();
+        CreateDevResetButton();
     }
 
     void CreateLanguageButtons()
@@ -141,12 +203,11 @@ public class TitleManager : MonoBehaviour
             Localization.Get("intro_line4")
         };
 
-        // セーブデータボタンのテキスト更新
-        if (saveDataButton != null)
-        {
-            var txt = saveDataButton.GetComponentInChildren<TextMeshProUGUI>();
-            if (txt != null) txt.text = Localization.Get("title_save_data");
-        }
+        // ボタンテキスト更新
+        if (startButtonText != null)
+            startButtonText.text = Localization.Get(hasProfile ? "title_tap_start" : "title_new_game");
+        if (saveDataButtonText != null)
+            saveDataButtonText.text = Localization.Get("title_save_data");
     }
 
     void UpdateLanguageButtonColors()
@@ -163,36 +224,70 @@ public class TitleManager : MonoBehaviour
 
     public void StartGame()
     {
-        // 新規ゲーム開始時はスロットをリセット
-        if (DataCarrier.Instance != null)
+        if (hasProfile)
         {
-            DataCarrier.Instance.currentSlot = -1;
+            // プロフィール済み → HomeSceneへ直行
+            if (DataCarrier.Instance != null)
+                DataCarrier.Instance.LoadProfile();
+            SceneManager.LoadScene("HomeScene");
         }
-        StartCoroutine(IntroSequence());
+        else
+        {
+            // 新規 → イントロ → ProfileScene
+            if (DataCarrier.Instance != null)
+            {
+                DataCarrier.Instance.currentSlot = -1;
+            }
+            StartCoroutine(IntroSequence());
+        }
     }
 
-    void CreateSaveDataButton()
+    void CreateSaveDataButton(float yPos, int pillRadius)
     {
         if (mainCanvas == null) return;
-
-        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(mainCanvas);
 
         saveDataButton = new GameObject("SaveDataButton");
         saveDataButton.transform.SetParent(mainCanvas.transform, false);
 
         var btnRect = saveDataButton.AddComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(0.5f, 0);
-        btnRect.anchorMax = new Vector2(0.5f, 0);
-        btnRect.anchoredPosition = new Vector2(0, 100 + safeBottom);
-        btnRect.sizeDelta = new Vector2(280, 60);
+        btnRect.anchorMin = new Vector2(0.5f, 0.5f);
+        btnRect.anchorMax = new Vector2(0.5f, 0.5f);
+        btnRect.anchoredPosition = new Vector2(0, yPos);
+        btnRect.sizeDelta = new Vector2(BTN_WIDTH, BTN_HEIGHT);
 
         var btnBg = saveDataButton.AddComponent<Image>();
-        btnBg.color = new Color(0.3f, 0.5f, 0.7f);
+        btnBg.sprite = GetPillSprite(pillRadius);
+        btnBg.type = Image.Type.Sliced;
+        btnBg.color = Color.white;
 
         var btn = saveDataButton.AddComponent<Button>();
         btn.targetGraphic = btnBg;
         btn.onClick.AddListener(ShowSaveDataList);
+        btn.navigation = new Navigation { mode = Navigation.Mode.None };
+        var colors = btn.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = Color.white;
+        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
+        colors.selectedColor = Color.white;
+        colors.fadeDuration = 0.08f;
+        btn.colors = colors;
 
+        // Box shadow（ボタンの子要素、中央透明で外周のみ影）
+        var shadowObj = new GameObject("Shadow");
+        shadowObj.transform.SetParent(saveDataButton.transform, false);
+        shadowObj.transform.SetAsFirstSibling();
+        var shadowRect = shadowObj.AddComponent<RectTransform>();
+        shadowRect.anchorMin = Vector2.zero;
+        shadowRect.anchorMax = Vector2.one;
+        shadowRect.offsetMin = new Vector2(-BTN_BLUR, -BTN_BLUR - 4);
+        shadowRect.offsetMax = new Vector2(BTN_BLUR, BTN_BLUR - 4);
+        var shadowImg = shadowObj.AddComponent<Image>();
+        shadowImg.sprite = GetShadowSprite(pillRadius, BTN_BLUR);
+        shadowImg.type = Image.Type.Sliced;
+        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
+        shadowImg.raycastTarget = false;
+
+        // テキスト
         var textObj = new GameObject("Text");
         textObj.transform.SetParent(saveDataButton.transform, false);
         var textRect = textObj.AddComponent<RectTransform>();
@@ -200,13 +295,16 @@ public class TitleManager : MonoBehaviour
         textRect.anchorMax = Vector2.one;
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
-        var text = textObj.AddComponent<TextMeshProUGUI>();
-        text.text = Localization.Get("title_save_data");
-        text.fontSize = 28;
-        text.alignment = TextAlignmentOptions.Center;
-        text.color = Color.white;
-        text.fontStyle = FontStyles.Bold;
-        text.raycastTarget = false;
+        saveDataButtonText = textObj.AddComponent<TextMeshProUGUI>();
+        saveDataButtonText.text = Localization.Get("title_save_data");
+        saveDataButtonText.fontSize = 36;
+        saveDataButtonText.alignment = TextAlignmentOptions.Center;
+        saveDataButtonText.color = new Color(0.45f, 0.45f, 0.5f);
+        saveDataButtonText.fontStyle = FontStyles.Bold;
+        saveDataButtonText.raycastTarget = false;
+
+        // 押下時スケールアニメーション
+        AddPressAnimation(saveDataButton);
     }
 
     void ShowSaveDataList()
@@ -535,7 +633,7 @@ public class TitleManager : MonoBehaviour
             saveDataListPanel = null;
         }
 
-        // セーブデータがなくなったらボタンも消す
+        // セーブデータがなくなったらボタンも消す（shadowは子要素なので一緒に消える）
         if (!DataCarrier.HasAnySaveData())
         {
             if (saveDataButton != null)
@@ -557,6 +655,219 @@ public class TitleManager : MonoBehaviour
             Destroy(saveDataListPanel);
             saveDataListPanel = null;
         }
+    }
+
+    void CreateDevResetButton()
+    {
+        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(mainCanvas);
+
+        var btnObj = new GameObject("DevResetButton");
+        btnObj.transform.SetParent(mainCanvas.transform, false);
+        var btnRect = btnObj.AddComponent<RectTransform>();
+        btnRect.anchorMin = new Vector2(1, 1);
+        btnRect.anchorMax = new Vector2(1, 1);
+        btnRect.anchoredPosition = new Vector2(-100, -30 - safeTop);
+        btnRect.sizeDelta = new Vector2(180, 40);
+
+        var btnBg = btnObj.AddComponent<Image>();
+        btnBg.color = new Color(0.3f, 0.3f, 0.3f, 0.6f);
+
+        var btn = btnObj.AddComponent<Button>();
+        btn.targetGraphic = btnBg;
+        btn.onClick.AddListener(() =>
+        {
+            DataCarrier.DeleteProfile();
+            SceneManager.LoadScene("TitleScene");
+        });
+
+        var textObj = new GameObject("Text");
+        textObj.transform.SetParent(btnObj.transform, false);
+        var textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+        var text = textObj.AddComponent<TextMeshProUGUI>();
+        text.text = Localization.Get("title_reset_profile");
+        text.fontSize = 16;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = new Color(1f, 0.4f, 0.4f);
+        text.raycastTarget = false;
+    }
+
+    void StyleStartButton(float yPos, int pillRadius)
+    {
+        var button = gameObject;
+
+        // サイズ・位置変更
+        var rect = button.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            rect.anchoredPosition = new Vector2(0, yPos);
+            rect.sizeDelta = new Vector2(BTN_WIDTH, BTN_HEIGHT);
+        }
+
+        // 既存の子オブジェクトを削除
+        for (int i = button.transform.childCount - 1; i >= 0; i--)
+            Destroy(button.transform.GetChild(i).gameObject);
+
+        // 背景Image: pill shape, 白背景
+        var img = button.GetComponent<Image>();
+        if (img != null)
+        {
+            img.enabled = true;
+            img.sprite = GetPillSprite(pillRadius);
+            img.type = Image.Type.Sliced;
+            img.color = Color.white;
+        }
+
+        // Box shadow（ボタンの子要素、中央透明で外周のみ影）
+        var shadowObj = new GameObject("Shadow");
+        shadowObj.transform.SetParent(button.transform, false);
+        shadowObj.transform.SetAsFirstSibling();
+        var shadowRect = shadowObj.AddComponent<RectTransform>();
+        shadowRect.anchorMin = Vector2.zero;
+        shadowRect.anchorMax = Vector2.one;
+        shadowRect.offsetMin = new Vector2(-BTN_BLUR, -BTN_BLUR - 4);
+        shadowRect.offsetMax = new Vector2(BTN_BLUR, BTN_BLUR - 4);
+        var shadowImg = shadowObj.AddComponent<Image>();
+        shadowImg.sprite = GetShadowSprite(pillRadius, BTN_BLUR);
+        shadowImg.type = Image.Type.Sliced;
+        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
+        shadowImg.raycastTarget = false;
+
+        // テキスト
+        var textObj = new GameObject("Text");
+        textObj.transform.SetParent(button.transform, false);
+        var textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+        startButtonText = textObj.AddComponent<TextMeshProUGUI>();
+        startButtonText.text = Localization.Get(hasProfile ? "title_tap_start" : "title_new_game");
+        startButtonText.fontSize = 36;
+        startButtonText.alignment = TextAlignmentOptions.Center;
+        startButtonText.color = new Color(0.45f, 0.45f, 0.5f);
+        startButtonText.fontStyle = FontStyles.Bold;
+        startButtonText.raycastTarget = false;
+
+        // Button設定
+        var btn = button.GetComponent<Button>();
+        if (btn != null)
+        {
+            btn.targetGraphic = img;
+            btn.navigation = new Navigation { mode = Navigation.Mode.None };
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = Color.white;
+            colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
+            colors.selectedColor = Color.white;
+            colors.fadeDuration = 0.08f;
+            btn.colors = colors;
+        }
+
+        AddPressAnimation(button);
+    }
+
+    void AddPressAnimation(GameObject button)
+    {
+        var trigger = button.GetComponent<EventTrigger>();
+        if (trigger == null)
+            trigger = button.AddComponent<EventTrigger>();
+        trigger.triggers.Clear();
+
+        var pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        pointerDown.callback.AddListener((data) => {
+            button.transform.localScale = new Vector3(0.95f, 0.95f, 1f);
+        });
+        trigger.triggers.Add(pointerDown);
+
+        var pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        pointerUp.callback.AddListener((data) => {
+            button.transform.localScale = Vector3.one;
+        });
+        trigger.triggers.Add(pointerUp);
+
+        var pointerExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        pointerExit.callback.AddListener((data) => {
+            button.transform.localScale = Vector3.one;
+        });
+        trigger.triggers.Add(pointerExit);
+    }
+
+    // Pill型スプライト（border-radius: 50%）
+    static Sprite GetPillSprite(int radius)
+    {
+        if (_pillSprite != null) return _pillSprite;
+
+        int size = radius * 2 + 2;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float center = (size - 1) / 2f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float px = x - center;
+                float py = y - center;
+                float dist = Mathf.Sqrt(px * px + py * py) - radius;
+
+                if (dist <= -1f)
+                    tex.SetPixel(x, y, Color.white);
+                else if (dist <= 0f)
+                    tex.SetPixel(x, y, new Color(1, 1, 1, -dist));
+                else
+                    tex.SetPixel(x, y, new Color(0, 0, 0, 0));
+            }
+        }
+        tex.Apply();
+
+        var border = new Vector4(radius, radius, radius, radius);
+        _pillSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        return _pillSprite;
+    }
+
+    // Box shadow用スプライト（ぼかし付きpill型影）
+    static Sprite GetShadowSprite(int radius, int blur)
+    {
+        if (_shadowSprite != null) return _shadowSprite;
+
+        int size = (radius + blur) * 2 + 2;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float center = (size - 1) / 2f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float px = x - center;
+                float py = y - center;
+                // SDFで円（pill形状の角部分）からの距離を計算
+                float dist = Mathf.Sqrt(px * px + py * py) - radius;
+
+                float alpha;
+                if (dist <= 0f)
+                    alpha = 0f; // 中央は透明（ボタン白背景と重なる部分）
+                else if (dist >= blur)
+                    alpha = 0f;
+                else
+                {
+                    float t = dist / blur;
+                    alpha = (1f - t) * (1f - t); // 二次関数で自然なフォールオフ
+                }
+
+                tex.SetPixel(x, y, new Color(1, 1, 1, alpha));
+            }
+        }
+        tex.Apply();
+
+        int borderVal = radius + blur;
+        var border = new Vector4(borderVal, borderVal, borderVal, borderVal);
+        _shadowSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        return _shadowSprite;
     }
 
     private IEnumerator IntroSequence()
@@ -645,6 +956,16 @@ public class TitleManager : MonoBehaviour
             yield return null;
         }
 
-        SceneManager.LoadScene("BirthScene");
+        if (DataCarrier.HasProfile())
+        {
+            // プロフィール登録済み → グローバルプロフィールを読み込んでBirthSceneへ
+            if (DataCarrier.Instance != null)
+                DataCarrier.Instance.LoadProfile();
+            SceneManager.LoadScene("BirthScene");
+        }
+        else
+        {
+            SceneManager.LoadScene("ProfileScene");
+        }
     }
 }

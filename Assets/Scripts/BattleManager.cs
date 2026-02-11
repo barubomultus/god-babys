@@ -23,6 +23,7 @@ public class BattleManager : MonoBehaviour
     int playerHp, playerMaxHp, playerAtk, playerDef;
     int playerHeight, playerWeight;
     bool playerDefending;
+    bool enemyDefending;
     bool isMale;
     bool isGodBaby;
     int playerEvasion; // 回避率(身長・体重で変動)
@@ -44,6 +45,10 @@ public class BattleManager : MonoBehaviour
     int enemyAtkDebuffTurns;   // 敵ATKデバフ残りターン
     int enemyPoisonTurns;      // 毒残りターン
     int playerEvasionBuffTurns;// 回避バフ残りターン
+    int playerPoisonTurns;     // プレイヤー毒残りターン
+    bool isDevilEnemy;         // 悪魔村敵フラグ
+    bool cannotRun;            // 逃走不可フラグ（固定エンカウント）
+    Color enemyBgColor = Color.clear; // スプライト無し時の背景色
 
     // 技情報ポップアップ
     GameObject skillInfoPopup;
@@ -186,6 +191,7 @@ public class BattleManager : MonoBehaviour
     bool isPlayerTurn;
     bool waitingForAction;
     int battleTurnCount;
+    int enemyTurnCount; // 敵ターンカウント（シバ必殺技用）
 
     // 演出用
     Image battleFlashOverlay;
@@ -197,10 +203,13 @@ public class BattleManager : MonoBehaviour
         if (canvas == null)
             canvas = FindAnyObjectByType<Canvas>();
 
-        // CanvasScaler調整: 横向きでは高さ基準
+        // CanvasScaler調整: 縦向き9:16、幅基準
         var canvasScaler = canvas.GetComponent<CanvasScaler>();
         if (canvasScaler != null)
-            canvasScaler.matchWidthOrHeight = 1f;
+        {
+            canvasScaler.referenceResolution = new Vector2(1080, 1920);
+            canvasScaler.matchWidthOrHeight = 0f;
+        }
 
         InitializePlayer();
         InitializeEnemy();
@@ -216,6 +225,9 @@ public class BattleManager : MonoBehaviour
         {
             playerMaxHp = DataCarrier.Instance.babyHp;
             playerHp = playerMaxHp;
+            // HP持越し: 前の戦闘のHPが残っていればそれを使う
+            if (DataCarrier.Instance.babyCurrentHp > 0)
+                playerHp = Mathf.Min(DataCarrier.Instance.babyCurrentHp, playerMaxHp);
             playerAtk = DataCarrier.Instance.babyAtk;
             playerDef = DataCarrier.Instance.babyDef;
 
@@ -253,8 +265,15 @@ public class BattleManager : MonoBehaviour
                 playerAtk = (int)(playerAtk * 1.12f);
                 playerDef = (int)(playerDef * 1.12f);
                 playerMaxHp = (int)(playerMaxHp * 1.12f);
-                playerHp = playerMaxHp;
+                // HP持越し: GOD BABYボーナス適用後のmaxHPに対してクランプ
+                if (DataCarrier.Instance.babyCurrentHp > 0)
+                    playerHp = Mathf.Min(DataCarrier.Instance.babyCurrentHp, playerMaxHp);
+                else
+                    playerHp = playerMaxHp;
             }
+
+            // 毒状態読込
+            playerPoisonTurns = DataCarrier.Instance.babyPoisonTurns;
 
             // 親の組み合わせから固有技を取得
             playerFatherName = DataCarrier.Instance.fatherName ?? "";
@@ -324,11 +343,35 @@ public class BattleManager : MonoBehaviour
     {
         bool fromMap = DataCarrier.Instance != null && DataCarrier.Instance.cameFromMap;
         bool bossBattle = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle;
+        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
 
-        if (fromMap && bossBattle)
+        // 固定エンカウント（デヴィル傭兵）
+        if (!string.IsNullOrEmpty(DataCarrier.Instance?.fixedEncounterEnemy))
+        {
+            InitializeFixedEnemy(DataCarrier.Instance.fixedEncounterEnemy);
+            DataCarrier.Instance.fixedEncounterEnemy = "";
+            return;
+        }
+
+        if (fromMap && bossBattle && area == 2)
+        {
+            // デヴィル夫人のやかた — デヴィル夫人
+            enemyName = "デヴィル夫人";
+            enemyAge = -1;
+            enemyMaxHp = 650;
+            enemyHp = enemyMaxHp;
+            enemyAtk = 95;
+            enemyDef = 40;
+            enemySpeed = 75;
+            isDevilEnemy = true;
+            enemyBgColor = new Color(0.3f, 0.0f, 0.2f);
+            loadedEnemySprite = null;
+        }
+        else if (fromMap && bossBattle)
         {
             // ボスの館 — 村の王シバ
             enemyName = "村の王シバ";
+            enemyAge = -1; // ボスは月齢非表示
             enemyMaxHp = 500;
             enemyHp = enemyMaxHp;
             enemyAtk = 80;
@@ -344,66 +387,156 @@ public class BattleManager : MonoBehaviour
         }
         else
         {
-            // 初回ボス
+            // 初回ボス（ガチャ平均程度の強さ）
             enemyName = "あばれんぼうベイビー";
-            enemyMaxHp = 150;
+            enemyAge = -1; // 初回ボスは月齢非表示
+            enemyMaxHp = 155;
             enemyHp = enemyMaxHp;
-            enemyAtk = 45;
-            enemyDef = 25;
-            enemySpeed = 40;
+            enemyAtk = 50;
+            enemyDef = 45;
+            enemySpeed = 45;
             loadedEnemySprite = Resources.Load<Sprite>("EnemyBabys/common-abarennbou");
         }
     }
 
+    int enemyAge; // 敵の月齢（経験値計算用）
+
     void InitializeRandomEnemy(int playerAge)
     {
-        // 月齢に応じてスケーリング
-        float scale = 1.0f + (playerAge - 1) * 0.08f;
+        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
 
-        // 敵名とスプライトの対応
-        string[][] enemyTable = {
-            new[]{ "やんちゃベイビー",     "EnemyBabys/common-yantya" },
-            new[]{ "いじわるベイビー",     "EnemyBabys/frist-enemy" },
-            new[]{ "なきむしベイビー",     "EnemyBabys/common-nakimushi" },
-            new[]{ "あばれんぼうベイビー", "EnemyBabys/common-abarennbou" },
-            new[]{ "わがままベイビー",     "EnemyBabys/common-wagamama" },
-        };
+        if (area == 0)
+        {
+            // 村: 0~8ヶ月の敵（プレイヤー月齢付近を中心にランダム）
+            int minAge = Mathf.Max(0, playerAge - 2);
+            int maxAge = Mathf.Min(8, playerAge + 2);
+            enemyAge = Random.Range(minAge, maxAge + 1);
+        }
+        else
+        {
+            // 悪魔村: 6~15ヶ月
+            int minAge = Mathf.Max(6, playerAge - 2);
+            int maxAge = Mathf.Min(15, playerAge + 3);
+            enemyAge = Random.Range(minAge, maxAge + 1);
+        }
 
-        int idx = Random.Range(0, enemyTable.Length);
-        enemyName = enemyTable[idx][0];
-        loadedEnemySprite = Resources.Load<Sprite>(enemyTable[idx][1]);
+        // 敵キャラ定義: 名前, スプライト, 基礎HP, 基礎ATK, 基礎DEF, 基礎SPD
+        // 弱い順に並べ、月齢に応じて出現テーブルを変える
+        object[][] enemyDefs;
 
-        enemyMaxHp = Mathf.RoundToInt(80 * scale + Random.Range(0, 30));
+        if (area == 1)
+        {
+            // 悪魔村専用テーブル（スプライト無し、背景色で表示）
+            enemyDefs = new object[][] {
+                //                    名前              スプライト  HP  ATK DEF SPD 出現月齢  背景色
+                new object[]{ "どくベイビー",     null,  90, 25, 15, 25,  6,  9, new Color(0.4f, 0.1f, 0.5f) },
+                new object[]{ "のろいベイビー",   null, 100, 30, 20, 22,  7, 10, new Color(0.3f, 0.0f, 0.3f) },
+                new object[]{ "やみベイビー",     null, 110, 35, 22, 30,  8, 11, new Color(0.15f, 0.05f, 0.2f) },
+                new object[]{ "あくまベイビー",   null, 130, 42, 28, 35,  9, 13, new Color(0.5f, 0.0f, 0.1f) },
+                new object[]{ "じゃあくベイビー", null, 150, 48, 32, 38, 11, 14, new Color(0.2f, 0.0f, 0.0f) },
+                new object[]{ "まおうベイビー",   null, 180, 55, 38, 42, 13, 15, new Color(0.1f, 0.0f, 0.15f) },
+            };
+        }
+        else
+        {
+            enemyDefs = new object[][] {
+                //                    名前                    スプライト                      HP  ATK DEF SPD  出現月齢
+                new object[]{ "なきむしベイビー",     "EnemyBabys/common-nakimushi",    60, 15, 10, 20, 0, 3 },
+                new object[]{ "やんちゃベイビー",     "EnemyBabys/common-yantya",       75, 22, 12, 30, 1, 5 },
+                new object[]{ "いじわるベイビー",     "EnemyBabys/frist-enemy",         85, 28, 18, 25, 3, 6 },
+                new object[]{ "わがままベイビー",     "EnemyBabys/common-wagamama",    100, 32, 22, 28, 4, 7 },
+                new object[]{ "あばれんぼうベイビー", "EnemyBabys/common-abarennbou",  120, 40, 25, 35, 5, 8 },
+            };
+        }
+
+        // 敵月齢に合う敵を候補に絞る
+        var candidates = new System.Collections.Generic.List<object[]>();
+        foreach (var def in enemyDefs)
+        {
+            int appearMin = (int)def[6];
+            int appearMax = (int)def[7];
+            if (enemyAge >= appearMin && enemyAge <= appearMax)
+                candidates.Add(def);
+        }
+        if (candidates.Count == 0)
+            candidates.Add(enemyDefs[enemyDefs.Length - 1]); // fallback
+
+        var chosen = candidates[Random.Range(0, candidates.Count)];
+        enemyName = (string)chosen[0];
+        if (chosen[1] != null)
+            loadedEnemySprite = Resources.Load<Sprite>((string)chosen[1]);
+        else
+            loadedEnemySprite = null;
+
+        // 悪魔村敵: 背景色設定
+        if (chosen.Length > 8 && chosen[8] is Color bgCol)
+        {
+            isDevilEnemy = true;
+            enemyBgColor = bgCol;
+        }
+
+        // 月齢スケーリング: 1ヶ月ごとに+12%成長
+        float scale = 1.0f + enemyAge * 0.12f;
+        int baseHp  = (int)chosen[2];
+        int baseAtk = (int)chosen[3];
+        int baseDef = (int)chosen[4];
+        int baseSpd = (int)chosen[5];
+
+        enemyMaxHp = Mathf.RoundToInt(baseHp * scale + Random.Range(0, 20));
         enemyHp = enemyMaxHp;
-        enemyAtk = Mathf.RoundToInt(25 * scale + Random.Range(0, 10));
-        enemyDef = Mathf.RoundToInt(15 * scale + Random.Range(0, 8));
-        enemySpeed = Mathf.RoundToInt(30 * scale + Random.Range(0, 20));
+        enemyAtk = Mathf.RoundToInt(baseAtk * scale + Random.Range(0, 5));
+        enemyDef = Mathf.RoundToInt(baseDef * scale + Random.Range(0, 5));
+        enemySpeed = Mathf.RoundToInt(baseSpd * scale + Random.Range(0, 10));
+    }
+
+    void InitializeFixedEnemy(string fixedName)
+    {
+        enemyName = fixedName;
+        enemyAge = -1;
+        cannotRun = true;
+        isDevilEnemy = true;
+        loadedEnemySprite = null;
+
+        // デヴィル傭兵A/B: 同じステータス
+        enemyMaxHp = 280;
+        enemyHp = enemyMaxHp;
+        enemyAtk = 60;
+        enemyDef = 35;
+        enemySpeed = 55;
+        enemyBgColor = new Color(0.35f, 0.05f, 0.05f);
     }
 
     // ===== バトルUI作成 =====
 
     void CreateBattleUI()
     {
-        // バトルパネル（中央上部）
+        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
+
+        // バトルパネル（画面全体を使う）
         battlePanel = new GameObject("BattlePanel");
         battlePanel.transform.SetParent(canvas.transform, false);
 
         var panelRect = battlePanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = new Vector2(0, 100);
-        panelRect.sizeDelta = new Vector2(900, 420);
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
 
-        // プレイヤー側（左）
-        CreateCharacterPanel(battlePanel.transform, -300, true, out playerFaceImage, out playerNameText, out playerHpBar, out playerHpText);
-        playerPanelRect = playerFaceImage.transform.parent.GetComponent<RectTransform>();
+        // 背景色（暗いグラデーション風）
+        var bgImg = battlePanel.AddComponent<Image>();
+        bgImg.color = new Color(0.08f, 0.08f, 0.15f);
+        bgImg.raycastTarget = false;
+
+        // 敵側（右上）
+        CreateCharacterPanel(battlePanel.transform, 220, 540 + safeTop * 0.5f, false, out enemyFaceImage, out enemyNameText, out enemyHpBar, out enemyHpText);
+        enemyPanelRect = enemyFaceImage.transform.parent.GetComponent<RectTransform>();
 
         // VS テキスト
         CreateVsText(battlePanel.transform);
 
-        // 敵側（右）
-        CreateCharacterPanel(battlePanel.transform, 300, false, out enemyFaceImage, out enemyNameText, out enemyHpBar, out enemyHpText);
-        enemyPanelRect = enemyFaceImage.transform.parent.GetComponent<RectTransform>();
+        // プレイヤー側（左下）
+        CreateCharacterPanel(battlePanel.transform, -220, -320, true, out playerFaceImage, out playerNameText, out playerHpBar, out playerHpText);
+        playerPanelRect = playerFaceImage.transform.parent.GetComponent<RectTransform>();
 
         // バトルログ
         CreateBattleLog();
@@ -428,7 +561,7 @@ public class BattleManager : MonoBehaviour
         UpdateEnemyDisplay();
     }
 
-    void CreateCharacterPanel(Transform parent, float xPos, bool isPlayer, out Image faceImage, out TextMeshProUGUI nameText, out Image hpBar, out TextMeshProUGUI hpText)
+    void CreateCharacterPanel(Transform parent, float xPos, float yPos, bool isPlayer, out Image faceImage, out TextMeshProUGUI nameText, out Image hpBar, out TextMeshProUGUI hpText)
     {
         var panel = new GameObject(isPlayer ? "PlayerPanel" : "EnemyPanel");
         panel.transform.SetParent(parent, false);
@@ -436,8 +569,8 @@ public class BattleManager : MonoBehaviour
         var panelRect = panel.AddComponent<RectTransform>();
         panelRect.anchorMin = new Vector2(0.5f, 0.5f);
         panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = new Vector2(xPos, 0);
-        panelRect.sizeDelta = new Vector2(340, 440);
+        panelRect.anchoredPosition = new Vector2(xPos, yPos);
+        panelRect.sizeDelta = new Vector2(450, 550);
 
         var panelBg = panel.AddComponent<Image>();
         panelBg.sprite = CreateRoundedRectSprite(64, 64, 16);
@@ -451,24 +584,24 @@ public class BattleManager : MonoBehaviour
         var nameRect = nameObj.AddComponent<RectTransform>();
         nameRect.anchorMin = new Vector2(0, 1);
         nameRect.anchorMax = new Vector2(1, 1);
-        nameRect.anchoredPosition = new Vector2(0, -25);
-        nameRect.sizeDelta = new Vector2(0, 50);
+        nameRect.anchoredPosition = new Vector2(0, -35);
+        nameRect.sizeDelta = new Vector2(0, 70);
         nameText = nameObj.AddComponent<TextMeshProUGUI>();
-        nameText.fontSize = 28;
+        nameText.fontSize = 52;
         nameText.alignment = TextAlignmentOptions.Center;
         nameText.color = isPlayer ? new Color(0.5f, 0.8f, 1f) : new Color(1f, 0.5f, 0.5f);
         nameText.fontStyle = FontStyles.Bold;
         nameText.raycastTarget = false;
         nameText.richText = true; // GOD BABYの金色表示用
 
-        // 顔
+        // 顔（HPバーと同じ幅 — パネル左右15pxマージン）
         var faceObj = new GameObject("Face");
         faceObj.transform.SetParent(panel.transform, false);
         var faceRect = faceObj.AddComponent<RectTransform>();
-        faceRect.anchorMin = new Vector2(0.5f, 0.5f);
-        faceRect.anchorMax = new Vector2(0.5f, 0.5f);
-        faceRect.anchoredPosition = new Vector2(0, 15);
-        faceRect.sizeDelta = new Vector2(260, 260);
+        faceRect.anchorMin = new Vector2(0, 0);
+        faceRect.anchorMax = new Vector2(1, 1);
+        faceRect.offsetMin = new Vector2(15, 80);   // 左15, 下80（HPバー・テキストの上）
+        faceRect.offsetMax = new Vector2(-15, -55);  // 右15, 上55（名前テキストの下）
         faceImage = faceObj.AddComponent<Image>();
         faceImage.color = Color.white;
         faceImage.raycastTarget = false;
@@ -506,10 +639,10 @@ public class BattleManager : MonoBehaviour
         var hpTextRect = hpTextObj.AddComponent<RectTransform>();
         hpTextRect.anchorMin = new Vector2(0, 0);
         hpTextRect.anchorMax = new Vector2(1, 0);
-        hpTextRect.anchoredPosition = new Vector2(0, 30);
-        hpTextRect.sizeDelta = new Vector2(0, 50);
+        hpTextRect.anchoredPosition = new Vector2(0, 35);
+        hpTextRect.sizeDelta = new Vector2(0, 75);
         hpText = hpTextObj.AddComponent<TextMeshProUGUI>();
-        hpText.fontSize = 16;
+        hpText.fontSize = 30;
         hpText.alignment = TextAlignmentOptions.Center;
         hpText.color = Color.white;
         hpText.richText = true;
@@ -523,11 +656,11 @@ public class BattleManager : MonoBehaviour
         var vsRect = vsObj.AddComponent<RectTransform>();
         vsRect.anchorMin = new Vector2(0.5f, 0.5f);
         vsRect.anchorMax = new Vector2(0.5f, 0.5f);
-        vsRect.anchoredPosition = new Vector2(0, 30);
-        vsRect.sizeDelta = new Vector2(100, 80);
+        vsRect.anchoredPosition = new Vector2(0, 180);
+        vsRect.sizeDelta = new Vector2(200, 100);
         var vsText = vsObj.AddComponent<TextMeshProUGUI>();
         vsText.text = "VS";
-        vsText.fontSize = 48;
+        vsText.fontSize = 80;
         vsText.alignment = TextAlignmentOptions.Center;
         vsText.color = new Color(1f, 0.8f, 0.2f);
         vsText.fontStyle = FontStyles.Bold;
@@ -542,8 +675,8 @@ public class BattleManager : MonoBehaviour
         var logRect = logPanel.AddComponent<RectTransform>();
         logRect.anchorMin = new Vector2(0.5f, 0.5f);
         logRect.anchorMax = new Vector2(0.5f, 0.5f);
-        logRect.anchoredPosition = new Vector2(0, -200);
-        logRect.sizeDelta = new Vector2(600, 100);
+        logRect.anchoredPosition = new Vector2(0, 100);
+        logRect.sizeDelta = new Vector2(1000, 200);
 
         var logBg = logPanel.AddComponent<Image>();
         logBg.sprite = CreateRoundedRectSprite(64, 64, 12);
@@ -559,7 +692,7 @@ public class BattleManager : MonoBehaviour
         textRect.offsetMin = new Vector2(15, 10);
         textRect.offsetMax = new Vector2(-15, -10);
         battleLogText = textObj.AddComponent<TextMeshProUGUI>();
-        battleLogText.fontSize = 22;
+        battleLogText.fontSize = 40;
         battleLogText.alignment = TextAlignmentOptions.Center;
         battleLogText.color = Color.white;
         battleLogText.raycastTarget = false;
@@ -576,19 +709,44 @@ public class BattleManager : MonoBehaviour
         var panelRect = actionPanel.AddComponent<RectTransform>();
         panelRect.anchorMin = new Vector2(0.5f, 0);
         panelRect.anchorMax = new Vector2(0.5f, 0);
-        panelRect.anchoredPosition = new Vector2(0, 80 + safeBottom);
-        panelRect.sizeDelta = new Vector2(700, 100);
+        panelRect.anchoredPosition = new Vector2(0, 100 + safeBottom);
+        panelRect.sizeDelta = new Vector2(1000, 230);
 
-        var layout = actionPanel.AddComponent<HorizontalLayoutGroup>();
+        // 上段コンテナ（4つの技ボタン）
+        var topRow = new GameObject("TopRow");
+        topRow.transform.SetParent(actionPanel.transform, false);
+        var topRowRect = topRow.AddComponent<RectTransform>();
+        topRowRect.anchorMin = new Vector2(0, 0.5f);
+        topRowRect.anchorMax = new Vector2(1, 1);
+        topRowRect.offsetMin = Vector2.zero;
+        topRowRect.offsetMax = Vector2.zero;
+
+        var layout = topRow.AddComponent<HorizontalLayoutGroup>();
         layout.spacing = 12;
         layout.childAlignment = TextAnchor.MiddleCenter;
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = true;
 
-        attackButton = CreateActionButton(actionPanel.transform, Localization.Get("battle_normal_attack"), normalAttackName, normalAttackDesc, new Color(0.8f, 0.3f, 0.3f), OnAttack, out attackButtonText);
-        CreateActionButton(actionPanel.transform, Localization.Get("battle_special_attack"), motherAttackName, motherAttackDesc, new Color(0.3f, 0.7f, 0.5f), OnMotherAttack, out _);
-        defendButton = CreateActionButton(actionPanel.transform, Localization.Get("battle_defend"), Localization.Get("battle_defend_name"), defendDesc, new Color(0.3f, 0.5f, 0.8f), OnDefend, out _);
-        specialButton = CreateActionButton(actionPanel.transform, Localization.Get("battle_special_skill"), specialAttackName, specialAttackDesc, new Color(0.8f, 0.6f, 0.2f), OnSpecial, out specialButtonText);
+        attackButton = CreateActionButton(topRow.transform, Localization.Get("battle_normal_attack"), normalAttackName, normalAttackDesc, new Color(0.8f, 0.3f, 0.3f), OnAttack, out attackButtonText);
+        CreateActionButton(topRow.transform, Localization.Get("battle_special_attack"), motherAttackName, motherAttackDesc, new Color(0.3f, 0.7f, 0.5f), OnMotherAttack, out _);
+        defendButton = CreateActionButton(topRow.transform, Localization.Get("battle_defend"), Localization.Get("battle_defend_name"), defendDesc, new Color(0.3f, 0.5f, 0.8f), OnDefend, out _);
+        specialButton = CreateActionButton(topRow.transform, Localization.Get("battle_special_skill"), specialAttackName, specialAttackDesc, new Color(0.8f, 0.6f, 0.2f), OnSpecial, out specialButtonText);
+
+        // 下段（にげるボタン）
+        var bottomRow = new GameObject("BottomRow");
+        bottomRow.transform.SetParent(actionPanel.transform, false);
+        var bottomRowRect = bottomRow.AddComponent<RectTransform>();
+        bottomRowRect.anchorMin = new Vector2(0.5f, 0);
+        bottomRowRect.anchorMax = new Vector2(0.5f, 0);
+        bottomRowRect.anchoredPosition = new Vector2(0, 10);
+        bottomRowRect.sizeDelta = new Vector2(960, 95);
+
+        CreateActionButton(bottomRow.transform, Localization.Get("battle_run"), Localization.Get("battle_run_name"), Localization.Get("battle_run_desc"), new Color(0.5f, 0.5f, 0.5f), OnRun, out _);
+        var runBtnRect = bottomRow.transform.GetChild(0).GetComponent<RectTransform>();
+        runBtnRect.anchorMin = Vector2.zero;
+        runBtnRect.anchorMax = Vector2.one;
+        runBtnRect.offsetMin = Vector2.zero;
+        runBtnRect.offsetMax = Vector2.zero;
 
         actionPanel.SetActive(false);
     }
@@ -617,7 +775,7 @@ public class BattleManager : MonoBehaviour
         labelRect.offsetMax = new Vector2(-4, -4);
         var labelTmp = labelObj.AddComponent<TextMeshProUGUI>();
         labelTmp.text = categoryLabel;
-        labelTmp.fontSize = 14;
+        labelTmp.fontSize = 26;
         labelTmp.alignment = TextAlignmentOptions.Center;
         labelTmp.color = new Color(1f, 1f, 1f, 0.7f);
         labelTmp.raycastTarget = false;
@@ -632,7 +790,7 @@ public class BattleManager : MonoBehaviour
         textRect.offsetMax = new Vector2(-4, 0);
         buttonText = textObj.AddComponent<TextMeshProUGUI>();
         buttonText.text = skillName;
-        buttonText.fontSize = 20;
+        buttonText.fontSize = 36;
         buttonText.alignment = TextAlignmentOptions.Center;
         buttonText.color = Color.white;
         buttonText.fontStyle = FontStyles.Bold;
@@ -645,8 +803,8 @@ public class BattleManager : MonoBehaviour
         infoRect.anchorMin = new Vector2(1, 1);
         infoRect.anchorMax = new Vector2(1, 1);
         infoRect.pivot = new Vector2(1, 1);
-        infoRect.anchoredPosition = new Vector2(-2, -2);
-        infoRect.sizeDelta = new Vector2(24, 24);
+        infoRect.anchoredPosition = new Vector2(-4, -4);
+        infoRect.sizeDelta = new Vector2(40, 40);
 
         var infoBg = infoObj.AddComponent<Image>();
         infoBg.sprite = CreateRoundedRectSprite(32, 32, 16);
@@ -669,7 +827,7 @@ public class BattleManager : MonoBehaviour
         infoTextRect.offsetMax = Vector2.zero;
         var infoTmp = infoTextObj.AddComponent<TextMeshProUGUI>();
         infoTmp.text = "i";
-        infoTmp.fontSize = 16;
+        infoTmp.fontSize = 28;
         infoTmp.alignment = TextAlignmentOptions.Center;
         infoTmp.color = Color.white;
         infoTmp.fontStyle = FontStyles.Bold | FontStyles.Italic;
@@ -712,7 +870,7 @@ public class BattleManager : MonoBehaviour
         popupRect.anchorMin = new Vector2(0.5f, 0.5f);
         popupRect.anchorMax = new Vector2(0.5f, 0.5f);
         popupRect.anchoredPosition = new Vector2(0, -50);
-        popupRect.sizeDelta = new Vector2(420, 260);
+        popupRect.sizeDelta = new Vector2(500, 280);
 
         var popupBg = popupObj.AddComponent<Image>();
         popupBg.sprite = CreateRoundedRectSprite(64, 64, 16);
@@ -752,7 +910,7 @@ public class BattleManager : MonoBehaviour
         titleRect.sizeDelta = new Vector2(-30, 40);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
         titleText.text = $"<color=#AAAAAA><size=70%>{category}</size></color>  <color=#FFDD44>{skillName}</color>";
-        titleText.fontSize = 26;
+        titleText.fontSize = 44;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.fontStyle = FontStyles.Bold;
         titleText.raycastTarget = false;
@@ -767,7 +925,7 @@ public class BattleManager : MonoBehaviour
         descRect.offsetMax = new Vector2(-20, -140);
         var descText = descObj.AddComponent<TextMeshProUGUI>();
         descText.text = description;
-        descText.fontSize = 20;
+        descText.fontSize = 36;
         descText.alignment = TextAlignmentOptions.Center;
         descText.color = Color.white;
         descText.enableWordWrapping = true;
@@ -845,7 +1003,7 @@ public class BattleManager : MonoBehaviour
             targetImage.enabled = true;
             targetImage.sprite = babySprite;
             targetImage.color = Color.white;
-            targetImage.preserveAspect = true;
+            targetImage.preserveAspect = false;
 
             // GOD BABYオーラを追加
             if (DataCarrier.Instance.isGodBaby)
@@ -910,7 +1068,7 @@ public class BattleManager : MonoBehaviour
             godBaby = DataCarrier.Instance.isGodBaby;
         }
 
-        float s = 0.7f; // スケール
+        float s = 1.0f; // スケール（パネル幅に合わせて大きく）
 
         // 肌色
         Color[] skinTones = { new Color(0.98f, 0.89f, 0.82f), new Color(0.95f, 0.83f, 0.74f), new Color(0.88f, 0.73f, 0.62f) };
@@ -1530,7 +1688,8 @@ public class BattleManager : MonoBehaviour
 
     void UpdateEnemyDisplay()
     {
-        enemyNameText.text = Localization.GetEnemy(enemyName);
+        string ageLabel = enemyAge >= 0 ? $" ({Localization.GetAge(enemyAge)})" : "";
+        enemyNameText.text = Localization.GetEnemy(enemyName) + ageLabel;
         enemyHpText.text = $"HP:{enemyHp}/{enemyMaxHp} <color=#FF0000>ATK:{enemyAtk}</color>";
 
         float hpRatio = (float)enemyHp / enemyMaxHp;
@@ -1543,7 +1702,14 @@ public class BattleManager : MonoBehaviour
             enemyFaceImage.enabled = true;
             enemyFaceImage.sprite = enemySprite;
             enemyFaceImage.color = Color.white;
-            enemyFaceImage.preserveAspect = true;
+            enemyFaceImage.preserveAspect = false;
+        }
+        else if (enemyBgColor != Color.clear)
+        {
+            // 悪魔村敵: スプライト無し、背景色で表示
+            enemyFaceImage.enabled = true;
+            enemyFaceImage.sprite = null;
+            enemyFaceImage.color = enemyBgColor;
         }
         else
         {
@@ -1680,6 +1846,37 @@ public class BattleManager : MonoBehaviour
 
         isPlayerTurn = true;
         playerDefending = false;
+
+        // プレイヤー毒ダメージ処理
+        if (playerPoisonTurns > 0)
+        {
+            int poisonDmg = Mathf.Max(3, playerMaxHp / 12);
+            playerHp = Mathf.Max(0, playerHp - poisonDmg);
+            playerPoisonTurns--;
+            UpdatePlayerDisplay();
+            battleLogText.text = Localization.Get("battle_player_poison_damage", poisonDmg);
+            yield return new WaitForSeconds(0.8f);
+            if (playerHp <= 0)
+            {
+                StartCoroutine(BattleLose());
+                yield break;
+            }
+        }
+
+        // シバ必殺技の予告（次の敵ターンが3の倍数の時）
+        bool isBoss = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle;
+        if (isBoss && enemyName == "村の王シバ" && (enemyTurnCount + 1) % 3 == 0 && enemyTurnCount > 0)
+        {
+            battleLogText.text = Localization.Get("battle_shiba_charging");
+            yield return new WaitForSeconds(1.5f);
+        }
+        // デヴィル夫人: 4ターンごとのチャージ警告
+        if (isBoss && enemyName == "デヴィル夫人" && (enemyTurnCount + 1) % 4 == 0 && enemyTurnCount > 0)
+        {
+            battleLogText.text = Localization.Get("battle_devil_lady_charge");
+            yield return new WaitForSeconds(1.5f);
+        }
+
         battleLogText.text = Localization.Get("battle_your_turn");
         actionPanel.SetActive(true);
         waitingForAction = true;
@@ -1697,6 +1894,7 @@ public class BattleManager : MonoBehaviour
         if (!isBattleActive) yield break;
 
         isPlayerTurn = false;
+        enemyDefending = false;
         yield return new WaitForSeconds(0.5f);
 
         // 毒ダメージ処理
@@ -1720,17 +1918,56 @@ public class BattleManager : MonoBehaviour
         if (enemyAtkDebuffTurns > 0) enemyAtkDebuffTurns--;
         if (playerEvasionBuffTurns > 0) playerEvasionBuffTurns--;
 
+        enemyTurnCount++;
+
+        // シバ: 3ターン毎に必殺技（回避不可・超ダメージ）
+        bool isBoss = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle;
+        if (isBoss && enemyName == "村の王シバ" && enemyTurnCount % 3 == 0)
+        {
+            yield return StartCoroutine(EnemyDoUltimate());
+            yield break;
+        }
+        // デヴィル夫人: 4ターン毎に必殺技「毒の洗礼」
+        if (isBoss && enemyName == "デヴィル夫人" && enemyTurnCount % 4 == 0)
+        {
+            yield return StartCoroutine(EnemyDoDevilLadyUltimate());
+            yield break;
+        }
+
+        // 敵の行動選択: 通常攻撃60%, 特殊攻撃25%, 防御15%
+        // HPが30%以下なら防御確率UP (35%)
+        float hpPercent = (float)enemyHp / enemyMaxHp;
+        int roll = Random.Range(0, 100);
+        int defendChance = hpPercent < 0.3f ? 35 : 15;
+        int specialChance = 25;
+
+        if (roll < defendChance)
+        {
+            // === 防御（HP少し回復） ===
+            yield return StartCoroutine(EnemyDoDefend());
+        }
+        else if (roll < defendChance + specialChance)
+        {
+            // === 特殊攻撃（1.5倍ダメージ） ===
+            yield return StartCoroutine(EnemyDoSpecialAttack());
+        }
+        else
+        {
+            // === 通常攻撃 ===
+            yield return StartCoroutine(EnemyDoNormalAttack());
+        }
+    }
+
+    IEnumerator EnemyDoNormalAttack()
+    {
         battleLogText.text = Localization.Get("battle_enemy_attack", Localization.GetEnemy(enemyName));
         yield return new WaitForSeconds(0.6f);
 
-        // 敵の突進演出
         yield return StartCoroutine(AttackAnimation(enemyPanelRect, playerPanelRect, false));
 
-        // 回避判定（バフ中は+20%）
+        // 回避判定
         int effectiveEvasion = playerEvasion + (playerEvasionBuffTurns > 0 ? 20 : 0);
-        bool evaded = Random.Range(0, 100) < effectiveEvasion;
-
-        if (evaded)
+        if (Random.Range(0, 100) < effectiveEvasion)
         {
             battleLogText.text = Localization.Get("battle_evaded");
             yield return new WaitForSeconds(1.0f);
@@ -1738,25 +1975,171 @@ public class BattleManager : MonoBehaviour
             yield break;
         }
 
-        // ATKデバフ中の敵は攻撃力低下
         int effectiveEnemyAtk = enemyAtkDebuffTurns > 0 ? (int)(enemyAtk * 0.6f) : enemyAtk;
         int damage = CalculateDamage(effectiveEnemyAtk, playerDef, playerDefending);
         playerHp = Mathf.Max(0, playerHp - damage);
         UpdatePlayerDisplay();
         StartCoroutine(DamageFlash(playerFaceImage));
 
+        battleLogText.text = playerDefending
+            ? Localization.Get("battle_defended", damage)
+            : Localization.Get("battle_took_damage", damage);
+        yield return new WaitForSeconds(1.0f);
+
+        yield return StartCoroutine(CheckPlayerDefeatAndContinue());
+    }
+
+    IEnumerator EnemyDoSpecialAttack()
+    {
+        battleLogText.text = Localization.Get("battle_enemy_special", Localization.GetEnemy(enemyName));
+        yield return new WaitForSeconds(0.6f);
+
+        yield return StartCoroutine(AttackAnimation(enemyPanelRect, playerPanelRect, true));
+
+        // 回避判定（特殊攻撃は回避しにくい: -10%）
+        int effectiveEvasion = Mathf.Max(0, playerEvasion + (playerEvasionBuffTurns > 0 ? 20 : 0) - 10);
+        if (Random.Range(0, 100) < effectiveEvasion)
+        {
+            battleLogText.text = Localization.Get("battle_evaded");
+            yield return new WaitForSeconds(1.0f);
+            StartCoroutine(PlayerTurn());
+            yield break;
+        }
+
+        // 1.5倍ダメージ
+        int effectiveEnemyAtk = enemyAtkDebuffTurns > 0 ? (int)(enemyAtk * 0.6f) : enemyAtk;
+        int specialAtk = (int)(effectiveEnemyAtk * 1.5f);
+        int damage = CalculateDamage(specialAtk, playerDef, playerDefending);
+        playerHp = Mathf.Max(0, playerHp - damage);
+        UpdatePlayerDisplay();
+        StartCoroutine(DamageFlash(playerFaceImage));
+
+        battleLogText.text = Localization.Get("battle_enemy_special_hit", Localization.GetEnemy(enemyName), damage);
+        yield return new WaitForSeconds(1.0f);
+
+        // 悪魔村敵・デヴィル系: 毒付与
+        if (isDevilEnemy && playerHp > 0)
+        {
+            int poisonDuration = (enemyName == "デヴィル夫人") ? 4 : 3;
+            if (playerPoisonTurns <= 0)
+            {
+                playerPoisonTurns = poisonDuration;
+                battleLogText.text = Localization.Get("battle_player_poisoned");
+                yield return new WaitForSeconds(1.0f);
+            }
+            else
+            {
+                battleLogText.text = Localization.Get("battle_player_poison_already");
+                yield return new WaitForSeconds(0.8f);
+            }
+        }
+
+        yield return StartCoroutine(CheckPlayerDefeatAndContinue());
+    }
+
+    IEnumerator EnemyDoDefend()
+    {
+        enemyDefending = true;
+        int healAmt = Mathf.Max(3, enemyMaxHp / 10);
+        enemyHp = Mathf.Min(enemyMaxHp, enemyHp + healAmt);
+        UpdateEnemyDisplay();
+
+        battleLogText.text = Localization.Get("battle_enemy_defend_heal", Localization.GetEnemy(enemyName), healAmt);
+        yield return new WaitForSeconds(1.2f);
+
+        StartCoroutine(PlayerTurn());
+    }
+
+    IEnumerator EnemyDoUltimate()
+    {
+        // 予告演出
+        battleLogText.text = Localization.Get("battle_shiba_ultimate_announce");
+        yield return new WaitForSeconds(1.0f);
+
+        // 画面フラッシュ（赤）
+        StartCoroutine(FlashEffect(new Color(1f, 0.2f, 0.1f), 0.5f));
+        yield return new WaitForSeconds(0.3f);
+
+        battleLogText.text = Localization.Get("battle_shiba_ultimate_name");
+        yield return new WaitForSeconds(0.5f);
+
+        // 必殺技演出（大振りシェイク）
+        yield return StartCoroutine(AttackAnimation(enemyPanelRect, playerPanelRect, true));
+        StartCoroutine(FlashEffect(new Color(0.8f, 0f, 0f), 0.6f));
+        StartCoroutine(ShakeEffect(playerPanelRect, 0.5f, 25f));
+
+        // ダメージ計算: 固定威力200 — 防御+育成で生存可能、無防備なら致命的
+        // 防御時: 200 - DEF（月齢8~10で耐えられる想定）
+        // 非防御時: 200 - DEF/2（ほぼ即死）
+        int ultimatePower = 200;
+        int damage = CalculateDamage(ultimatePower, playerDef, playerDefending);
+
+        playerHp = Mathf.Max(0, playerHp - damage);
+        UpdatePlayerDisplay();
+        StartCoroutine(DamageFlash(playerFaceImage));
+
         if (playerDefending)
         {
-            battleLogText.text = Localization.Get("battle_defended", damage);
+            battleLogText.text = Localization.Get("battle_shiba_ultimate_blocked", damage);
         }
         else
         {
-            battleLogText.text = Localization.Get("battle_took_damage", damage);
+            battleLogText.text = Localization.Get("battle_shiba_ultimate_hit", damage);
         }
+        yield return new WaitForSeconds(1.2f);
 
+        yield return StartCoroutine(CheckPlayerDefeatAndContinue());
+    }
+
+    IEnumerator EnemyDoDevilLadyUltimate()
+    {
+        // 予告演出
+        battleLogText.text = Localization.Get("battle_devil_lady_ultimate");
         yield return new WaitForSeconds(1.0f);
 
-        // プレイヤー敗北チェック
+        // 画面フラッシュ（紫）
+        StartCoroutine(FlashEffect(new Color(0.6f, 0.0f, 0.8f), 0.5f));
+        yield return new WaitForSeconds(0.3f);
+
+        battleLogText.text = Localization.Get("battle_devil_lady_ultimate_name");
+        yield return new WaitForSeconds(0.5f);
+
+        // 必殺技演出
+        yield return StartCoroutine(AttackAnimation(enemyPanelRect, playerPanelRect, true));
+        StartCoroutine(FlashEffect(new Color(0.5f, 0f, 0.6f), 0.6f));
+        StartCoroutine(ShakeEffect(playerPanelRect, 0.5f, 25f));
+
+        // 固定ダメージ200 + 防御で半減可能
+        int ultimatePower = 200;
+        int damage = CalculateDamage(ultimatePower, playerDef, playerDefending);
+
+        playerHp = Mathf.Max(0, playerHp - damage);
+        UpdatePlayerDisplay();
+        StartCoroutine(DamageFlash(playerFaceImage));
+
+        if (playerDefending)
+        {
+            battleLogText.text = Localization.Get("battle_devil_lady_ultimate_blocked", damage);
+        }
+        else
+        {
+            battleLogText.text = Localization.Get("battle_devil_lady_ultimate_hit", damage);
+        }
+        yield return new WaitForSeconds(1.0f);
+
+        // 5ターン毒付与（上書き）
+        if (playerHp > 0)
+        {
+            playerPoisonTurns = 5;
+            battleLogText.text = Localization.Get("battle_devil_lady_poisoned");
+            yield return new WaitForSeconds(1.0f);
+        }
+
+        yield return StartCoroutine(CheckPlayerDefeatAndContinue());
+    }
+
+    IEnumerator CheckPlayerDefeatAndContinue()
+    {
         if (playerHp <= 0)
         {
             // 覇王色の特徴: 1/3の確率でHP300回復
@@ -1829,6 +2212,60 @@ public class BattleManager : MonoBehaviour
         StartCoroutine(DoSpecial());
     }
 
+    void OnRun()
+    {
+        CloseSkillInfo();
+        if (!waitingForAction) return;
+        waitingForAction = false;
+        StartCoroutine(DoRun());
+    }
+
+    IEnumerator DoRun()
+    {
+        // ボス戦・固定エンカウントでは逃げられない
+        bool isBoss = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle;
+        if (isBoss || cannotRun)
+        {
+            actionPanel.SetActive(false);
+            battleLogText.text = cannotRun && !isBoss
+                ? Localization.Get("battle_run_fixed")
+                : Localization.Get("battle_run_boss");
+            yield return new WaitForSeconds(1.5f);
+            // ターン消費なし — 再度行動選択
+            actionPanel.SetActive(true);
+            waitingForAction = true;
+            yield break;
+        }
+
+        actionPanel.SetActive(false);
+
+        // 50%の確率で成功
+        if (Random.Range(0f, 1f) < 0.5f)
+        {
+            battleLogText.text = Localization.Get("battle_run_success");
+            yield return new WaitForSeconds(1.2f);
+
+            // HP・毒保存して村へ（セーブはしない）
+            if (DataCarrier.Instance != null)
+            {
+                DataCarrier.Instance.babyCurrentHp = playerHp;
+                DataCarrier.Instance.babyPoisonTurns = playerPoisonTurns;
+                DataCarrier.Instance.cameFromMap = false;
+                DataCarrier.Instance.isBossBattle = false;
+            }
+            SceneManager.LoadScene("MapScene");
+        }
+        else
+        {
+            battleLogText.text = Localization.Get("battle_run_fail");
+            yield return new WaitForSeconds(1.2f);
+            battleTurnCount++;
+
+            // 敵ターンへ移行
+            StartCoroutine(EnemyTurn());
+        }
+    }
+
     IEnumerator DoAttack()
     {
         // パンチ + 固有技を表示
@@ -1842,7 +2279,8 @@ public class BattleManager : MonoBehaviour
         yield return StartCoroutine(AttackAnimation(playerPanelRect, enemyPanelRect, false));
 
         int effectiveDef = enemyDefDebuffTurns > 0 ? (int)(enemyDef * 0.6f) : enemyDef;
-        int damage = CalculateDamage(playerAtk, effectiveDef, false);
+        int damage = CalculateDamage(playerAtk, effectiveDef, enemyDefending);
+        enemyDefending = false;
         enemyHp = Mathf.Max(0, enemyHp - damage);
         UpdateEnemyDisplay();
         StartCoroutine(DamageFlash(enemyFaceImage));
@@ -1877,10 +2315,9 @@ public class BattleManager : MonoBehaviour
         yield return StartCoroutine(ShowMotherSkillCutIn());
 
         // ダメージ計算（通常攻撃の70%威力）
-        int baseDamage = CalculateDamage((int)(playerAtk * 0.7f), enemyDef, false);
-        // デバフ中の敵はDEF低下
         int effectiveDef = enemyDefDebuffTurns > 0 ? (int)(enemyDef * 0.6f) : enemyDef;
-        int damage = CalculateDamage((int)(playerAtk * 0.7f), effectiveDef, false);
+        int damage = CalculateDamage((int)(playerAtk * 0.7f), effectiveDef, enemyDefending);
+        enemyDefending = false;
 
         yield return StartCoroutine(AttackAnimation(playerPanelRect, enemyPanelRect, false));
 
@@ -1962,6 +2399,8 @@ public class BattleManager : MonoBehaviour
 
             float multiplier = isGodBaby ? 2.5f : 2.0f;
             int damage = (int)(playerAtk * multiplier) + Random.Range(5, 15);
+            if (enemyDefending) damage = damage / 2;
+            enemyDefending = false;
             enemyHp = Mathf.Max(0, enemyHp - damage);
             UpdateEnemyDisplay();
             StartCoroutine(DamageFlash(enemyFaceImage));
@@ -2006,14 +2445,34 @@ public class BattleManager : MonoBehaviour
         battleLogText.text = Localization.Get("battle_enemy_defeated", Localization.GetEnemy(enemyName));
         yield return new WaitForSeconds(1.5f);
 
+        // 縁の書: 初めて倒した敵なら通知
+        if (DataCarrier.Instance != null)
+        {
+            bool isFirstDefeat = DataCarrier.Instance.AddDefeatedEnemy(enemyName);
+            if (isFirstDefeat)
+            {
+                battleLogText.text = Localization.Get("enishi_added", Localization.GetEnemy(enemyName));
+                yield return new WaitForSeconds(2f);
+            }
+        }
+
         battleLogText.text = Localization.Get("battle_victory");
         yield return new WaitForSeconds(1.5f);
 
         // 経験値獲得と年齢アップ演出
         yield return StartCoroutine(GainExpSequence());
 
-        // 自動セーブ
+        // HP・毒持越し保存
         if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.babyCurrentHp = playerHp;
+            DataCarrier.Instance.babyPoisonTurns = playerPoisonTurns;
+        }
+
+        // ボス戦・固定エンカウントは自動セーブ
+        bool isBossWin = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle;
+        bool isFixedWin = cannotRun; // 固定エンカウント勝利
+        if ((isBossWin || isFixedWin) && DataCarrier.Instance != null)
         {
             DataCarrier.Instance.SaveData();
         }
@@ -2023,9 +2482,13 @@ public class BattleManager : MonoBehaviour
         if (actionPanel != null) actionPanel.SetActive(false);
         battleLogText.transform.parent.gameObject.SetActive(false);
 
+        // 固定エンカウント勝利（傭兵）→ 館に戻る
+        if (isFixedWin && !isBossWin)
+        {
+            StartCoroutine(FixedEncounterVictory());
+        }
         // ボス戦なら特別演出、通常なら村へ帰還
-        bool wasBossBattle = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle;
-        if (wasBossBattle)
+        else if (isBossWin)
         {
             StartCoroutine(BossDefeatSequence());
         }
@@ -2087,7 +2550,10 @@ public class BattleManager : MonoBehaviour
             playerAtk = DataCarrier.Instance.babyAtk;
             playerDef = DataCarrier.Instance.babyDef;
             playerMaxHp = DataCarrier.Instance.babyHp;
-            playerHp = playerMaxHp; // HP全回復
+            playerHp = playerMaxHp; // レベルアップで全回復
+            DataCarrier.Instance.babyCurrentHp = -1;
+            playerPoisonTurns = 0; // レベルアップで毒治療
+            DataCarrier.Instance.babyPoisonTurns = 0;
             playerHeight = DataCarrier.Instance.babyHeight;
             playerWeight = DataCarrier.Instance.babyWeight;
 
@@ -2143,7 +2609,7 @@ public class BattleManager : MonoBehaviour
         titleRect.sizeDelta = new Vector2(0, 50);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
         titleText.text = Localization.Get("battle_growth_title");
-        titleText.fontSize = 32;
+        titleText.fontSize = 56;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.fontStyle = FontStyles.Bold;
         titleText.raycastTarget = false;
@@ -2157,7 +2623,7 @@ public class BattleManager : MonoBehaviour
         statsRect.offsetMin = new Vector2(30, 60);
         statsRect.offsetMax = new Vector2(-30, -60);
         var statsText = statsObj.AddComponent<TextMeshProUGUI>();
-        statsText.fontSize = 22;
+        statsText.fontSize = 40;
         statsText.alignment = TextAlignmentOptions.Left;
         statsText.raycastTarget = false;
 
@@ -2219,7 +2685,7 @@ public class BattleManager : MonoBehaviour
         textRect.offsetMax = new Vector2(-20, -20);
         var resultText = textObj.AddComponent<TextMeshProUGUI>();
         resultText.text = Localization.Get("battle_game_over");
-        resultText.fontSize = 48;
+        resultText.fontSize = 80;
         resultText.alignment = TextAlignmentOptions.Center;
         resultText.fontStyle = FontStyles.Bold;
         resultText.raycastTarget = false;
@@ -2246,23 +2712,54 @@ public class BattleManager : MonoBehaviour
         retryTextRect.offsetMax = Vector2.zero;
         var retryTmp = retryTextObj.AddComponent<TextMeshProUGUI>();
         retryTmp.text = string.Format(Localization.Get("ui_try_again"), DataCarrier.Instance.babyName);
-        retryTmp.fontSize = 28;
+        retryTmp.fontSize = 48;
         retryTmp.alignment = TextAlignmentOptions.Center;
         retryTmp.color = Color.white;
         retryTmp.raycastTarget = false;
+    }
+
+    // ===== 固定エンカウント（傭兵）勝利 → 館に戻る =====
+
+    IEnumerator FixedEncounterVictory()
+    {
+        yield return new WaitForSeconds(1.5f);
+
+        if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.cameFromMap = false;
+            DataCarrier.Instance.isBossBattle = false;
+            // 館内（area 2）に戻る — 位置はそのまま
+        }
+
+        SceneManager.LoadScene("MapScene");
     }
 
     // ===== ボス撃破演出 =====
 
     IEnumerator BossDefeatSequence()
     {
-        string[] bossLines = new string[]
+        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+
+        string[] bossLines;
+        if (area == 2 && enemyName == "デヴィル夫人")
         {
-            Localization.Get("boss_defeat_line1"),
-            Localization.Get("boss_defeat_line2"),
-            Localization.Get("boss_defeat_line3"),
-            Localization.Get("boss_defeat_line4"),
-        };
+            bossLines = new string[]
+            {
+                Localization.Get("devil_lady_defeat_line1"),
+                Localization.Get("devil_lady_defeat_line2"),
+                Localization.Get("devil_lady_defeat_line3"),
+            };
+        }
+        else
+        {
+            bossLines = new string[]
+            {
+                Localization.Get("boss_defeat_line1"),
+                Localization.Get("boss_defeat_line2"),
+                Localization.Get("boss_defeat_line3"),
+                Localization.Get("boss_defeat_line4"),
+            };
+        }
 
         float slideDuration = 1.5f;
         float lineInterval = 1.2f;
@@ -2350,11 +2847,28 @@ public class BattleManager : MonoBehaviour
             yield return null;
         }
 
-        // フラグをリセットしてマップへ
+        // フラグをリセットして遷移
         if (DataCarrier.Instance != null)
         {
             DataCarrier.Instance.cameFromMap = false;
             DataCarrier.Instance.isBossBattle = false;
+            DataCarrier.Instance.babyCurrentHp = -1; // ボス撃破後は全回復
+
+            if (area == 2 && enemyName == "デヴィル夫人")
+            {
+                // デヴィル夫人撃破 → 悪魔村に戻る
+                DataCarrier.Instance.currentArea = 1;
+                DataCarrier.Instance.mapPlayerX = 8;
+                DataCarrier.Instance.mapPlayerY = 14;
+            }
+            else
+            {
+                // シバ撃破 → 悪魔村へ
+                DataCarrier.Instance.currentArea = 1;
+                DataCarrier.Instance.mapPlayerX = 5;
+                DataCarrier.Instance.mapPlayerY = 9;
+            }
+            DataCarrier.Instance.SaveData();
         }
 
         SceneManager.LoadScene("MapScene");
@@ -2382,9 +2896,9 @@ public class BattleManager : MonoBehaviour
         textRect.anchorMin = new Vector2(0.5f, 0.5f);
         textRect.anchorMax = new Vector2(0.5f, 0.5f);
         textRect.anchoredPosition = Vector2.zero;
-        textRect.sizeDelta = new Vector2(600, 200);
+        textRect.sizeDelta = new Vector2(800, 200);
         var victoryText = textObj.AddComponent<TextMeshProUGUI>();
-        victoryText.fontSize = 36;
+        victoryText.fontSize = 64;
         victoryText.alignment = TextAlignmentOptions.Center;
         victoryText.color = Color.white;
         victoryText.fontStyle = FontStyles.Bold;
@@ -2393,7 +2907,7 @@ public class BattleManager : MonoBehaviour
         string babyName = DataCarrier.Instance != null ? DataCarrier.Instance.babyName : "ベイビー";
         int currentAge = DataCarrier.Instance != null ? DataCarrier.Instance.babyAge : 0;
 
-        victoryText.text = Localization.Get("battle_saved_return", babyName, currentAge);
+        victoryText.text = Localization.Get("battle_victory_return", babyName, currentAge);
         yield return new WaitForSeconds(1.5f);
 
         victoryText.text = Localization.Get("battle_returning");
@@ -2422,8 +2936,8 @@ public class BattleManager : MonoBehaviour
         barRect.anchorMin = new Vector2(1, 1);
         barRect.anchorMax = new Vector2(1, 1);
         barRect.pivot = new Vector2(1, 1);
-        barRect.anchoredPosition = new Vector2(-20 - safeRight, -20 - safeTop);
-        barRect.sizeDelta = new Vector2(360, 60);
+        barRect.anchoredPosition = new Vector2(-15 - safeRight, -15 - safeTop);
+        barRect.sizeDelta = new Vector2(300, 55);
 
         var barBg = bar.AddComponent<Image>();
         barBg.color = new Color(0.15f, 0.15f, 0.2f, 0.85f);
@@ -2469,7 +2983,7 @@ public class BattleManager : MonoBehaviour
 
         var tmp = textObj.AddComponent<TextMeshProUGUI>();
         tmp.text = label;
-        tmp.fontSize = 24;
+        tmp.fontSize = 42;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
         tmp.raycastTarget = false;

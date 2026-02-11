@@ -28,9 +28,20 @@ public class DataCarrier : MonoBehaviour
     public bool isGodBaby;
     public bool cameFromMap = false;
     public bool isBossBattle = false;
+    public int currentArea = 0;     // 0=村, 1=悪魔村, 2=デヴィル夫人のやかた
+    public string fixedEncounterEnemy = "";  // 固定エンカウント敵名（空=ランダム）
+    public int babyCurrentHp = -1;  // 戦闘間HP持越し（-1=maxHP）
+    public int babyPoisonTurns = 0;  // 毒残りターン
+
+    [Header("Player Profile")]
+    public string playerName = "";
+    public int playerIcon = 0;
 
     [Header("Inventory")]
     public string inventory = "";
+
+    [Header("Defeated Enemies (縁の書)")]
+    public string defeatedEnemyList = "";
 
     // マップ上のプレイヤー位置（復帰用）
     public int mapPlayerX = 10;
@@ -80,7 +91,12 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.SetInt(p + "isBossBattle", isBossBattle ? 1 : 0);
         PlayerPrefs.SetInt(p + "mapPlayerX", mapPlayerX);
         PlayerPrefs.SetInt(p + "mapPlayerY", mapPlayerY);
+        PlayerPrefs.SetInt(p + "currentArea", currentArea);
+        PlayerPrefs.SetInt(p + "babyCurrentHp", babyCurrentHp);
+        PlayerPrefs.SetInt(p + "babyPoisonTurns", babyPoisonTurns);
         PlayerPrefs.SetString(p + "inventory", inventory);
+        PlayerPrefs.SetString(p + "defeatedEnemyList", defeatedEnemyList);
+        PlayerPrefs.SetString(p + "fixedEncounterEnemy", fixedEncounterEnemy);
         PlayerPrefs.SetInt(p + "exists", 1);
         PlayerPrefs.Save();
     }
@@ -109,7 +125,14 @@ public class DataCarrier : MonoBehaviour
         isBossBattle = PlayerPrefs.GetInt(p + "isBossBattle", 0) == 1;
         mapPlayerX = PlayerPrefs.GetInt(p + "mapPlayerX", 10);
         mapPlayerY = PlayerPrefs.GetInt(p + "mapPlayerY", 7);
+        currentArea = PlayerPrefs.GetInt(p + "currentArea", 0);
+        babyCurrentHp = PlayerPrefs.GetInt(p + "babyCurrentHp", -1);
+        babyPoisonTurns = PlayerPrefs.GetInt(p + "babyPoisonTurns", 0);
         inventory = PlayerPrefs.GetString(p + "inventory", "");
+        defeatedEnemyList = PlayerPrefs.GetString(p + "defeatedEnemyList", "");
+        fixedEncounterEnemy = PlayerPrefs.GetString(p + "fixedEncounterEnemy", "");
+        // playerName/playerIcon はグローバルプロフィールから読む
+        LoadProfile();
     }
 
     // 現在のスロットにセーブ（スロット未設定なら空きスロットを探す）
@@ -163,7 +186,12 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.DeleteKey(p + "isBossBattle");
         PlayerPrefs.DeleteKey(p + "mapPlayerX");
         PlayerPrefs.DeleteKey(p + "mapPlayerY");
+        PlayerPrefs.DeleteKey(p + "currentArea");
+        PlayerPrefs.DeleteKey(p + "babyCurrentHp");
+        PlayerPrefs.DeleteKey(p + "babyPoisonTurns");
         PlayerPrefs.DeleteKey(p + "inventory");
+        PlayerPrefs.DeleteKey(p + "defeatedEnemyList");
+        PlayerPrefs.DeleteKey(p + "fixedEncounterEnemy");
         PlayerPrefs.DeleteKey(p + "exists");
         PlayerPrefs.Save();
     }
@@ -194,10 +222,41 @@ public class DataCarrier : MonoBehaviour
         return inventory.Split(',');
     }
 
+    // ===== 縁の書（倒した敵管理） =====
+
+    public bool HasDefeatedEnemy(string enemyName)
+    {
+        if (string.IsNullOrEmpty(defeatedEnemyList)) return false;
+        foreach (var e in defeatedEnemyList.Split(','))
+        {
+            if (e == enemyName) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Returns true if this enemy was newly added (first defeat)
+    /// </summary>
+    public bool AddDefeatedEnemy(string enemyName)
+    {
+        if (HasDefeatedEnemy(enemyName)) return false;
+        if (string.IsNullOrEmpty(defeatedEnemyList))
+            defeatedEnemyList = enemyName;
+        else
+            defeatedEnemyList += "," + enemyName;
+        return true;
+    }
+
+    public string[] GetDefeatedEnemyList()
+    {
+        if (string.IsNullOrEmpty(defeatedEnemyList)) return new string[0];
+        return defeatedEnemyList.Split(',');
+    }
+
     // 次の月齢に必要な経験値
     public static int ExpForNextAge(int age)
     {
-        return 50 + age * 30;
+        return 120 + age * 70;
     }
 
     // 月齢アップ時のステータス成長
@@ -211,6 +270,45 @@ public class DataCarrier : MonoBehaviour
         // babyAcademic は生まれつきの値で変化しない
         babyAthletic += Mathf.RoundToInt(2 * growthRate);
         // babyHeight, babyWeight は生まれつきの値で変化しない（回避率に影響）
+    }
+
+    // ===== グローバルプロフィール =====
+
+    public void SaveProfile()
+    {
+        PlayerPrefs.SetString("global_playerName", playerName);
+        PlayerPrefs.SetInt("global_playerIcon", playerIcon);
+        PlayerPrefs.SetInt("global_profileExists", 1);
+        PlayerPrefs.Save();
+    }
+
+    public void LoadProfile()
+    {
+        playerName = PlayerPrefs.GetString("global_playerName", "");
+        playerIcon = PlayerPrefs.GetInt("global_playerIcon", 0);
+    }
+
+    public static bool HasProfile()
+    {
+        return PlayerPrefs.GetInt("global_profileExists", 0) == 1;
+    }
+
+    public static void DeleteProfile()
+    {
+        PlayerPrefs.DeleteKey("global_playerName");
+        PlayerPrefs.DeleteKey("global_playerIcon");
+        PlayerPrefs.DeleteKey("global_profileExists");
+        PlayerPrefs.Save();
+    }
+
+    public static string GetProfileName()
+    {
+        return PlayerPrefs.GetString("global_playerName", "");
+    }
+
+    public static int GetProfileIcon()
+    {
+        return PlayerPrefs.GetInt("global_playerIcon", 0);
     }
 
     // ===== スロット情報取得（静的メソッド） =====
@@ -238,6 +336,11 @@ public class DataCarrier : MonoBehaviour
     public static string GetSlotMotherName(int slot)
     {
         return PlayerPrefs.GetString($"slot{slot}_motherName", "");
+    }
+
+    public static string GetSlotBabyGender(int slot)
+    {
+        return PlayerPrefs.GetString($"slot{slot}_babyGender", "");
     }
 
     public static bool GetSlotIsGodBaby(int slot)

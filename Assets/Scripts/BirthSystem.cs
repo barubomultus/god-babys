@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
 using System.Collections;
 
 public class BirthSystem : MonoBehaviour
@@ -28,12 +29,19 @@ public class BirthSystem : MonoBehaviour
 
     // 自動生成される親UI
     GameObject parentPanel;
+    GameObject fatherCard;
+    GameObject motherCard;
     Image fatherFaceImage;
     TextMeshProUGUI fatherNameText;
     TextMeshProUGUI fatherIntroText;
     Image motherFaceImage;
     TextMeshProUGUI motherNameText;
     TextMeshProUGUI motherIntroText;
+    GameObject nextButton;
+    bool waitingForNext;
+    GameObject menuPanel;
+    GameObject birthResultCard;
+    GameObject statusCardObj;
 
     // フラッシュ演出用
     Image flashOverlay;
@@ -48,13 +56,20 @@ public class BirthSystem : MonoBehaviour
     TextMeshProUGUI introText;
     GameObject introPanel;
 
+    // 性別ラベル（画像の上）
+    TextMeshProUGUI genderLabel;
+
+    // 親情報パネル
+    GameObject parentInfoButton;
+    GameObject parentBioPanel;
+
+    // 背景
+    Image mainBgImg;
+
     // アニメーション中フラグ
     bool isAnimating;
 
-    // 性別選択UI
-    GameObject genderSelectPanel;
     string selectedGender;
-    bool waitingForGenderSelect;
 
     // 名前入力UI
     GameObject nameInputPanel;
@@ -166,10 +181,13 @@ public class BirthSystem : MonoBehaviour
         if (canvas == null)
             canvas = FindAnyObjectByType<Canvas>();
 
-        // CanvasScaler調整: 横向きでは高さ基準
+        // CanvasScaler調整: 縦向き9:16、幅基準
         var canvasScaler = canvas.GetComponent<CanvasScaler>();
         if (canvasScaler != null)
-            canvasScaler.matchWidthOrHeight = 1f;
+        {
+            canvasScaler.referenceResolution = new Vector2(1080, 1920);
+            canvasScaler.matchWidthOrHeight = 0f;
+        }
 
         // childStatusText が未設定なら自動生成
         if (childStatusText == null && canvas != null)
@@ -185,25 +203,56 @@ public class BirthSystem : MonoBehaviour
             childStatusText.fontSize = 28;
             childStatusText.alignment = TextAlignmentOptions.Center;
             childStatusText.color = Color.white;
+            childStatusText.raycastTarget = false;
         }
         if (childStatusText != null)
+        {
             childStatusText.richText = true;
-        SetButtonText(generateLifeButton, Localization.Get("birth_summon_button"));
-        SetButtonText(anotherGalButton, Localization.Get("birth_reroll_button"));
-        SetButtonText(gotoBattleButton, Localization.Get("birth_name_button"));
+            childStatusText.raycastTarget = false;
+        }
+        // 全画面背景
+        var bgObj = new GameObject("Background");
+        bgObj.transform.SetParent(canvas.transform, false);
+        bgObj.transform.SetAsFirstSibling();
+        var bgRect = bgObj.AddComponent<RectTransform>();
+        bgRect.anchorMin = Vector2.zero;
+        bgRect.anchorMax = Vector2.one;
+        bgRect.offsetMin = Vector2.zero;
+        bgRect.offsetMax = Vector2.zero;
+        mainBgImg = bgObj.AddComponent<Image>();
+        mainBgImg.color = new Color(0.953f, 0.969f, 0.973f);
+        mainBgImg.raycastTarget = false;
+
+        // いでよGodBabyボタンをパチンコ風赤ボタンにスタイリング
+        StylePachinkoButton(generateLifeButton);
+
+        StylePillButton(anotherGalButton, 700, 120, Localization.Get("birth_reroll_button"), 36);
+        StylePillButton(gotoBattleButton, 700, 120, Localization.Get("birth_name_button"), 36);
+
+        // ボタンを縦組に配置（名前をつけるが上、もう一度が下）
+        if (gotoBattleButton != null)
+        {
+            var rect = gotoBattleButton.GetComponent<RectTransform>();
+            rect.anchoredPosition = new Vector2(0, -710);
+        }
+        if (anotherGalButton != null)
+        {
+            var rect = anotherGalButton.GetComponent<RectTransform>();
+            rect.anchoredPosition = new Vector2(0, -850);
+        }
         CreateStatusTextBackground();
         CreateParentUI();
         CreateBabyFaceUI(); // babyFaceを作成
         CreateFlashOverlay();
         CreateLightningOverlay();
         CreateIntroPanel();
-        CreateGenderSelectUI();
         CreateNameInputUI();
         CreateSaveConfirmUI();
         CreateStoryUI();
         //CreateCharacterListUI();
         CreateMenuBar();
         if (parentPanel != null) parentPanel.SetActive(false);
+
     }
 
     // ===== ボタンから呼ばれるメソッド =====
@@ -217,13 +266,136 @@ public class BirthSystem : MonoBehaviour
         if (introPanel != null)
             introPanel.SetActive(false);
 
+        StartCoroutine(PachinkoStartSequence());
+    }
+
+    IEnumerator PachinkoStartSequence()
+    {
+        isAnimating = true;
+
+        // ボタンのエフェクトを停止、PUSHロゴ非表示
+        if (generateLifeButton != null)
+        {
+            var effect = generateLifeButton.GetComponent<PachinkoButtonEffect>();
+            if (effect != null) effect.enabled = false;
+        }
+
+
+        // ── フェーズ1: ボタンが震える（3秒） ──
+        float shakeDuration = 3f;
+        float elapsed = 0f;
+        float shakeIntensity = 3f;
+        Vector3 originalPos = Vector3.zero;
+        RectTransform btnRect = null;
+
+        if (generateLifeButton != null)
+        {
+            btnRect = generateLifeButton.GetComponent<RectTransform>();
+            if (btnRect != null) originalPos = btnRect.anchoredPosition;
+        }
+
+        // 震えが徐々に激しくなる
+        while (elapsed < shakeDuration)
+        {
+            elapsed += Time.deltaTime;
+            float progress = elapsed / shakeDuration;
+            // 強度は時間とともに増す（最初は微振動、最後は激しく）
+            float currentIntensity = Mathf.Lerp(shakeIntensity, shakeIntensity * 8f, progress * progress);
+            if (btnRect != null)
+            {
+                float offX = Random.Range(-currentIntensity, currentIntensity);
+                float offY = Random.Range(-currentIntensity, currentIntensity);
+                btnRect.anchoredPosition = new Vector2(originalPos.x + offX, originalPos.y + offY);
+            }
+            yield return null;
+        }
+
+        // 位置リセット
+        if (btnRect != null)
+            btnRect.anchoredPosition = new Vector2(originalPos.x, originalPos.y);
+
+        // ── フェーズ2: 雷演出 + フラッシュ ──
+        if (lightningContainer != null) lightningContainer.SetActive(true);
+
+        for (int i = 0; i < 4; i++)
+        {
+            var bolt = CreateLightningBolt();
+
+            if (flashOverlay != null)
+            {
+                flashOverlay.gameObject.SetActive(true);
+                flashOverlay.color = new Color(1f, 1f, 0.8f, 0.6f);
+            }
+
+            // 画面全体も震わせる
+            if (canvas != null)
+            {
+                var cRect = canvas.GetComponent<RectTransform>();
+                if (cRect != null)
+                {
+                    cRect.anchoredPosition = new Vector2(
+                        Random.Range(-12f, 12f), Random.Range(-12f, 12f));
+                }
+            }
+
+            yield return new WaitForSeconds(0.08f);
+
+            if (flashOverlay != null)
+            {
+                flashOverlay.color = new Color(1f, 1f, 1f, 0f);
+                flashOverlay.gameObject.SetActive(false);
+            }
+
+            yield return new WaitForSeconds(0.06f);
+            if (bolt != null) Destroy(bolt);
+            yield return new WaitForSeconds(Random.Range(0.05f, 0.12f));
+        }
+
+        // 最後の大フラッシュ（白）
+        if (flashOverlay != null)
+        {
+            flashOverlay.gameObject.SetActive(true);
+            flashOverlay.color = new Color(1f, 1f, 1f, 0.95f);
+        }
+
+        yield return new WaitForSeconds(0.15f);
+
+        // Canvas位置リセット
+        if (canvas != null)
+        {
+            var cRect = canvas.GetComponent<RectTransform>();
+            if (cRect != null) cRect.anchoredPosition = Vector2.zero;
+        }
+
+        if (lightningContainer != null) lightningContainer.SetActive(false);
+
+        // フラッシュフェードアウト
+        if (flashOverlay != null)
+        {
+            float fadeDur = 0.5f;
+            float fadeElapsed = 0f;
+            while (fadeElapsed < fadeDur)
+            {
+                fadeElapsed += Time.deltaTime;
+                float a = Mathf.Lerp(0.95f, 0f, fadeElapsed / fadeDur);
+                flashOverlay.color = new Color(1f, 1f, 1f, a);
+                yield return null;
+            }
+            flashOverlay.gameObject.SetActive(false);
+        }
+
+        // ── フェーズ3: 「父親は誰だろう！？」カットイン ──
+        yield return StartCoroutine(ShowCutinText(Localization.Get("cutin_who_father")));
+
+        // ── フェーズ4: ルーレットへ遷移 ──
+        isAnimating = false;
         StartCoroutine(SpinRouletteAnimation());
     }
 
     public void ResetParents()
     {
         if (isAnimating) return;
-        StartCoroutine(SpinRouletteAnimation());
+        SceneManager.LoadScene("BirthScene");
     }
 
     public void GoToBattle()
@@ -233,9 +405,14 @@ public class BirthSystem : MonoBehaviour
 
     IEnumerator NameAndSaveSequence()
     {
+        // 名前をつける・もう一度ボタンを無効化
+        if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
+        if (anotherGalButton != null) anotherGalButton.SetActive(false);
+
         // 名前入力ダイアログ表示
         if (nameInputPanel != null)
         {
+            nameInputPanel.transform.SetAsLastSibling();
             nameInputPanel.SetActive(true);
             if (nameInputField != null)
             {
@@ -255,21 +432,8 @@ public class BirthSystem : MonoBehaviour
         if (DataCarrier.Instance != null)
         {
             DataCarrier.Instance.babyName = enteredName;
-        }
 
-        // セーブ確認ダイアログ表示
-        if (saveConfirmPanel != null)
-            saveConfirmPanel.SetActive(true);
-
-        waitingForSaveConfirm = true;
-        while (waitingForSaveConfirm)
-            yield return null;
-
-        saveConfirmPanel.SetActive(false);
-
-        // セーブする場合（新規赤ちゃんなので空きスロットを探す）
-        if (saveConfirmResult && DataCarrier.Instance != null)
-        {
+            // 自動セーブ（空きスロットを探す）
             int emptySlot = DataCarrier.FindEmptySlot();
             if (emptySlot >= 0)
             {
@@ -277,7 +441,6 @@ public class BirthSystem : MonoBehaviour
             }
             else
             {
-                // 空きがなければスロット0に上書き
                 DataCarrier.Instance.SaveToSlot(0);
             }
         }
@@ -309,20 +472,6 @@ public class BirthSystem : MonoBehaviour
         waitingForSaveConfirm = false;
     }
 
-    // ===== 性別選択 =====
-
-    public void SelectMale()
-    {
-        selectedGender = "男の子";
-        waitingForGenderSelect = false;
-    }
-
-    public void SelectFemale()
-    {
-        selectedGender = "女の子";
-        waitingForGenderSelect = false;
-    }
-
     // ===== メインアニメーション =====
 
     IEnumerator SpinRouletteAnimation()
@@ -335,6 +484,7 @@ public class BirthSystem : MonoBehaviour
 
         // ボタンを即非表示、?マークを隠す、背景も非表示
         if (generateLifeButton != null) generateLifeButton.SetActive(false);
+
         if (anotherGalButton != null) anotherGalButton.SetActive(false);
         if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
         if (introText != null) introText.gameObject.SetActive(false);
@@ -384,24 +534,19 @@ public class BirthSystem : MonoBehaviour
 
         string trait1 = Traits[Random.Range(0, Traits.Length)];
 
-        // ── フェーズ1: パネル表示、母親側は「???」で伏せる ──
+        // ── フェーズ1: パネル表示、一人ずつ表示 ──
         if (parentPanel != null) parentPanel.SetActive(true);
         childStatusText.text = "";
 
         // 紹介文を非表示にリセット
         if (fatherIntroText != null) fatherIntroText.gameObject.SetActive(false);
         if (motherIntroText != null) motherIntroText.gameObject.SetActive(false);
+        if (nextButton != null) nextButton.SetActive(false);
 
-        // 母親側を「???」で伏せる
-        if (motherFaceImage != null)
-        {
-            motherFaceImage.sprite = null;
-            motherFaceImage.color = new Color(0.3f, 0.3f, 0.4f);
-        }
-        if (motherNameText != null)
-            motherNameText.text = Localization.Get("birth_mother_unknown");
-
-        // ── フェーズ2: 父親ルーレット ──
+        // 父親カードのみ表示、母親カードは非表示
+        if (fatherCard != null) fatherCard.SetActive(true);
+        if (motherCard != null) motherCard.SetActive(false);
+        // ── フェーズ2: 父親ルーレット（父親カードのみ表示） ──
         // 高速シャッフル（15回×0.06秒）
         for (int i = 0; i < 15; i++)
         {
@@ -419,15 +564,30 @@ public class BirthSystem : MonoBehaviour
         }
         // 父親確定
         ShowSingleParentPreview(fIdx, father, true);
+        // カットイン演出
+        yield return StartCoroutine(ShowParentCutin(father.name));
         // 紹介文表示
         if (fatherIntroText != null)
         {
             fatherIntroText.text = Localization.GetParentIntro(father.name).Replace(" / ", "\n");
             fatherIntroText.gameObject.SetActive(true);
         }
-        yield return new WaitForSeconds(1.5f);
+        // 「愛する女性を探す」ボタンで待機
+        yield return new WaitForSeconds(0.5f);
+        CreateParentInfoButton(father.name, fatherCard);
+        SetButtonText(nextButton, Localization.Get("birth_find_mother"));
+        if (nextButton != null) nextButton.SetActive(true);
+        waitingForNext = true;
+        while (waitingForNext) yield return null;
+        if (nextButton != null) nextButton.SetActive(false);
+        DestroyParentInfoButton();
+        SetButtonText(nextButton, Localization.Get("birth_next"));
 
-        // ── フェーズ3: 母親ルーレット ──
+        // ── フェーズ3: 「運命の人は誰だ？」カットイン → 母親ルーレット ──
+        yield return StartCoroutine(ShowCutinText(Localization.Get("cutin_who_mother")));
+
+        if (fatherCard != null) fatherCard.SetActive(false);
+        if (motherCard != null) motherCard.SetActive(true);
         // 高速シャッフル（15回×0.06秒）
         for (int i = 0; i < 15; i++)
         {
@@ -445,37 +605,32 @@ public class BirthSystem : MonoBehaviour
         }
         // 母親確定
         ShowSingleParentPreview(mIdx, mother, false);
+        // カットイン演出
+        yield return StartCoroutine(ShowParentCutin(mother.name));
         // 紹介文表示
         if (motherIntroText != null)
         {
             motherIntroText.text = Localization.GetParentIntro(mother.name).Replace(" / ", "\n");
             motherIntroText.gameObject.SetActive(true);
         }
-        yield return new WaitForSeconds(1.5f);
+        // 「恋の始まり」ボタンで待機
+        yield return new WaitForSeconds(0.5f);
+        CreateParentInfoButton(mother.name, motherCard);
+        SetButtonText(nextButton, Localization.Get("birth_love_begin"));
+        if (nextButton != null) nextButton.SetActive(true);
+        waitingForNext = true;
+        while (waitingForNext) yield return null;
+        if (nextButton != null) nextButton.SetActive(false);
+        DestroyParentInfoButton();
+        SetButtonText(nextButton, Localization.Get("birth_next"));
 
-        // ── フェーズ4: 性別選択 ──
-        Debug.Log("[BirthSystem] Phase 4: Gender selection");
-        if (genderSelectPanel != null)
-        {
-            genderSelectPanel.SetActive(true);
-            waitingForGenderSelect = true;
-            selectedGender = "";
+        // ── フェーズ4: 性別をランダム決定 ──
+        selectedGender = Random.Range(0, 2) == 0 ? "男の子" : "女の子";
+        Debug.Log($"[BirthSystem] Gender random: {selectedGender}");
 
-            // 選択されるまで待機
-            while (waitingForGenderSelect)
-            {
-                yield return null;
-            }
-
-            genderSelectPanel.SetActive(false);
-            Debug.Log($"[BirthSystem] Gender selected: {selectedGender}");
-        }
-        else
-        {
-            // パネルがない場合はランダム
-            selectedGender = Random.Range(0, 2) == 0 ? "男の子" : "女の子";
-            Debug.Log($"[BirthSystem] Gender random: {selectedGender}");
-        }
+        // 両親カード非表示
+        if (fatherCard != null) fatherCard.SetActive(false);
+        if (motherCard != null) motherCard.SetActive(false);
 
         // 女の子は身長・体重が小さくなる（男の子の70-90%程度）
         if (selectedGender == "女の子")
@@ -599,6 +754,9 @@ public class BirthSystem : MonoBehaviour
         Debug.Log("[BirthSystem] Phase 5: Flash effect");
         yield return StartCoroutine(FlashEffect());
 
+        // ── フェーズ5.3: 「子宝に恵まれた！」カットイン ──
+        yield return StartCoroutine(ShowCutinText(Localization.Get("cutin_baby_born")));
+
         // ── フェーズ5.5: レイアウト切り替え（親を端に、赤ちゃんを大きく中央に） ──
         Debug.Log("[BirthSystem] Phase 5.5: Layout switch and baby display");
         SwitchToBirthResultLayout();
@@ -633,49 +791,29 @@ public class BirthSystem : MonoBehaviour
             yield return StartCoroutine(LightningEffect(isGodBaby));
         }
 
-        // ステータス表示前に背景を表示し、位置を調整
-        RepositionStatusTextForDisplay();
-        if (statusTextBackground != null) statusTextBackground.SetActive(true);
+        // ステータステキストはカード内に配置済み
 
         string genderColor = selectedGender == "男の子" ? "#66ccff" : "#ff99cc";
-        string line1;
-        string line2;
-
-        if (isGodBaby)
-        {
-            // 上位1%: GOD BABY演出（金屏風）
-            line1 = Localization.Get("birth_god_line1");
-            line2 = Localization.Get("birth_god_line2");
-        }
-        else if (isPromisingBaby)
-        {
-            // 上位10%: 大物演出（赤屏風）
-            line1 = Localization.Get("birth_promising_line1");
-            line2 = Localization.Get("birth_separator");
-        }
-        else
-        {
-            line1 = Localization.Get("birth_normal_line1");
-            line2 = Localization.Get("birth_separator");
-        }
-
         string displayGender = Localization.GetGender(selectedGender);
-        string line3 = $"{Localization.Get("birth_stat_gender")} <color={genderColor}>{displayGender}</color>    {Localization.Get("birth_stat_height")} {c_height} cm    {Localization.Get("birth_stat_weight")} {c_weight} g";
-        string line4 = $"{Localization.Get("birth_stat_hp")} {c_hp}    {Localization.Get("birth_stat_atk")} {c_atk}    {Localization.Get("birth_stat_def")} {c_def}";
-        string line5 = $"{Localization.Get("birth_stat_academic")} {c_academic}    {Localization.Get("birth_stat_athletic")} {c_athletic}";
-        string line6 = $"{Localization.Get("birth_stat_trait")}  <color=#FFA500>{Localization.GetTrait(trait1)}</color>";
 
-        childStatusText.text = line1;
-        yield return new WaitForSeconds(isGodBaby ? 1.0f : (isPromisingBaby ? 0.6f : 0.3f));
-        childStatusText.text = line1 + "\n" + line2;
-        yield return new WaitForSeconds(isGodBaby ? 1.0f : (isPromisingBaby ? 0.4f : 0.15f));
-        childStatusText.text = line1 + "\n" + line2 + "\n\n" + line3;
+        // 性別は画像の上に表示
+        if (genderLabel != null)
+        {
+            genderLabel.text = $"{Localization.Get("birth_stat_gender")}  <color={genderColor}>{displayGender}</color>";
+        }
+
+        string stat1 = $"{Localization.Get("birth_stat_height")} {c_height} cm    {Localization.Get("birth_stat_weight")} {c_weight} g";
+        string stat2 = $"{Localization.Get("birth_stat_hp")} {c_hp}    {Localization.Get("birth_stat_atk")} {c_atk}    {Localization.Get("birth_stat_def")} {c_def}";
+        string stat3 = $"{Localization.Get("birth_stat_academic")} {c_academic}    {Localization.Get("birth_stat_athletic")} {c_athletic}";
+        string stat4 = $"{Localization.Get("birth_stat_trait")}  <color=#FFA500>{Localization.GetTrait(trait1)}</color>";
+
+        childStatusText.text = stat1;
+        yield return new WaitForSeconds(0.2f);
+        childStatusText.text = stat1 + "\n\n" + stat2;
         yield return new WaitForSeconds(0.15f);
-        childStatusText.text = line1 + "\n" + line2 + "\n\n" + line3 + "\n" + line4;
-        yield return new WaitForSeconds(0.15f);
-        childStatusText.text = line1 + "\n" + line2 + "\n\n" + line3 + "\n" + line4 + "\n" + line5;
+        childStatusText.text = stat1 + "\n\n" + stat2 + "\n\n" + stat3;
         yield return new WaitForSeconds(0.25f);
-        childStatusText.text = line1 + "\n" + line2 + "\n\n" + line3 + "\n" + line4 + "\n" + line5 + "\n\n" + line6;
+        childStatusText.text = stat1 + "\n\n" + stat2 + "\n\n" + stat3 + "\n\n" + stat4;
 
         // ── DataCarrier に保存 ──
         if (DataCarrier.Instance != null)
@@ -867,6 +1005,53 @@ public class BirthSystem : MonoBehaviour
             nameT.text = $"{prefix}: {Localization.GetParent(data.name)}";
     }
 
+    // ===== 両親を小さく並べて表示（性別選択時） =====
+
+    void ShowBothParentsMini(int fIdx, ParentData father, int mIdx, ParentData mother)
+    {
+        // 紹介文を非表示
+        if (fatherIntroText != null) fatherIntroText.gameObject.SetActive(false);
+        if (motherIntroText != null) motherIntroText.gameObject.SetActive(false);
+
+        // 両カードを表示
+        if (fatherCard != null) fatherCard.SetActive(true);
+        if (motherCard != null) motherCard.SetActive(true);
+
+        // カードを小さくして左右に並べる (各492 = (1080-32*2-32間隔)/2)
+        var fRect = fatherCard.GetComponent<RectTransform>();
+        fRect.sizeDelta = new Vector2(492, 600);
+        fRect.anchoredPosition = new Vector2(-262, 180);
+
+        var mRect = motherCard.GetComponent<RectTransform>();
+        mRect.sizeDelta = new Vector2(492, 600);
+        mRect.anchoredPosition = new Vector2(262, 180);
+
+        // 顔画像を小さくリサイズ
+        var fFaceRect = fatherFaceImage.GetComponent<RectTransform>();
+        fFaceRect.sizeDelta = new Vector2(380, 380);
+        var mFaceRect = motherFaceImage.GetComponent<RectTransform>();
+        mFaceRect.sizeDelta = new Vector2(380, 380);
+
+        // 確定済みの親を表示
+        ShowSingleParentPreview(fIdx, father, true);
+        ShowSingleParentPreview(mIdx, mother, false);
+    }
+
+    // カードをルーレット用の大きいサイズに戻す
+    void ResetCardToFullSize(GameObject card, Image faceImage)
+    {
+        if (card == null) return;
+        var rect = card.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(1016, 1300);
+        rect.anchoredPosition = new Vector2(0, 100);
+
+        if (faceImage != null)
+        {
+            var faceRect = faceImage.GetComponent<RectTransform>();
+            faceRect.sizeDelta = new Vector2(850, 850);
+        }
+    }
+
     // ===== ステータス判定 =====
 
     // DetermineTrait は廃止 — 16種からランダムに選ばれる
@@ -1037,14 +1222,11 @@ public class BirthSystem : MonoBehaviour
     {
         if (babyFace == null) return;
 
-        // 赤ちゃんを大きく、両親の上端とラインが揃うように配置
-        // 親パネルはy=280、カード高さ380なので上端はy=280+190=470
+        // 親カードの顔画像と同じ配置 (center, y=10, 850x850)
         babyFace.anchorMin = new Vector2(0.5f, 0.5f);
         babyFace.anchorMax = new Vector2(0.5f, 0.5f);
-        babyFace.anchoredPosition = new Vector2(0, 250); // 高い位置
-        babyFace.sizeDelta = new Vector2(450, 450); // 大きいサイズ（上端が親と揃う）
-
-        // babyFaceを最前面に表示
+        babyFace.anchoredPosition = new Vector2(0, 10);
+        babyFace.sizeDelta = new Vector2(850, 850);
         babyFace.SetAsLastSibling();
     }
 
@@ -1440,69 +1622,390 @@ public class BirthSystem : MonoBehaviour
         parentPanel.transform.SetParent(canvas.transform, false);
 
         var panelRect = parentPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0, 0.5f);
-        panelRect.anchorMax = new Vector2(1, 0.5f);
-        panelRect.anchoredPosition = new Vector2(0, 150);
-        panelRect.sizeDelta = new Vector2(0, 560);
+        panelRect.anchorMin = new Vector2(0, 0);
+        panelRect.anchorMax = new Vector2(1, 1);
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
 
-        CreateParentCard(parentPanel.transform, -600, out fatherFaceImage, out fatherNameText, out fatherIntroText);
-        CreateParentCard(parentPanel.transform, 600, out motherFaceImage, out motherNameText, out motherIntroText);
+        // 両カードとも中央に配置（一人ずつ表示するため）
+        CreateParentCard(parentPanel.transform, out fatherCard, out fatherFaceImage, out fatherNameText, out fatherIntroText,
+            new Color(0.12f, 0.18f, 0.35f, 0.95f), new Color(0.25f, 0.35f, 0.6f, 0.9f));
+        CreateParentCard(parentPanel.transform, out motherCard, out motherFaceImage, out motherNameText, out motherIntroText,
+            new Color(0.35f, 0.12f, 0.22f, 0.95f), new Color(0.6f, 0.25f, 0.4f, 0.9f));
+
+        // ── 「次へ」ボタン（pill型白背景+box shadow）──
+        int nextPillRadius = 60; // 120 / 2
+        int nextBlur = 20;
+
+        nextButton = new GameObject("NextButton");
+        nextButton.transform.SetParent(parentPanel.transform, false);
+        var btnRect = nextButton.AddComponent<RectTransform>();
+        btnRect.anchorMin = new Vector2(0.5f, 0f);
+        btnRect.anchorMax = new Vector2(0.5f, 0f);
+        btnRect.anchoredPosition = new Vector2(0, 205);
+        btnRect.sizeDelta = new Vector2(700, 120);
+
+        var btnBg = nextButton.AddComponent<Image>();
+        btnBg.sprite = GetPillSprite(nextPillRadius);
+        btnBg.type = Image.Type.Sliced;
+        btnBg.color = Color.white;
+
+        // Box shadow（子要素、中央透明）
+        var shadowObj = new GameObject("Shadow");
+        shadowObj.transform.SetParent(nextButton.transform, false);
+        shadowObj.transform.SetAsFirstSibling();
+        var shadowRect = shadowObj.AddComponent<RectTransform>();
+        shadowRect.anchorMin = Vector2.zero;
+        shadowRect.anchorMax = Vector2.one;
+        shadowRect.offsetMin = new Vector2(-nextBlur, -nextBlur - 4);
+        shadowRect.offsetMax = new Vector2(nextBlur, nextBlur - 4);
+        var shadowImg = shadowObj.AddComponent<Image>();
+        shadowImg.sprite = GetShadowSprite(nextPillRadius, nextBlur);
+        shadowImg.type = Image.Type.Sliced;
+        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
+        shadowImg.raycastTarget = false;
+
+        var btn = nextButton.AddComponent<Button>();
+        btn.targetGraphic = btnBg;
+        btn.onClick.AddListener(OnNextPressed);
+        btn.navigation = new Navigation { mode = Navigation.Mode.None };
+        var btnColors = btn.colors;
+        btnColors.normalColor = Color.white;
+        btnColors.highlightedColor = Color.white;
+        btnColors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
+        btnColors.selectedColor = Color.white;
+        btnColors.fadeDuration = 0.08f;
+        btn.colors = btnColors;
+
+        var btnTextObj = new GameObject("Text");
+        btnTextObj.transform.SetParent(nextButton.transform, false);
+        var btnTextRect = btnTextObj.AddComponent<RectTransform>();
+        btnTextRect.anchorMin = Vector2.zero;
+        btnTextRect.anchorMax = Vector2.one;
+        btnTextRect.offsetMin = Vector2.zero;
+        btnTextRect.offsetMax = Vector2.zero;
+        var btnText = btnTextObj.AddComponent<TextMeshProUGUI>();
+        btnText.text = Localization.Get("birth_next");
+        btnText.fontSize = 36;
+        btnText.alignment = TextAlignmentOptions.Center;
+        btnText.color = new Color(0.45f, 0.45f, 0.5f);
+        btnText.fontStyle = FontStyles.Bold;
+        btnText.raycastTarget = false;
+
+        // 押下スケールアニメーション
+        var trigger = nextButton.AddComponent<EventTrigger>();
+        var pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        pointerDown.callback.AddListener((data) => { nextButton.transform.localScale = new Vector3(0.95f, 0.95f, 1f); });
+        trigger.triggers.Add(pointerDown);
+        var pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        pointerUp.callback.AddListener((data) => { nextButton.transform.localScale = Vector3.one; });
+        trigger.triggers.Add(pointerUp);
+        var pointerExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        pointerExit.callback.AddListener((data) => { nextButton.transform.localScale = Vector3.one; });
+        trigger.triggers.Add(pointerExit);
+
+        nextButton.SetActive(false);
     }
 
-    void CreateParentCard(Transform parent, float xPos, out Image faceImage, out TextMeshProUGUI nameText, out TextMeshProUGUI introText)
+    void OnNextPressed()
+    {
+        waitingForNext = false;
+    }
+
+    void CreateParentInfoButton(string parentName, GameObject targetCard)
+    {
+        if (targetCard == null) return;
+        DestroyParentInfoButton();
+
+        parentInfoButton = new GameObject("InfoButton");
+        parentInfoButton.transform.SetParent(targetCard.transform, false);
+
+        var btnRect = parentInfoButton.AddComponent<RectTransform>();
+        btnRect.anchorMin = new Vector2(1f, 1f);
+        btnRect.anchorMax = new Vector2(1f, 1f);
+        btnRect.anchoredPosition = new Vector2(-30, -30);
+        btnRect.sizeDelta = new Vector2(64, 64);
+
+        // 円形背景
+        var bgImg = parentInfoButton.AddComponent<Image>();
+        bgImg.sprite = GetRoundedRectSprite(32);
+        bgImg.type = Image.Type.Sliced;
+        bgImg.color = new Color(1f, 1f, 1f, 0.9f);
+
+        // "i" テキスト
+        var textObj = new GameObject("Text");
+        textObj.transform.SetParent(parentInfoButton.transform, false);
+        var textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+        var text = textObj.AddComponent<TextMeshProUGUI>();
+        text.text = "i";
+        text.fontSize = 38;
+        text.fontStyle = FontStyles.Bold | FontStyles.Italic;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = new Color(0.2f, 0.3f, 0.55f);
+        text.raycastTarget = false;
+
+        var btn = parentInfoButton.AddComponent<Button>();
+        btn.targetGraphic = bgImg;
+        btn.navigation = new Navigation { mode = Navigation.Mode.None };
+        var colors = btn.colors;
+        colors.normalColor = new Color(1f, 1f, 1f, 0.9f);
+        colors.highlightedColor = Color.white;
+        colors.pressedColor = new Color(0.85f, 0.85f, 0.9f);
+        colors.selectedColor = new Color(1f, 1f, 1f, 0.9f);
+        btn.colors = colors;
+
+        string bioName = parentName;
+        btn.onClick.AddListener(() => ShowParentBioPanel(bioName));
+    }
+
+    void DestroyParentInfoButton()
+    {
+        if (parentInfoButton != null)
+        {
+            Destroy(parentInfoButton);
+            parentInfoButton = null;
+        }
+    }
+
+    void ShowParentBioPanel(string parentName)
+    {
+        if (parentBioPanel != null) return; // 既に開いている
+
+        parentBioPanel = new GameObject("ParentBioPanel");
+        parentBioPanel.transform.SetParent(canvas.transform, false);
+        parentBioPanel.transform.SetAsLastSibling();
+
+        var panelRect = parentBioPanel.AddComponent<RectTransform>();
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
+
+        // 半透明オーバーレイ（タップで閉じる）
+        var overlay = parentBioPanel.AddComponent<Image>();
+        overlay.color = new Color(0f, 0f, 0f, 0.6f);
+
+        var overlayBtn = parentBioPanel.AddComponent<Button>();
+        overlayBtn.targetGraphic = overlay;
+        overlayBtn.navigation = new Navigation { mode = Navigation.Mode.None };
+        var oc = overlayBtn.colors;
+        var overlayColor = new Color(0f, 0f, 0f, 0.6f);
+        oc.normalColor = overlayColor;
+        oc.highlightedColor = overlayColor;
+        oc.pressedColor = overlayColor;
+        oc.selectedColor = overlayColor;
+        overlayBtn.colors = oc;
+        overlayBtn.onClick.AddListener(CloseParentBioPanel);
+
+        // カード
+        var cardObj = new GameObject("BioCard");
+        cardObj.transform.SetParent(parentBioPanel.transform, false);
+        var cardRect = cardObj.AddComponent<RectTransform>();
+        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+        cardRect.anchoredPosition = Vector2.zero;
+        cardRect.sizeDelta = new Vector2(940, 750);
+
+        var cardBorder = cardObj.AddComponent<Image>();
+        cardBorder.sprite = GetRoundedRectSprite(24);
+        cardBorder.type = Image.Type.Sliced;
+        cardBorder.color = new Color(0.25f, 0.35f, 0.6f, 0.95f);
+        cardBorder.raycastTarget = false;
+
+        var innerObj = new GameObject("Inner");
+        innerObj.transform.SetParent(cardObj.transform, false);
+        var innerRect = innerObj.AddComponent<RectTransform>();
+        innerRect.anchorMin = Vector2.zero;
+        innerRect.anchorMax = Vector2.one;
+        innerRect.offsetMin = new Vector2(6, 6);
+        innerRect.offsetMax = new Vector2(-6, -6);
+        var innerBg = innerObj.AddComponent<Image>();
+        innerBg.sprite = GetRoundedRectSprite(20);
+        innerBg.type = Image.Type.Sliced;
+        innerBg.color = new Color(0.1f, 0.14f, 0.28f, 0.98f);
+        innerBg.raycastTarget = false;
+
+        // タイトル（父親名）
+        var titleObj = new GameObject("Title");
+        titleObj.transform.SetParent(cardObj.transform, false);
+        var titleRect = titleObj.AddComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0, 1f);
+        titleRect.anchorMax = new Vector2(1, 1f);
+        titleRect.anchoredPosition = new Vector2(0, -40);
+        titleRect.sizeDelta = new Vector2(-48, 60);
+        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        titleText.text = Localization.GetParent(parentName);
+        titleText.fontSize = 40;
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.alignment = TextAlignmentOptions.Center;
+        titleText.color = new Color(1f, 0.9f, 0.5f);
+        titleText.raycastTarget = false;
+
+        // 区切り線
+        var lineObj = new GameObject("Separator");
+        lineObj.transform.SetParent(cardObj.transform, false);
+        var lineRect = lineObj.AddComponent<RectTransform>();
+        lineRect.anchorMin = new Vector2(0.05f, 1f);
+        lineRect.anchorMax = new Vector2(0.95f, 1f);
+        lineRect.anchoredPosition = new Vector2(0, -75);
+        lineRect.sizeDelta = new Vector2(0, 2);
+        var lineImg = lineObj.AddComponent<Image>();
+        lineImg.color = new Color(0.4f, 0.5f, 0.75f, 0.5f);
+        lineImg.raycastTarget = false;
+
+        // 本文
+        var bodyObj = new GameObject("Body");
+        bodyObj.transform.SetParent(cardObj.transform, false);
+        var bodyRect = bodyObj.AddComponent<RectTransform>();
+        bodyRect.anchorMin = Vector2.zero;
+        bodyRect.anchorMax = Vector2.one;
+        bodyRect.offsetMin = new Vector2(36, 80);
+        bodyRect.offsetMax = new Vector2(-36, -90);
+        var bodyText = bodyObj.AddComponent<TextMeshProUGUI>();
+        bodyText.text = Localization.GetParentBio(parentName);
+        bodyText.fontSize = 32;
+        bodyText.lineSpacing = 8;
+        bodyText.alignment = TextAlignmentOptions.TopLeft;
+        bodyText.color = Color.white;
+        bodyText.raycastTarget = false;
+
+        // 閉じるボタン（右上 ×）
+        var closeObj = new GameObject("CloseButton");
+        closeObj.transform.SetParent(cardObj.transform, false);
+        var closeRect = closeObj.AddComponent<RectTransform>();
+        closeRect.anchorMin = new Vector2(1f, 1f);
+        closeRect.anchorMax = new Vector2(1f, 1f);
+        closeRect.anchoredPosition = new Vector2(-24, -24);
+        closeRect.sizeDelta = new Vector2(52, 52);
+
+        var closeBg = closeObj.AddComponent<Image>();
+        closeBg.sprite = GetRoundedRectSprite(26);
+        closeBg.type = Image.Type.Sliced;
+        closeBg.color = new Color(1f, 1f, 1f, 0.15f);
+
+        var closeTextObj = new GameObject("X");
+        closeTextObj.transform.SetParent(closeObj.transform, false);
+        var closeTextRect = closeTextObj.AddComponent<RectTransform>();
+        closeTextRect.anchorMin = Vector2.zero;
+        closeTextRect.anchorMax = Vector2.one;
+        closeTextRect.offsetMin = Vector2.zero;
+        closeTextRect.offsetMax = Vector2.zero;
+        var closeText = closeTextObj.AddComponent<TextMeshProUGUI>();
+        closeText.text = "\u00d7";
+        closeText.fontSize = 36;
+        closeText.alignment = TextAlignmentOptions.Center;
+        closeText.color = Color.white;
+        closeText.raycastTarget = false;
+
+        var closeBtn = closeObj.AddComponent<Button>();
+        closeBtn.targetGraphic = closeBg;
+        closeBtn.navigation = new Navigation { mode = Navigation.Mode.None };
+        var cc = closeBtn.colors;
+        cc.normalColor = new Color(1f, 1f, 1f, 0.15f);
+        cc.highlightedColor = new Color(1f, 1f, 1f, 0.3f);
+        cc.pressedColor = new Color(1f, 1f, 1f, 0.1f);
+        cc.selectedColor = new Color(1f, 1f, 1f, 0.15f);
+        closeBtn.colors = cc;
+        closeBtn.onClick.AddListener(CloseParentBioPanel);
+    }
+
+    void CloseParentBioPanel()
+    {
+        if (parentBioPanel != null)
+        {
+            Destroy(parentBioPanel);
+            parentBioPanel = null;
+        }
+    }
+
+    void CreateParentCard(Transform parent, out GameObject cardObj, out Image faceImage, out TextMeshProUGUI nameText, out TextMeshProUGUI introText,
+        Color innerColor, Color borderColor)
     {
         var card = new GameObject("ParentCard");
         card.transform.SetParent(parent, false);
+        cardObj = card;
 
         var cardRect = card.AddComponent<RectTransform>();
         cardRect.anchorMin = new Vector2(0.5f, 0.5f);
         cardRect.anchorMax = new Vector2(0.5f, 0.5f);
-        cardRect.anchoredPosition = new Vector2(xPos, 0);
-        cardRect.sizeDelta = new Vector2(400, 560);
+        cardRect.anchoredPosition = new Vector2(0, 100);
+        cardRect.sizeDelta = new Vector2(1016, 1300); // 1080 - margin32*2
 
-        var bg = card.AddComponent<Image>();
-        bg.sprite = GetRoundedRectSprite(32);
-        bg.type = Image.Type.Sliced;
-        bg.color = new Color(0.2f, 0.2f, 0.3f, 0.8f);
-        bg.raycastTarget = false;
+        // カード外枠（ボーダー）
+        var border = card.AddComponent<Image>();
+        border.sprite = GetRoundedRectSprite(24);
+        border.type = Image.Type.Sliced;
+        border.color = borderColor;
+        border.raycastTarget = false;
 
-        // 名前テキスト (画像の上)
+        // カード内側背景
+        var innerObj = new GameObject("Inner");
+        innerObj.transform.SetParent(card.transform, false);
+        var innerRect = innerObj.AddComponent<RectTransform>();
+        innerRect.anchorMin = Vector2.zero;
+        innerRect.anchorMax = Vector2.one;
+        innerRect.offsetMin = new Vector2(6, 6);
+        innerRect.offsetMax = new Vector2(-6, -6);
+        var innerBg = innerObj.AddComponent<Image>();
+        innerBg.sprite = GetRoundedRectSprite(20);
+        innerBg.type = Image.Type.Sliced;
+        innerBg.color = innerColor;
+        innerBg.raycastTarget = false;
+
+        // 名前テキスト (上部)
         var nameObj = new GameObject("Name");
         nameObj.transform.SetParent(card.transform, false);
         var nameRect = nameObj.AddComponent<RectTransform>();
         nameRect.anchorMin = new Vector2(0, 1f);
         nameRect.anchorMax = new Vector2(1, 1f);
-        nameRect.anchoredPosition = new Vector2(0, -25);
-        nameRect.sizeDelta = new Vector2(0, 50);
+        nameRect.anchoredPosition = new Vector2(0, -45);
+        nameRect.sizeDelta = new Vector2(-30, 70);
         nameText = nameObj.AddComponent<TextMeshProUGUI>();
-        nameText.fontSize = 32;
+        nameText.fontSize = 42;
         nameText.alignment = TextAlignmentOptions.Center;
         nameText.color = Color.white;
+        nameText.fontStyle = FontStyles.Bold;
         nameText.raycastTarget = false;
 
-        // 顔画像 (360x360)
+        // 区切り線
+        var lineObj = new GameObject("Separator");
+        lineObj.transform.SetParent(card.transform, false);
+        var lineRect = lineObj.AddComponent<RectTransform>();
+        lineRect.anchorMin = new Vector2(0.1f, 1f);
+        lineRect.anchorMax = new Vector2(0.9f, 1f);
+        lineRect.anchoredPosition = new Vector2(0, -85);
+        lineRect.sizeDelta = new Vector2(0, 2);
+        var lineImg = lineObj.AddComponent<Image>();
+        lineImg.color = new Color(borderColor.r + 0.15f, borderColor.g + 0.15f, borderColor.b + 0.15f, 0.6f);
+        lineImg.raycastTarget = false;
+
+        // 顔画像 (850x850)
         var faceObj = new GameObject("Face");
         faceObj.transform.SetParent(card.transform, false);
         var faceRect = faceObj.AddComponent<RectTransform>();
         faceRect.anchorMin = new Vector2(0.5f, 0.5f);
         faceRect.anchorMax = new Vector2(0.5f, 0.5f);
-        faceRect.anchoredPosition = new Vector2(0, 20);
-        faceRect.sizeDelta = new Vector2(360, 360);
+        faceRect.anchoredPosition = new Vector2(0, 10);
+        faceRect.sizeDelta = new Vector2(850, 850);
         faceImage = faceObj.AddComponent<Image>();
         faceImage.color = Color.white;
         faceImage.raycastTarget = false;
         faceImage.preserveAspect = true;
 
-        // 紹介文テキスト (画像の下)
+        // 紹介文テキスト (下部)
         var introObj = new GameObject("Intro");
         introObj.transform.SetParent(card.transform, false);
         var introRect = introObj.AddComponent<RectTransform>();
         introRect.anchorMin = new Vector2(0, 0);
         introRect.anchorMax = new Vector2(1, 0);
-        introRect.anchoredPosition = new Vector2(0, 40);
-        introRect.sizeDelta = new Vector2(0, 80);
+        introRect.anchoredPosition = new Vector2(0, 110);
+        introRect.sizeDelta = new Vector2(-30, 130);
         introText = introObj.AddComponent<TextMeshProUGUI>();
-        introText.fontSize = 32;
+        introText.fontSize = 40;
         introText.alignment = TextAlignmentOptions.Center;
         introText.color = new Color(1f, 0.9f, 0.5f);
         introText.raycastTarget = false;
@@ -1547,16 +2050,144 @@ public class BirthSystem : MonoBehaviour
     // 誕生後のレイアウトに切り替え（赤ちゃんを大きく中央上部に）
     void SwitchToBirthResultLayout()
     {
-        // 親パネルと親カードの位置・サイズはそのまま維持
-        // 赤ちゃんだけ大きくして上に配置（RepositionBabyFaceForDisplayで行う）
+        // 親パネルを非表示
+        if (parentPanel != null) parentPanel.SetActive(false);
+
+        // 既存のカードがあれば削除
+        if (birthResultCard != null) Destroy(birthResultCard);
+
+        // 赤ちゃんカードを作成（親カードと同じレイアウト）
+        birthResultCard = new GameObject("BirthResultCard");
+        birthResultCard.transform.SetParent(canvas.transform, false);
+
+        var cardRect = birthResultCard.AddComponent<RectTransform>();
+        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+        cardRect.anchoredPosition = new Vector2(0, 250);
+        cardRect.sizeDelta = new Vector2(1016, 1300);
+
+        // カード外枠（ボーダー）— ゴールド系（親カードと同じ構造）
+        var border = birthResultCard.AddComponent<Image>();
+        border.sprite = GetRoundedRectSprite(24);
+        border.type = Image.Type.Sliced;
+        border.color = new Color(0.55f, 0.45f, 0.2f, 1f);
+        border.raycastTarget = false;
+
+        // カード内側背景
+        var innerObj = new GameObject("Inner");
+        innerObj.transform.SetParent(birthResultCard.transform, false);
+        var innerRect = innerObj.AddComponent<RectTransform>();
+        innerRect.anchorMin = Vector2.zero;
+        innerRect.anchorMax = Vector2.one;
+        innerRect.offsetMin = new Vector2(6, 6);
+        innerRect.offsetMax = new Vector2(-6, -6);
+        var innerBg = innerObj.AddComponent<Image>();
+        innerBg.sprite = GetRoundedRectSprite(20);
+        innerBg.type = Image.Type.Sliced;
+        innerBg.color = new Color(0.2f, 0.18f, 0.12f, 1f);
+        innerBg.raycastTarget = false;
+        innerObj.AddComponent<RectMask2D>();
+
+        // 性別ラベル（親カードの名前と同じ位置）
+        var genderObj = new GameObject("GenderLabel");
+        genderObj.transform.SetParent(birthResultCard.transform, false);
+        var genderRect = genderObj.AddComponent<RectTransform>();
+        genderRect.anchorMin = new Vector2(0, 1f);
+        genderRect.anchorMax = new Vector2(1, 1f);
+        genderRect.anchoredPosition = new Vector2(0, -45);
+        genderRect.sizeDelta = new Vector2(-30, 70);
+        genderLabel = genderObj.AddComponent<TextMeshProUGUI>();
+        genderLabel.fontSize = 42;
+        genderLabel.fontStyle = FontStyles.Bold;
+        genderLabel.alignment = TextAlignmentOptions.Center;
+        genderLabel.color = Color.white;
+        genderLabel.raycastTarget = false;
+        genderLabel.text = "";
+
+        // 区切り線（親カードと同じ）
+        var lineObj = new GameObject("Separator");
+        lineObj.transform.SetParent(birthResultCard.transform, false);
+        var lineRect = lineObj.AddComponent<RectTransform>();
+        lineRect.anchorMin = new Vector2(0.1f, 1f);
+        lineRect.anchorMax = new Vector2(0.9f, 1f);
+        lineRect.anchoredPosition = new Vector2(0, -85);
+        lineRect.sizeDelta = new Vector2(0, 2);
+        var lineImg = lineObj.AddComponent<Image>();
+        lineImg.color = new Color(0.70f, 0.60f, 0.35f, 0.6f);
+        lineImg.raycastTarget = false;
+
+        // babyFaceをinnerObjの子にして配置（親カードの顔画像と同じ位置）
+        if (babyFace != null)
+        {
+            babyFace.SetParent(innerObj.transform, false);
+            babyFace.anchorMin = new Vector2(0.5f, 0.5f);
+            babyFace.anchorMax = new Vector2(0.5f, 0.5f);
+            babyFace.anchoredPosition = new Vector2(0, 10);
+            babyFace.sizeDelta = new Vector2(850, 850);
+            babyFace.SetAsLastSibling();
+        }
+
+        // ── ステータスカード（赤ちゃんカードの下に別カード） ──
+        statusCardObj = new GameObject("StatusCard");
+        statusCardObj.transform.SetParent(canvas.transform, false);
+
+        var scRect = statusCardObj.AddComponent<RectTransform>();
+        scRect.anchorMin = new Vector2(0.5f, 0.5f);
+        scRect.anchorMax = new Vector2(0.5f, 0.5f);
+        scRect.anchoredPosition = new Vector2(0, -350);
+        scRect.sizeDelta = new Vector2(900, 500);
+
+        // カード背景（ページ背景と同じ色 #f3f7f8）
+        var scBg = statusCardObj.AddComponent<Image>();
+        scBg.color = new Color(0.953f, 0.969f, 0.973f);
+        scBg.raycastTarget = false;
+
+        // 内側背景（明るいベージュ系）padding 32
+        var scInnerObj = new GameObject("Inner");
+        scInnerObj.transform.SetParent(statusCardObj.transform, false);
+        var scInnerRect = scInnerObj.AddComponent<RectTransform>();
+        scInnerRect.anchorMin = Vector2.zero;
+        scInnerRect.anchorMax = Vector2.one;
+        scInnerRect.offsetMin = new Vector2(32, 32);
+        scInnerRect.offsetMax = new Vector2(-32, -32);
+        var scInnerBg = scInnerObj.AddComponent<Image>();
+        scInnerBg.color = new Color(0.88f, 0.85f, 0.78f, 1f);
+        scInnerBg.raycastTarget = false;
+
+        // childStatusTextを内側カードの子にして配置（左寄せ）
+        if (childStatusText != null)
+        {
+            childStatusText.transform.SetParent(scInnerObj.transform, false);
+            var statusRect = childStatusText.GetComponent<RectTransform>();
+            statusRect.anchorMin = Vector2.zero;
+            statusRect.anchorMax = Vector2.one;
+            statusRect.offsetMin = new Vector2(20, 16);
+            statusRect.offsetMax = new Vector2(-20, -16);
+            childStatusText.fontSize = 36;
+            childStatusText.lineSpacing = 12;
+            childStatusText.alignment = TextAlignmentOptions.TopLeft;
+            childStatusText.color = new Color(0.1f, 0.1f, 0.1f);
+        }
+
+        // statusTextBackgroundを非表示（カード自体が背景になる）
+        if (statusTextBackground != null) statusTextBackground.SetActive(false);
     }
 
     // ルーレット用のレイアウトにリセット
     void ResetToRouletteLayout()
     {
-        // 赤ちゃんの位置をリセット（ルーレット時は小さく、?マーク表示用）
+        // 情報パネル系をクリーンアップ
+        DestroyParentInfoButton();
+        CloseParentBioPanel();
+
+        // カードを元のサイズに戻す
+        ResetCardToFullSize(fatherCard, fatherFaceImage);
+        ResetCardToFullSize(motherCard, motherFaceImage);
+
+        // birthResultCardからbabyFaceとchildStatusTextをcanvasに戻す
         if (babyFace != null)
         {
+            babyFace.SetParent(canvas.transform, false);
             babyFace.anchorMin = new Vector2(0.5f, 0.5f);
             babyFace.anchorMax = new Vector2(0.5f, 0.5f);
             babyFace.anchoredPosition = new Vector2(0, -50);
@@ -1577,6 +2208,33 @@ public class BirthSystem : MonoBehaviour
             }
         }
 
+        if (childStatusText != null)
+        {
+            childStatusText.transform.SetParent(canvas.transform, false);
+            var statusRect = childStatusText.GetComponent<RectTransform>();
+            statusRect.anchorMin = new Vector2(0.5f, 0.5f);
+            statusRect.anchorMax = new Vector2(0.5f, 0.5f);
+            statusRect.anchoredPosition = new Vector2(0, -200);
+            statusRect.sizeDelta = new Vector2(800, 350);
+            childStatusText.alignment = TextAlignmentOptions.Center;
+            childStatusText.lineSpacing = 0;
+        }
+
+        // birthResultCardを削除（genderLabelはその子なので一緒に破棄される）
+        if (birthResultCard != null)
+        {
+            Destroy(birthResultCard);
+            birthResultCard = null;
+            genderLabel = null;
+        }
+
+        // statusCardObjを削除
+        if (statusCardObj != null)
+        {
+            Destroy(statusCardObj);
+            statusCardObj = null;
+        }
+
         // babyFaceImageを非表示、introTextを表示
         if (babyFaceImage != null)
         {
@@ -1587,7 +2245,6 @@ public class BirthSystem : MonoBehaviour
         {
             introText.gameObject.SetActive(true);
         }
-        // 親パネルとステータステキストの位置は変更しない（元のまま）
     }
 
     void CreateStatusTextBackground()
@@ -1690,84 +2347,6 @@ public class BirthSystem : MonoBehaviour
         rect.offsetMax = Vector2.zero;
 
         lightningContainer.SetActive(false);
-    }
-
-    void CreateGenderSelectUI()
-    {
-        if (canvas == null) return;
-
-        genderSelectPanel = new GameObject("GenderSelectPanel");
-        genderSelectPanel.transform.SetParent(canvas.transform, false);
-
-        var panelRect = genderSelectPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = new Vector2(0, -50);
-        panelRect.sizeDelta = new Vector2(464, 200);
-
-        var panelBg = genderSelectPanel.AddComponent<Image>();
-        panelBg.sprite = GetRoundedRectSprite(32);
-        panelBg.type = Image.Type.Sliced;
-        panelBg.color = new Color(0.2f, 0.2f, 0.3f, 0.8f);
-
-        // タイトルテキスト
-        var titleObj = new GameObject("Title");
-        titleObj.transform.SetParent(genderSelectPanel.transform, false);
-        var titleRect = titleObj.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0, 1);
-        titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.anchoredPosition = new Vector2(0, -30);
-        titleRect.sizeDelta = new Vector2(-64, 50);
-        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        titleText.text = Localization.Get("birth_gender_title");
-        titleText.fontSize = 32;
-        titleText.alignment = TextAlignmentOptions.Center;
-        titleText.color = Color.white;
-        titleText.fontStyle = FontStyles.Bold;
-        titleText.raycastTarget = false;
-
-        // 男の子ボタン
-        CreateGenderButton(genderSelectPanel.transform, -90, Localization.Get("birth_male"), new Color(0.4f, 0.6f, 1f), SelectMale);
-
-        // 女の子ボタン
-        CreateGenderButton(genderSelectPanel.transform, 90, Localization.Get("birth_female"), new Color(1f, 0.5f, 0.7f), SelectFemale);
-
-        genderSelectPanel.SetActive(false);
-    }
-
-    void CreateGenderButton(Transform parent, float xPos, string label, Color bgColor, UnityEngine.Events.UnityAction onClick)
-    {
-        var btnObj = new GameObject(label + "Button");
-        btnObj.transform.SetParent(parent, false);
-
-        var btnRect = btnObj.AddComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(0.5f, 0);
-        btnRect.anchorMax = new Vector2(0.5f, 0);
-        btnRect.anchoredPosition = new Vector2(xPos, 55);
-        btnRect.sizeDelta = new Vector2(140, 80);
-
-        var btnImg = btnObj.AddComponent<Image>();
-        btnImg.color = bgColor;
-
-        var btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnImg;
-        btn.onClick.AddListener(onClick);
-
-        // ボタンテキスト
-        var textObj = new GameObject("Text");
-        textObj.transform.SetParent(btnObj.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-        var btnText = textObj.AddComponent<TextMeshProUGUI>();
-        btnText.text = label;
-        btnText.fontSize = 28;
-        btnText.alignment = TextAlignmentOptions.Center;
-        btnText.color = Color.white;
-        btnText.fontStyle = FontStyles.Bold;
-        btnText.raycastTarget = false;
     }
 
     void CreateNameInputUI()
@@ -1980,6 +2559,364 @@ public class BirthSystem : MonoBehaviour
         if (tmp != null) tmp.text = text;
     }
 
+    static Sprite _pachinkoButtonSprite;
+
+    static Sprite GetPachinkoButtonSprite()
+    {
+        if (_pachinkoButtonSprite != null) return _pachinkoButtonSprite;
+
+        int size = 512;
+        float center = size / 2f;
+        float outerR = size / 2f;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        var pixels = new Color[size * size];
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - center;
+                float dy = y - center;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                float normDist = dist / outerR;
+
+                if (normDist > 1f)
+                {
+                    pixels[y * size + x] = new Color(0, 0, 0, 0);
+                    continue;
+                }
+
+                // アンチエイリアス
+                float aa = Mathf.Clamp01((outerR - dist) * 2f);
+
+                // メタリックリム（外周 92%-100%）
+                if (normDist > 0.92f)
+                {
+                    float rimT = (normDist - 0.92f) / 0.08f;
+                    // クロームリム: 光の角度によるグラデーション
+                    float rimAngle = (dy / dist + 1f) * 0.5f; // 0(下)〜1(上)
+                    float rimLight = 0.3f + 0.5f * rimAngle + 0.15f * Mathf.Pow(rimAngle, 4f);
+                    Color rimColor = new Color(rimLight * 0.85f, rimLight * 0.8f, rimLight * 0.75f, aa);
+                    pixels[y * size + x] = rimColor;
+                    continue;
+                }
+
+                // メタリック溝（88%-92%: 暗い線）
+                if (normDist > 0.88f)
+                {
+                    float grooveT = (normDist - 0.88f) / 0.04f;
+                    float grooveV = 0.15f + 0.05f * Mathf.Sin(grooveT * Mathf.PI);
+                    pixels[y * size + x] = new Color(grooveV, grooveV * 0.05f, grooveV * 0.05f, aa);
+                    continue;
+                }
+
+                // 赤いドーム本体（0%-88%）
+                float bodyNorm = normDist / 0.88f;
+
+                // 3Dドーム：中央が明るく、端が暗い（放物線的）
+                float dome = 1f - bodyNorm * bodyNorm;
+
+                // 上方向からの照明（yが上ほど明るい）
+                float lightDir = (dy / (outerR * 0.88f) + 1f) * 0.5f; // 0(下)〜1(上)
+
+                // ベース赤色にドーム陰影と方向照明を合成
+                float baseR = 0.65f + 0.35f * dome * (0.6f + 0.4f * lightDir);
+                float baseG = 0.02f + 0.12f * dome * lightDir;
+                float baseB = 0.02f + 0.08f * dome * lightDir;
+
+                // 上半分のスペキュラーハイライト（鏡面反射）
+                float specX = dx / (outerR * 0.88f);
+                float specY = (dy / (outerR * 0.88f)) - 0.3f; // 中心より少し上
+                float specDist = Mathf.Sqrt(specX * specX * 1.8f + specY * specY * 3.5f);
+                float specular = Mathf.Pow(Mathf.Clamp01(1f - specDist), 6f) * 0.7f;
+
+                // 小さく強いハイライト点（左上）
+                float hotX = (dx / (outerR * 0.88f)) + 0.25f;
+                float hotY = (dy / (outerR * 0.88f)) - 0.25f;
+                float hotDist = Mathf.Sqrt(hotX * hotX + hotY * hotY);
+                float hotspot = Mathf.Pow(Mathf.Clamp01(1f - hotDist * 3.5f), 4f) * 0.5f;
+
+                // 下部の環境反射（薄い）
+                float envX = dx / (outerR * 0.88f);
+                float envY = (dy / (outerR * 0.88f)) + 0.6f;
+                float envDist = Mathf.Sqrt(envX * envX * 2f + envY * envY * 5f);
+                float envReflect = Mathf.Pow(Mathf.Clamp01(1f - envDist), 3f) * 0.1f;
+
+                float r = Mathf.Clamp01(baseR + specular + hotspot + envReflect);
+                float g = Mathf.Clamp01(baseG + specular * 0.9f + hotspot * 0.95f + envReflect * 0.8f);
+                float b = Mathf.Clamp01(baseB + specular * 0.85f + hotspot * 0.9f + envReflect * 0.7f);
+
+                pixels[y * size + x] = new Color(r, g, b, aa);
+            }
+        }
+
+        tex.SetPixels(pixels);
+        tex.Apply();
+        tex.filterMode = FilterMode.Bilinear;
+        _pachinkoButtonSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100);
+        return _pachinkoButtonSprite;
+    }
+
+    void StylePachinkoButton(GameObject button)
+    {
+        if (button == null) return;
+
+        float size = 340f;
+        var rect = button.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            rect.sizeDelta = new Vector2(size, size);
+            rect.anchoredPosition = new Vector2(0, -200);
+        }
+
+        // 既存の子オブジェクトを削除
+        for (int i = button.transform.childCount - 1; i >= 0; i--)
+            Destroy(button.transform.GetChild(i).gameObject);
+
+        // ── 外側のグローオーラ ──
+        var glowObj = new GameObject("Glow");
+        glowObj.transform.SetParent(button.transform, false);
+        glowObj.transform.SetAsFirstSibling();
+        var glowRect = glowObj.AddComponent<RectTransform>();
+        glowRect.anchorMin = new Vector2(0.5f, 0.5f);
+        glowRect.anchorMax = new Vector2(0.5f, 0.5f);
+        glowRect.sizeDelta = new Vector2(size + 100, size + 100);
+        var glowImg = glowObj.AddComponent<Image>();
+        glowImg.sprite = GetCircleSprite(128);
+        glowImg.color = new Color(1f, 0.2f, 0.1f, 0.35f);
+        glowImg.raycastTarget = false;
+
+        // ── 回転する光線（放射状） ──
+        var raysObj = new GameObject("Rays");
+        raysObj.transform.SetParent(button.transform, false);
+        raysObj.transform.SetAsFirstSibling();
+        var raysRect = raysObj.AddComponent<RectTransform>();
+        raysRect.anchorMin = new Vector2(0.5f, 0.5f);
+        raysRect.anchorMax = new Vector2(0.5f, 0.5f);
+        raysRect.sizeDelta = new Vector2(size + 200, size + 200);
+        raysRect.localRotation = Quaternion.identity;
+        for (int i = 0; i < 12; i++)
+        {
+            var rayObj = new GameObject($"Ray{i}");
+            rayObj.transform.SetParent(raysObj.transform, false);
+            var rayRect = rayObj.AddComponent<RectTransform>();
+            rayRect.anchorMin = new Vector2(0.5f, 0.5f);
+            rayRect.anchorMax = new Vector2(0.5f, 0.5f);
+            rayRect.sizeDelta = new Vector2(12, size + 160);
+            rayRect.localRotation = Quaternion.Euler(0, 0, i * 30f);
+            var rayImg = rayObj.AddComponent<Image>();
+            rayImg.color = new Color(1f, 0.85f, 0.3f, 0.1f);
+            rayImg.raycastTarget = false;
+        }
+
+        // ── ボタン台座（下に影を含むベース） ──
+        var baseObj = new GameObject("Base");
+        baseObj.transform.SetParent(button.transform, false);
+        var baseRect = baseObj.AddComponent<RectTransform>();
+        baseRect.anchorMin = new Vector2(0.5f, 0.5f);
+        baseRect.anchorMax = new Vector2(0.5f, 0.5f);
+        baseRect.sizeDelta = new Vector2(size + 20, size + 20);
+        baseRect.anchoredPosition = new Vector2(0, -6);
+        var baseImg = baseObj.AddComponent<Image>();
+        baseImg.sprite = GetCircleSprite(128);
+        baseImg.color = new Color(0.12f, 0.02f, 0.02f, 0.7f);
+        baseImg.raycastTarget = false;
+
+        // ── 3Dドームボタン本体（プロシージャル生成） ──
+        var domeObj = new GameObject("Dome");
+        domeObj.transform.SetParent(button.transform, false);
+        var domeRect = domeObj.AddComponent<RectTransform>();
+        domeRect.anchorMin = new Vector2(0.5f, 0.5f);
+        domeRect.anchorMax = new Vector2(0.5f, 0.5f);
+        domeRect.sizeDelta = new Vector2(size, size);
+        var domeImg = domeObj.AddComponent<Image>();
+        domeImg.sprite = GetPachinkoButtonSprite();
+        domeImg.raycastTarget = false;
+
+        // ── PUSHロゴ（ボタン中央） ──
+        var pushSprite = Resources.Load<Sprite>("UI/push-logo");
+        if (pushSprite != null)
+        {
+            var logoObj = new GameObject("PushLogo");
+            logoObj.transform.SetParent(button.transform, false);
+            var logoRect = logoObj.AddComponent<RectTransform>();
+            logoRect.anchorMin = new Vector2(0.5f, 0.5f);
+            logoRect.anchorMax = new Vector2(0.5f, 0.5f);
+            // ボタンから大きくはみ出るサイズ（幅はボタンの150%）
+            float logoW = size * 1.5f;
+            float logoH = logoW * (612f / 1280f);
+            logoRect.sizeDelta = new Vector2(logoW, logoH);
+            logoRect.anchoredPosition = Vector2.zero;
+            var logoImg = logoObj.AddComponent<Image>();
+            logoImg.sprite = pushSprite;
+            logoImg.preserveAspect = true;
+            logoImg.raycastTarget = false;
+        }
+
+        // ── きらめきパーティクル（4つの小さな星） ──
+        for (int i = 0; i < 4; i++)
+        {
+            var sparkObj = new GameObject($"Sparkle{i}");
+            sparkObj.transform.SetParent(button.transform, false);
+            var spRect = sparkObj.AddComponent<RectTransform>();
+            spRect.anchorMin = new Vector2(0.5f, 0.5f);
+            spRect.anchorMax = new Vector2(0.5f, 0.5f);
+            spRect.sizeDelta = new Vector2(14, 14);
+            float angle = i * 90f * Mathf.Deg2Rad;
+            float dist = size * 0.55f;
+            spRect.anchoredPosition = new Vector2(Mathf.Cos(angle) * dist, Mathf.Sin(angle) * dist);
+            var spImg = sparkObj.AddComponent<Image>();
+            spImg.sprite = GetCircleSprite(128);
+            spImg.color = new Color(1f, 1f, 0.7f, 0.8f);
+            spImg.raycastTarget = false;
+        }
+
+        // Button設定（ボタン自体のImageを透明だがraycast有効にし、全面クリック可能に）
+        var img = button.GetComponent<Image>();
+        if (img != null)
+        {
+            img.sprite = null;
+            img.color = new Color(0, 0, 0, 0);
+            img.raycastTarget = true;
+        }
+        var btn = button.GetComponent<Button>();
+        if (btn != null)
+        {
+            btn.targetGraphic = img;
+            btn.navigation = new Navigation { mode = Navigation.Mode.None };
+            var colors = btn.colors;
+            colors.normalColor = new Color(0, 0, 0, 0);
+            colors.highlightedColor = new Color(0, 0, 0, 0);
+            colors.pressedColor = new Color(0, 0, 0, 0);
+            colors.selectedColor = new Color(0, 0, 0, 0);
+            btn.colors = colors;
+        }
+
+        // 押下時スケール + 押し込みアニメーション
+        var trigger = button.GetComponent<EventTrigger>();
+        if (trigger == null) trigger = button.AddComponent<EventTrigger>();
+        trigger.triggers.Clear();
+
+        var pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        pointerDown.callback.AddListener((data) => {
+            button.transform.localScale = new Vector3(0.92f, 0.92f, 1f);
+        });
+        trigger.triggers.Add(pointerDown);
+
+        var pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        pointerUp.callback.AddListener((data) => {
+            button.transform.localScale = Vector3.one;
+        });
+        trigger.triggers.Add(pointerUp);
+
+        var pointerExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        pointerExit.callback.AddListener((data) => {
+            button.transform.localScale = Vector3.one;
+        });
+        trigger.triggers.Add(pointerExit);
+
+        // エフェクトアニメーション用コンポーネント追加
+        var effect = button.GetComponent<PachinkoButtonEffect>();
+        if (effect == null) effect = button.AddComponent<PachinkoButtonEffect>();
+    }
+
+    void StylePillButton(GameObject button, float width, float height, string label, int fontSize)
+    {
+        if (button == null) return;
+
+        int pillRadius = (int)(height / 2);
+
+        var rect = button.GetComponent<RectTransform>();
+        if (rect != null)
+            rect.sizeDelta = new Vector2(width, height);
+
+        // 既存の子オブジェクトを削除
+        for (int i = button.transform.childCount - 1; i >= 0; i--)
+            Destroy(button.transform.GetChild(i).gameObject);
+
+        // 背景Image: pill shape, 白背景
+        var img = button.GetComponent<Image>();
+        if (img != null)
+        {
+            img.enabled = true;
+            img.sprite = GetPillSprite(pillRadius);
+            img.type = Image.Type.Sliced;
+            img.color = Color.white;
+        }
+
+        // Box shadow（ボタンの子要素、中央透明で外周のみ影）
+        int blur = 20;
+        var shadowObj = new GameObject("Shadow");
+        shadowObj.transform.SetParent(button.transform, false);
+        shadowObj.transform.SetAsFirstSibling();
+        var shadowRect = shadowObj.AddComponent<RectTransform>();
+        shadowRect.anchorMin = Vector2.zero;
+        shadowRect.anchorMax = Vector2.one;
+        shadowRect.offsetMin = new Vector2(-blur, -blur - 4);
+        shadowRect.offsetMax = new Vector2(blur, blur - 4);
+        var shadowImg = shadowObj.AddComponent<Image>();
+        shadowImg.sprite = GetShadowSprite(pillRadius, blur);
+        shadowImg.type = Image.Type.Sliced;
+        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
+        shadowImg.raycastTarget = false;
+
+        // テキスト
+        var textObj = new GameObject("Text");
+        textObj.transform.SetParent(button.transform, false);
+        var textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+        var tmp = textObj.AddComponent<TextMeshProUGUI>();
+        tmp.text = label;
+        tmp.fontSize = fontSize;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = new Color(0.45f, 0.45f, 0.5f);
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.raycastTarget = false;
+
+        // Button設定
+        var btn = button.GetComponent<Button>();
+        if (btn != null)
+        {
+            btn.targetGraphic = img;
+            btn.navigation = new Navigation { mode = Navigation.Mode.None };
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = Color.white;
+            colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
+            colors.selectedColor = Color.white;
+            colors.fadeDuration = 0.08f;
+            btn.colors = colors;
+        }
+
+        // 押下時スケールアニメーション
+        var trigger = button.GetComponent<EventTrigger>();
+        if (trigger == null)
+            trigger = button.AddComponent<EventTrigger>();
+        trigger.triggers.Clear();
+
+        var pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        pointerDown.callback.AddListener((data) => {
+            button.transform.localScale = new Vector3(0.95f, 0.95f, 1f);
+        });
+        trigger.triggers.Add(pointerDown);
+
+        var pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        pointerUp.callback.AddListener((data) => {
+            button.transform.localScale = Vector3.one;
+        });
+        trigger.triggers.Add(pointerUp);
+
+        var pointerExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        pointerExit.callback.AddListener((data) => {
+            button.transform.localScale = Vector3.one;
+        });
+        trigger.triggers.Add(pointerExit);
+    }
+
     // ===== キャラクターリストUI =====
 
     void CreateCharacterListUI()
@@ -2098,67 +3035,120 @@ public class BirthSystem : MonoBehaviour
         panelRect.offsetMax = Vector2.zero;
 
         var panelBg = storyPanel.AddComponent<Image>();
-        panelBg.color = new Color(0f, 0f, 0f, 0.85f);
+        panelBg.color = new Color(0.953f, 0.969f, 0.973f, 1f); // #f3f7f8（イントロと同じ）
 
         // タイトル
         var titleObj = new GameObject("Title");
         titleObj.transform.SetParent(storyPanel.transform, false);
         var titleRect = titleObj.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0, 0.75f);
-        titleRect.anchorMax = new Vector2(1, 0.9f);
+        titleRect.anchorMin = new Vector2(0, 0.92f);
+        titleRect.anchorMax = new Vector2(1, 0.98f);
         titleRect.offsetMin = new Vector2(20, 0);
         titleRect.offsetMax = new Vector2(-20, 0);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
         titleText.text = Localization.Get("birth_story_title");
-        titleText.fontSize = 42;
+        titleText.fontSize = 56;
         titleText.alignment = TextAlignmentOptions.Center;
-        titleText.color = new Color(1f, 0.85f, 0.9f);
+        titleText.color = new Color(0.3f, 0.25f, 0.35f);
         titleText.fontStyle = FontStyles.Bold;
         titleText.raycastTarget = false;
 
-        // ── 左側: 父親カード (5-25%) ──
+        // ── 左: 父親カード (3-48%, 62-92%) ──
         CreateStoryParentCard(storyPanel.transform, true,
-            new Vector2(0.05f, 0.15f), new Vector2(0.25f, 0.80f),
+            new Vector2(0.03f, 0.62f), new Vector2(0.48f, 0.92f),
             out storyFatherFace, out storyFatherName, out storyFatherIntro);
 
-        // ── 右側: 母親カード (75-95%) ──
+        // ── 右: 母親カード (52-97%, 62-92%) ──
         CreateStoryParentCard(storyPanel.transform, false,
-            new Vector2(0.75f, 0.15f), new Vector2(0.95f, 0.80f),
+            new Vector2(0.52f, 0.62f), new Vector2(0.97f, 0.92f),
             out storyMotherFace, out storyMotherName, out storyMotherIntro);
 
-        // ストーリーテキスト（中央 27-73%）
+        // ストーリーテキスト（中央 5-95%, 15-58%）
         var storyObj = new GameObject("StoryText");
         storyObj.transform.SetParent(storyPanel.transform, false);
         var storyRect = storyObj.AddComponent<RectTransform>();
-        storyRect.anchorMin = new Vector2(0.27f, 0.35f);
-        storyRect.anchorMax = new Vector2(0.73f, 0.7f);
+        storyRect.anchorMin = new Vector2(0.05f, 0.15f);
+        storyRect.anchorMax = new Vector2(0.95f, 0.58f);
         storyRect.offsetMin = Vector2.zero;
         storyRect.offsetMax = Vector2.zero;
         storyText = storyObj.AddComponent<TextMeshProUGUI>();
-        storyText.fontSize = 32;
+        storyText.fontSize = 42;
         storyText.alignment = TextAlignmentOptions.Center;
-        storyText.color = Color.white;
+        storyText.color = new Color(0.15f, 0.15f, 0.2f);
         storyText.raycastTarget = false;
 
-        // タップで続行のヒント
-        var hintObj = new GameObject("Hint");
-        hintObj.transform.SetParent(storyPanel.transform, false);
-        var hintRect = hintObj.AddComponent<RectTransform>();
-        hintRect.anchorMin = new Vector2(0, 0.1f);
-        hintRect.anchorMax = new Vector2(1, 0.2f);
-        hintRect.offsetMin = Vector2.zero;
-        hintRect.offsetMax = Vector2.zero;
-        var hintText = hintObj.AddComponent<TextMeshProUGUI>();
-        hintText.text = Localization.Get("birth_story_tap");
-        hintText.fontSize = 24;
-        hintText.alignment = TextAlignmentOptions.Center;
-        hintText.color = new Color(1f, 1f, 1f, 0.6f);
-        hintText.raycastTarget = false;
+        // 「愛を育む」ボタン（pill型、他のボタンと同デザイン）
+        var loveBtnObj = new GameObject("LoveButton");
+        loveBtnObj.transform.SetParent(storyPanel.transform, false);
+        var loveBtnRect = loveBtnObj.AddComponent<RectTransform>();
+        loveBtnRect.anchorMin = new Vector2(0.5f, 0);
+        loveBtnRect.anchorMax = new Vector2(0.5f, 0);
+        loveBtnRect.anchoredPosition = new Vector2(0, 120);
+        loveBtnRect.sizeDelta = new Vector2(700, 120);
 
-        // タップ検出用のボタン
-        var tapBtn = storyPanel.AddComponent<Button>();
-        tapBtn.transition = Selectable.Transition.None;
-        tapBtn.onClick.AddListener(OnStoryTap);
+        int lovePillRadius = 60;
+        int loveBlur = 20;
+
+        var loveBtnBg = loveBtnObj.AddComponent<Image>();
+        loveBtnBg.sprite = GetPillSprite(lovePillRadius);
+        loveBtnBg.type = Image.Type.Sliced;
+        loveBtnBg.color = Color.white;
+
+        // Box shadow
+        var loveShadowObj = new GameObject("Shadow");
+        loveShadowObj.transform.SetParent(loveBtnObj.transform, false);
+        loveShadowObj.transform.SetAsFirstSibling();
+        var loveShadowRect = loveShadowObj.AddComponent<RectTransform>();
+        loveShadowRect.anchorMin = Vector2.zero;
+        loveShadowRect.anchorMax = Vector2.one;
+        loveShadowRect.offsetMin = new Vector2(-loveBlur, -loveBlur - 4);
+        loveShadowRect.offsetMax = new Vector2(loveBlur, loveBlur - 4);
+        var loveShadowImg = loveShadowObj.AddComponent<Image>();
+        loveShadowImg.sprite = GetShadowSprite(lovePillRadius, loveBlur);
+        loveShadowImg.type = Image.Type.Sliced;
+        loveShadowImg.color = new Color(0f, 0f, 0f, 0.18f);
+        loveShadowImg.raycastTarget = false;
+
+        // テキスト
+        var loveTextObj = new GameObject("Text");
+        loveTextObj.transform.SetParent(loveBtnObj.transform, false);
+        var loveTextRect = loveTextObj.AddComponent<RectTransform>();
+        loveTextRect.anchorMin = Vector2.zero;
+        loveTextRect.anchorMax = Vector2.one;
+        loveTextRect.offsetMin = Vector2.zero;
+        loveTextRect.offsetMax = Vector2.zero;
+        var loveTmp = loveTextObj.AddComponent<TextMeshProUGUI>();
+        loveTmp.text = Localization.Get("birth_nurture_love");
+        loveTmp.fontSize = 36;
+        loveTmp.alignment = TextAlignmentOptions.Center;
+        loveTmp.color = new Color(0.45f, 0.45f, 0.5f);
+        loveTmp.fontStyle = FontStyles.Bold;
+        loveTmp.raycastTarget = false;
+
+        // ボタン設定
+        var loveBtn = loveBtnObj.AddComponent<Button>();
+        loveBtn.targetGraphic = loveBtnBg;
+        loveBtn.onClick.AddListener(OnStoryTap);
+        loveBtn.navigation = new Navigation { mode = Navigation.Mode.None };
+        var loveColors = loveBtn.colors;
+        loveColors.normalColor = Color.white;
+        loveColors.highlightedColor = Color.white;
+        loveColors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
+        loveColors.selectedColor = Color.white;
+        loveColors.fadeDuration = 0.08f;
+        loveBtn.colors = loveColors;
+
+        // 押下スケールアニメーション
+        var loveTrigger = loveBtnObj.AddComponent<EventTrigger>();
+        var loveDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        loveDown.callback.AddListener((data) => { loveBtnObj.transform.localScale = new Vector3(0.95f, 0.95f, 1f); });
+        loveTrigger.triggers.Add(loveDown);
+        var loveUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        loveUp.callback.AddListener((data) => { loveBtnObj.transform.localScale = Vector3.one; });
+        loveTrigger.triggers.Add(loveUp);
+        var loveExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        loveExit.callback.AddListener((data) => { loveBtnObj.transform.localScale = Vector3.one; });
+        loveTrigger.triggers.Add(loveExit);
 
         storyPanel.SetActive(false);
     }
@@ -2183,49 +3173,148 @@ public class BirthSystem : MonoBehaviour
         cardRect.offsetMin = Vector2.zero;
         cardRect.offsetMax = Vector2.zero;
 
-        // 名前テキスト (画像の上)
+        // 名前テキスト (上部)
         var nameObj = new GameObject("Name");
         nameObj.transform.SetParent(card.transform, false);
         var nameRect = nameObj.AddComponent<RectTransform>();
-        nameRect.anchorMin = new Vector2(0f, 0.5f);
-        nameRect.anchorMax = new Vector2(1f, 0.5f);
-        nameRect.pivot = new Vector2(0.5f, 0.5f);
-        nameRect.anchoredPosition = new Vector2(0, 280);
-        nameRect.sizeDelta = new Vector2(0, 40);
+        nameRect.anchorMin = new Vector2(0f, 1f);
+        nameRect.anchorMax = new Vector2(1f, 1f);
+        nameRect.pivot = new Vector2(0.5f, 1f);
+        nameRect.anchoredPosition = new Vector2(0, 0);
+        nameRect.sizeDelta = new Vector2(0, 60);
         nameLabel = nameObj.AddComponent<TextMeshProUGUI>();
-        nameLabel.fontSize = 32;
+        nameLabel.fontSize = 40;
         nameLabel.alignment = TextAlignmentOptions.Center;
-        nameLabel.color = new Color(1f, 0.95f, 0.8f);
+        nameLabel.color = new Color(0.2f, 0.2f, 0.25f);
         nameLabel.fontStyle = FontStyles.Bold;
         nameLabel.raycastTarget = false;
 
-        // 顔画像 (360x360、カード中央)
+        // 顔画像マスク（角丸クリッピング）
+        var maskObj = new GameObject("FaceMask");
+        maskObj.transform.SetParent(card.transform, false);
+        var maskRect = maskObj.AddComponent<RectTransform>();
+        maskRect.anchorMin = new Vector2(0.5f, 0.5f);
+        maskRect.anchorMax = new Vector2(0.5f, 0.5f);
+        maskRect.pivot = new Vector2(0.5f, 0.5f);
+        maskRect.anchoredPosition = new Vector2(0, 10);
+        maskRect.sizeDelta = new Vector2(350, 350);
+        var maskImg = maskObj.AddComponent<Image>();
+        maskImg.sprite = GetRoundedRectSprite(24);
+        maskImg.type = Image.Type.Sliced;
+        maskImg.color = Color.white;
+        maskImg.raycastTarget = false;
+        var mask = maskObj.AddComponent<UnityEngine.UI.Mask>();
+        mask.showMaskGraphic = false;
+
+        // 顔画像 (マスク内)
         var faceObj = new GameObject("Face");
-        faceObj.transform.SetParent(card.transform, false);
+        faceObj.transform.SetParent(maskObj.transform, false);
         var faceRect = faceObj.AddComponent<RectTransform>();
-        faceRect.anchorMin = new Vector2(0.5f, 0.5f);
-        faceRect.anchorMax = new Vector2(0.5f, 0.5f);
-        faceRect.pivot = new Vector2(0.5f, 0.5f);
-        faceRect.anchoredPosition = new Vector2(0, 60);
-        faceRect.sizeDelta = new Vector2(360, 360);
+        faceRect.anchorMin = Vector2.zero;
+        faceRect.anchorMax = Vector2.one;
+        faceRect.offsetMin = Vector2.zero;
+        faceRect.offsetMax = Vector2.zero;
         faceImg = faceObj.AddComponent<Image>();
         faceImg.color = Color.gray;
+        faceImg.preserveAspect = true;
         faceImg.raycastTarget = false;
 
         // 紹介文テキスト (画像の下)
         var introObj = new GameObject("Intro");
         introObj.transform.SetParent(card.transform, false);
         var introRect = introObj.AddComponent<RectTransform>();
-        introRect.anchorMin = new Vector2(0f, 0.5f);
-        introRect.anchorMax = new Vector2(1f, 0.5f);
-        introRect.pivot = new Vector2(0.5f, 0.5f);
-        introRect.anchoredPosition = new Vector2(0, -200);
+        introRect.anchorMin = new Vector2(0f, 0f);
+        introRect.anchorMax = new Vector2(1f, 0f);
+        introRect.pivot = new Vector2(0.5f, 0f);
+        introRect.anchoredPosition = new Vector2(0, 0);
         introRect.sizeDelta = new Vector2(0, 80);
         introLabel = introObj.AddComponent<TextMeshProUGUI>();
-        introLabel.fontSize = 32;
+        introLabel.fontSize = 22;
         introLabel.alignment = TextAlignmentOptions.Center;
-        introLabel.color = new Color(1f, 1f, 1f, 0.7f);
+        introLabel.color = new Color(0.35f, 0.35f, 0.4f, 0.8f);
+        introLabel.enableWordWrapping = true;
         introLabel.raycastTarget = false;
+    }
+
+    IEnumerator ShowParentCutin(string parentName)
+    {
+        string cutinText = Localization.GetParentCutin(parentName);
+        if (string.IsNullOrEmpty(cutinText)) yield break;
+        yield return StartCoroutine(ShowCutinText(cutinText));
+    }
+
+    IEnumerator ShowCutinText(string cutinText)
+    {
+        if (canvas == null || string.IsNullOrEmpty(cutinText)) yield break;
+
+        // ── 帯（画面中央の横帯） ──
+        var bandObj = new GameObject("CutinBand");
+        bandObj.transform.SetParent(canvas.transform, false);
+        bandObj.transform.SetAsLastSibling();
+        var bandRect = bandObj.AddComponent<RectTransform>();
+        bandRect.anchorMin = new Vector2(0, 0.38f);
+        bandRect.anchorMax = new Vector2(1, 0.62f);
+        bandRect.offsetMin = Vector2.zero;
+        bandRect.offsetMax = Vector2.zero;
+        var bandImg = bandObj.AddComponent<Image>();
+        bandImg.color = new Color(0, 0, 0, 0);
+        bandImg.raycastTarget = true;
+
+        // ── テキスト（帯の中、右からスライドイン） ──
+        var textObj = new GameObject("CutinText");
+        textObj.transform.SetParent(bandObj.transform, false);
+        var textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(40, 0);
+        textRect.offsetMax = new Vector2(-40, 0);
+        var tmp = textObj.AddComponent<TextMeshProUGUI>();
+        tmp.text = cutinText;
+        tmp.fontSize = 52;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = new Color(1, 1, 1, 0);
+        tmp.enableWordWrapping = false;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        tmp.raycastTarget = false;
+
+        // ── アニメーション: フェードイン + スライド ──
+        float slideOffset = 300f;
+        float fadeInDuration = 0.25f;
+        float holdDuration = 1.2f;
+        float fadeOutDuration = 0.3f;
+
+        // フェードイン（右から左へスライド）
+        float elapsed = 0;
+        while (elapsed < fadeInDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / fadeInDuration);
+            float easeT = 1f - (1f - t) * (1f - t); // ease-out quad
+            bandImg.color = new Color(0, 0, 0, 0.8f * easeT);
+            tmp.color = new Color(1, 1, 1, easeT);
+            textRect.anchoredPosition = new Vector2(slideOffset * (1f - easeT), 0);
+            yield return null;
+        }
+        bandImg.color = new Color(0, 0, 0, 0.8f);
+        tmp.color = Color.white;
+        textRect.anchoredPosition = Vector2.zero;
+
+        // ホールド
+        yield return new WaitForSeconds(holdDuration);
+
+        // フェードアウト
+        elapsed = 0;
+        while (elapsed < fadeOutDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / fadeOutDuration);
+            bandImg.color = new Color(0, 0, 0, 0.8f * (1f - t));
+            tmp.color = new Color(1, 1, 1, 1f - t);
+            yield return null;
+        }
+
+        Destroy(bandObj);
     }
 
     IEnumerator ShowLoveStory(ParentData father, ParentData mother, int fIdx, int mIdx)
@@ -2402,6 +3491,7 @@ public class BirthSystem : MonoBehaviour
         // やり直しボタンのみ表示
         childStatusText.text = "";
         if (generateLifeButton != null) generateLifeButton.SetActive(true);
+
         if (anotherGalButton != null) anotherGalButton.SetActive(false);
         if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
     }
@@ -2503,6 +3593,7 @@ public class BirthSystem : MonoBehaviour
 
         childStatusText.text = "";
         if (generateLifeButton != null) generateLifeButton.SetActive(true);
+
         if (anotherGalButton != null) anotherGalButton.SetActive(false);
         if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
     }
@@ -2604,6 +3695,7 @@ public class BirthSystem : MonoBehaviour
 
         childStatusText.text = "";
         if (generateLifeButton != null) generateLifeButton.SetActive(true);
+
         if (anotherGalButton != null) anotherGalButton.SetActive(false);
         if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
     }
@@ -2705,6 +3797,7 @@ public class BirthSystem : MonoBehaviour
 
         childStatusText.text = "";
         if (generateLifeButton != null) generateLifeButton.SetActive(true);
+
         if (anotherGalButton != null) anotherGalButton.SetActive(false);
         if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
     }
@@ -2806,6 +3899,7 @@ public class BirthSystem : MonoBehaviour
 
         childStatusText.text = "";
         if (generateLifeButton != null) generateLifeButton.SetActive(true);
+
         if (anotherGalButton != null) anotherGalButton.SetActive(false);
         if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
     }
@@ -2818,63 +3912,226 @@ public class BirthSystem : MonoBehaviour
 
         var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
 
-        var bar = new GameObject("MenuBar");
-        bar.transform.SetParent(canvas.transform, false);
+        int btnSize = 80;
+        int circleRadius = btnSize / 2;
+        int blur = 16;
 
-        var barRect = bar.AddComponent<RectTransform>();
-        barRect.anchorMin = new Vector2(1, 1);
-        barRect.anchorMax = new Vector2(1, 1);
-        barRect.pivot = new Vector2(1, 1);
-        barRect.anchoredPosition = new Vector2(-20 - safeRight, -20 - safeTop);
-        barRect.sizeDelta = new Vector2(180, 60);
+        var btnObj = new GameObject("MenuButton");
+        btnObj.transform.SetParent(canvas.transform, false);
 
-        var barBg = bar.AddComponent<Image>();
-        barBg.color = new Color(0.15f, 0.15f, 0.2f, 0.85f);
-        barBg.raycastTarget = false;
+        var btnRect = btnObj.AddComponent<RectTransform>();
+        btnRect.anchorMin = new Vector2(1, 1);
+        btnRect.anchorMax = new Vector2(1, 1);
+        btnRect.pivot = new Vector2(1, 1);
+        btnRect.anchoredPosition = new Vector2(-24 - safeRight, -24 - safeTop);
+        btnRect.sizeDelta = new Vector2(btnSize, btnSize);
 
-        var layout = bar.AddComponent<HorizontalLayoutGroup>();
-        layout.spacing = 12;
-        layout.padding = new RectOffset(12, 12, 6, 6);
-        layout.childAlignment = TextAnchor.MiddleRight;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = true;
+        var btnBg = btnObj.AddComponent<Image>();
+        btnBg.sprite = GetCircleSprite(circleRadius);
+        btnBg.type = Image.Type.Sliced;
+        btnBg.color = Color.white;
 
-        CreateMenuButton(bar.transform, Localization.Get("ui_back_to_title"), () => SceneManager.LoadScene("TitleScene"));
-    }
+        // Box shadow（子要素、中央透明）
+        var shadowObj = new GameObject("Shadow");
+        shadowObj.transform.SetParent(btnObj.transform, false);
+        shadowObj.transform.SetAsFirstSibling();
+        var shadowRect = shadowObj.AddComponent<RectTransform>();
+        shadowRect.anchorMin = Vector2.zero;
+        shadowRect.anchorMax = Vector2.one;
+        shadowRect.offsetMin = new Vector2(-blur, -blur - 3);
+        shadowRect.offsetMax = new Vector2(blur, blur - 3);
+        var shadowImg = shadowObj.AddComponent<Image>();
+        shadowImg.sprite = GetCircleShadowSprite(circleRadius, blur);
+        shadowImg.type = Image.Type.Sliced;
+        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
+        shadowImg.raycastTarget = false;
 
-    void CreateMenuButton(Transform parent, string label, UnityEngine.Events.UnityAction action)
-    {
-        var btnObj = new GameObject(label);
-        btnObj.transform.SetParent(parent, false);
+        // ハンバーガーアイコン（3本線）
+        float lineWidth = 30f;
+        float lineHeight = 3.5f;
+        float gap = 8f;
+        Color lineColor = new Color(0.45f, 0.45f, 0.5f);
 
-        var btnImage = btnObj.AddComponent<Image>();
-        btnImage.color = new Color(0.3f, 0.3f, 0.45f, 1f);
+        for (int i = -1; i <= 1; i++)
+        {
+            var lineObj = new GameObject($"Line{i + 2}");
+            lineObj.transform.SetParent(btnObj.transform, false);
+            var lineRect = lineObj.AddComponent<RectTransform>();
+            lineRect.anchorMin = new Vector2(0.5f, 0.5f);
+            lineRect.anchorMax = new Vector2(0.5f, 0.5f);
+            lineRect.anchoredPosition = new Vector2(0, -i * gap);
+            lineRect.sizeDelta = new Vector2(lineWidth, lineHeight);
+            var lineImg = lineObj.AddComponent<Image>();
+            lineImg.color = lineColor;
+            lineImg.raycastTarget = false;
+        }
 
         var btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnImage;
-
+        btn.targetGraphic = btnBg;
+        btn.onClick.AddListener(ToggleMenuPanel);
+        btn.navigation = new Navigation { mode = Navigation.Mode.None };
         var colors = btn.colors;
-        colors.highlightedColor = new Color(0.45f, 0.45f, 0.65f, 1f);
-        colors.pressedColor = new Color(0.2f, 0.2f, 0.35f, 1f);
+        colors.normalColor = Color.white;
+        colors.highlightedColor = Color.white;
+        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
+        colors.selectedColor = Color.white;
+        colors.fadeDuration = 0.08f;
         btn.colors = colors;
 
-        btn.onClick.AddListener(action);
+        // 押下スケールアニメーション
+        var trigger = btnObj.AddComponent<EventTrigger>();
+        var pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        pointerDown.callback.AddListener((data) => { btnObj.transform.localScale = new Vector3(0.9f, 0.9f, 1f); });
+        trigger.triggers.Add(pointerDown);
+        var pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        pointerUp.callback.AddListener((data) => { btnObj.transform.localScale = Vector3.one; });
+        trigger.triggers.Add(pointerUp);
+        var pointerExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        pointerExit.callback.AddListener((data) => { btnObj.transform.localScale = Vector3.one; });
+        trigger.triggers.Add(pointerExit);
 
-        var textObj = new GameObject("Text");
-        textObj.transform.SetParent(btnObj.transform, false);
+        // ── メニューパネル（ドロップダウン） ──
+        CreateMenuPanel(btnObj.GetComponent<RectTransform>(), safeRight, safeTop);
+    }
 
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
+    void CreateMenuPanel(RectTransform menuBtnRect, float safeRight, float safeTop)
+    {
+        menuPanel = new GameObject("MenuPanel");
+        menuPanel.transform.SetParent(canvas.transform, false);
 
-        var tmp = textObj.AddComponent<TextMeshProUGUI>();
-        tmp.text = label;
-        tmp.fontSize = 24;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = Color.white;
-        tmp.raycastTarget = false;
+        var panelRect = menuPanel.AddComponent<RectTransform>();
+        panelRect.anchorMin = new Vector2(1, 1);
+        panelRect.anchorMax = new Vector2(1, 1);
+        panelRect.pivot = new Vector2(1, 1);
+        panelRect.anchoredPosition = new Vector2(-24 - safeRight, -114 - safeTop);
+        panelRect.sizeDelta = new Vector2(280, 140);
+
+        var panelBg = menuPanel.AddComponent<Image>();
+        panelBg.sprite = GetRoundedRectSprite(24);
+        panelBg.type = Image.Type.Sliced;
+        panelBg.color = Color.white;
+        panelBg.raycastTarget = true;
+
+        // Shadow for panel
+        int panelBlur = 20;
+        var panelShadow = new GameObject("Shadow");
+        panelShadow.transform.SetParent(menuPanel.transform, false);
+        panelShadow.transform.SetAsFirstSibling();
+        var pShadowRect = panelShadow.AddComponent<RectTransform>();
+        pShadowRect.anchorMin = Vector2.zero;
+        pShadowRect.anchorMax = Vector2.one;
+        pShadowRect.offsetMin = new Vector2(-panelBlur, -panelBlur - 3);
+        pShadowRect.offsetMax = new Vector2(panelBlur, panelBlur - 3);
+        var pShadowImg = panelShadow.AddComponent<Image>();
+        pShadowImg.sprite = GetShadowSprite(60, panelBlur);
+        pShadowImg.type = Image.Type.Sliced;
+        pShadowImg.color = new Color(0f, 0f, 0f, 0.15f);
+        pShadowImg.raycastTarget = false;
+
+        // 「ホーム」ボタン
+        CreateMenuPanelItem(menuPanel.transform, "GoHome", Localization.Get("map_menu_home"),
+            new Vector2(0, 0.5f), new Vector2(1, 1), () => SceneManager.LoadScene("HomeScene"));
+
+        // 「トップへ戻る」ボタン
+        CreateMenuPanelItem(menuPanel.transform, "BackToTitle", Localization.Get("ui_back_to_title"),
+            Vector2.zero, new Vector2(1, 0.5f), () => SceneManager.LoadScene("TitleScene"));
+
+        menuPanel.SetActive(false);
+    }
+
+    void CreateMenuPanelItem(Transform parent, string name, string label, Vector2 anchorMin, Vector2 anchorMax, UnityEngine.Events.UnityAction action)
+    {
+        var itemObj = new GameObject(name);
+        itemObj.transform.SetParent(parent, false);
+        var itemRect = itemObj.AddComponent<RectTransform>();
+        itemRect.anchorMin = anchorMin;
+        itemRect.anchorMax = anchorMax;
+        itemRect.offsetMin = Vector2.zero;
+        itemRect.offsetMax = Vector2.zero;
+
+        var itemImg = itemObj.AddComponent<Image>();
+        itemImg.sprite = GetRoundedRectSprite(24);
+        itemImg.type = Image.Type.Sliced;
+        itemImg.color = new Color(1, 1, 1, 0);
+
+        var itemBtn = itemObj.AddComponent<Button>();
+        itemBtn.targetGraphic = itemImg;
+        itemBtn.onClick.AddListener(action);
+        itemBtn.navigation = new Navigation { mode = Navigation.Mode.None };
+        var itemColors = itemBtn.colors;
+        itemColors.normalColor = new Color(1, 1, 1, 0);
+        itemColors.highlightedColor = new Color(0.95f, 0.95f, 0.97f, 1f);
+        itemColors.pressedColor = new Color(0.9f, 0.9f, 0.93f, 1f);
+        itemColors.selectedColor = new Color(1, 1, 1, 0);
+        itemColors.fadeDuration = 0.08f;
+        itemBtn.colors = itemColors;
+
+        var itemTextObj = new GameObject("Text");
+        itemTextObj.transform.SetParent(itemObj.transform, false);
+        var itemTextRect = itemTextObj.AddComponent<RectTransform>();
+        itemTextRect.anchorMin = Vector2.zero;
+        itemTextRect.anchorMax = Vector2.one;
+        itemTextRect.offsetMin = Vector2.zero;
+        itemTextRect.offsetMax = Vector2.zero;
+        var itemText = itemTextObj.AddComponent<TextMeshProUGUI>();
+        itemText.text = label;
+        itemText.fontSize = 30;
+        itemText.alignment = TextAlignmentOptions.Center;
+        itemText.color = new Color(0.35f, 0.35f, 0.4f);
+        itemText.raycastTarget = false;
+    }
+
+    void ToggleMenuPanel()
+    {
+        if (menuPanel == null) return;
+        menuPanel.SetActive(!menuPanel.activeSelf);
+    }
+
+    static Sprite _circleSprite;
+    static Sprite GetCircleSprite(int radius)
+    {
+        if (_circleSprite != null) return _circleSprite;
+        int size = radius * 2 + 2;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float center = (size - 1) / 2f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dist = Mathf.Sqrt((x - center) * (x - center) + (y - center) * (y - center)) - radius;
+                if (dist < -1f) tex.SetPixel(x, y, Color.white);
+                else if (dist <= 0f) tex.SetPixel(x, y, new Color(1, 1, 1, -dist));
+                else tex.SetPixel(x, y, new Color(0, 0, 0, 0));
+            }
+        tex.Apply();
+        var border = new Vector4(radius, radius, radius, radius);
+        _circleSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        return _circleSprite;
+    }
+
+    static Sprite _circleShadowSprite;
+    static Sprite GetCircleShadowSprite(int radius, int blur)
+    {
+        if (_circleShadowSprite != null) return _circleShadowSprite;
+        int size = (radius + blur) * 2 + 2;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float center = (size - 1) / 2f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dist = Mathf.Sqrt((x - center) * (x - center) + (y - center) * (y - center)) - radius;
+                float alpha;
+                if (dist <= 0f) alpha = 0f;
+                else if (dist >= blur) alpha = 0f;
+                else { float t = dist / blur; alpha = (1f - t) * (1f - t); }
+                tex.SetPixel(x, y, new Color(1, 1, 1, alpha));
+            }
+        tex.Apply();
+        int borderVal = radius + blur;
+        var border = new Vector4(borderVal, borderVal, borderVal, borderVal);
+        _circleShadowSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        return _circleShadowSprite;
     }
 
     // ===== 角丸スプライト生成 =====
@@ -2923,6 +4180,82 @@ public class BirthSystem : MonoBehaviour
             new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
         return _roundedRectSprite;
     }
+
+    // ===== Pill型スプライト生成（border-radius: 50%）=====
+
+    static Sprite _pillSprite;
+    static Sprite _shadowSprite;
+
+    static Sprite GetPillSprite(int radius)
+    {
+        if (_pillSprite != null) return _pillSprite;
+
+        int size = radius * 2 + 2;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float center = (size - 1) / 2f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float px = x - center;
+                float py = y - center;
+                float dist = Mathf.Sqrt(px * px + py * py) - radius;
+
+                if (dist <= -1f)
+                    tex.SetPixel(x, y, Color.white);
+                else if (dist <= 0f)
+                    tex.SetPixel(x, y, new Color(1, 1, 1, -dist));
+                else
+                    tex.SetPixel(x, y, new Color(0, 0, 0, 0));
+            }
+        }
+        tex.Apply();
+
+        var border = new Vector4(radius, radius, radius, radius);
+        _pillSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        return _pillSprite;
+    }
+
+    static Sprite GetShadowSprite(int radius, int blur)
+    {
+        if (_shadowSprite != null) return _shadowSprite;
+
+        int size = (radius + blur) * 2 + 2;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float center = (size - 1) / 2f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float px = x - center;
+                float py = y - center;
+                float dist = Mathf.Sqrt(px * px + py * py) - radius;
+
+                float alpha;
+                if (dist <= 0f)
+                    alpha = 0f; // 中央は透明（ボタン白背景と重なる部分）
+                else if (dist >= blur)
+                    alpha = 0f;
+                else
+                {
+                    float t = dist / blur;
+                    alpha = (1f - t) * (1f - t);
+                }
+
+                tex.SetPixel(x, y, new Color(1, 1, 1, alpha));
+            }
+        }
+        tex.Apply();
+
+        int borderVal = radius + blur;
+        var border = new Vector4(borderVal, borderVal, borderVal, borderVal);
+        _shadowSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        return _shadowSprite;
+    }
 }
 
 public struct ParentData
@@ -2946,5 +4279,85 @@ public struct ParentData
         this.athletic = athletic;
         this.faceColor = faceColor;
         this.intro = intro;
+    }
+}
+
+public class PachinkoButtonEffect : MonoBehaviour
+{
+    float time;
+    Transform glowTf;
+    Image glowImg;
+    Transform raysTf;
+    Transform[] sparkleTfs;
+    Image[] sparkleImgs;
+
+    void Start()
+    {
+        // 子要素を名前で取得
+        var glow = transform.Find("Glow");
+        if (glow != null)
+        {
+            glowTf = glow;
+            glowImg = glow.GetComponent<Image>();
+        }
+        var rays = transform.Find("Rays");
+        if (rays != null) raysTf = rays;
+
+        // Sparkleを収集
+        var sparkles = new System.Collections.Generic.List<Transform>();
+        var sparkleImgList = new System.Collections.Generic.List<Image>();
+        for (int i = 0; i < 4; i++)
+        {
+            var sp = transform.Find($"Sparkle{i}");
+            if (sp != null)
+            {
+                sparkles.Add(sp);
+                sparkleImgList.Add(sp.GetComponent<Image>());
+            }
+        }
+        sparkleTfs = sparkles.ToArray();
+        sparkleImgs = sparkleImgList.ToArray();
+    }
+
+    void Update()
+    {
+        time += Time.deltaTime;
+
+        // グローの脈動（ゆっくり大きくなったり小さくなったり）
+        if (glowTf != null && glowImg != null)
+        {
+            float pulse = 1f + 0.12f * Mathf.Sin(time * 2.5f);
+            glowTf.localScale = new Vector3(pulse, pulse, 1f);
+            float alpha = 0.3f + 0.15f * Mathf.Sin(time * 2.5f);
+            glowImg.color = new Color(1f, 0.3f, 0.15f, alpha);
+        }
+
+        // 光線の回転
+        if (raysTf != null)
+        {
+            raysTf.localRotation = Quaternion.Euler(0, 0, time * 15f);
+        }
+
+        // きらめき：回転 + サイズ脈動 + 点滅
+        if (sparkleTfs != null)
+        {
+            for (int i = 0; i < sparkleTfs.Length; i++)
+            {
+                float offset = i * 1.57f; // π/2ずつずらす
+                float angle = time * 1.2f + offset;
+                float dist = 185f + 10f * Mathf.Sin(time * 3f + offset);
+                sparkleTfs[i].GetComponent<RectTransform>().anchoredPosition =
+                    new Vector2(Mathf.Cos(angle) * dist, Mathf.Sin(angle) * dist);
+
+                float sparkleScale = 0.8f + 0.5f * Mathf.Sin(time * 5f + offset);
+                sparkleTfs[i].localScale = new Vector3(sparkleScale, sparkleScale, 1f);
+
+                if (sparkleImgs != null && i < sparkleImgs.Length)
+                {
+                    float sa = 0.5f + 0.5f * Mathf.Sin(time * 4f + offset);
+                    sparkleImgs[i].color = new Color(1f, 1f, 0.7f, sa);
+                }
+            }
+        }
     }
 }
