@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
 using System.Collections;
+using System.IO;
 
 public class BirthSystem : MonoBehaviour
 {
@@ -62,6 +63,9 @@ public class BirthSystem : MonoBehaviour
     // 親情報パネル
     GameObject parentInfoButton;
     GameObject parentBioPanel;
+
+    // 画像アップロードボタン
+    GameObject uploadImageBtn;
 
     // 背景
     Image mainBgImg;
@@ -245,12 +249,12 @@ public class BirthSystem : MonoBehaviour
         if (gotoBattleButton != null)
         {
             var rect = gotoBattleButton.GetComponent<RectTransform>();
-            rect.anchoredPosition = new Vector2(0, -710);
+            rect.anchoredPosition = new Vector2(0, -662);
         }
         if (anotherGalButton != null)
         {
             var rect = anotherGalButton.GetComponent<RectTransform>();
-            rect.anchoredPosition = new Vector2(0, -850);
+            rect.anchoredPosition = new Vector2(0, -802);
         }
         CreateStatusTextBackground();
         CreateParentUI();
@@ -456,21 +460,11 @@ public class BirthSystem : MonoBehaviour
 
         nameInputPanel.SetActive(false);
 
-        // DataCarrierに名前を保存
+        // DataCarrierに名前を保存（スロットへの自動セーブはしない）
         if (DataCarrier.Instance != null)
         {
             DataCarrier.Instance.babyName = enteredName;
-
-            // 自動セーブ（空きスロットを探す）
-            int emptySlot = DataCarrier.FindEmptySlot();
-            if (emptySlot >= 0)
-            {
-                DataCarrier.Instance.SaveToSlot(emptySlot);
-            }
-            else
-            {
-                DataCarrier.Instance.SaveToSlot(0);
-            }
+            DataCarrier.Instance.currentSlot = -1; // 新規なのでスロット未割当
         }
 
         // バトルシーンへ
@@ -834,6 +828,10 @@ public class BirthSystem : MonoBehaviour
             // 専用画像がない場合は自動生成
             GenerateBabyFace(c_weight, c_height, c_atk, c_academic, c_athletic, selectedGender, isGodBaby);
         }
+
+        // 画像アップロードボタン（顔生成後に追加）
+        if (babyFace != null) CreateUploadButton(babyFace);
+
         bool isPromisingBaby = !isGodBaby && IsPromisingBaby(c_atk, c_def, c_hp, c_academic, c_athletic);
 
         // ── 稲妻演出（GOD BABY or 大物の場合） ──
@@ -1693,7 +1691,7 @@ public class BirthSystem : MonoBehaviour
         var btnRect = nextButton.AddComponent<RectTransform>();
         btnRect.anchorMin = new Vector2(0.5f, 0f);
         btnRect.anchorMax = new Vector2(0.5f, 0f);
-        btnRect.anchoredPosition = new Vector2(0, 205);
+        btnRect.anchoredPosition = new Vector2(0, 280);
         btnRect.sizeDelta = new Vector2(700, 120);
 
         var btnBg = nextButton.AddComponent<Image>();
@@ -2175,14 +2173,21 @@ public class BirthSystem : MonoBehaviour
         lineImg.color = new Color(0.78f, 0.78f, 0.82f, 0.6f);
         lineImg.raycastTarget = false;
 
-        // babyFaceをinnerObjの子にして配置（親カードの顔画像と同じ位置）
+        // babyFaceをinnerObjの子にして配置（ステータスカードの48px上、幅を合わせる）
         if (babyFace != null)
         {
             babyFace.SetParent(innerObj.transform, false);
             babyFace.anchorMin = new Vector2(0.5f, 0.5f);
             babyFace.anchorMax = new Vector2(0.5f, 0.5f);
-            babyFace.anchoredPosition = new Vector2(0, 150);
-            babyFace.sizeDelta = new Vector2(700, 700);
+            // ステータスカード上端 = birthResultCard高さ(1300) * 0.3 = 390 (bottom起算)
+            // innerObj内での上端 = 390 - 6(padding) = 384 (innerObj bottom起算)
+            // innerObj中央からの距離 = 384 - (1300-12)/2 = 384 - 644 = -260
+            // babyFace下端 = -260 + 48 = -212, 中央 = -212 + 955/2 = 265.5
+            float statusCardTopInInner = 1300f * 0.3f - 6f - (1300f - 12f) / 2f; // -260
+            float faceSize = 1016f * 0.94f; // ステータスカードと同じ幅 ≈ 955
+            float faceCenterY = statusCardTopInInner + 48f + faceSize / 2f;
+            babyFace.anchoredPosition = new Vector2(0, faceCenterY);
+            babyFace.sizeDelta = new Vector2(faceSize, faceSize);
             babyFace.SetAsLastSibling();
         }
 
@@ -2285,6 +2290,9 @@ public class BirthSystem : MonoBehaviour
             childStatusText.lineSpacing = 0;
         }
 
+        // uploadImageBtnはbabyFaceの子で上で破棄済み
+        uploadImageBtn = null;
+
         // birthResultCardを削除（genderLabel, statusCardObjはその子なので一緒に破棄される）
         if (birthResultCard != null)
         {
@@ -2304,6 +2312,141 @@ public class BirthSystem : MonoBehaviour
         {
             introText.gameObject.SetActive(true);
         }
+    }
+
+    void ResetBackgroundToBirth()
+    {
+        if (mainBgImg == null) return;
+        var birthBgSprite = Resources.Load<Sprite>("BackGrounds/birth-background");
+        if (birthBgSprite != null)
+        {
+            mainBgImg.sprite = birthBgSprite;
+            mainBgImg.type = Image.Type.Simple;
+            mainBgImg.preserveAspect = false;
+            mainBgImg.color = Color.white;
+        }
+        else
+        {
+            mainBgImg.color = new Color(0.953f, 0.969f, 0.973f);
+        }
+    }
+
+    // ===== 画像アップロード機能 =====
+
+    void CreateUploadButton(Transform parent)
+    {
+        if (uploadImageBtn != null) Destroy(uploadImageBtn);
+
+        uploadImageBtn = new GameObject("UploadImageBtn");
+        uploadImageBtn.transform.SetParent(parent, false);
+
+        var btnRect = uploadImageBtn.AddComponent<RectTransform>();
+        btnRect.anchorMin = new Vector2(1f, 0f);
+        btnRect.anchorMax = new Vector2(1f, 0f);
+        btnRect.anchoredPosition = new Vector2(-40, 40);
+        btnRect.sizeDelta = new Vector2(80, 80);
+
+        // 青い円形背景
+        var bg = uploadImageBtn.AddComponent<Image>();
+        bg.color = new Color(0.2f, 0.5f, 0.9f, 0.9f);
+
+        // カメラアイコンテキスト
+        var iconObj = new GameObject("Icon");
+        iconObj.transform.SetParent(uploadImageBtn.transform, false);
+        var iconRect = iconObj.AddComponent<RectTransform>();
+        iconRect.anchorMin = Vector2.zero;
+        iconRect.anchorMax = Vector2.one;
+        iconRect.offsetMin = Vector2.zero;
+        iconRect.offsetMax = Vector2.zero;
+        var iconText = iconObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(iconText);
+        iconText.text = "写真";
+        iconText.fontSize = 24;
+        iconText.alignment = TextAlignmentOptions.Center;
+        iconText.color = Color.white;
+        iconText.fontStyle = FontStyles.Bold;
+        iconText.raycastTarget = false;
+
+        var btn = uploadImageBtn.AddComponent<Button>();
+        btn.targetGraphic = bg;
+        var colors = btn.colors;
+        colors.normalColor = new Color(0.2f, 0.5f, 0.9f, 0.9f);
+        colors.highlightedColor = new Color(0.3f, 0.6f, 1.0f, 1f);
+        colors.pressedColor = new Color(0.15f, 0.4f, 0.8f, 1f);
+        btn.colors = colors;
+        btn.onClick.AddListener(PickImageFromGallery);
+    }
+
+    void PickImageFromGallery()
+    {
+        NativeGallery.GetImageFromGallery((path) =>
+        {
+            if (path == null) return;
+
+            // ファイルをそのままコピーして保存
+            byte[] fileData = File.ReadAllBytes(path);
+            string fileName = "baby_custom.png";
+            string savePath = Path.Combine(Application.persistentDataPath, fileName);
+            File.WriteAllBytes(savePath, fileData);
+
+            // 読み取り可能なテクスチャとして読み込み（表示用）
+            var tex = new Texture2D(2, 2);
+            tex.LoadImage(fileData);
+
+            // DataCarrierに保存
+            if (DataCarrier.Instance != null)
+                DataCarrier.Instance.customBabyImagePath = fileName;
+
+            // 表示を更新
+            Sprite spr = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+            UpdateBabyFaceWithCustomImage(spr);
+        }, "赤ちゃんの画像を選択");
+    }
+
+    void UpdateBabyFaceWithCustomImage(Sprite spr)
+    {
+        if (babyFace == null) return;
+
+        // 既存の動的パーツを削除（babyFaceImageとintroText、uploadImageBtn以外）
+        for (int i = babyFace.childCount - 1; i >= 0; i--)
+        {
+            Transform child = babyFace.GetChild(i);
+            bool isPreserved = false;
+            if (babyFaceImage != null && child.gameObject == babyFaceImage.gameObject) isPreserved = true;
+            if (introText != null && child.gameObject == introText.gameObject) isPreserved = true;
+            if (uploadImageBtn != null && child.gameObject == uploadImageBtn) isPreserved = true;
+            if (!isPreserved)
+                Destroy(child.gameObject);
+        }
+
+        // babyFaceImageを使ってカスタム画像を表示
+        Image targetImage = babyFaceImage;
+        if (targetImage == null || targetImage.gameObject == null)
+        {
+            var imgObj = new GameObject("BabyImage");
+            imgObj.transform.SetParent(babyFace, false);
+            var imgRect = imgObj.AddComponent<RectTransform>();
+            imgRect.anchorMin = Vector2.zero;
+            imgRect.anchorMax = Vector2.one;
+            imgRect.offsetMin = Vector2.zero;
+            imgRect.offsetMax = Vector2.zero;
+            targetImage = imgObj.AddComponent<Image>();
+            babyFaceImage = targetImage;
+        }
+        else
+        {
+            targetImage.gameObject.SetActive(true);
+        }
+
+        targetImage.enabled = true;
+        targetImage.sprite = spr;
+        targetImage.color = Color.white;
+        targetImage.preserveAspect = true;
+        targetImage.raycastTarget = false;
+
+        // アップロードボタンを最前面に
+        if (uploadImageBtn != null)
+            uploadImageBtn.transform.SetAsLastSibling();
     }
 
     void CreateStatusTextBackground()
@@ -3586,8 +3729,8 @@ public class BirthSystem : MonoBehaviour
         float slideDuration = 1.5f;
         float lineInterval = 2.0f;
         float startOffsetX = -800f;
-        float verticalStart = 100f;
-        float lineSpacing = 120f;
+        float verticalStart = 200f;
+        float lineSpacing = 200f;
 
         string[] sadLines = new string[]
         {
@@ -3606,14 +3749,14 @@ public class BirthSystem : MonoBehaviour
             FontHelper.Apply(tmp);
 
             tmp.text = sadLines[i];
-            tmp.fontSize = i == 0 ? 36 : 32;
+            tmp.fontSize = i == 0 ? 72 : 60;
             tmp.color = i == 0 ? Color.white : new Color(0.8f, 0.8f, 1f);
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.enableWordWrapping = true;
             tmp.raycastTarget = false;
 
             float yPos = verticalStart - (i * lineSpacing);
-            textRect.sizeDelta = new Vector2(800f, 100f);
+            textRect.sizeDelta = new Vector2(900f, 180f);
             textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
 
             // スライドインアニメーション
@@ -3651,6 +3794,9 @@ public class BirthSystem : MonoBehaviour
         }
 
         Destroy(panel);
+
+        // 背景をbirth-backgroundに戻す
+        ResetBackgroundToBirth();
 
         // やり直しボタンのみ表示
         childStatusText.text = "";
@@ -3692,8 +3838,8 @@ public class BirthSystem : MonoBehaviour
         float slideDuration = 1.5f;
         float lineInterval = 2.0f;
         float startOffsetX = -800f;
-        float verticalStart = 100f;
-        float lineSpacing = 120f;
+        float verticalStart = 200f;
+        float lineSpacing = 200f;
 
         string[] sadLines = new string[]
         {
@@ -3712,14 +3858,14 @@ public class BirthSystem : MonoBehaviour
             FontHelper.Apply(tmp);
 
             tmp.text = sadLines[i];
-            tmp.fontSize = i == 0 ? 36 : 32;
+            tmp.fontSize = i == 0 ? 72 : 60;
             tmp.color = i == 0 ? Color.white : new Color(1f, 0.8f, 0.85f);
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.enableWordWrapping = true;
             tmp.raycastTarget = false;
 
             float yPos = verticalStart - (i * lineSpacing);
-            textRect.sizeDelta = new Vector2(800f, 100f);
+            textRect.sizeDelta = new Vector2(900f, 180f);
             textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
 
             float slideElapsed = 0f;
@@ -3756,6 +3902,7 @@ public class BirthSystem : MonoBehaviour
 
         Destroy(panel);
 
+        ResetBackgroundToBirth();
         childStatusText.text = "";
         if (generateLifeButton != null) generateLifeButton.SetActive(true);
 
@@ -3795,8 +3942,8 @@ public class BirthSystem : MonoBehaviour
         float slideDuration = 1.5f;
         float lineInterval = 2.0f;
         float startOffsetX = -800f;
-        float verticalStart = 100f;
-        float lineSpacing = 120f;
+        float verticalStart = 200f;
+        float lineSpacing = 200f;
 
         string[] sadLines = new string[]
         {
@@ -3815,14 +3962,14 @@ public class BirthSystem : MonoBehaviour
             FontHelper.Apply(tmp);
 
             tmp.text = sadLines[i];
-            tmp.fontSize = i == 0 ? 36 : 32;
+            tmp.fontSize = i == 0 ? 72 : 60;
             tmp.color = i == 0 ? Color.white : new Color(0.7f, 0.9f, 1f);
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.enableWordWrapping = true;
             tmp.raycastTarget = false;
 
             float yPos = verticalStart - (i * lineSpacing);
-            textRect.sizeDelta = new Vector2(800f, 100f);
+            textRect.sizeDelta = new Vector2(900f, 180f);
             textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
 
             float slideElapsed = 0f;
@@ -3859,6 +4006,7 @@ public class BirthSystem : MonoBehaviour
 
         Destroy(panel);
 
+        ResetBackgroundToBirth();
         childStatusText.text = "";
         if (generateLifeButton != null) generateLifeButton.SetActive(true);
 
@@ -3898,8 +4046,8 @@ public class BirthSystem : MonoBehaviour
         float slideDuration = 1.5f;
         float lineInterval = 2.0f;
         float startOffsetX = -800f;
-        float verticalStart = 100f;
-        float lineSpacing = 120f;
+        float verticalStart = 200f;
+        float lineSpacing = 200f;
 
         string[] sadLines = new string[]
         {
@@ -3918,14 +4066,14 @@ public class BirthSystem : MonoBehaviour
             FontHelper.Apply(tmp);
 
             tmp.text = sadLines[i];
-            tmp.fontSize = i == 0 ? 36 : 32;
+            tmp.fontSize = i == 0 ? 72 : 60;
             tmp.color = i == 0 ? Color.white : new Color(0.8f, 0.7f, 1f);
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.enableWordWrapping = true;
             tmp.raycastTarget = false;
 
             float yPos = verticalStart - (i * lineSpacing);
-            textRect.sizeDelta = new Vector2(800f, 100f);
+            textRect.sizeDelta = new Vector2(900f, 180f);
             textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
 
             float slideElapsed = 0f;
@@ -3962,6 +4110,7 @@ public class BirthSystem : MonoBehaviour
 
         Destroy(panel);
 
+        ResetBackgroundToBirth();
         childStatusText.text = "";
         if (generateLifeButton != null) generateLifeButton.SetActive(true);
 
@@ -4001,8 +4150,8 @@ public class BirthSystem : MonoBehaviour
         float slideDuration = 1.5f;
         float lineInterval = 2.0f;
         float startOffsetX = -800f;
-        float verticalStart = 100f;
-        float lineSpacing = 120f;
+        float verticalStart = 200f;
+        float lineSpacing = 200f;
 
         string[] sadLines = new string[]
         {
@@ -4021,14 +4170,14 @@ public class BirthSystem : MonoBehaviour
             FontHelper.Apply(tmp);
 
             tmp.text = sadLines[i];
-            tmp.fontSize = i == 0 ? 36 : 32;
+            tmp.fontSize = i == 0 ? 72 : 60;
             tmp.color = i == 0 ? Color.white : new Color(0.6f, 1f, 0.8f);
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.enableWordWrapping = true;
             tmp.raycastTarget = false;
 
             float yPos = verticalStart - (i * lineSpacing);
-            textRect.sizeDelta = new Vector2(800f, 100f);
+            textRect.sizeDelta = new Vector2(900f, 180f);
             textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
 
             float slideElapsed = 0f;
@@ -4065,6 +4214,7 @@ public class BirthSystem : MonoBehaviour
 
         Destroy(panel);
 
+        ResetBackgroundToBirth();
         childStatusText.text = "";
         if (generateLifeButton != null) generateLifeButton.SetActive(true);
 

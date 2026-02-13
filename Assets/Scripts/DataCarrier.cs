@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.IO;
 
 public class DataCarrier : MonoBehaviour
 {
@@ -28,10 +29,11 @@ public class DataCarrier : MonoBehaviour
     public bool isGodBaby;
     public bool cameFromMap = false;
     public bool isBossBattle = false;
-    public int currentArea = 0;     // 0=村, 1=悪魔村, 2=デヴィル夫人のやかた
+    public int currentArea = 0;     // 0=村, 1=悪魔村, 2=デヴィル夫人のやかた, 3=小悪魔の街
     public string fixedEncounterEnemy = "";  // 固定エンカウント敵名（空=ランダム）
     public int babyCurrentHp = -1;  // 戦闘間HP持越し（-1=maxHP）
     public int babyPoisonTurns = 0;  // 毒残りターン
+    public string customBabyImagePath = ""; // persistentDataPath内のカスタム画像ファイル名
 
     [Header("Player Profile")]
     public string playerName = "";
@@ -97,6 +99,7 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.SetString(p + "inventory", inventory);
         PlayerPrefs.SetString(p + "defeatedEnemyList", defeatedEnemyList);
         PlayerPrefs.SetString(p + "fixedEncounterEnemy", fixedEncounterEnemy);
+        PlayerPrefs.SetString(p + "customBabyImagePath", customBabyImagePath);
         PlayerPrefs.SetInt(p + "exists", 1);
         PlayerPrefs.Save();
     }
@@ -131,6 +134,7 @@ public class DataCarrier : MonoBehaviour
         inventory = PlayerPrefs.GetString(p + "inventory", "");
         defeatedEnemyList = PlayerPrefs.GetString(p + "defeatedEnemyList", "");
         fixedEncounterEnemy = PlayerPrefs.GetString(p + "fixedEncounterEnemy", "");
+        customBabyImagePath = PlayerPrefs.GetString(p + "customBabyImagePath", "");
         // playerName/playerIcon はグローバルプロフィールから読む
         LoadProfile();
     }
@@ -192,6 +196,7 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.DeleteKey(p + "inventory");
         PlayerPrefs.DeleteKey(p + "defeatedEnemyList");
         PlayerPrefs.DeleteKey(p + "fixedEncounterEnemy");
+        PlayerPrefs.DeleteKey(p + "customBabyImagePath");
         PlayerPrefs.DeleteKey(p + "exists");
         PlayerPrefs.Save();
     }
@@ -251,6 +256,22 @@ public class DataCarrier : MonoBehaviour
     {
         if (string.IsNullOrEmpty(defeatedEnemyList)) return new string[0];
         return defeatedEnemyList.Split(',');
+    }
+
+    // カスタム赤ちゃん画像の読み込み
+    public static Sprite LoadCustomBabySprite()
+    {
+        if (Instance == null) return null;
+        string path = Instance.customBabyImagePath;
+        if (string.IsNullOrEmpty(path)) return null;
+
+        string fullPath = Path.Combine(Application.persistentDataPath, path);
+        if (!File.Exists(fullPath)) return null;
+
+        byte[] data = File.ReadAllBytes(fullPath);
+        var tex = new Texture2D(2, 2);
+        tex.LoadImage(data);
+        return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
     }
 
     // 次の月齢に必要な経験値

@@ -80,6 +80,8 @@ public class MapManager : MonoBehaviour
     GameObject goldenEggObj;
     const int GOLDEN_EGG_X = 9;
     const int GOLDEN_EGG_Y = 14;
+    const int GOLDEN_EGG_X_AREA3 = 2;
+    const int GOLDEN_EGG_Y_AREA3 = 16;
 
     // ミルクポイント（回復）
     GameObject milkPointObj;
@@ -128,7 +130,9 @@ public class MapManager : MonoBehaviour
         LoadTileset();
 
         int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
-        if (area == 2)
+        if (area == 3)
+            GenerateImpTownMapData();
+        else if (area == 2)
             GenerateMansionMapData();
         else if (area == 1)
             GenerateDevilMapData();
@@ -140,7 +144,14 @@ public class MapManager : MonoBehaviour
         CreateStatusUI();
         CreateMenuButton();
 
-        if (area == 2)
+        if (area == 3)
+        {
+            milkPointX = 3;
+            milkPointY = 8;
+            CreateMilkPoint();
+            CreateGoldenEgg();
+        }
+        else if (area == 2)
         {
             // 館内: ランダムエンカウントなし、ミルクポイントなし
             CreateMansionNPCs();
@@ -487,6 +498,132 @@ public class MapManager : MonoBehaviour
         }
     }
 
+    void GenerateImpTownMapData()
+    {
+        mapData = new int[MAP_WIDTH, MAP_HEIGHT];
+        walkable = new bool[MAP_WIDTH, MAP_HEIGHT];
+
+        // 基本は草で埋める
+        for (int x = 0; x < MAP_WIDTH; x++)
+        {
+            for (int y = 0; y < MAP_HEIGHT; y++)
+            {
+                mapData[x, y] = TILE_GRASS;
+                walkable[x, y] = true;
+            }
+        }
+
+        // === 外周（木の壁） ===
+        for (int x = 0; x < MAP_WIDTH; x++)
+        {
+            mapData[x, 0] = TILE_TREE;
+            walkable[x, 0] = false;
+            mapData[x, MAP_HEIGHT - 1] = TILE_TREE;
+            walkable[x, MAP_HEIGHT - 1] = false;
+        }
+        for (int y = 0; y < MAP_HEIGHT; y++)
+        {
+            mapData[0, y] = TILE_TREE;
+            walkable[0, y] = false;
+            mapData[MAP_WIDTH - 1, y] = TILE_TREE;
+            walkable[MAP_WIDTH - 1, y] = false;
+        }
+
+        // === 曲がりくねった小道 ===
+        // 入口 (y=1〜3, x=5)
+        for (int y = 1; y <= 3; y++)
+            mapData[5, y] = TILE_PATH;
+        // 右に曲がる (y=3, x=5〜8)
+        for (int x = 5; x <= 8; x++)
+            mapData[x, 3] = TILE_PATH;
+        // 上へ (y=3〜7, x=8)
+        for (int y = 3; y <= 7; y++)
+            mapData[8, y] = TILE_PATH;
+        // 左へ (y=7, x=4〜8)
+        for (int x = 4; x <= 8; x++)
+            mapData[x, 7] = TILE_PATH;
+        // 上へ (y=7〜11, x=4)
+        for (int y = 7; y <= 11; y++)
+            mapData[4, y] = TILE_PATH;
+        // 右へ (y=11, x=4〜9)
+        for (int x = 4; x <= 9; x++)
+            mapData[x, 11] = TILE_PATH;
+        // 上へ (y=11〜15, x=9)
+        for (int y = 11; y <= 15; y++)
+            mapData[9, y] = TILE_PATH;
+        // 左へ (y=15, x=5〜9)
+        for (int x = 5; x <= 9; x++)
+            mapData[x, 15] = TILE_PATH;
+        // 上へ (y=15〜18, x=5)
+        for (int y = 15; y <= 18; y++)
+            mapData[5, y] = TILE_PATH;
+
+        // === 毒沼（水場） ===
+        for (int x = 2; x <= 4; x++)
+        {
+            for (int y = 13; y <= 14; y++)
+            {
+                mapData[x, y] = TILE_WATER;
+                walkable[x, y] = false;
+            }
+        }
+
+        // === 暗い土の地面 ===
+        mapData[3, 2] = TILE_DARK_DIRT;
+        mapData[4, 2] = TILE_DARK_DIRT;
+        mapData[7, 5] = TILE_DARK_DIRT;
+        mapData[9, 6] = TILE_DARK_DIRT;
+        mapData[2, 9] = TILE_DARK_DIRT;
+        mapData[3, 9] = TILE_DARK_DIRT;
+        mapData[7, 14] = TILE_DARK_DIRT;
+        mapData[8, 14] = TILE_DARK_DIRT;
+
+        // === 岩 ===
+        mapData[1, 5] = TILE_ROCK;
+        walkable[1, 5] = false;
+        mapData[10, 8] = TILE_ROCK;
+        walkable[10, 8] = false;
+        mapData[6, 13] = TILE_ROCK;
+        walkable[6, 13] = false;
+        mapData[3, 17] = TILE_ROCK;
+        walkable[3, 17] = false;
+        mapData[10, 3] = TILE_ROCK;
+        walkable[10, 3] = false;
+
+        // === 花畑（エンカウント率高め） ===
+        mapData[2, 6] = TILE_FLOWER;
+        mapData[3, 6] = TILE_FLOWER;
+        mapData[2, 7] = TILE_FLOWER;
+        mapData[6, 9] = TILE_FLOWER;
+        mapData[7, 9] = TILE_FLOWER;
+        mapData[7, 10] = TILE_FLOWER;
+        mapData[1, 12] = TILE_FLOWER;
+        mapData[10, 15] = TILE_FLOWER;
+        mapData[10, 16] = TILE_FLOWER;
+        mapData[7, 17] = TILE_FLOWER;
+
+        // === 追加の木（内部に散在） ===
+        mapData[1, 3] = TILE_TREE;
+        walkable[1, 3] = false;
+        mapData[10, 5] = TILE_TREE;
+        walkable[10, 5] = false;
+        mapData[1, 10] = TILE_TREE;
+        walkable[1, 10] = false;
+        mapData[6, 16] = TILE_TREE;
+        walkable[6, 16] = false;
+        mapData[2, 17] = TILE_TREE;
+        walkable[2, 17] = false;
+        mapData[10, 11] = TILE_TREE;
+        walkable[10, 11] = false;
+
+        // プレイヤーの初期位置は必ず歩けるようにする
+        walkable[playerTileX, playerTileY] = true;
+        if (mapData[playerTileX, playerTileY] != TILE_PATH && mapData[playerTileX, playerTileY] != TILE_GRASS)
+        {
+            mapData[playerTileX, playerTileY] = TILE_PATH;
+        }
+    }
+
     void GenerateMansionMapData()
     {
         mapData = new int[MAP_WIDTH, MAP_HEIGHT];
@@ -655,7 +792,9 @@ public class MapManager : MonoBehaviour
 
         var bg = mapPanel.AddComponent<Image>();
         int areaForColor = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
-        if (areaForColor == 2)
+        if (areaForColor == 3)
+            bg.color = new Color(0.12f, 0.06f, 0.18f);  // 小悪魔の森: 暗い紫
+        else if (areaForColor == 2)
             bg.color = new Color(0.1f, 0.08f, 0.08f);   // 館内: 暗灰
         else if (areaForColor == 1)
             bg.color = new Color(0.2f, 0.08f, 0.15f);   // 悪魔村: 暗い赤紫
@@ -690,7 +829,7 @@ public class MapManager : MonoBehaviour
         if (tilesContainer == null) return;
 
         int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
-        if (area == 2) return; // 館内ではオーバーレイ不要
+        if (area == 2 || area == 3) return; // 館内・小悪魔の森ではオーバーレイ不要
 
         // 館本体（3x2タイル分の大きさ）中央: (8, 16.5)
         float centerX = (8 - MAP_WIDTH / 2f + 0.5f) * DISPLAY_TILE;
@@ -801,9 +940,11 @@ public class MapManager : MonoBehaviour
         else if (tileSprites.ContainsKey(tileType) && tileSprites[tileType] != null)
         {
             img.sprite = tileSprites[tileType];
-            // 悪魔村の水タイルは赤系（溶岩池）
+            // エリアごとの水タイル色変更
             int areaForTile = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
-            if (areaForTile == 1 && tileType == TILE_WATER)
+            if (areaForTile == 3 && tileType == TILE_WATER)
+                img.color = new Color(0.6f, 0.3f, 0.8f);  // 毒沼: 紫
+            else if (areaForTile == 1 && tileType == TILE_WATER)
                 img.color = new Color(1f, 0.4f, 0.3f);
             else
                 img.color = Color.white;
@@ -826,7 +967,9 @@ public class MapManager : MonoBehaviour
         float hueShift = Random.Range(-0.02f, 0.02f);
         float brightShift = Random.Range(-0.04f, 0.04f);
         Color baseColor;
-        if (area == 1)
+        if (area == 3)
+            baseColor = new Color(0.18f + hueShift, 0.20f + brightShift, 0.25f + hueShift); // 暗い紫がかった緑
+        else if (area == 1)
             baseColor = new Color(0.22f + hueShift, 0.15f + brightShift, 0.28f + hueShift); // 暗い紫灰
         else
             baseColor = new Color(0.28f + hueShift, 0.62f + brightShift, 0.25f + hueShift);
@@ -836,7 +979,9 @@ public class MapManager : MonoBehaviour
         var gradTop = FacePart("GradTop", parent, new Vector2(0, DISPLAY_TILE * 0.2f),
             new Vector2(DISPLAY_TILE, DISPLAY_TILE * 0.5f));
         var gradImg = gradTop.AddComponent<Image>();
-        gradImg.color = (area == 1)
+        gradImg.color = (area == 3)
+            ? new Color(0.25f, 0.22f, 0.38f, 0.25f)
+            : (area == 1)
             ? new Color(0.3f, 0.2f, 0.4f, 0.25f)
             : new Color(0.4f, 0.75f, 0.35f, 0.25f);
         gradImg.raycastTarget = false;
@@ -845,7 +990,9 @@ public class MapManager : MonoBehaviour
         var gradBot = FacePart("GradBot", parent, new Vector2(0, -DISPLAY_TILE * 0.25f),
             new Vector2(DISPLAY_TILE, DISPLAY_TILE * 0.4f));
         var gradBotImg = gradBot.AddComponent<Image>();
-        gradBotImg.color = (area == 1)
+        gradBotImg.color = (area == 3)
+            ? new Color(0.08f, 0.04f, 0.12f, 0.15f)
+            : (area == 1)
             ? new Color(0.1f, 0.05f, 0.15f, 0.15f)
             : new Color(0.1f, 0.3f, 0.1f, 0.15f);
         gradBotImg.raycastTarget = false;
@@ -864,7 +1011,9 @@ public class MapManager : MonoBehaviour
             blade.transform.localRotation = Quaternion.Euler(0, 0, angle);
             var bladeImg = blade.AddComponent<Image>();
             float bladeAlpha = Random.Range(0.15f, 0.35f);
-            bladeImg.color = (area == 1)
+            bladeImg.color = (area == 3)
+                ? new Color(0.28f, 0.30f, 0.42f, bladeAlpha)  // 暗い紫がかった草
+                : (area == 1)
                 ? new Color(0.35f, 0.2f, 0.45f, bladeAlpha)  // 暗い紫の草
                 : new Color(0.45f, 0.82f, 0.38f, bladeAlpha);
             bladeImg.raycastTarget = false;
@@ -1261,32 +1410,46 @@ public class MapManager : MonoBehaviour
 
         var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
 
-        float size = 70f;
+        int btnSize = 80;
+        int circleRadius = btnSize / 2;
+        int blur = 16;
 
-        // 右上のメニューボタン（円形＋ハンバーガーアイコン）
+        // 右上のメニューボタン（白円形＋影＋ハンバーガーアイコン）
         var btnObj = new GameObject("MenuButton");
         btnObj.transform.SetParent(canvas.transform, false);
         var btnRect = btnObj.AddComponent<RectTransform>();
         btnRect.anchorMin = new Vector2(1, 1);
         btnRect.anchorMax = new Vector2(1, 1);
         btnRect.pivot = new Vector2(1, 1);
-        btnRect.anchoredPosition = new Vector2(-15 - safeRight, -15 - safeTop);
-        btnRect.sizeDelta = new Vector2(size, size);
+        btnRect.anchoredPosition = new Vector2(-24 - safeRight, -24 - safeTop);
+        btnRect.sizeDelta = new Vector2(btnSize, btnSize);
 
-        // 円形背景
+        // 白い円形背景
         var btnImg = btnObj.AddComponent<Image>();
-        btnImg.sprite = CreateCircleSprite(64);
-        btnImg.type = Image.Type.Simple;
-        btnImg.color = new Color(0.25f, 0.25f, 0.4f, 0.85f);
+        btnImg.sprite = GetCircleSprite(circleRadius);
+        btnImg.type = Image.Type.Sliced;
+        btnImg.color = Color.white;
 
-        var btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnImg;
-        btn.onClick.AddListener(ToggleMenu);
+        // Box shadow
+        var shadowObj = new GameObject("Shadow");
+        shadowObj.transform.SetParent(btnObj.transform, false);
+        shadowObj.transform.SetAsFirstSibling();
+        var shadowRect = shadowObj.AddComponent<RectTransform>();
+        shadowRect.anchorMin = Vector2.zero;
+        shadowRect.anchorMax = Vector2.one;
+        shadowRect.offsetMin = new Vector2(-blur, -blur - 3);
+        shadowRect.offsetMax = new Vector2(blur, blur - 3);
+        var shadowImg = shadowObj.AddComponent<Image>();
+        shadowImg.sprite = GetCircleShadowSprite(circleRadius, blur);
+        shadowImg.type = Image.Type.Sliced;
+        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
+        shadowImg.raycastTarget = false;
 
-        // ハンバーガー3本線
+        // ハンバーガー3本線（グレー）
         float lineW = 30f;
-        float lineH = 4f;
+        float lineH = 3.5f;
         float gap = 8f;
+        Color lineColor = new Color(0.45f, 0.45f, 0.5f);
         for (int i = -1; i <= 1; i++)
         {
             var line = new GameObject("Line" + (i + 2));
@@ -1294,32 +1457,26 @@ public class MapManager : MonoBehaviour
             var lr = line.AddComponent<RectTransform>();
             lr.anchorMin = new Vector2(0.5f, 0.5f);
             lr.anchorMax = new Vector2(0.5f, 0.5f);
-            lr.anchoredPosition = new Vector2(0, i * gap);
+            lr.anchoredPosition = new Vector2(0, -i * gap);
             lr.sizeDelta = new Vector2(lineW, lineH);
             var lineImg = line.AddComponent<Image>();
-            lineImg.color = Color.white;
+            lineImg.color = lineColor;
             lineImg.raycastTarget = false;
         }
-    }
 
-    Sprite CreateCircleSprite(int size)
-    {
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        float center = size / 2f;
-        float radius = size / 2f;
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                float dx = x - center + 0.5f;
-                float dy = y - center + 0.5f;
-                float dist = Mathf.Sqrt(dx * dx + dy * dy);
-                float alpha = Mathf.Clamp01(radius - dist);
-                tex.SetPixel(x, y, new Color(1, 1, 1, alpha));
-            }
-        }
-        tex.Apply();
-        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100);
+        var btn = btnObj.AddComponent<Button>();
+        btn.targetGraphic = btnImg;
+        btn.onClick.AddListener(ToggleMenu);
+        btn.navigation = new Navigation { mode = Navigation.Mode.None };
+        var colors = btn.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = Color.white;
+        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
+        colors.selectedColor = Color.white;
+        colors.fadeDuration = 0.08f;
+        btn.colors = colors;
+
+        AddPressAnimation(btnObj);
     }
 
     void UpdateStatusText()
@@ -1555,7 +1712,12 @@ public class MapManager : MonoBehaviour
             mapData[playerTileX, playerTileY] == TILE_FLOWER)
         {
             float rate;
-            if (area == 1)
+            if (area == 3)
+            {
+                // 小悪魔の森: 草5%, 花10%
+                rate = mapData[playerTileX, playerTileY] == TILE_FLOWER ? 0.10f : 0.05f;
+            }
+            else if (area == 1)
             {
                 // 悪魔村: 草4%, 花8%（村の2倍）
                 rate = mapData[playerTileX, playerTileY] == TILE_FLOWER ? 0.08f : 0.04f;
@@ -2065,16 +2227,17 @@ public class MapManager : MonoBehaviour
         menuOpen = true;
         SetTouchControlsVisible(false);
 
+        // 全画面白背景オーバーレイ
         savePanel = new GameObject("SavePanel");
         savePanel.transform.SetParent(canvas.transform, false);
         var panelRect = savePanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = Vector2.zero;
-        panelRect.sizeDelta = new Vector2(400, 480);
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
 
         var panelBg = savePanel.AddComponent<Image>();
-        panelBg.color = new Color(0.08f, 0.08f, 0.18f, 0.95f);
+        panelBg.color = new Color(1f, 1f, 1f, 0.97f);
 
         // タイトル
         var titleObj = new GameObject("SaveTitle");
@@ -2082,32 +2245,35 @@ public class MapManager : MonoBehaviour
         var titleRect = titleObj.AddComponent<RectTransform>();
         titleRect.anchorMin = new Vector2(0, 1);
         titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.anchoredPosition = new Vector2(0, -25);
-        titleRect.sizeDelta = new Vector2(0, 50);
+        titleRect.anchoredPosition = new Vector2(0, -50);
+        titleRect.sizeDelta = new Vector2(0, 70);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
         FontHelper.Apply(titleText);
         titleText.text = Localization.Get("map_save_title");
-        titleText.fontSize = 24;
+        titleText.fontSize = 36;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.fontStyle = FontStyles.Bold;
-        titleText.color = new Color(0.9f, 0.9f, 0.5f);
+        titleText.color = new Color(0.15f, 0.15f, 0.18f);
         titleText.raycastTarget = false;
 
         // スロット一覧
-        float slotY = -70;
+        float slotY = -130;
+        float slotSpacing = 90;
         for (int i = 0; i < DataCarrier.MAX_SAVE_SLOTS; i++)
         {
             CreateSaveSlotEntry(i, slotY);
-            slotY -= 70;
+            slotY -= slotSpacing;
         }
 
         // とじる
-        CreateMenuItemButton(savePanel.transform, Localization.Get("ui_close"), slotY - 10, () => CloseSavePanel());
+        CreateMenuItemButton(savePanel.transform, Localization.Get("ui_close"), slotY - 20, () => CloseSavePanel());
     }
 
     void CreateSaveSlotEntry(int slot, float yPos)
     {
         bool exists = DataCarrier.SlotExists(slot);
+        int pillRadius = 30;
+        int blur = 16;
 
         var slotObj = new GameObject($"SaveSlot{slot}");
         slotObj.transform.SetParent(savePanel.transform, false);
@@ -2115,10 +2281,27 @@ public class MapManager : MonoBehaviour
         slotRect.anchorMin = new Vector2(0.5f, 1);
         slotRect.anchorMax = new Vector2(0.5f, 1);
         slotRect.anchoredPosition = new Vector2(0, yPos);
-        slotRect.sizeDelta = new Vector2(340, 60);
+        slotRect.sizeDelta = new Vector2(580, 70);
 
         var slotBg = slotObj.AddComponent<Image>();
-        slotBg.color = exists ? new Color(0.2f, 0.25f, 0.35f) : new Color(0.15f, 0.15f, 0.2f);
+        slotBg.sprite = GetPillSprite(pillRadius);
+        slotBg.type = Image.Type.Sliced;
+        slotBg.color = exists ? new Color(0.95f, 0.95f, 1f) : new Color(0.92f, 0.92f, 0.92f);
+
+        // Shadow
+        var shadowObj = new GameObject("Shadow");
+        shadowObj.transform.SetParent(slotObj.transform, false);
+        shadowObj.transform.SetAsFirstSibling();
+        var shadowRect = shadowObj.AddComponent<RectTransform>();
+        shadowRect.anchorMin = Vector2.zero;
+        shadowRect.anchorMax = Vector2.one;
+        shadowRect.offsetMin = new Vector2(-blur, -blur - 3);
+        shadowRect.offsetMax = new Vector2(blur, blur - 3);
+        var shadowImg = shadowObj.AddComponent<Image>();
+        shadowImg.sprite = GetShadowSprite(pillRadius, blur);
+        shadowImg.type = Image.Type.Sliced;
+        shadowImg.color = new Color(0f, 0f, 0f, 0.12f);
+        shadowImg.raycastTarget = false;
 
         // スロット情報テキスト
         var infoObj = new GameObject("Info");
@@ -2126,13 +2309,14 @@ public class MapManager : MonoBehaviour
         var infoRect = infoObj.AddComponent<RectTransform>();
         infoRect.anchorMin = Vector2.zero;
         infoRect.anchorMax = Vector2.one;
-        infoRect.offsetMin = new Vector2(10, 5);
-        infoRect.offsetMax = new Vector2(-10, -5);
+        infoRect.offsetMin = new Vector2(20, 5);
+        infoRect.offsetMax = new Vector2(-20, -5);
         var infoText = infoObj.AddComponent<TextMeshProUGUI>();
         FontHelper.Apply(infoText);
-        infoText.fontSize = 18;
-        infoText.alignment = TextAlignmentOptions.MidlineLeft;
-        infoText.color = Color.white;
+        infoText.fontSize = 28;
+        infoText.alignment = TextAlignmentOptions.Center;
+        infoText.fontStyle = FontStyles.Bold;
+        infoText.color = new Color(0.15f, 0.15f, 0.18f);
         infoText.richText = true;
         infoText.raycastTarget = false;
 
@@ -2153,12 +2337,18 @@ public class MapManager : MonoBehaviour
         var btn = slotObj.AddComponent<Button>();
         btn.targetGraphic = slotBg;
         var colors = btn.colors;
-        colors.highlightedColor = new Color(0.35f, 0.35f, 0.55f);
-        colors.pressedColor = new Color(0.15f, 0.15f, 0.3f);
+        colors.normalColor = exists ? new Color(0.95f, 0.95f, 1f) : new Color(0.92f, 0.92f, 0.92f);
+        colors.highlightedColor = exists ? new Color(0.95f, 0.95f, 1f) : new Color(0.92f, 0.92f, 0.92f);
+        colors.pressedColor = new Color(0.85f, 0.85f, 0.9f);
+        colors.selectedColor = exists ? new Color(0.95f, 0.95f, 1f) : new Color(0.92f, 0.92f, 0.92f);
+        colors.fadeDuration = 0.08f;
         btn.colors = colors;
+        btn.navigation = new Navigation { mode = Navigation.Mode.None };
 
         int idx = slot;
         btn.onClick.AddListener(() => OnSaveSlotSelected(idx));
+
+        AddPressAnimation(slotObj);
     }
 
     void OnSaveSlotSelected(int slot)
@@ -2189,20 +2379,21 @@ public class MapManager : MonoBehaviour
         var msgRect = msgObj.AddComponent<RectTransform>();
         msgRect.anchorMin = new Vector2(0, 0.5f);
         msgRect.anchorMax = new Vector2(1, 0.5f);
-        msgRect.anchoredPosition = new Vector2(0, 40);
-        msgRect.sizeDelta = new Vector2(-40, 100);
+        msgRect.anchoredPosition = new Vector2(0, 60);
+        msgRect.sizeDelta = new Vector2(-60, 140);
         var msgText = msgObj.AddComponent<TextMeshProUGUI>();
         FontHelper.Apply(msgText);
         msgText.text = Localization.Get("map_save_overwrite_msg", slot + 1, babyName);
-        msgText.fontSize = 22;
+        msgText.fontSize = 32;
         msgText.alignment = TextAlignmentOptions.Center;
-        msgText.color = Color.white;
+        msgText.fontStyle = FontStyles.Bold;
+        msgText.color = new Color(0.15f, 0.15f, 0.18f);
         msgText.richText = true;
         msgText.raycastTarget = false;
 
-        // はい
-        CreateMenuItemButton(savePanel.transform, Localization.Get("map_save_overwrite"), -30, () => DoSaveToSlot(slot));
-        CreateMenuItemButton(savePanel.transform, Localization.Get("map_save_cancel"), -90, () => { CloseSavePanel(); OpenSavePanel(); });
+        // はい / キャンセル
+        CreateMenuItemButton(savePanel.transform, Localization.Get("map_save_overwrite"), -40, () => DoSaveToSlot(slot));
+        CreateMenuItemButton(savePanel.transform, Localization.Get("map_save_cancel"), -130, () => { CloseSavePanel(); OpenSavePanel(); });
     }
 
     void DoSaveToSlot(int slot)
@@ -2242,15 +2433,20 @@ public class MapManager : MonoBehaviour
     void CreateGoldenEgg()
     {
         if (tilesContainer == null) return;
+        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+        string eggItemName = area == 3 ? "金のたまご2" : "金のたまご";
         // 既に持っていたら生成しない
-        if (DataCarrier.Instance != null && DataCarrier.Instance.HasItem("金のたまご")) return;
+        if (DataCarrier.Instance != null && DataCarrier.Instance.HasItem(eggItemName)) return;
+
+        int eggX = area == 3 ? GOLDEN_EGG_X_AREA3 : GOLDEN_EGG_X;
+        int eggY = area == 3 ? GOLDEN_EGG_Y_AREA3 : GOLDEN_EGG_Y;
 
         goldenEggObj = new GameObject("GoldenEgg");
         goldenEggObj.transform.SetParent(tilesContainer.transform, false);
 
         var rect = goldenEggObj.AddComponent<RectTransform>();
-        float posX = (GOLDEN_EGG_X - MAP_WIDTH / 2f + 0.5f) * DISPLAY_TILE;
-        float posY = (GOLDEN_EGG_Y - MAP_HEIGHT / 2f + 0.5f) * DISPLAY_TILE;
+        float posX = (eggX - MAP_WIDTH / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (eggY - MAP_HEIGHT / 2f + 0.5f) * DISPLAY_TILE;
         rect.anchoredPosition = new Vector2(posX, posY);
         rect.sizeDelta = new Vector2(DISPLAY_TILE, DISPLAY_TILE);
 
@@ -2272,12 +2468,16 @@ public class MapManager : MonoBehaviour
     void CheckItemPickup()
     {
         if (goldenEggObj == null) return;
-        if (playerTileX != GOLDEN_EGG_X || playerTileY != GOLDEN_EGG_Y) return;
+        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+        int eggX = area == 3 ? GOLDEN_EGG_X_AREA3 : GOLDEN_EGG_X;
+        int eggY = area == 3 ? GOLDEN_EGG_Y_AREA3 : GOLDEN_EGG_Y;
+        if (playerTileX != eggX || playerTileY != eggY) return;
 
         // 金のたまごを取得
         if (DataCarrier.Instance != null)
         {
-            DataCarrier.Instance.AddItem("金のたまご");
+            string eggItemName = area == 3 ? "金のたまご2" : "金のたまご";
+            DataCarrier.Instance.AddItem(eggItemName);
         }
 
         Destroy(goldenEggObj);
@@ -2876,6 +3076,53 @@ public class MapManager : MonoBehaviour
         _shadowSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
             new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
         return _shadowSprite;
+    }
+
+    static Sprite _circleSprite;
+    static Sprite GetCircleSprite(int radius)
+    {
+        if (_circleSprite != null) return _circleSprite;
+        int size = radius * 2 + 2;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float center = (size - 1) / 2f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dist = Mathf.Sqrt((x - center) * (x - center) + (y - center) * (y - center)) - radius;
+                if (dist < -1f) tex.SetPixel(x, y, Color.white);
+                else if (dist <= 0f) tex.SetPixel(x, y, new Color(1, 1, 1, -dist));
+                else tex.SetPixel(x, y, new Color(0, 0, 0, 0));
+            }
+        tex.Apply();
+        var border = new Vector4(radius, radius, radius, radius);
+        _circleSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        return _circleSprite;
+    }
+
+    static Sprite _circleShadowSprite;
+    static Sprite GetCircleShadowSprite(int radius, int blur)
+    {
+        if (_circleShadowSprite != null) return _circleShadowSprite;
+        int size = (radius + blur) * 2 + 2;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float center = (size - 1) / 2f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dist = Mathf.Sqrt((x - center) * (x - center) + (y - center) * (y - center)) - radius;
+                float alpha;
+                if (dist <= 0f) alpha = 0f;
+                else if (dist >= blur) alpha = 0f;
+                else { float t = dist / blur; alpha = (1f - t) * (1f - t); }
+                tex.SetPixel(x, y, new Color(1, 1, 1, alpha));
+            }
+        tex.Apply();
+        int borderVal = radius + blur;
+        var border = new Vector4(borderVal, borderVal, borderVal, borderVal);
+        _circleShadowSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        return _circleShadowSprite;
     }
 
     void AddPressAnimation(GameObject obj)

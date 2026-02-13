@@ -179,11 +179,11 @@ public static class Localization
 
         // ===== Phase Cut-in =====
         Add("cutin_who_father", "父親は誰だろう！？", "Who will be the father!?");
-        Add("birth_find_mother", "愛する女性を探す", "Find Your Beloved");
+        Add("birth_find_mother", "宿命を定める", "Determine Destiny");
         Add("birth_nurture_love", "愛を育む", "Nurture Love");
         Add("cutin_who_mother", "運命の人は誰だ？", "Who is your destiny?");
         Add("cutin_baby_born", "子宝に恵まれた！", "Blessed with a child!");
-        Add("birth_love_begin", "恋の始まり", "Love Begins");
+        Add("birth_love_begin", "二人の物語を紡ぐ", "Weave Their Story");
 
         // ===== Father Cut-in =====
         Add("cutin_タケシ", "元・格闘技世界王者のタケシだ！！", "It's Takeshi, the ex-World Champion!!");

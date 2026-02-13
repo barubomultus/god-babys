@@ -417,6 +417,13 @@ public class BattleManager : MonoBehaviour
             int maxAge = Mathf.Min(8, playerAge + 2);
             enemyAge = Random.Range(minAge, maxAge + 1);
         }
+        else if (area == 3)
+        {
+            // 小悪魔の街: 14~24ヶ月
+            int minAge = Mathf.Max(14, playerAge - 2);
+            int maxAge = Mathf.Min(24, playerAge + 3);
+            enemyAge = Random.Range(minAge, maxAge + 1);
+        }
         else
         {
             // 悪魔村: 6~15ヶ月
@@ -429,17 +436,30 @@ public class BattleManager : MonoBehaviour
         // 弱い順に並べ、月齢に応じて出現テーブルを変える
         object[][] enemyDefs;
 
-        if (area == 1)
+        if (area == 3)
         {
-            // 悪魔村専用テーブル（スプライト無し、背景色で表示）
+            // 小悪魔の街専用テーブル
+            enemyDefs = new object[][] {
+                //                    名前              スプライト  HP  ATK DEF SPD 出現月齢  背景色
+                new object[]{ "小悪魔ひとみ", Resources.Load<Sprite>("EnemyBabys/poison/doku-baby"),   160, 45, 30, 40, 14, 17, new Color(0.35f, 0.1f, 0.4f) },
+                new object[]{ "小悪魔あやか", Resources.Load<Sprite>("EnemyBabys/poison/noroi-baby"),  190, 52, 35, 45, 15, 18, new Color(0.3f, 0.05f, 0.35f) },
+                new object[]{ "小悪魔りん",   Resources.Load<Sprite>("EnemyBabys/poison/yami-baby"),   220, 60, 38, 50, 16, 19, new Color(0.2f, 0.05f, 0.3f) },
+                new object[]{ "小悪魔みく",   Resources.Load<Sprite>("EnemyBabys/poison/akuma-baby"),  250, 68, 42, 55, 17, 20, new Color(0.45f, 0.05f, 0.15f) },
+                new object[]{ "小悪魔なな",   Resources.Load<Sprite>("EnemyBabys/poison/jyaaku-baby"), 280, 75, 48, 60, 18, 22, new Color(0.25f, 0.0f, 0.05f) },
+                new object[]{ "小悪魔れい",   Resources.Load<Sprite>("EnemyBabys/poison/maou-baby"),   320, 85, 55, 65, 20, 24, new Color(0.15f, 0.0f, 0.2f) },
+            };
+        }
+        else if (area == 1)
+        {
+            // 悪魔村専用テーブル
             enemyDefs = new object[][] {
                 //                    名前              スプライト  HP  ATK DEF SPD 出現月齢  背景色
                 new object[]{ "どくベイビー",     Resources.Load<Sprite>("EnemyBabys/poison/doku-baby"),  90, 25, 15, 25,  6,  9, new Color(0.4f, 0.1f, 0.5f) },
                 new object[]{ "のろいベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/noroi-baby"), 100, 30, 20, 22,  7, 10, new Color(0.3f, 0.0f, 0.3f) },
-                new object[]{ "やみベイビー",     null, 110, 35, 22, 30,  8, 11, new Color(0.15f, 0.05f, 0.2f) },
+                new object[]{ "やみベイビー",     Resources.Load<Sprite>("EnemyBabys/poison/yami-baby"), 110, 35, 22, 30,  8, 11, new Color(0.15f, 0.05f, 0.2f) },
                 new object[]{ "あくまベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/akuma-baby"), 130, 42, 28, 35,  9, 13, new Color(0.5f, 0.0f, 0.1f) },
-                new object[]{ "じゃあくベイビー", null, 150, 48, 32, 38, 11, 14, new Color(0.2f, 0.0f, 0.0f) },
-                new object[]{ "まおうベイビー",   null, 180, 55, 38, 42, 13, 15, new Color(0.1f, 0.0f, 0.15f) },
+                new object[]{ "じゃあくベイビー", Resources.Load<Sprite>("EnemyBabys/poison/jyaaku-baby"), 150, 48, 32, 38, 11, 14, new Color(0.2f, 0.0f, 0.0f) },
+                new object[]{ "まおうベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/maou-baby"), 180, 55, 38, 42, 13, 15, new Color(0.1f, 0.0f, 0.15f) },
             };
         }
         else
@@ -466,7 +486,18 @@ public class BattleManager : MonoBehaviour
         if (candidates.Count == 0)
             candidates.Add(enemyDefs[enemyDefs.Length - 1]); // fallback
 
-        var chosen = candidates[Random.Range(0, candidates.Count)];
+        // レアスポーン制限: まおうベイビー・小悪魔れいは3%の確率でのみ出現
+        object[] chosen;
+        int safetyCount = 0;
+        do
+        {
+            chosen = candidates[Random.Range(0, candidates.Count)];
+            safetyCount++;
+            string cName = (string)chosen[0];
+            if ((cName == "まおうベイビー" || cName == "小悪魔れい") && Random.value > 0.03f && candidates.Count > 1)
+                continue;
+            break;
+        } while (safetyCount < 20);
         enemyName = (string)chosen[0];
         if (chosen[1] is Sprite spr)
             loadedEnemySprite = spr;
@@ -532,7 +563,7 @@ public class BattleManager : MonoBehaviour
 
         // 背景色（暗いグラデーション風）
         var bgImg = battlePanel.AddComponent<Image>();
-        bgImg.color = new Color(0.953f, 0.969f, 0.973f);
+        bgImg.color = new Color(0.08f, 0.08f, 0.15f);
         bgImg.raycastTarget = false;
 
         // 敵側（右上）
@@ -620,7 +651,7 @@ public class BattleManager : MonoBehaviour
         faceMaskImg.color = Color.white;
         faceMaskImg.raycastTarget = false;
         var faceMask = faceMaskObj.AddComponent<Mask>();
-        faceMask.showMaskGraphic = true;
+        faceMask.showMaskGraphic = false;
 
         // 顔画像（マスク内）
         var faceObj = new GameObject("Face");
@@ -759,7 +790,7 @@ public class BattleManager : MonoBehaviour
         panelRect.anchorMin = new Vector2(0.5f, 0);
         panelRect.anchorMax = new Vector2(0.5f, 0);
         panelRect.anchoredPosition = new Vector2(0, 320 + safeBottom);
-        panelRect.sizeDelta = new Vector2(1000, 560);
+        panelRect.sizeDelta = new Vector2(1020, 560);
 
         float btnHeight = 120f;
         float btnSpacing = 32f;
@@ -768,20 +799,21 @@ public class BattleManager : MonoBehaviour
 
         // 中段（2ボタン: 防御, 必殺技）
         float midY = bottomPad + btnHeight * 0.5f;
-        float halfW = 480f;
+        float btnGap = 20f;
+        float halfW = 460f;
 
         defendButton = CreateActionButton(actionPanel.transform, Localization.Get("battle_defend"), Localization.Get("battle_defend_name"), defendDesc, Color.white, OnDefend, out _);
         var defendRect = defendButton.GetComponent<RectTransform>();
         defendRect.anchorMin = new Vector2(0.5f, 0);
         defendRect.anchorMax = new Vector2(0.5f, 0);
-        defendRect.anchoredPosition = new Vector2(-halfW * 0.5f - 6, midY);
+        defendRect.anchoredPosition = new Vector2(-halfW * 0.5f - btnGap, midY);
         defendRect.sizeDelta = new Vector2(halfW, btnHeight);
 
         specialButton = CreateActionButton(actionPanel.transform, Localization.Get("battle_special_skill"), specialAttackName, specialAttackDesc, Color.white, OnSpecial, out specialButtonText);
         var specialRect = specialButton.GetComponent<RectTransform>();
         specialRect.anchorMin = new Vector2(0.5f, 0);
         specialRect.anchorMax = new Vector2(0.5f, 0);
-        specialRect.anchoredPosition = new Vector2(halfW * 0.5f + 6, midY);
+        specialRect.anchoredPosition = new Vector2(halfW * 0.5f + btnGap, midY);
         specialRect.sizeDelta = new Vector2(halfW, btnHeight);
 
         // 上段（2ボタン: 攻撃, 母スキル）
@@ -791,14 +823,14 @@ public class BattleManager : MonoBehaviour
         var attackRect = attackButton.GetComponent<RectTransform>();
         attackRect.anchorMin = new Vector2(0.5f, 0);
         attackRect.anchorMax = new Vector2(0.5f, 0);
-        attackRect.anchoredPosition = new Vector2(-halfW * 0.5f - 6, topY);
+        attackRect.anchoredPosition = new Vector2(-halfW * 0.5f - btnGap, topY);
         attackRect.sizeDelta = new Vector2(halfW, btnHeight);
 
         var motherBtn = CreateActionButton(actionPanel.transform, Localization.Get("battle_special_attack"), motherAttackName, motherAttackDesc, Color.white, OnMotherAttack, out _);
         var motherRect = motherBtn.GetComponent<RectTransform>();
         motherRect.anchorMin = new Vector2(0.5f, 0);
         motherRect.anchorMax = new Vector2(0.5f, 0);
-        motherRect.anchoredPosition = new Vector2(halfW * 0.5f + 6, topY);
+        motherRect.anchoredPosition = new Vector2(halfW * 0.5f + btnGap, topY);
         motherRect.sizeDelta = new Vector2(halfW, btnHeight);
 
         actionPanel.SetActive(false);
@@ -810,7 +842,7 @@ public class BattleManager : MonoBehaviour
         btnObj.transform.SetParent(parent, false);
 
         var btnImg = btnObj.AddComponent<Image>();
-        btnImg.sprite = CreateRoundedRectSprite(120, 120, 60);
+        btnImg.sprite = CreateRoundedRectSprite(64, 64, 16);
         btnImg.type = Image.Type.Sliced;
         btnImg.color = Color.white;
 
@@ -835,7 +867,7 @@ public class BattleManager : MonoBehaviour
         outlineRect.offsetMin = new Vector2(-2, -2);
         outlineRect.offsetMax = new Vector2(2, 2);
         var outlineImg = outlineObj.AddComponent<Image>();
-        outlineImg.sprite = CreateRoundedRectSprite(120, 120, 60);
+        outlineImg.sprite = CreateRoundedRectSprite(64, 64, 16);
         outlineImg.type = Image.Type.Sliced;
         outlineImg.color = new Color(0.75f, 0.75f, 0.8f);
         outlineImg.raycastTarget = false;
@@ -1066,6 +1098,31 @@ public class BattleManager : MonoBehaviour
     bool TryShowBabySprite(Image targetImage)
     {
         if (DataCarrier.Instance == null) return false;
+
+        // カスタム画像があればそちらを優先
+        Sprite customSprite = DataCarrier.LoadCustomBabySprite();
+        if (customSprite != null)
+        {
+            foreach (Transform child in targetImage.transform)
+                Destroy(child.gameObject);
+            targetImage.enabled = true;
+            targetImage.sprite = customSprite;
+            targetImage.color = Color.white;
+            targetImage.preserveAspect = true;
+
+            if (DataCarrier.Instance.isGodBaby)
+            {
+                for (int i = 2; i >= 0; i--)
+                {
+                    var aura = BPart("Aura" + i, targetImage.transform, Vector2.zero, new Vector2(130 + i * 12, 150 + i * 12));
+                    var auraImg = aura.AddComponent<Image>();
+                    auraImg.color = new Color(1f, 0.85f, 0.2f, 0.1f - i * 0.02f);
+                    auraImg.raycastTarget = false;
+                    aura.transform.SetAsFirstSibling();
+                }
+            }
+            return true;
+        }
 
         string fatherName = GetParentImageName(DataCarrier.Instance.fatherName);
         string motherName = GetParentImageName(DataCarrier.Instance.motherName);
@@ -2541,8 +2598,26 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        battleLogText.text = Localization.Get("battle_victory");
+        // 勝利画像を表示
+        battleLogText.text = "";
+        var victoryImgObj = new GameObject("VictoryImage");
+        victoryImgObj.transform.SetParent(canvas.transform, false);
+        var victoryImgRect = victoryImgObj.AddComponent<RectTransform>();
+        victoryImgRect.anchorMin = new Vector2(0.5f, 0.5f);
+        victoryImgRect.anchorMax = new Vector2(0.5f, 0.5f);
+        victoryImgRect.anchoredPosition = Vector2.zero;
+        victoryImgRect.sizeDelta = new Vector2(800, 400);
+        var victoryImg = victoryImgObj.AddComponent<Image>();
+        var victorySpr = Resources.Load<Sprite>("UI/victory");
+        if (victorySpr != null)
+        {
+            victoryImg.sprite = victorySpr;
+            victoryImg.preserveAspect = true;
+            victoryImg.color = Color.white;
+        }
+        victoryImg.raycastTarget = false;
         yield return new WaitForSeconds(1.5f);
+        Destroy(victoryImgObj);
 
         // 経験値獲得と年齢アップ演出
         yield return StartCoroutine(GainExpSequence());
@@ -2671,18 +2746,51 @@ public class BattleManager : MonoBehaviour
     IEnumerator ShowStatGrowth(int oldAtk, int oldDef, int oldHp, int oldAcademic, int oldAthletic, int oldHeight, int oldWeight,
                                 int newAtk, int newDef, int newHp, int newAcademic, int newAthletic, int newHeight, int newWeight)
     {
-        // 成長パネルを作成
-        var growthPanel = new GameObject("GrowthPanel");
-        growthPanel.transform.SetParent(canvas.transform, false);
+        int cardRadius = 32;
+        int pillRadius = 30;
+        int blur = 16;
 
+        // 全画面オーバーレイ（白背景）
+        var overlay = new GameObject("GrowthOverlay");
+        overlay.transform.SetParent(canvas.transform, false);
+        var overlayRect = overlay.AddComponent<RectTransform>();
+        overlayRect.anchorMin = Vector2.zero;
+        overlayRect.anchorMax = Vector2.one;
+        overlayRect.offsetMin = Vector2.zero;
+        overlayRect.offsetMax = Vector2.zero;
+        var overlayImg = overlay.AddComponent<Image>();
+        overlayImg.color = new Color(1f, 1f, 1f, 0.95f);
+        overlayImg.raycastTarget = true;
+
+        // カード
+        var growthPanel = new GameObject("GrowthPanel");
+        growthPanel.transform.SetParent(overlay.transform, false);
         var panelRect = growthPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = Vector2.zero;
-        panelRect.sizeDelta = new Vector2(450, 350);
+        panelRect.anchorMin = new Vector2(0.05f, 0.1f);
+        panelRect.anchorMax = new Vector2(0.95f, 0.9f);
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
 
         var panelBg = growthPanel.AddComponent<Image>();
-        panelBg.color = new Color(0.1f, 0.1f, 0.2f, 0.95f);
+        panelBg.sprite = GetPillSprite(cardRadius);
+        panelBg.type = Image.Type.Sliced;
+        panelBg.color = Color.white;
+        panelBg.raycastTarget = false;
+
+        // カード影
+        var cardShadow = new GameObject("CardShadow");
+        cardShadow.transform.SetParent(growthPanel.transform, false);
+        cardShadow.transform.SetAsFirstSibling();
+        var cardShadowRect = cardShadow.AddComponent<RectTransform>();
+        cardShadowRect.anchorMin = Vector2.zero;
+        cardShadowRect.anchorMax = Vector2.one;
+        cardShadowRect.offsetMin = new Vector2(-blur, -blur - 4);
+        cardShadowRect.offsetMax = new Vector2(blur, blur - 4);
+        var cardShadowImg = cardShadow.AddComponent<Image>();
+        cardShadowImg.sprite = GetShadowSprite(cardRadius, blur);
+        cardShadowImg.type = Image.Type.Sliced;
+        cardShadowImg.color = new Color(0f, 0f, 0f, 0.12f);
+        cardShadowImg.raycastTarget = false;
 
         // タイトル
         var titleObj = new GameObject("Title");
@@ -2690,37 +2798,58 @@ public class BattleManager : MonoBehaviour
         var titleRect = titleObj.AddComponent<RectTransform>();
         titleRect.anchorMin = new Vector2(0, 1);
         titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.anchoredPosition = new Vector2(0, -25);
-        titleRect.sizeDelta = new Vector2(0, 50);
+        titleRect.anchoredPosition = new Vector2(0, -50);
+        titleRect.sizeDelta = new Vector2(0, 80);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
         FontHelper.Apply(titleText);
         titleText.text = Localization.Get("battle_growth_title");
-        titleText.fontSize = 56;
+        titleText.fontSize = 64;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.fontStyle = FontStyles.Bold;
+        titleText.color = new Color(0.15f, 0.15f, 0.18f);
         titleText.raycastTarget = false;
 
-        // ステータス表示
+        // 月齢テキスト
+        int newAge = DataCarrier.Instance != null ? DataCarrier.Instance.babyAge : 0;
+        var ageObj = new GameObject("AgeText");
+        ageObj.transform.SetParent(growthPanel.transform, false);
+        var ageRect = ageObj.AddComponent<RectTransform>();
+        ageRect.anchorMin = new Vector2(0, 1);
+        ageRect.anchorMax = new Vector2(1, 1);
+        ageRect.anchoredPosition = new Vector2(0, -120);
+        ageRect.sizeDelta = new Vector2(0, 50);
+        var ageText = ageObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(ageText);
+        ageText.text = Localization.Get("battle_age_up", newAge);
+        ageText.fontSize = 36;
+        ageText.alignment = TextAlignmentOptions.Center;
+        ageText.color = new Color(0.4f, 0.4f, 0.45f);
+        ageText.raycastTarget = false;
+
+        // ステータス表示エリア
         var statsObj = new GameObject("Stats");
         statsObj.transform.SetParent(growthPanel.transform, false);
         var statsRect = statsObj.AddComponent<RectTransform>();
-        statsRect.anchorMin = new Vector2(0, 0);
-        statsRect.anchorMax = new Vector2(1, 1);
-        statsRect.offsetMin = new Vector2(30, 60);
-        statsRect.offsetMax = new Vector2(-30, -60);
+        statsRect.anchorMin = new Vector2(0, 0.2f);
+        statsRect.anchorMax = new Vector2(1, 0.8f);
+        statsRect.offsetMin = new Vector2(60, 0);
+        statsRect.offsetMax = new Vector2(-60, -20);
         var statsText = statsObj.AddComponent<TextMeshProUGUI>();
         FontHelper.Apply(statsText);
-        statsText.fontSize = 40;
+        statsText.fontSize = 44;
+        statsText.lineSpacing = 16;
         statsText.alignment = TextAlignmentOptions.Left;
+        statsText.color = new Color(0.15f, 0.15f, 0.18f);
+        statsText.richText = true;
         statsText.raycastTarget = false;
 
         // ステータスを1行ずつ表示
         string[] statLines = new string[]
         {
-            $"{Localization.Get("battle_stat_atk")}: {oldAtk} → <color=#00FF00>{newAtk}</color> <color=#FFFF00>(+{newAtk - oldAtk})</color>",
-            $"{Localization.Get("battle_stat_def")}: {oldDef} → <color=#00FF00>{newDef}</color> <color=#FFFF00>(+{newDef - oldDef})</color>",
-            $"{Localization.Get("battle_stat_hp_label")}: {oldHp} → <color=#00FF00>{newHp}</color> <color=#FFFF00>(+{newHp - oldHp})</color>",
-            $"{Localization.Get("battle_stat_athletic")}: {oldAthletic} → <color=#00FF00>{newAthletic}</color> <color=#FFFF00>(+{newAthletic - oldAthletic})</color>"
+            $"{Localization.Get("battle_stat_atk")}: {oldAtk}  →  <color=#22AA44>{newAtk}</color>  <color=#DD8800>(+{newAtk - oldAtk})</color>",
+            $"{Localization.Get("battle_stat_def")}: {oldDef}  →  <color=#22AA44>{newDef}</color>  <color=#DD8800>(+{newDef - oldDef})</color>",
+            $"{Localization.Get("battle_stat_hp_label")}: {oldHp}  →  <color=#22AA44>{newHp}</color>  <color=#DD8800>(+{newHp - oldHp})</color>",
+            $"{Localization.Get("battle_stat_athletic")}: {oldAthletic}  →  <color=#22AA44>{newAthletic}</color>  <color=#DD8800>(+{newAthletic - oldAthletic})</color>"
         };
 
         string displayText = "";
@@ -2728,13 +2857,72 @@ public class BattleManager : MonoBehaviour
         {
             displayText += line + "\n";
             statsText.text = displayText;
-            yield return new WaitForSeconds(0.3f);
+            yield return new WaitForSeconds(0.4f);
         }
 
-        yield return new WaitForSeconds(1.5f);
+        // OKボタン（TitleScene風 pill + shadow）
+        var okBtn = new GameObject("OkButton");
+        okBtn.transform.SetParent(growthPanel.transform, false);
+        var okRect = okBtn.AddComponent<RectTransform>();
+        okRect.anchorMin = new Vector2(0.5f, 0);
+        okRect.anchorMax = new Vector2(0.5f, 0);
+        okRect.anchoredPosition = new Vector2(0, 70);
+        okRect.sizeDelta = new Vector2(600, 100);
 
-        // パネルを削除
-        Destroy(growthPanel);
+        var okImg = okBtn.AddComponent<Image>();
+        okImg.sprite = GetPillSprite(pillRadius);
+        okImg.type = Image.Type.Sliced;
+        okImg.color = Color.white;
+
+        var okShadowObj = new GameObject("Shadow");
+        okShadowObj.transform.SetParent(okBtn.transform, false);
+        okShadowObj.transform.SetAsFirstSibling();
+        var okShadowRect = okShadowObj.AddComponent<RectTransform>();
+        okShadowRect.anchorMin = Vector2.zero;
+        okShadowRect.anchorMax = Vector2.one;
+        okShadowRect.offsetMin = new Vector2(-blur, -blur - 3);
+        okShadowRect.offsetMax = new Vector2(blur, blur - 3);
+        var okShadowImg = okShadowObj.AddComponent<Image>();
+        okShadowImg.sprite = GetShadowSprite(pillRadius, blur);
+        okShadowImg.type = Image.Type.Sliced;
+        okShadowImg.color = new Color(0f, 0f, 0f, 0.18f);
+        okShadowImg.raycastTarget = false;
+
+        bool dismissed = false;
+        var okButton = okBtn.AddComponent<Button>();
+        okButton.targetGraphic = okImg;
+        okButton.navigation = new Navigation { mode = Navigation.Mode.None };
+        var colors = okButton.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = Color.white;
+        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
+        colors.selectedColor = Color.white;
+        colors.fadeDuration = 0.08f;
+        okButton.colors = colors;
+        okButton.onClick.AddListener(() => dismissed = true);
+        AddPressAnimation(okBtn);
+
+        var okTextObj = new GameObject("Text");
+        okTextObj.transform.SetParent(okBtn.transform, false);
+        var okTextRect = okTextObj.AddComponent<RectTransform>();
+        okTextRect.anchorMin = Vector2.zero;
+        okTextRect.anchorMax = Vector2.one;
+        okTextRect.offsetMin = Vector2.zero;
+        okTextRect.offsetMax = Vector2.zero;
+        var okTmp = okTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(okTmp);
+        okTmp.text = "OK";
+        okTmp.fontSize = 40;
+        okTmp.alignment = TextAlignmentOptions.Center;
+        okTmp.color = new Color(0.15f, 0.15f, 0.18f);
+        okTmp.fontStyle = FontStyles.Bold;
+        okTmp.raycastTarget = false;
+
+        // ボタンが押されるまで待機
+        while (!dismissed)
+            yield return null;
+
+        Destroy(overlay);
 
         battleLogText.text = Localization.Get("battle_hp_full_heal");
         yield return new WaitForSeconds(1.0f);
@@ -3002,10 +3190,10 @@ public class BattleManager : MonoBehaviour
 
             if (area == 2 && enemyName == "デヴィル夫人")
             {
-                // デヴィル夫人撃破 → 悪魔村に戻る
-                DataCarrier.Instance.currentArea = 1;
-                DataCarrier.Instance.mapPlayerX = 8;
-                DataCarrier.Instance.mapPlayerY = 14;
+                // デヴィル夫人撃破 → 小悪魔の街へ
+                DataCarrier.Instance.currentArea = 3;
+                DataCarrier.Instance.mapPlayerX = 5;
+                DataCarrier.Instance.mapPlayerY = 2;
             }
             else
             {
