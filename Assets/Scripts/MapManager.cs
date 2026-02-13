@@ -18,7 +18,7 @@ public class MapManager : MonoBehaviour
     const int MAP_HEIGHT = 20;
 
     // 表示スケール（UI上でのタイルの大きさ）- 9:16縦画面用
-    const float DISPLAY_SCALE = 2.8f;
+    const float DISPLAY_SCALE = 3.2f;
     const float DISPLAY_TILE = TILE_SIZE * DISPLAY_SCALE;
 
     // タイルID定義
@@ -98,6 +98,9 @@ public class MapManager : MonoBehaviour
     int touchDx, touchDy;
     bool touchInteract;
     bool touchMenuPressed;
+    Vector2 touchStartPos;
+    bool isTouchDragging;
+    const float SWIPE_THRESHOLD = 30f;
 
     void Start()
     {
@@ -628,6 +631,7 @@ public class MapManager : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
         var tmp = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmp);
         tmp.text = "\u5175"; // 兵
         tmp.fontSize = 36;
         tmp.alignment = TextAlignmentOptions.Center;
@@ -665,7 +669,7 @@ public class MapManager : MonoBehaviour
         tilesContainerRect = tilesContainer.AddComponent<RectTransform>();
         tilesContainerRect.anchorMin = new Vector2(0.5f, 0.5f);
         tilesContainerRect.anchorMax = new Vector2(0.5f, 0.5f);
-        tilesContainerRect.anchoredPosition = new Vector2(0, 40);
+        tilesContainerRect.anchoredPosition = new Vector2(0, -40);
         tilesContainerRect.sizeDelta = new Vector2(MAP_WIDTH * DISPLAY_TILE, MAP_HEIGHT * DISPLAY_TILE);
 
         // タイルを配置
@@ -762,6 +766,7 @@ public class MapManager : MonoBehaviour
         signTextRect.offsetMax = Vector2.zero;
 
         var signText = signTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(signText);
         signText.text = (area == 1)
             ? Localization.Get("map_devil_boss_sign")
             : Localization.Get("map_boss_sign");
@@ -1240,6 +1245,7 @@ public class MapManager : MonoBehaviour
         textRect.offsetMax = new Vector2(-100, -5);
 
         statusText = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(statusText);
         statusText.fontSize = 28;
         statusText.alignment = TextAlignmentOptions.Left;
         statusText.color = Color.white;
@@ -1386,7 +1392,7 @@ public class MapManager : MonoBehaviour
                 dx = 1;
         }
 
-        // タッチ入力（D-padホールド）
+        // タッチ入力（スワイプ）
         if (dx == 0 && dy == 0)
         {
             dx = touchDx;
@@ -1610,6 +1616,7 @@ public class MapManager : MonoBehaviour
         textRect.sizeDelta = new Vector2(800, 100);
 
         var tmpText = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmpText);
         tmpText.text = Localization.Get("map_encounter");
         tmpText.fontSize = 42;
         tmpText.alignment = TextAlignmentOptions.Center;
@@ -1711,6 +1718,7 @@ public class MapManager : MonoBehaviour
         textRect.sizeDelta = new Vector2(800, 200);
 
         var tmpText = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmpText);
         tmpText.text = Localization.Get("map_boss_enter");
         tmpText.fontSize = 36;
         tmpText.alignment = TextAlignmentOptions.Center;
@@ -1766,6 +1774,7 @@ public class MapManager : MonoBehaviour
         textRect.sizeDelta = new Vector2(800, 200);
 
         var tmpText = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmpText);
         tmpText.text = Localization.Get("map_mansion_enter");
         tmpText.fontSize = 36;
         tmpText.alignment = TextAlignmentOptions.Center;
@@ -1834,6 +1843,7 @@ public class MapManager : MonoBehaviour
         textRect.sizeDelta = new Vector2(800, 200);
 
         var tmpText = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmpText);
         tmpText.text = Localization.Get("map_mansion_boss_enter");
         tmpText.fontSize = 36;
         tmpText.alignment = TextAlignmentOptions.Center;
@@ -1901,67 +1911,116 @@ public class MapManager : MonoBehaviour
         menuOpen = true;
         SetTouchControlsVisible(false);
 
+        // 半透明オーバーレイ
         menuPanel = new GameObject("MenuPanel");
         menuPanel.transform.SetParent(canvas.transform, false);
-        var panelRect = menuPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = Vector2.zero;
-        panelRect.sizeDelta = new Vector2(350, 480);
+        var overlayRect = menuPanel.AddComponent<RectTransform>();
+        overlayRect.anchorMin = Vector2.zero;
+        overlayRect.anchorMax = Vector2.one;
+        overlayRect.offsetMin = Vector2.zero;
+        overlayRect.offsetMax = Vector2.zero;
+        var overlayImg = menuPanel.AddComponent<Image>();
+        overlayImg.color = new Color(0, 0, 0, 0.4f);
 
-        var panelBg = menuPanel.AddComponent<Image>();
-        panelBg.color = new Color(0.08f, 0.08f, 0.18f, 0.95f);
+        // タップでメニュー閉じる
+        var overlayBtn = menuPanel.AddComponent<Button>();
+        overlayBtn.targetGraphic = overlayImg;
+        overlayBtn.onClick.AddListener(() => CloseMenu());
+        var overlayColors = overlayBtn.colors;
+        overlayColors.normalColor = overlayColors.highlightedColor = overlayColors.pressedColor = overlayColors.selectedColor = new Color(0, 0, 0, 0.4f);
+        overlayBtn.colors = overlayColors;
+
+        // 白カード
+        var cardObj = new GameObject("MenuCard");
+        cardObj.transform.SetParent(menuPanel.transform, false);
+        var cardRect = cardObj.AddComponent<RectTransform>();
+        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+        cardRect.anchoredPosition = Vector2.zero;
+        cardRect.sizeDelta = new Vector2(700, 720);
+        var cardBg = cardObj.AddComponent<Image>();
+        int cardRadius = 32;
+        cardBg.sprite = GetPillSprite(cardRadius);
+        cardBg.type = Image.Type.Sliced;
+        cardBg.color = Color.white;
+        cardBg.raycastTarget = true; // カード内タップがオーバーレイに伝播しないように
 
         // タイトル
         var titleObj = new GameObject("MenuTitle");
-        titleObj.transform.SetParent(menuPanel.transform, false);
+        titleObj.transform.SetParent(cardObj.transform, false);
         var titleRect = titleObj.AddComponent<RectTransform>();
         titleRect.anchorMin = new Vector2(0, 1);
         titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.anchoredPosition = new Vector2(0, -25);
-        titleRect.sizeDelta = new Vector2(0, 50);
+        titleRect.anchoredPosition = new Vector2(0, -40);
+        titleRect.sizeDelta = new Vector2(0, 60);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(titleText);
         titleText.text = "MENU";
-        titleText.fontSize = 30;
+        titleText.fontSize = 40;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.fontStyle = FontStyles.Bold;
-        titleText.color = new Color(0.9f, 0.9f, 0.5f);
+        titleText.color = Color.black;
         titleText.raycastTarget = false;
 
         // ボタン群
-        float btnY = -70;
-        CreateMenuItemButton(menuPanel.transform, Localization.Get("map_menu_status"), btnY, () => { CloseMenu(); OpenStatusPanel(); });
-        btnY -= 60;
-        CreateMenuItemButton(menuPanel.transform, Localization.Get("map_menu_inventory"), btnY, () => { CloseMenu(); OpenInventoryPanel(); });
-        btnY -= 60;
-        CreateMenuItemButton(menuPanel.transform, Localization.Get("map_menu_home"), btnY, OnGoHome);
-        btnY -= 60;
-        CreateMenuItemButton(menuPanel.transform, Localization.Get("map_menu_save"), btnY, OnSave);
-        btnY -= 60;
-        CreateMenuItemButton(menuPanel.transform, Localization.Get("map_menu_title"), btnY, OnGoTitle);
-        btnY -= 60;
-        CreateMenuItemButton(menuPanel.transform, Localization.Get("map_menu_close"), btnY, () => CloseMenu());
+        float btnY = -100;
+        float btnSpacing = 90;
+        CreateMenuItemButton(cardObj.transform, Localization.Get("map_menu_status"), btnY, () => { CloseMenu(); OpenStatusPanel(); });
+        btnY -= btnSpacing;
+        CreateMenuItemButton(cardObj.transform, Localization.Get("map_menu_inventory"), btnY, () => { CloseMenu(); OpenInventoryPanel(); });
+        btnY -= btnSpacing;
+        CreateMenuItemButton(cardObj.transform, Localization.Get("map_menu_home"), btnY, OnGoHome);
+        btnY -= btnSpacing;
+        CreateMenuItemButton(cardObj.transform, Localization.Get("map_menu_save"), btnY, OnSave);
+        btnY -= btnSpacing;
+        CreateMenuItemButton(cardObj.transform, Localization.Get("map_menu_title"), btnY, OnGoTitle);
+        btnY -= btnSpacing;
+        CreateMenuItemButton(cardObj.transform, Localization.Get("map_menu_close"), btnY, () => CloseMenu());
     }
 
     void CreateMenuItemButton(Transform parent, string label, float yPos, UnityEngine.Events.UnityAction action)
     {
+        int pillRadius = 30;
+        int blur = 16;
+
         var btnObj = new GameObject(label + "Button");
         btnObj.transform.SetParent(parent, false);
         var btnRect = btnObj.AddComponent<RectTransform>();
         btnRect.anchorMin = new Vector2(0.5f, 1);
         btnRect.anchorMax = new Vector2(0.5f, 1);
         btnRect.anchoredPosition = new Vector2(0, yPos);
-        btnRect.sizeDelta = new Vector2(260, 50);
+        btnRect.sizeDelta = new Vector2(580, 70);
 
         var btnImg = btnObj.AddComponent<Image>();
-        btnImg.color = new Color(0.25f, 0.25f, 0.4f);
+        btnImg.sprite = GetPillSprite(pillRadius);
+        btnImg.type = Image.Type.Sliced;
+        btnImg.color = Color.white;
+
+        // Shadow
+        var shadowObj = new GameObject("Shadow");
+        shadowObj.transform.SetParent(btnObj.transform, false);
+        shadowObj.transform.SetAsFirstSibling();
+        var shadowRect = shadowObj.AddComponent<RectTransform>();
+        shadowRect.anchorMin = Vector2.zero;
+        shadowRect.anchorMax = Vector2.one;
+        shadowRect.offsetMin = new Vector2(-blur, -blur - 3);
+        shadowRect.offsetMax = new Vector2(blur, blur - 3);
+        var shadowImg = shadowObj.AddComponent<Image>();
+        shadowImg.sprite = GetShadowSprite(pillRadius, blur);
+        shadowImg.type = Image.Type.Sliced;
+        shadowImg.color = new Color(0f, 0f, 0f, 0.15f);
+        shadowImg.raycastTarget = false;
 
         var btn = btnObj.AddComponent<Button>();
         btn.targetGraphic = btnImg;
         var colors = btn.colors;
-        colors.highlightedColor = new Color(0.4f, 0.4f, 0.6f);
-        colors.pressedColor = new Color(0.15f, 0.15f, 0.3f);
+        colors.normalColor = Color.white;
+        colors.highlightedColor = Color.white;
+        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
+        colors.selectedColor = Color.white;
+        colors.fadeDuration = 0.08f;
         btn.colors = colors;
+        btn.navigation = new Navigation { mode = Navigation.Mode.None };
         btn.onClick.AddListener(action);
 
         var textObj = new GameObject("Text");
@@ -1971,13 +2030,16 @@ public class MapManager : MonoBehaviour
         textRect.anchorMax = Vector2.one;
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
-
         var tmp = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmp);
         tmp.text = label;
-        tmp.fontSize = 24;
+        tmp.fontSize = 32;
         tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = Color.white;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.color = new Color(0.15f, 0.15f, 0.18f);
         tmp.raycastTarget = false;
+
+        AddPressAnimation(btnObj);
     }
 
     void CloseMenu()
@@ -2023,6 +2085,7 @@ public class MapManager : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, -25);
         titleRect.sizeDelta = new Vector2(0, 50);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(titleText);
         titleText.text = Localization.Get("map_save_title");
         titleText.fontSize = 24;
         titleText.alignment = TextAlignmentOptions.Center;
@@ -2066,6 +2129,7 @@ public class MapManager : MonoBehaviour
         infoRect.offsetMin = new Vector2(10, 5);
         infoRect.offsetMax = new Vector2(-10, -5);
         var infoText = infoObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(infoText);
         infoText.fontSize = 18;
         infoText.alignment = TextAlignmentOptions.MidlineLeft;
         infoText.color = Color.white;
@@ -2128,6 +2192,7 @@ public class MapManager : MonoBehaviour
         msgRect.anchoredPosition = new Vector2(0, 40);
         msgRect.sizeDelta = new Vector2(-40, 100);
         var msgText = msgObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(msgText);
         msgText.text = Localization.Get("map_save_overwrite_msg", slot + 1, babyName);
         msgText.fontSize = 22;
         msgText.alignment = TextAlignmentOptions.Center;
@@ -2422,6 +2487,7 @@ public class MapManager : MonoBehaviour
         milkTextRect.offsetMax = new Vector2(-20, -5);
 
         var tmp = milkText.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmp);
         tmp.text = Localization.Get("map_milk_heal");
         tmp.fontSize = 28;
         tmp.alignment = TextAlignmentOptions.Center;
@@ -2480,6 +2546,7 @@ public class MapManager : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, -25);
         titleRect.sizeDelta = new Vector2(0, 50);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(titleText);
         titleText.text = Localization.Get("map_status_title");
         titleText.fontSize = 28;
         titleText.alignment = TextAlignmentOptions.Center;
@@ -2515,6 +2582,7 @@ public class MapManager : MonoBehaviour
         contentRect.sizeDelta = new Vector2(-40, 300);
         contentRect.pivot = new Vector2(0.5f, 1);
         var contentText = contentObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(contentText);
         contentText.text = content;
         contentText.fontSize = 22;
         contentText.alignment = TextAlignmentOptions.TopLeft;
@@ -2579,6 +2647,7 @@ public class MapManager : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, -25);
         titleRect.sizeDelta = new Vector2(0, 50);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(titleText);
         titleText.text = Localization.Get("map_inventory_title");
         titleText.fontSize = 28;
         titleText.alignment = TextAlignmentOptions.Center;
@@ -2600,6 +2669,7 @@ public class MapManager : MonoBehaviour
             emptyRect.anchoredPosition = new Vector2(0, itemY);
             emptyRect.sizeDelta = new Vector2(0, 40);
             var emptyText = emptyObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(emptyText);
             emptyText.text = Localization.Get("map_inventory_empty");
             emptyText.fontSize = 22;
             emptyText.alignment = TextAlignmentOptions.Center;
@@ -2618,6 +2688,7 @@ public class MapManager : MonoBehaviour
                 itemRect.anchoredPosition = new Vector2(0, itemY);
                 itemRect.sizeDelta = new Vector2(0, 40);
                 var itemText = itemObj.AddComponent<TextMeshProUGUI>();
+                FontHelper.Apply(itemText);
                 itemText.text = item == "金のたまご" ? "<color=#FFD700>★ " + Localization.Get("map_item_golden_egg") + "</color>" : item;
                 itemText.fontSize = 22;
                 itemText.alignment = TextAlignmentOptions.Center;
@@ -2675,6 +2746,7 @@ public class MapManager : MonoBehaviour
         textRect.offsetMax = new Vector2(-20, -10);
 
         var text = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(text);
         text.text = msg;
         text.fontSize = 24;
         text.alignment = TextAlignmentOptions.Center;
@@ -2702,120 +2774,121 @@ public class MapManager : MonoBehaviour
         touchRect.offsetMin = Vector2.zero;
         touchRect.offsetMax = Vector2.zero;
 
-        // 縦画面9:16 (1080x1920): D-padを左下、アクションボタンを右下
-        float dpadCenterX = -300 + safeLeft;
-        float dpadCenterY = 180 + safeBottom;
-        float dpadBtnSize = 100f;
-        float dpadSpacing = 105f;
+        // === スワイプ移動エリア（画面左半分） ===
+        var swipeObj = new GameObject("SwipeArea");
+        swipeObj.transform.SetParent(touchControlsObj.transform, false);
+        var swipeRect = swipeObj.AddComponent<RectTransform>();
+        swipeRect.anchorMin = new Vector2(0, 0);
+        swipeRect.anchorMax = new Vector2(0.5f, 1);
+        swipeRect.offsetMin = Vector2.zero;
+        swipeRect.offsetMax = Vector2.zero;
+        var swipeImg = swipeObj.AddComponent<Image>();
+        swipeImg.color = Color.clear;
 
-        // 上
-        CreateDpadButton(touchControlsObj.transform, new Vector2(dpadCenterX, dpadCenterY + dpadSpacing),
-            new Vector2(dpadBtnSize, dpadBtnSize), "\u25B2", 0, 1);
-        // 下
-        CreateDpadButton(touchControlsObj.transform, new Vector2(dpadCenterX, dpadCenterY - dpadSpacing),
-            new Vector2(dpadBtnSize, dpadBtnSize), "\u25BC", 0, -1);
-        // 左
-        CreateDpadButton(touchControlsObj.transform, new Vector2(dpadCenterX - dpadSpacing, dpadCenterY),
-            new Vector2(dpadBtnSize, dpadBtnSize), "\u25C0", -1, 0);
-        // 右
-        CreateDpadButton(touchControlsObj.transform, new Vector2(dpadCenterX + dpadSpacing, dpadCenterY),
-            new Vector2(dpadBtnSize, dpadBtnSize), "\u25B6", 1, 0);
+        var trigger = swipeObj.AddComponent<EventTrigger>();
 
-        // === 調べるボタン（右下） ===
-        float rightBtnX = 300 - safeRight;
-        float rightBtnBaseY = 140 + safeBottom;
+        var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        down.callback.AddListener((data) => {
+            var ped = (PointerEventData)data;
+            touchStartPos = ped.position;
+            isTouchDragging = true;
+            touchDx = 0; touchDy = 0;
+        });
+        trigger.triggers.Add(down);
 
-        var interactBtn = CreateTouchButton(touchControlsObj.transform,
-            new Vector2(rightBtnX, rightBtnBaseY),
-            new Vector2(180, 90),
-            Localization.Get("touch_interact"),
-            new Color(0.3f, 0.6f, 0.4f));
-        interactBtn.GetComponent<Button>().onClick.AddListener(() => { touchInteract = true; });
+        var drag = new EventTrigger.Entry { eventID = EventTriggerType.Drag };
+        drag.callback.AddListener((data) => {
+            if (!isTouchDragging) return;
+            var ped = (PointerEventData)data;
+            Vector2 delta = ped.position - touchStartPos;
+            if (delta.magnitude < SWIPE_THRESHOLD) {
+                touchDx = 0; touchDy = 0;
+                return;
+            }
+            if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y)) {
+                touchDx = delta.x > 0 ? 1 : -1;
+                touchDy = 0;
+            } else {
+                touchDx = 0;
+                touchDy = delta.y > 0 ? 1 : -1;
+            }
+        });
+        trigger.triggers.Add(drag);
 
-        // === メニューボタン（右下、調べるの上） ===
-        var menuBtn = CreateTouchButton(touchControlsObj.transform,
-            new Vector2(rightBtnX, rightBtnBaseY + 110),
-            new Vector2(180, 90),
-            Localization.Get("touch_menu"),
-            new Color(0.4f, 0.35f, 0.55f));
-        menuBtn.GetComponent<Button>().onClick.AddListener(() => { touchMenuPressed = true; });
-    }
+        var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        up.callback.AddListener((_) => {
+            isTouchDragging = false;
+            touchDx = 0; touchDy = 0;
+        });
+        trigger.triggers.Add(up);
 
-    void CreateDpadButton(Transform parent, Vector2 pos, Vector2 size, string label, int dx, int dy)
-    {
-        var btnObj = new GameObject($"Dpad_{label}");
-        btnObj.transform.SetParent(parent, false);
-        var rect = btnObj.AddComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, 0);
-        rect.anchorMax = new Vector2(0.5f, 0);
-        rect.anchoredPosition = pos;
-        rect.sizeDelta = size;
-
-        var img = btnObj.AddComponent<Image>();
-        img.color = new Color(0.2f, 0.2f, 0.3f, 0.7f);
-
-        // EventTrigger でホールド移動対応
-        var trigger = btnObj.AddComponent<EventTrigger>();
-
-        var pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-        pointerDown.callback.AddListener((_) => { touchDx = dx; touchDy = dy; });
-        trigger.triggers.Add(pointerDown);
-
-        var pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-        pointerUp.callback.AddListener((_) => { if (touchDx == dx && touchDy == dy) { touchDx = 0; touchDy = 0; } });
-        trigger.triggers.Add(pointerUp);
-
-        var textObj = new GameObject("Text");
-        textObj.transform.SetParent(btnObj.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-        var tmp = textObj.AddComponent<TextMeshProUGUI>();
-        tmp.text = label;
-        tmp.fontSize = 36;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = Color.white;
-        tmp.raycastTarget = false;
-    }
-
-    GameObject CreateTouchButton(Transform parent, Vector2 pos, Vector2 size, string label, Color bgColor)
-    {
-        var btnObj = new GameObject($"Touch_{label}");
-        btnObj.transform.SetParent(parent, false);
-        var rect = btnObj.AddComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, 0);
-        rect.anchorMax = new Vector2(0.5f, 0);
-        rect.anchoredPosition = pos;
-        rect.sizeDelta = size;
-
-        var img = btnObj.AddComponent<Image>();
-        img.color = new Color(bgColor.r, bgColor.g, bgColor.b, 0.7f);
-
-        var btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = img;
-
-        var textObj = new GameObject("Text");
-        textObj.transform.SetParent(btnObj.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-        var tmp = textObj.AddComponent<TextMeshProUGUI>();
-        tmp.text = label;
-        tmp.fontSize = 26;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = Color.white;
-        tmp.raycastTarget = false;
-
-        return btnObj;
     }
 
     void SetTouchControlsVisible(bool visible)
     {
         if (touchControlsObj != null)
             touchControlsObj.SetActive(visible);
+    }
+
+    // ── Pill / Shadow sprite helpers ──
+    static Sprite _pillSprite, _shadowSprite;
+
+    static Sprite GetPillSprite(int radius)
+    {
+        if (_pillSprite != null) return _pillSprite;
+        int size = radius * 2 + 2;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float center = (size - 1) / 2f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dist = Mathf.Sqrt((x - center) * (x - center) + (y - center) * (y - center)) - radius;
+                if (dist <= -1f) tex.SetPixel(x, y, Color.white);
+                else if (dist <= 0f) tex.SetPixel(x, y, new Color(1, 1, 1, -dist));
+                else tex.SetPixel(x, y, new Color(0, 0, 0, 0));
+            }
+        tex.Apply();
+        var border = new Vector4(radius, radius, radius, radius);
+        _pillSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        return _pillSprite;
+    }
+
+    static Sprite GetShadowSprite(int radius, int blur)
+    {
+        if (_shadowSprite != null) return _shadowSprite;
+        int size = (radius + blur) * 2 + 2;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float center = (size - 1) / 2f;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dist = Mathf.Sqrt((x - center) * (x - center) + (y - center) * (y - center)) - radius;
+                float alpha;
+                if (dist <= 0f) alpha = 0f;
+                else if (dist >= blur) alpha = 0f;
+                else { float t = dist / blur; alpha = (1f - t) * (1f - t); }
+                tex.SetPixel(x, y, new Color(1, 1, 1, alpha));
+            }
+        tex.Apply();
+        int borderVal = radius + blur;
+        var border = new Vector4(borderVal, borderVal, borderVal, borderVal);
+        _shadowSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        return _shadowSprite;
+    }
+
+    void AddPressAnimation(GameObject obj)
+    {
+        var trigger = obj.AddComponent<EventTrigger>();
+        var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        down.callback.AddListener((_) => obj.transform.localScale = new Vector3(0.95f, 0.95f, 1f));
+        trigger.triggers.Add(down);
+        var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        up.callback.AddListener((_) => obj.transform.localScale = Vector3.one);
+        trigger.triggers.Add(up);
+        var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        exit.callback.AddListener((_) => obj.transform.localScale = Vector3.one);
+        trigger.triggers.Add(exit);
     }
 }

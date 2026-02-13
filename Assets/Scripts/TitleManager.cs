@@ -154,6 +154,7 @@ public class TitleManager : MonoBehaviour
         jaTextRect.offsetMin = Vector2.zero;
         jaTextRect.offsetMax = Vector2.zero;
         jaText = jaTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(jaText);
         jaText.text = "日本語";
         jaText.fontSize = 20;
         jaText.alignment = TextAlignmentOptions.Center;
@@ -180,6 +181,7 @@ public class TitleManager : MonoBehaviour
         enTextRect.offsetMin = Vector2.zero;
         enTextRect.offsetMax = Vector2.zero;
         enText = enTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(enText);
         enText.text = "English";
         enText.fontSize = 20;
         enText.alignment = TextAlignmentOptions.Center;
@@ -296,6 +298,7 @@ public class TitleManager : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
         saveDataButtonText = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(saveDataButtonText);
         saveDataButtonText.text = Localization.Get("title_save_data");
         saveDataButtonText.fontSize = 36;
         saveDataButtonText.alignment = TextAlignmentOptions.Center;
@@ -337,6 +340,7 @@ public class TitleManager : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, -25);
         titleRect.sizeDelta = new Vector2(0, 50);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(titleText);
         titleText.text = Localization.Get("title_save_data_list");
         titleText.fontSize = 30;
         titleText.alignment = TextAlignmentOptions.Center;
@@ -377,6 +381,7 @@ public class TitleManager : MonoBehaviour
         closeTextRect.offsetMin = Vector2.zero;
         closeTextRect.offsetMax = Vector2.zero;
         var closeText = closeTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(closeText);
         closeText.text = Localization.Get("ui_close");
         closeText.fontSize = 22;
         closeText.alignment = TextAlignmentOptions.Center;
@@ -416,6 +421,7 @@ public class TitleManager : MonoBehaviour
             infoRect.offsetMin = new Vector2(15, 5);
             infoRect.offsetMax = new Vector2(0, -5);
             var infoText = infoObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(infoText);
 
             string nameColor = isGodBaby ? "#FFD700" : "#FFFFFF";
             string fatherDisplay = Localization.GetParent(fatherName);
@@ -451,6 +457,7 @@ public class TitleManager : MonoBehaviour
             loadTextRect.offsetMin = Vector2.zero;
             loadTextRect.offsetMax = Vector2.zero;
             var loadText = loadTextObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(loadText);
             loadText.text = Localization.Get("ui_load");
             loadText.fontSize = 18;
             loadText.alignment = TextAlignmentOptions.Center;
@@ -481,6 +488,7 @@ public class TitleManager : MonoBehaviour
             delTextRect.offsetMin = Vector2.zero;
             delTextRect.offsetMax = Vector2.zero;
             var delText = delTextObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(delText);
             delText.text = "×";
             delText.fontSize = 24;
             delText.alignment = TextAlignmentOptions.Center;
@@ -499,6 +507,7 @@ public class TitleManager : MonoBehaviour
             emptyRect.offsetMin = new Vector2(15, 0);
             emptyRect.offsetMax = new Vector2(-15, 0);
             var emptyText = emptyObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(emptyText);
             emptyText.text = Localization.Get("title_slot_empty", slot + 1);
             emptyText.fontSize = 20;
             emptyText.alignment = TextAlignmentOptions.Left;
@@ -554,6 +563,7 @@ public class TitleManager : MonoBehaviour
         msgRect.offsetMin = new Vector2(10, 10);
         msgRect.offsetMax = new Vector2(-10, -10);
         var msgText = msgObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(msgText);
         msgText.text = Localization.Get("title_confirm_delete", slot + 1);
         msgText.fontSize = 22;
         msgText.alignment = TextAlignmentOptions.Center;
@@ -588,6 +598,7 @@ public class TitleManager : MonoBehaviour
         yesTextRect.offsetMin = Vector2.zero;
         yesTextRect.offsetMax = Vector2.zero;
         var yesText = yesTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(yesText);
         yesText.text = Localization.Get("ui_delete");
         yesText.fontSize = 20;
         yesText.alignment = TextAlignmentOptions.Center;
@@ -618,6 +629,7 @@ public class TitleManager : MonoBehaviour
         noTextRect.offsetMin = Vector2.zero;
         noTextRect.offsetMax = Vector2.zero;
         var noText = noTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(noText);
         noText.text = Localization.Get("ui_cancel");
         noText.fontSize = 20;
         noText.alignment = TextAlignmentOptions.Center;
@@ -688,6 +700,7 @@ public class TitleManager : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
         var text = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(text);
         text.text = Localization.Get("title_reset_profile");
         text.fontSize = 16;
         text.alignment = TextAlignmentOptions.Center;
@@ -745,6 +758,7 @@ public class TitleManager : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
         startButtonText = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(startButtonText);
         startButtonText.text = Localization.Get(hasProfile ? "title_tap_start" : "title_new_game");
         startButtonText.fontSize = 36;
         startButtonText.alignment = TextAlignmentOptions.Center;
@@ -912,6 +926,7 @@ public class TitleManager : MonoBehaviour
             textObj.transform.SetParent(panel.transform, false);
             RectTransform textRect = textObj.AddComponent<RectTransform>();
             TextMeshProUGUI tmp = textObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(tmp);
 
             tmp.text = introLines[i];
             tmp.fontSize = 36;

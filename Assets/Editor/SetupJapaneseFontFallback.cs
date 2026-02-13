@@ -5,7 +5,7 @@ using UnityEngine.TextCore.LowLevel;
 
 public static class SetupJapaneseFontFallback
 {
-    private const string FontAssetPath = "Assets/Fonts/HiraginoSans SDF.asset";
+    private const string FontAssetPath = "Assets/Resources/NotoSansJP-Medium SDF.asset";
     private const string DefaultFontPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
 
     [MenuItem("Tools/Setup Japanese Font")]

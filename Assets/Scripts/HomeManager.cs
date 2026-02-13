@@ -78,7 +78,7 @@ public class HomeManager : MonoBehaviour
         bgImg.raycastTarget = false;
 
         // Player icon — centered, circular (160x160)
-        float iconY = -160f;
+        float iconY = -124f;
         float iconSize = 160f;
 
         // Circle border ring (behind mask)
@@ -138,12 +138,13 @@ public class HomeManager : MonoBehaviour
         nameRect.anchoredPosition = new Vector2(0, nameY);
         nameRect.sizeDelta = new Vector2(800, 60);
         var nameText = nameObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(nameText);
         string pName = dc != null ? dc.playerName : DataCarrier.GetProfileName();
         nameText.text = string.IsNullOrEmpty(pName) ? "???" : pName;
         nameText.fontSize = 40;
         nameText.fontStyle = FontStyles.Bold;
         nameText.alignment = TextAlignmentOptions.Center;
-        nameText.color = new Color(0.15f, 0.15f, 0.15f);
+        nameText.color = new Color(0.05f, 0.05f, 0.08f);
         nameText.raycastTarget = false;
 
         // Separator
@@ -201,10 +202,11 @@ public class HomeManager : MonoBehaviour
         descRect.anchoredPosition = new Vector2(0, 200 + 498f / 2f + 40f);
         descRect.sizeDelta = new Vector2(900, 50);
         var descText = descObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(descText);
         descText.text = Localization.Get("home_gacha_desc");
         descText.fontSize = 30;
         descText.alignment = TextAlignmentOptions.Center;
-        descText.color = new Color(0.35f, 0.35f, 0.4f);
+        descText.color = new Color(0.1f, 0.1f, 0.13f);
         descText.raycastTarget = false;
 
         // ===== "運命のガチャ" Button (same Y as TitleScene start button) =====
@@ -303,6 +305,7 @@ public class HomeManager : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
         var tmpText = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmpText);
         tmpText.text = "<color=#F24E80>\u2665</color>  " + Localization.Get("home_meet");
         tmpText.fontSize = 36;
         tmpText.alignment = TextAlignmentOptions.Center;
@@ -364,10 +367,11 @@ public class HomeManager : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
         var tmpText = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmpText);
         tmpText.text = label;
         tmpText.fontSize = 36;
         tmpText.alignment = TextAlignmentOptions.Center;
-        tmpText.color = new Color(0.45f, 0.45f, 0.5f);
+        tmpText.color = new Color(0.15f, 0.15f, 0.18f);
         tmpText.fontStyle = FontStyles.Bold;
         tmpText.raycastTarget = false;
 
@@ -443,6 +447,7 @@ public class HomeManager : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
         var tmpText = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmpText);
         tmpText.text = label;
         tmpText.fontSize = 36;
         tmpText.alignment = TextAlignmentOptions.Center;
@@ -524,9 +529,15 @@ public class HomeManager : MonoBehaviour
         return _cornerSprite;
     }
 
+    private static readonly string[] iconNames = new string[]
+    {
+        "kayo", "ikemen", "inteli", "matcho", "old-women", "sexy-lady"
+    };
+
     void ApplyIconSprite(int index)
     {
-        Sprite spr = Resources.Load<Sprite>($"Icons/icon_{index}");
+        string name = (index >= 0 && index < iconNames.Length) ? iconNames[index] : iconNames[0];
+        Sprite spr = Resources.Load<Sprite>($"Icons/{name}");
         if (spr != null)
         {
             playerIconImg.sprite = spr;
@@ -535,19 +546,8 @@ public class HomeManager : MonoBehaviour
         }
         else
         {
-            // デフォルト: kayo.png
-            Sprite defaultSpr = Resources.Load<Sprite>("Icons/kayo");
-            if (defaultSpr != null)
-            {
-                playerIconImg.sprite = defaultSpr;
-                playerIconImg.color = Color.white;
-                playerIconImg.preserveAspect = true;
-            }
-            else
-            {
-                playerIconImg.sprite = null;
-                playerIconImg.color = new Color(0.7f, 0.7f, 0.7f);
-            }
+            playerIconImg.sprite = null;
+            playerIconImg.color = new Color(0.7f, 0.7f, 0.7f);
         }
     }
 

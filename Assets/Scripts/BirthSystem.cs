@@ -200,6 +200,7 @@ public class BirthSystem : MonoBehaviour
             rect.anchoredPosition = new Vector2(0, -200);
             rect.sizeDelta = new Vector2(800, 350);
             childStatusText = textObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(childStatusText);
             childStatusText.fontSize = 28;
             childStatusText.alignment = TextAlignmentOptions.Center;
             childStatusText.color = Color.white;
@@ -220,7 +221,18 @@ public class BirthSystem : MonoBehaviour
         bgRect.offsetMin = Vector2.zero;
         bgRect.offsetMax = Vector2.zero;
         mainBgImg = bgObj.AddComponent<Image>();
-        mainBgImg.color = new Color(0.953f, 0.969f, 0.973f);
+        var birthBgSprite = Resources.Load<Sprite>("BackGrounds/birth-background");
+        if (birthBgSprite != null)
+        {
+            mainBgImg.sprite = birthBgSprite;
+            mainBgImg.type = Image.Type.Simple;
+            mainBgImg.preserveAspect = false;
+            mainBgImg.color = Color.white;
+        }
+        else
+        {
+            mainBgImg.color = new Color(0.953f, 0.969f, 0.973f);
+        }
         mainBgImg.raycastTarget = false;
 
         // いでよGodBabyボタンをパチンコ風赤ボタンにスタイリング
@@ -384,6 +396,22 @@ public class BirthSystem : MonoBehaviour
             flashOverlay.gameObject.SetActive(false);
         }
 
+        // 背景を青空に切り替え
+        if (mainBgImg != null)
+        {
+            var aozoraSprite = Resources.Load<Sprite>("BackGrounds/aozora-background");
+            if (aozoraSprite != null)
+            {
+                mainBgImg.sprite = aozoraSprite;
+                mainBgImg.type = Image.Type.Simple;
+                mainBgImg.preserveAspect = false;
+                mainBgImg.color = Color.white;
+            }
+        }
+
+        // ボタンを非表示
+        if (generateLifeButton != null) generateLifeButton.SetActive(false);
+
         // ── フェーズ3: 「父親は誰だろう！？」カットイン ──
         yield return StartCoroutine(ShowCutinText(Localization.Get("cutin_who_father")));
 
@@ -451,13 +479,36 @@ public class BirthSystem : MonoBehaviour
 
     public void OnNameConfirm()
     {
-        if (nameInputField != null)
+        if (nameInputField == null) return;
+
+        string text = nameInputField.text != null ? nameInputField.text.Trim() : "";
+        if (string.IsNullOrEmpty(text))
         {
-            enteredName = nameInputField.text;
-            if (string.IsNullOrEmpty(enteredName))
-                enteredName = Localization.Get("birth_default_name");
+            // 空欄の場合は入力フィールドを揺らして拒否
+            StartCoroutine(ShakeInputField());
+            return;
         }
+
+        enteredName = text;
         waitingForNameInput = false;
+    }
+
+    IEnumerator ShakeInputField()
+    {
+        if (nameInputField == null) yield break;
+        var rect = nameInputField.GetComponent<RectTransform>();
+        Vector2 orig = rect.anchoredPosition;
+        float duration = 0.3f;
+        float elapsed = 0f;
+        float magnitude = 15f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float x = orig.x + Mathf.Sin(elapsed * 40f) * magnitude * (1f - elapsed / duration);
+            rect.anchoredPosition = new Vector2(x, orig.y);
+            yield return null;
+        }
+        rect.anchoredPosition = orig;
     }
 
     public void OnSaveYes()
@@ -1685,6 +1736,7 @@ public class BirthSystem : MonoBehaviour
         btnTextRect.offsetMin = Vector2.zero;
         btnTextRect.offsetMax = Vector2.zero;
         var btnText = btnTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(btnText);
         btnText.text = Localization.Get("birth_next");
         btnText.fontSize = 36;
         btnText.alignment = TextAlignmentOptions.Center;
@@ -1741,6 +1793,7 @@ public class BirthSystem : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
         var text = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(text);
         text.text = "i";
         text.fontSize = 38;
         text.fontStyle = FontStyles.Bold | FontStyles.Italic;
@@ -1838,6 +1891,7 @@ public class BirthSystem : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, -40);
         titleRect.sizeDelta = new Vector2(-48, 60);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(titleText);
         titleText.text = Localization.GetParent(parentName);
         titleText.fontSize = 40;
         titleText.fontStyle = FontStyles.Bold;
@@ -1866,6 +1920,7 @@ public class BirthSystem : MonoBehaviour
         bodyRect.offsetMin = new Vector2(36, 80);
         bodyRect.offsetMax = new Vector2(-36, -90);
         var bodyText = bodyObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(bodyText);
         bodyText.text = Localization.GetParentBio(parentName);
         bodyText.fontSize = 32;
         bodyText.lineSpacing = 8;
@@ -1895,6 +1950,7 @@ public class BirthSystem : MonoBehaviour
         closeTextRect.offsetMin = Vector2.zero;
         closeTextRect.offsetMax = Vector2.zero;
         var closeText = closeTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(closeText);
         closeText.text = "\u00d7";
         closeText.fontSize = 36;
         closeText.alignment = TextAlignmentOptions.Center;
@@ -1965,6 +2021,7 @@ public class BirthSystem : MonoBehaviour
         nameRect.anchoredPosition = new Vector2(0, -45);
         nameRect.sizeDelta = new Vector2(-30, 70);
         nameText = nameObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(nameText);
         nameText.fontSize = 42;
         nameText.alignment = TextAlignmentOptions.Center;
         nameText.color = Color.white;
@@ -2005,6 +2062,7 @@ public class BirthSystem : MonoBehaviour
         introRect.anchoredPosition = new Vector2(0, 110);
         introRect.sizeDelta = new Vector2(-30, 130);
         introText = introObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(introText);
         introText.fontSize = 40;
         introText.alignment = TextAlignmentOptions.Center;
         introText.color = new Color(1f, 0.9f, 0.5f);
@@ -2063,14 +2121,14 @@ public class BirthSystem : MonoBehaviour
         var cardRect = birthResultCard.AddComponent<RectTransform>();
         cardRect.anchorMin = new Vector2(0.5f, 0.5f);
         cardRect.anchorMax = new Vector2(0.5f, 0.5f);
-        cardRect.anchoredPosition = new Vector2(0, 250);
+        cardRect.anchoredPosition = new Vector2(0, 150);
         cardRect.sizeDelta = new Vector2(1016, 1300);
 
-        // カード外枠（ボーダー）— ゴールド系（親カードと同じ構造）
+        // カード外枠（ボーダー）
         var border = birthResultCard.AddComponent<Image>();
         border.sprite = GetRoundedRectSprite(24);
         border.type = Image.Type.Sliced;
-        border.color = new Color(0.55f, 0.45f, 0.2f, 1f);
+        border.color = new Color(0.82f, 0.82f, 0.85f, 1f);
         border.raycastTarget = false;
 
         // カード内側背景
@@ -2084,7 +2142,7 @@ public class BirthSystem : MonoBehaviour
         var innerBg = innerObj.AddComponent<Image>();
         innerBg.sprite = GetRoundedRectSprite(20);
         innerBg.type = Image.Type.Sliced;
-        innerBg.color = new Color(0.2f, 0.18f, 0.12f, 1f);
+        innerBg.color = new Color(0.953f, 0.969f, 0.973f, 1f);
         innerBg.raycastTarget = false;
         innerObj.AddComponent<RectMask2D>();
 
@@ -2097,10 +2155,11 @@ public class BirthSystem : MonoBehaviour
         genderRect.anchoredPosition = new Vector2(0, -45);
         genderRect.sizeDelta = new Vector2(-30, 70);
         genderLabel = genderObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(genderLabel);
         genderLabel.fontSize = 42;
         genderLabel.fontStyle = FontStyles.Bold;
         genderLabel.alignment = TextAlignmentOptions.Center;
-        genderLabel.color = Color.white;
+        genderLabel.color = new Color(0.25f, 0.25f, 0.3f);
         genderLabel.raycastTarget = false;
         genderLabel.text = "";
 
@@ -2113,7 +2172,7 @@ public class BirthSystem : MonoBehaviour
         lineRect.anchoredPosition = new Vector2(0, -85);
         lineRect.sizeDelta = new Vector2(0, 2);
         var lineImg = lineObj.AddComponent<Image>();
-        lineImg.color = new Color(0.70f, 0.60f, 0.35f, 0.6f);
+        lineImg.color = new Color(0.78f, 0.78f, 0.82f, 0.6f);
         lineImg.raycastTarget = false;
 
         // babyFaceをinnerObjの子にして配置（親カードの顔画像と同じ位置）
@@ -2122,36 +2181,40 @@ public class BirthSystem : MonoBehaviour
             babyFace.SetParent(innerObj.transform, false);
             babyFace.anchorMin = new Vector2(0.5f, 0.5f);
             babyFace.anchorMax = new Vector2(0.5f, 0.5f);
-            babyFace.anchoredPosition = new Vector2(0, 10);
-            babyFace.sizeDelta = new Vector2(850, 850);
+            babyFace.anchoredPosition = new Vector2(0, 150);
+            babyFace.sizeDelta = new Vector2(700, 700);
             babyFace.SetAsLastSibling();
         }
 
-        // ── ステータスカード（赤ちゃんカードの下に別カード） ──
+        // ── ステータスカード（赤ちゃんカード内の下部） ──
         statusCardObj = new GameObject("StatusCard");
-        statusCardObj.transform.SetParent(canvas.transform, false);
+        statusCardObj.transform.SetParent(birthResultCard.transform, false);
 
         var scRect = statusCardObj.AddComponent<RectTransform>();
-        scRect.anchorMin = new Vector2(0.5f, 0.5f);
-        scRect.anchorMax = new Vector2(0.5f, 0.5f);
-        scRect.anchoredPosition = new Vector2(0, -350);
-        scRect.sizeDelta = new Vector2(900, 500);
+        scRect.anchorMin = new Vector2(0.03f, 0.01f);
+        scRect.anchorMax = new Vector2(0.97f, 0.3f);
+        scRect.offsetMin = Vector2.zero;
+        scRect.offsetMax = Vector2.zero;
 
-        // カード背景（ページ背景と同じ色 #f3f7f8）
+        // カード背景（枠線）
         var scBg = statusCardObj.AddComponent<Image>();
-        scBg.color = new Color(0.953f, 0.969f, 0.973f);
+        scBg.sprite = GetRoundedRectSprite(24);
+        scBg.type = Image.Type.Sliced;
+        scBg.color = new Color(0.82f, 0.82f, 0.85f, 1f);
         scBg.raycastTarget = false;
 
-        // 内側背景（明るいベージュ系）padding 32
+        // 内側背景（ページ背景と統一）
         var scInnerObj = new GameObject("Inner");
         scInnerObj.transform.SetParent(statusCardObj.transform, false);
         var scInnerRect = scInnerObj.AddComponent<RectTransform>();
         scInnerRect.anchorMin = Vector2.zero;
         scInnerRect.anchorMax = Vector2.one;
-        scInnerRect.offsetMin = new Vector2(32, 32);
-        scInnerRect.offsetMax = new Vector2(-32, -32);
+        scInnerRect.offsetMin = new Vector2(6, 6);
+        scInnerRect.offsetMax = new Vector2(-6, -6);
         var scInnerBg = scInnerObj.AddComponent<Image>();
-        scInnerBg.color = new Color(0.88f, 0.85f, 0.78f, 1f);
+        scInnerBg.sprite = GetRoundedRectSprite(20);
+        scInnerBg.type = Image.Type.Sliced;
+        scInnerBg.color = new Color(0.953f, 0.969f, 0.973f, 1f);
         scInnerBg.raycastTarget = false;
 
         // childStatusTextを内側カードの子にして配置（左寄せ）
@@ -2161,10 +2224,12 @@ public class BirthSystem : MonoBehaviour
             var statusRect = childStatusText.GetComponent<RectTransform>();
             statusRect.anchorMin = Vector2.zero;
             statusRect.anchorMax = Vector2.one;
-            statusRect.offsetMin = new Vector2(20, 16);
-            statusRect.offsetMax = new Vector2(-20, -16);
-            childStatusText.fontSize = 36;
-            childStatusText.lineSpacing = 12;
+            statusRect.offsetMin = new Vector2(28, 12);
+            statusRect.offsetMax = new Vector2(-28, -12);
+            childStatusText.fontSize = 28;
+            childStatusText.lineSpacing = 4;
+            childStatusText.enableAutoSizing = false;
+            childStatusText.overflowMode = TextOverflowModes.Truncate;
             childStatusText.alignment = TextAlignmentOptions.TopLeft;
             childStatusText.color = new Color(0.1f, 0.1f, 0.1f);
         }
@@ -2220,18 +2285,12 @@ public class BirthSystem : MonoBehaviour
             childStatusText.lineSpacing = 0;
         }
 
-        // birthResultCardを削除（genderLabelはその子なので一緒に破棄される）
+        // birthResultCardを削除（genderLabel, statusCardObjはその子なので一緒に破棄される）
         if (birthResultCard != null)
         {
             Destroy(birthResultCard);
             birthResultCard = null;
             genderLabel = null;
-        }
-
-        // statusCardObjを削除
-        if (statusCardObj != null)
-        {
-            Destroy(statusCardObj);
             statusCardObj = null;
         }
 
@@ -2305,6 +2364,7 @@ public class BirthSystem : MonoBehaviour
         textRect.offsetMax = Vector2.zero;
 
         introText = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(introText);
         introText.text = "";
         introText.fontSize = 36;
         introText.alignment = TextAlignmentOptions.Center;
@@ -2353,45 +2413,60 @@ public class BirthSystem : MonoBehaviour
     {
         if (canvas == null) return;
 
+        // 全画面オーバーレイ
         nameInputPanel = new GameObject("NameInputPanel");
         nameInputPanel.transform.SetParent(canvas.transform, false);
+        var overlayRect = nameInputPanel.AddComponent<RectTransform>();
+        overlayRect.anchorMin = Vector2.zero;
+        overlayRect.anchorMax = Vector2.one;
+        overlayRect.offsetMin = Vector2.zero;
+        overlayRect.offsetMax = Vector2.zero;
+        var overlayBg = nameInputPanel.AddComponent<Image>();
+        overlayBg.color = new Color(0f, 0f, 0f, 0.5f);
 
-        var panelRect = nameInputPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = Vector2.zero;
-        panelRect.sizeDelta = new Vector2(450, 220);
-
-        var panelBg = nameInputPanel.AddComponent<Image>();
-        panelBg.color = new Color(0.1f, 0.1f, 0.2f, 0.95f);
+        // 白カード
+        var card = new GameObject("Card");
+        card.transform.SetParent(nameInputPanel.transform, false);
+        var cardRect = card.AddComponent<RectTransform>();
+        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+        cardRect.anchoredPosition = new Vector2(0, -100);
+        cardRect.sizeDelta = new Vector2(900, 450);
+        var cardBg = card.AddComponent<Image>();
+        cardBg.sprite = GetRoundedRectSprite(24);
+        cardBg.type = Image.Type.Sliced;
+        cardBg.color = Color.white;
 
         // タイトルテキスト
         var titleObj = new GameObject("Title");
-        titleObj.transform.SetParent(nameInputPanel.transform, false);
+        titleObj.transform.SetParent(card.transform, false);
         var titleRect = titleObj.AddComponent<RectTransform>();
         titleRect.anchorMin = new Vector2(0, 1);
         titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.anchoredPosition = new Vector2(0, -30);
-        titleRect.sizeDelta = new Vector2(0, 50);
+        titleRect.anchoredPosition = new Vector2(0, -50);
+        titleRect.sizeDelta = new Vector2(0, 60);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(titleText);
         titleText.text = Localization.Get("birth_name_input_title");
-        titleText.fontSize = 26;
+        titleText.fontSize = 36;
         titleText.alignment = TextAlignmentOptions.Center;
-        titleText.color = Color.white;
+        titleText.color = new Color(0.25f, 0.25f, 0.3f);
         titleText.fontStyle = FontStyles.Bold;
         titleText.raycastTarget = false;
 
         // 入力フィールド
         var inputObj = new GameObject("InputField");
-        inputObj.transform.SetParent(nameInputPanel.transform, false);
+        inputObj.transform.SetParent(card.transform, false);
         var inputRect = inputObj.AddComponent<RectTransform>();
         inputRect.anchorMin = new Vector2(0.5f, 0.5f);
         inputRect.anchorMax = new Vector2(0.5f, 0.5f);
-        inputRect.anchoredPosition = new Vector2(0, 10);
-        inputRect.sizeDelta = new Vector2(350, 50);
+        inputRect.anchoredPosition = new Vector2(0, 15);
+        inputRect.sizeDelta = new Vector2(750, 80);
 
         var inputBg = inputObj.AddComponent<Image>();
-        inputBg.color = new Color(0.2f, 0.2f, 0.3f, 1f);
+        inputBg.sprite = GetRoundedRectSprite(16);
+        inputBg.type = Image.Type.Sliced;
+        inputBg.color = new Color(0.94f, 0.94f, 0.96f);
 
         nameInputField = inputObj.AddComponent<TMP_InputField>();
         nameInputField.characterLimit = 12;
@@ -2402,8 +2477,8 @@ public class BirthSystem : MonoBehaviour
         var textAreaRect = textAreaObj.AddComponent<RectTransform>();
         textAreaRect.anchorMin = Vector2.zero;
         textAreaRect.anchorMax = Vector2.one;
-        textAreaRect.offsetMin = new Vector2(10, 5);
-        textAreaRect.offsetMax = new Vector2(-10, -5);
+        textAreaRect.offsetMin = new Vector2(15, 5);
+        textAreaRect.offsetMax = new Vector2(-15, -5);
         textAreaObj.AddComponent<RectMask2D>();
 
         // 入力テキスト
@@ -2415,28 +2490,60 @@ public class BirthSystem : MonoBehaviour
         inputTextRect.offsetMin = Vector2.zero;
         inputTextRect.offsetMax = Vector2.zero;
         var inputText = inputTextObj.AddComponent<TextMeshProUGUI>();
-        inputText.fontSize = 28;
+        FontHelper.Apply(inputText);
+        inputText.fontSize = 32;
         inputText.alignment = TextAlignmentOptions.Left;
-        inputText.color = Color.white;
+        inputText.color = new Color(0.15f, 0.15f, 0.15f);
         nameInputField.textComponent = inputText;
         nameInputField.textViewport = textAreaRect;
 
-        // 確定ボタン
+        // 確定ボタン（pill style）
+        float btnW = 500f;
+        float btnH = 100f;
+        int pillRadius = (int)(btnH / 2);
+        int blur = 20;
+
         var confirmObj = new GameObject("ConfirmButton");
-        confirmObj.transform.SetParent(nameInputPanel.transform, false);
+        confirmObj.transform.SetParent(card.transform, false);
         var confirmRect = confirmObj.AddComponent<RectTransform>();
         confirmRect.anchorMin = new Vector2(0.5f, 0);
         confirmRect.anchorMax = new Vector2(0.5f, 0);
-        confirmRect.anchoredPosition = new Vector2(0, 45);
-        confirmRect.sizeDelta = new Vector2(160, 50);
+        confirmRect.anchoredPosition = new Vector2(0, 75);
+        confirmRect.sizeDelta = new Vector2(btnW, btnH);
 
         var confirmBg = confirmObj.AddComponent<Image>();
-        confirmBg.color = new Color(0.3f, 0.7f, 0.4f);
+        confirmBg.sprite = GetPillSprite(pillRadius);
+        confirmBg.type = Image.Type.Sliced;
+        confirmBg.color = Color.white;
 
         var confirmBtn = confirmObj.AddComponent<Button>();
         confirmBtn.targetGraphic = confirmBg;
         confirmBtn.onClick.AddListener(OnNameConfirm);
+        confirmBtn.navigation = new Navigation { mode = Navigation.Mode.None };
+        var colors = confirmBtn.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = Color.white;
+        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
+        colors.selectedColor = Color.white;
+        colors.fadeDuration = 0.08f;
+        confirmBtn.colors = colors;
 
+        // Shadow
+        var shadowObj = new GameObject("Shadow");
+        shadowObj.transform.SetParent(confirmObj.transform, false);
+        shadowObj.transform.SetAsFirstSibling();
+        var shadowRect = shadowObj.AddComponent<RectTransform>();
+        shadowRect.anchorMin = Vector2.zero;
+        shadowRect.anchorMax = Vector2.one;
+        shadowRect.offsetMin = new Vector2(-blur, -blur - 4);
+        shadowRect.offsetMax = new Vector2(blur, blur - 4);
+        var shadowImg = shadowObj.AddComponent<Image>();
+        shadowImg.sprite = GetShadowSprite(pillRadius, blur);
+        shadowImg.type = Image.Type.Sliced;
+        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
+        shadowImg.raycastTarget = false;
+
+        // Button text
         var confirmTextObj = new GameObject("Text");
         confirmTextObj.transform.SetParent(confirmObj.transform, false);
         var confirmTextRect = confirmTextObj.AddComponent<RectTransform>();
@@ -2445,12 +2552,31 @@ public class BirthSystem : MonoBehaviour
         confirmTextRect.offsetMin = Vector2.zero;
         confirmTextRect.offsetMax = Vector2.zero;
         var confirmText = confirmTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(confirmText);
         confirmText.text = Localization.Get("ui_confirm");
-        confirmText.fontSize = 26;
+        confirmText.fontSize = 36;
         confirmText.alignment = TextAlignmentOptions.Center;
-        confirmText.color = Color.white;
+        confirmText.color = new Color(0.45f, 0.45f, 0.5f);
         confirmText.fontStyle = FontStyles.Bold;
         confirmText.raycastTarget = false;
+
+        // Press animation
+        var trigger = confirmObj.AddComponent<EventTrigger>();
+        var pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        pointerDown.callback.AddListener((data) => {
+            confirmObj.transform.localScale = new Vector3(0.95f, 0.95f, 1f);
+        });
+        trigger.triggers.Add(pointerDown);
+        var pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        pointerUp.callback.AddListener((data) => {
+            confirmObj.transform.localScale = Vector3.one;
+        });
+        trigger.triggers.Add(pointerUp);
+        var pointerExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        pointerExit.callback.AddListener((data) => {
+            confirmObj.transform.localScale = Vector3.one;
+        });
+        trigger.triggers.Add(pointerExit);
 
         nameInputPanel.SetActive(false);
     }
@@ -2480,6 +2606,7 @@ public class BirthSystem : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, -40);
         titleRect.sizeDelta = new Vector2(0, 60);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(titleText);
         titleText.text = Localization.Get("birth_save_confirm");
         titleText.fontSize = 32;
         titleText.alignment = TextAlignmentOptions.Center;
@@ -2511,6 +2638,7 @@ public class BirthSystem : MonoBehaviour
         yesTextRect.offsetMin = Vector2.zero;
         yesTextRect.offsetMax = Vector2.zero;
         var yesText = yesTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(yesText);
         yesText.text = Localization.Get("ui_yes");
         yesText.fontSize = 26;
         yesText.alignment = TextAlignmentOptions.Center;
@@ -2542,6 +2670,7 @@ public class BirthSystem : MonoBehaviour
         noTextRect.offsetMin = Vector2.zero;
         noTextRect.offsetMax = Vector2.zero;
         var noText = noTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(noText);
         noText.text = Localization.Get("ui_no");
         noText.fontSize = 26;
         noText.alignment = TextAlignmentOptions.Center;
@@ -2667,7 +2796,7 @@ public class BirthSystem : MonoBehaviour
         if (rect != null)
         {
             rect.sizeDelta = new Vector2(size, size);
-            rect.anchoredPosition = new Vector2(0, -200);
+            rect.anchoredPosition = new Vector2(0, -400);
         }
 
         // 既存の子オブジェクトを削除
@@ -2870,6 +2999,7 @@ public class BirthSystem : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
         var tmp = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmp);
         tmp.text = label;
         tmp.fontSize = fontSize;
         tmp.alignment = TextAlignmentOptions.Center;
@@ -2954,6 +3084,7 @@ public class BirthSystem : MonoBehaviour
         labelRect.anchoredPosition = new Vector2(40, yCards);
         labelRect.sizeDelta = new Vector2(50, 24);
         var labelText = labelObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(labelText);
         labelText.text = label;
         labelText.fontSize = 14;
         labelText.alignment = TextAlignmentOptions.Center;
@@ -3012,6 +3143,7 @@ public class BirthSystem : MonoBehaviour
         nameRect.anchoredPosition = new Vector2(15, 0);
         nameRect.sizeDelta = new Vector2(0, 20);
         var nameText = nameObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(nameText);
         nameText.text = Localization.GetParent(data.name);
         nameText.fontSize = 12;
         nameText.alignment = TextAlignmentOptions.Center;
@@ -3035,7 +3167,32 @@ public class BirthSystem : MonoBehaviour
         panelRect.offsetMax = Vector2.zero;
 
         var panelBg = storyPanel.AddComponent<Image>();
-        panelBg.color = new Color(0.953f, 0.969f, 0.973f, 1f); // #f3f7f8（イントロと同じ）
+        var loveBgSprite = Resources.Load<Sprite>("BackGrounds/love-background");
+        if (loveBgSprite != null)
+        {
+            // 背景を別オブジェクトにして上下反転
+            var bgObj = new GameObject("LoveBg");
+            bgObj.transform.SetParent(storyPanel.transform, false);
+            bgObj.transform.SetAsFirstSibling();
+            var bgRect = bgObj.AddComponent<RectTransform>();
+            bgRect.anchorMin = Vector2.zero;
+            bgRect.anchorMax = Vector2.one;
+            bgRect.offsetMin = Vector2.zero;
+            bgRect.offsetMax = Vector2.zero;
+            bgRect.localScale = new Vector3(1, -1, 1); // 上下反転
+            var bgImg = bgObj.AddComponent<Image>();
+            bgImg.sprite = loveBgSprite;
+            bgImg.type = Image.Type.Simple;
+            bgImg.preserveAspect = false;
+            bgImg.color = Color.white;
+            bgImg.raycastTarget = false;
+
+            panelBg.color = Color.clear; // パネル自体は透明
+        }
+        else
+        {
+            panelBg.color = new Color(0.953f, 0.969f, 0.973f, 1f);
+        }
 
         // タイトル
         var titleObj = new GameObject("Title");
@@ -3046,10 +3203,11 @@ public class BirthSystem : MonoBehaviour
         titleRect.offsetMin = new Vector2(20, 0);
         titleRect.offsetMax = new Vector2(-20, 0);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(titleText);
         titleText.text = Localization.Get("birth_story_title");
         titleText.fontSize = 56;
         titleText.alignment = TextAlignmentOptions.Center;
-        titleText.color = new Color(0.3f, 0.25f, 0.35f);
+        titleText.color = Color.black;
         titleText.fontStyle = FontStyles.Bold;
         titleText.raycastTarget = false;
 
@@ -3072,9 +3230,10 @@ public class BirthSystem : MonoBehaviour
         storyRect.offsetMin = Vector2.zero;
         storyRect.offsetMax = Vector2.zero;
         storyText = storyObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(storyText);
         storyText.fontSize = 42;
         storyText.alignment = TextAlignmentOptions.Center;
-        storyText.color = new Color(0.15f, 0.15f, 0.2f);
+        storyText.color = Color.black;
         storyText.raycastTarget = false;
 
         // 「愛を育む」ボタン（pill型、他のボタンと同デザイン）
@@ -3118,10 +3277,11 @@ public class BirthSystem : MonoBehaviour
         loveTextRect.offsetMin = Vector2.zero;
         loveTextRect.offsetMax = Vector2.zero;
         var loveTmp = loveTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(loveTmp);
         loveTmp.text = Localization.Get("birth_nurture_love");
         loveTmp.fontSize = 36;
         loveTmp.alignment = TextAlignmentOptions.Center;
-        loveTmp.color = new Color(0.45f, 0.45f, 0.5f);
+        loveTmp.color = Color.black;
         loveTmp.fontStyle = FontStyles.Bold;
         loveTmp.raycastTarget = false;
 
@@ -3183,9 +3343,10 @@ public class BirthSystem : MonoBehaviour
         nameRect.anchoredPosition = new Vector2(0, 0);
         nameRect.sizeDelta = new Vector2(0, 60);
         nameLabel = nameObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(nameLabel);
         nameLabel.fontSize = 40;
         nameLabel.alignment = TextAlignmentOptions.Center;
-        nameLabel.color = new Color(0.2f, 0.2f, 0.25f);
+        nameLabel.color = Color.black;
         nameLabel.fontStyle = FontStyles.Bold;
         nameLabel.raycastTarget = false;
 
@@ -3229,9 +3390,10 @@ public class BirthSystem : MonoBehaviour
         introRect.anchoredPosition = new Vector2(0, 0);
         introRect.sizeDelta = new Vector2(0, 80);
         introLabel = introObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(introLabel);
         introLabel.fontSize = 22;
         introLabel.alignment = TextAlignmentOptions.Center;
-        introLabel.color = new Color(0.35f, 0.35f, 0.4f, 0.8f);
+        introLabel.color = Color.black;
         introLabel.enableWordWrapping = true;
         introLabel.raycastTarget = false;
     }
@@ -3269,6 +3431,7 @@ public class BirthSystem : MonoBehaviour
         textRect.offsetMin = new Vector2(40, 0);
         textRect.offsetMax = new Vector2(-40, 0);
         var tmp = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmp);
         tmp.text = cutinText;
         tmp.fontSize = 52;
         tmp.fontStyle = FontStyles.Bold;
@@ -3440,6 +3603,7 @@ public class BirthSystem : MonoBehaviour
             textObj.transform.SetParent(panel.transform, false);
             var textRect = textObj.AddComponent<RectTransform>();
             var tmp = textObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(tmp);
 
             tmp.text = sadLines[i];
             tmp.fontSize = i == 0 ? 36 : 32;
@@ -3545,6 +3709,7 @@ public class BirthSystem : MonoBehaviour
             textObj.transform.SetParent(panel.transform, false);
             var textRect = textObj.AddComponent<RectTransform>();
             var tmp = textObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(tmp);
 
             tmp.text = sadLines[i];
             tmp.fontSize = i == 0 ? 36 : 32;
@@ -3647,6 +3812,7 @@ public class BirthSystem : MonoBehaviour
             textObj.transform.SetParent(panel.transform, false);
             var textRect = textObj.AddComponent<RectTransform>();
             var tmp = textObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(tmp);
 
             tmp.text = sadLines[i];
             tmp.fontSize = i == 0 ? 36 : 32;
@@ -3749,6 +3915,7 @@ public class BirthSystem : MonoBehaviour
             textObj.transform.SetParent(panel.transform, false);
             var textRect = textObj.AddComponent<RectTransform>();
             var tmp = textObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(tmp);
 
             tmp.text = sadLines[i];
             tmp.fontSize = i == 0 ? 36 : 32;
@@ -3851,6 +4018,7 @@ public class BirthSystem : MonoBehaviour
             textObj.transform.SetParent(panel.transform, false);
             var textRect = textObj.AddComponent<RectTransform>();
             var tmp = textObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(tmp);
 
             tmp.text = sadLines[i];
             tmp.fontSize = i == 0 ? 36 : 32;
@@ -4074,10 +4242,11 @@ public class BirthSystem : MonoBehaviour
         itemTextRect.offsetMin = Vector2.zero;
         itemTextRect.offsetMax = Vector2.zero;
         var itemText = itemTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(itemText);
         itemText.text = label;
         itemText.fontSize = 30;
         itemText.alignment = TextAlignmentOptions.Center;
-        itemText.color = new Color(0.35f, 0.35f, 0.4f);
+        itemText.color = new Color(0.1f, 0.1f, 0.13f);
         itemText.raycastTarget = false;
     }
 

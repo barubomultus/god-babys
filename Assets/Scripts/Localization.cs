@@ -739,6 +739,7 @@ public static class Localization
         Add("profile_start", "はじめる", "Start");
         Add("profile_save", "保存する", "Save");
         Add("profile_icon_select", "アイコンを選択", "Select Icon");
+        Add("profile_icon_saved", "アイコンを保存しました", "Icon saved");
 
         // ===== Cutscene (after profile creation) =====
         Add("cutscene_line1",

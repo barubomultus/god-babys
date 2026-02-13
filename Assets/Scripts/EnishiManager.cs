@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
 using TMPro;
 using System.Collections.Generic;
 
@@ -8,6 +9,8 @@ public class EnishiManager : MonoBehaviour
 {
     private Canvas mainCanvas;
     private static Sprite _circleSprite;
+    private static Sprite _pillSprite;
+    private static Sprite _shadowSprite;
 
     // Enemy name → sprite path mapping
     private static readonly Dictionary<string, string> EnemySpriteMap = new Dictionary<string, string>
@@ -17,8 +20,14 @@ public class EnishiManager : MonoBehaviour
         { "なきむしベイビー", "EnemyBabys/common-nakimushi" },
         { "あばれんぼうベイビー", "EnemyBabys/common-abarennbou" },
         { "わがままベイビー", "EnemyBabys/common-wagamama" },
-        { "村の王シバ", "EnemyBabys/first-boss-shiba" },
+        { "村の王シバ", "EnemyBabys/boss/first-boss-shiba" },
         { "わるいベイビー", "EnemyBabys/frist-enemy" },
+        { "どくベイビー", "EnemyBabys/poison/doku-baby" },
+        { "のろいベイビー", "EnemyBabys/poison/noroi-baby" },
+        { "あくまベイビー", "EnemyBabys/poison/akuma-baby" },
+        { "デヴィル傭兵A", "EnemyBabys/poison/katchu-a" },
+        { "デヴィル傭兵B", "EnemyBabys/poison/katchu-b" },
+        { "デヴィル夫人", "EnemyBabys/boss/devil-wife" },
     };
 
     private static readonly string[] FatherNames = { "タケシ", "ユウキ", "ゴウ", "シンジ", "リョウマ", "テツヤ" };
@@ -54,7 +63,7 @@ public class EnishiManager : MonoBehaviour
         bgImg.raycastTarget = false;
 
         // Title
-        float titleY = -100f;
+        float titleY = -188f;
         var titleObj = new GameObject("Title");
         titleObj.transform.SetParent(mainCanvas.transform, false);
         var titleRect = titleObj.AddComponent<RectTransform>();
@@ -63,6 +72,7 @@ public class EnishiManager : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, titleY);
         titleRect.sizeDelta = new Vector2(800, 70);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(titleText);
         titleText.text = Localization.Get("enishi_title");
         titleText.fontSize = 44;
         titleText.fontStyle = FontStyles.Bold;
@@ -71,7 +81,7 @@ public class EnishiManager : MonoBehaviour
         titleText.raycastTarget = false;
 
         // Back button
-        float backY = -100f;
+        float backY = -188f;
         var backObj = new GameObject("BackButton");
         backObj.transform.SetParent(mainCanvas.transform, false);
         var backRect = backObj.AddComponent<RectTransform>();
@@ -92,6 +102,7 @@ public class EnishiManager : MonoBehaviour
         backTextRect.offsetMin = Vector2.zero;
         backTextRect.offsetMax = Vector2.zero;
         var backText = backTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(backText);
         backText.text = "< " + Localization.Get("ui_back");
         backText.fontSize = 28;
         backText.alignment = TextAlignmentOptions.Center;
@@ -293,6 +304,7 @@ public class EnishiManager : MonoBehaviour
         headerRect.anchoredPosition = new Vector2(0, yOffset - headerHeight / 2f);
         headerRect.sizeDelta = new Vector2(0, headerHeight);
         var headerText = headerObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(headerText);
         headerText.text = text;
         headerText.fontSize = 36;
         headerText.fontStyle = FontStyles.Bold;
@@ -325,6 +337,7 @@ public class EnishiManager : MonoBehaviour
         emptyRect.anchoredPosition = new Vector2(0, yOffset - 40f);
         emptyRect.sizeDelta = new Vector2(700, 80);
         var emptyText = emptyObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(emptyText);
         emptyText.text = text;
         emptyText.fontSize = 30;
         emptyText.alignment = TextAlignmentOptions.Center;
@@ -412,6 +425,7 @@ public class EnishiManager : MonoBehaviour
         nameRect.anchoredPosition = new Vector2(0, -size - 15f);
         nameRect.sizeDelta = new Vector2(size + 20f, 40f);
         var nameText = nameObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(nameText);
         nameText.text = name;
         nameText.fontSize = 24;
         nameText.alignment = TextAlignmentOptions.Center;
@@ -480,10 +494,10 @@ public class EnishiManager : MonoBehaviour
         var panel = new GameObject("DetailPanel");
         panel.transform.SetParent(overlay.transform, false);
         var panelRect = panel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = Vector2.zero;
-        panelRect.sizeDelta = new Vector2(900, 1100);
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = new Vector2(50, 80);
+        panelRect.offsetMax = new Vector2(-50, -80);
         var panelImg = panel.AddComponent<Image>();
         panelImg.color = new Color(0.97f, 0.95f, 0.98f);
 
@@ -560,6 +574,7 @@ public class EnishiManager : MonoBehaviour
         nameRect.anchoredPosition = new Vector2(0, nameY);
         nameRect.sizeDelta = new Vector2(800, 60);
         var nameText = nameObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(nameText);
         nameText.text = name;
         nameText.fontSize = 40;
         nameText.fontStyle = FontStyles.Bold;
@@ -571,7 +586,7 @@ public class EnishiManager : MonoBehaviour
         if (!string.IsNullOrEmpty(description))
         {
             float descTop = nameY - 50f;
-            float descBottom = 130f; // above close button
+            float descBottom = 160f; // above close button
 
             var descScrollObj = new GameObject("DescScroll");
             descScrollObj.transform.SetParent(panel.transform, false);
@@ -604,6 +619,7 @@ public class EnishiManager : MonoBehaviour
             descTextRect.pivot = new Vector2(0.5f, 1);
             descTextRect.anchoredPosition = Vector2.zero;
             var descText = descTextObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(descText);
             descText.text = description;
             descText.fontSize = 36;
             descText.alignment = TextAlignmentOptions.TopLeft;
@@ -618,22 +634,53 @@ public class EnishiManager : MonoBehaviour
             descContentRect.sizeDelta = new Vector2(0, textHeight);
         }
 
-        // Close button
+        // Close button (pill style matching TitleScene)
+        float closeBtnW = 500f;
+        float closeBtnH = 100f;
+        int closePillRadius = (int)(closeBtnH / 2);
+        int closeBlur = 20;
+
         var closeObj = new GameObject("CloseButton");
         closeObj.transform.SetParent(panel.transform, false);
         var closeRect = closeObj.AddComponent<RectTransform>();
         closeRect.anchorMin = new Vector2(0.5f, 0f);
         closeRect.anchorMax = new Vector2(0.5f, 0f);
-        closeRect.anchoredPosition = new Vector2(0, 60f);
-        closeRect.sizeDelta = new Vector2(300, 80);
+        closeRect.anchoredPosition = new Vector2(0, 80f);
+        closeRect.sizeDelta = new Vector2(closeBtnW, closeBtnH);
+
         var closeBg = closeObj.AddComponent<Image>();
-        closeBg.sprite = GetCircleSprite();
-        closeBg.type = Image.Type.Simple;
-        closeBg.color = new Color(0.55f, 0.35f, 0.65f);
+        closeBg.sprite = GetPillSprite(closePillRadius);
+        closeBg.type = Image.Type.Sliced;
+        closeBg.color = Color.white;
+
         var closeBtn = closeObj.AddComponent<Button>();
         closeBtn.targetGraphic = closeBg;
         closeBtn.onClick.AddListener(() => Destroy(overlay));
+        closeBtn.navigation = new Navigation { mode = Navigation.Mode.None };
+        var closeColors = closeBtn.colors;
+        closeColors.normalColor = Color.white;
+        closeColors.highlightedColor = Color.white;
+        closeColors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
+        closeColors.selectedColor = Color.white;
+        closeColors.fadeDuration = 0.08f;
+        closeBtn.colors = closeColors;
 
+        // Shadow
+        var shadowObj = new GameObject("Shadow");
+        shadowObj.transform.SetParent(closeObj.transform, false);
+        shadowObj.transform.SetAsFirstSibling();
+        var shadowRect = shadowObj.AddComponent<RectTransform>();
+        shadowRect.anchorMin = Vector2.zero;
+        shadowRect.anchorMax = Vector2.one;
+        shadowRect.offsetMin = new Vector2(-closeBlur, -closeBlur - 4);
+        shadowRect.offsetMax = new Vector2(closeBlur, closeBlur - 4);
+        var shadowImg = shadowObj.AddComponent<Image>();
+        shadowImg.sprite = GetShadowSprite(closePillRadius, closeBlur);
+        shadowImg.type = Image.Type.Sliced;
+        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
+        shadowImg.raycastTarget = false;
+
+        // Text
         var closeTextObj = new GameObject("Text");
         closeTextObj.transform.SetParent(closeObj.transform, false);
         var closeTextRect = closeTextObj.AddComponent<RectTransform>();
@@ -642,12 +689,16 @@ public class EnishiManager : MonoBehaviour
         closeTextRect.offsetMin = Vector2.zero;
         closeTextRect.offsetMax = Vector2.zero;
         var closeTmp = closeTextObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(closeTmp);
         closeTmp.text = Localization.Get("ui_close");
-        closeTmp.fontSize = 32;
+        closeTmp.fontSize = 36;
         closeTmp.alignment = TextAlignmentOptions.Center;
-        closeTmp.color = Color.white;
+        closeTmp.color = new Color(0.45f, 0.45f, 0.5f);
         closeTmp.fontStyle = FontStyles.Bold;
         closeTmp.raycastTarget = false;
+
+        // Press animation
+        AddPressAnimation(closeObj);
     }
 
     // === Helpers ===
@@ -701,5 +752,101 @@ public class EnishiManager : MonoBehaviour
         _circleSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
             new Vector2(0.5f, 0.5f), 100);
         return _circleSprite;
+    }
+
+    static Sprite GetPillSprite(int radius)
+    {
+        if (_pillSprite != null) return _pillSprite;
+
+        int size = radius * 2 + 2;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float center = (size - 1) / 2f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float px = x - center;
+                float py = y - center;
+                float dist = Mathf.Sqrt(px * px + py * py) - radius;
+
+                if (dist <= -1f)
+                    tex.SetPixel(x, y, Color.white);
+                else if (dist <= 0f)
+                    tex.SetPixel(x, y, new Color(1, 1, 1, -dist));
+                else
+                    tex.SetPixel(x, y, new Color(0, 0, 0, 0));
+            }
+        }
+        tex.Apply();
+
+        var border = new Vector4(radius, radius, radius, radius);
+        _pillSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        return _pillSprite;
+    }
+
+    static Sprite GetShadowSprite(int radius, int blur)
+    {
+        if (_shadowSprite != null) return _shadowSprite;
+
+        int size = (radius + blur) * 2 + 2;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float center = (size - 1) / 2f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float px = x - center;
+                float py = y - center;
+                float dist = Mathf.Sqrt(px * px + py * py) - radius;
+
+                float alpha;
+                if (dist <= 0f)
+                    alpha = 0f;
+                else if (dist >= blur)
+                    alpha = 0f;
+                else
+                {
+                    float t = dist / blur;
+                    alpha = (1f - t) * (1f - t);
+                }
+
+                tex.SetPixel(x, y, new Color(1, 1, 1, alpha));
+            }
+        }
+        tex.Apply();
+
+        int borderVal = radius + blur;
+        var border = new Vector4(borderVal, borderVal, borderVal, borderVal);
+        _shadowSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        return _shadowSprite;
+    }
+
+    void AddPressAnimation(GameObject button)
+    {
+        var trigger = button.GetComponent<EventTrigger>();
+        if (trigger == null)
+            trigger = button.AddComponent<EventTrigger>();
+
+        var pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        pointerDown.callback.AddListener((data) => {
+            button.transform.localScale = new Vector3(0.95f, 0.95f, 1f);
+        });
+        trigger.triggers.Add(pointerDown);
+
+        var pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        pointerUp.callback.AddListener((data) => {
+            button.transform.localScale = Vector3.one;
+        });
+        trigger.triggers.Add(pointerUp);
+
+        var pointerExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        pointerExit.callback.AddListener((data) => {
+            button.transform.localScale = Vector3.one;
+        });
+        trigger.triggers.Add(pointerExit);
     }
 }

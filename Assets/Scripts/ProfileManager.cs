@@ -8,7 +8,11 @@ public class ProfileManager : MonoBehaviour
 {
     private Canvas mainCanvas;
     private int selectedIcon = 0;
-    private const int ICON_COUNT = 6;
+
+    private static readonly string[] iconNames = new string[]
+    {
+        "kayo", "ikemen", "inteli", "matcho", "old-women", "sexy-lady"
+    };
 
     private Image avatarImg;
     private GameObject iconPickerPanel;
@@ -95,10 +99,12 @@ public class ProfileManager : MonoBehaviour
         labelRect.anchoredPosition = new Vector2(0, -20);
         labelRect.sizeDelta = new Vector2(800, 60);
         var labelText = labelObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(labelText);
         labelText.text = Localization.Get("profile_name_label");
-        labelText.fontSize = 36;
+        labelText.fontSize = 42;
+        labelText.fontStyle = FontStyles.Bold;
         labelText.alignment = TextAlignmentOptions.Center;
-        labelText.color = new Color(0.15f, 0.15f, 0.15f);
+        labelText.color = new Color(0.05f, 0.05f, 0.08f);
         labelText.raycastTarget = false;
 
         // Name input field
@@ -157,22 +163,24 @@ public class ProfileManager : MonoBehaviour
         // Load default kayo.png
         ApplyAvatarSprite(0);
 
-        // Edit badge (bottom-right)
+        // Edit badge (bottom-right, on the circle edge)
         float badgeSize = 56f;
+        float badgeAngle = -45f * Mathf.Deg2Rad; // 右下45度
+        float badgeDist = avatarSize / 2f - badgeSize / 4f;
         var badgeObj = new GameObject("EditBadge");
         badgeObj.transform.SetParent(avatarBtnObj.transform, false);
         var badgeRect = badgeObj.AddComponent<RectTransform>();
-        badgeRect.anchorMin = new Vector2(1, 0);
-        badgeRect.anchorMax = new Vector2(1, 0);
-        badgeRect.anchoredPosition = new Vector2(-12, 12);
+        badgeRect.anchorMin = new Vector2(0.5f, 0.5f);
+        badgeRect.anchorMax = new Vector2(0.5f, 0.5f);
+        badgeRect.anchoredPosition = new Vector2(Mathf.Cos(badgeAngle) * badgeDist, Mathf.Sin(badgeAngle) * badgeDist);
         badgeRect.sizeDelta = new Vector2(badgeSize, badgeSize);
         var badgeBg = badgeObj.AddComponent<Image>();
         badgeBg.sprite = GetCircleSprite();
         badgeBg.color = new Color(0.3f, 0.5f, 0.9f);
         badgeBg.raycastTarget = false;
 
-        // Pencil icon text
-        var penObj = new GameObject("PenIcon");
+        // Edit icon (pencil unicode)
+        var penObj = new GameObject("EditIcon");
         penObj.transform.SetParent(badgeObj.transform, false);
         var penRect = penObj.AddComponent<RectTransform>();
         penRect.anchorMin = Vector2.zero;
@@ -180,9 +188,9 @@ public class ProfileManager : MonoBehaviour
         penRect.offsetMin = Vector2.zero;
         penRect.offsetMax = Vector2.zero;
         var penText = penObj.AddComponent<TextMeshProUGUI>();
-        penText.text = "E";
-        penText.fontSize = 26;
-        penText.fontStyle = FontStyles.Bold;
+        FontHelper.Apply(penText);
+        penText.text = "\u270E";
+        penText.fontSize = 28;
         penText.alignment = TextAlignmentOptions.Center;
         penText.color = Color.white;
         penText.raycastTarget = false;
@@ -190,9 +198,8 @@ public class ProfileManager : MonoBehaviour
 
     void ApplyAvatarSprite(int index)
     {
-        Sprite spr = Resources.Load<Sprite>($"Icons/icon_{index}");
-        if (spr == null)
-            spr = Resources.Load<Sprite>("Icons/kayo");
+        string name = (index >= 0 && index < iconNames.Length) ? iconNames[index] : iconNames[0];
+        Sprite spr = Resources.Load<Sprite>($"Icons/{name}");
 
         if (spr != null)
         {
@@ -219,86 +226,238 @@ public class ProfileManager : MonoBehaviour
 
     void ShowIconPicker()
     {
+        // 全画面オーバーレイ
         iconPickerPanel = new GameObject("IconPickerPanel");
         iconPickerPanel.transform.SetParent(mainCanvas.transform, false);
-        var panelRect = iconPickerPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = new Vector2(0, 100);
-        panelRect.sizeDelta = new Vector2(600, 380);
+        var overlayRect = iconPickerPanel.AddComponent<RectTransform>();
+        overlayRect.anchorMin = Vector2.zero;
+        overlayRect.anchorMax = Vector2.one;
+        overlayRect.offsetMin = Vector2.zero;
+        overlayRect.offsetMax = Vector2.zero;
+        var overlayBg = iconPickerPanel.AddComponent<Image>();
+        overlayBg.color = new Color(0f, 0f, 0f, 0.5f);
 
-        var panelBg = iconPickerPanel.AddComponent<Image>();
-        panelBg.color = new Color(0.08f, 0.08f, 0.18f, 0.95f);
+        // 白カード
+        var card = new GameObject("Card");
+        card.transform.SetParent(iconPickerPanel.transform, false);
+        var cardRect = card.AddComponent<RectTransform>();
+        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+        cardRect.anchoredPosition = new Vector2(0, 50);
+        cardRect.sizeDelta = new Vector2(900, 700);
+        var cardBg = card.AddComponent<Image>();
+        cardBg.sprite = GetPillSprite(24);
+        cardBg.type = Image.Type.Sliced;
+        cardBg.color = Color.white;
 
         // Title
         var titleObj = new GameObject("PickerTitle");
-        titleObj.transform.SetParent(iconPickerPanel.transform, false);
+        titleObj.transform.SetParent(card.transform, false);
         var titleRect = titleObj.AddComponent<RectTransform>();
         titleRect.anchorMin = new Vector2(0, 1);
         titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.anchoredPosition = new Vector2(0, -30);
-        titleRect.sizeDelta = new Vector2(0, 50);
+        titleRect.anchoredPosition = new Vector2(0, -40);
+        titleRect.sizeDelta = new Vector2(0, 60);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(titleText);
         titleText.text = Localization.Get("profile_icon_select");
-        titleText.fontSize = 28;
+        titleText.fontSize = 36;
         titleText.fontStyle = FontStyles.Bold;
         titleText.alignment = TextAlignmentOptions.Center;
-        titleText.color = new Color(1f, 0.92f, 0.42f);
+        titleText.color = new Color(0.25f, 0.25f, 0.3f);
         titleText.raycastTarget = false;
 
         // 2x3 grid of circular icons
-        float iconSize = 100f;
-        float gapX = 30f;
-        float gapY = 20f;
+        float iconSize = 140f;
+        float gapX = 40f;
+        float gapY = 30f;
         float totalWidth = iconSize * 3 + gapX * 2;
         float startX = -totalWidth / 2f + iconSize / 2f;
-        float gridStartY = -90f;
+        float gridStartY = -110f;
 
-        for (int i = 0; i < ICON_COUNT; i++)
+        for (int i = 0; i < iconNames.Length; i++)
         {
             int col = i % 3;
             int row = i / 3;
             float x = startX + col * (iconSize + gapX);
             float y = gridStartY - row * (iconSize + gapY);
-            CreatePickerIcon(i, x, y, iconSize);
+            CreatePickerIcon(card.transform, i, x, y, iconSize);
         }
 
-        // Close button
-        var closeObj = new GameObject("CloseBtn");
-        closeObj.transform.SetParent(iconPickerPanel.transform, false);
-        var closeRect = closeObj.AddComponent<RectTransform>();
-        closeRect.anchorMin = new Vector2(0.5f, 0);
-        closeRect.anchorMax = new Vector2(0.5f, 0);
-        closeRect.anchoredPosition = new Vector2(0, 35);
-        closeRect.sizeDelta = new Vector2(150, 45);
-        var closeBg = closeObj.AddComponent<Image>();
-        closeBg.color = new Color(0.4f, 0.4f, 0.5f);
-        var closeBtn = closeObj.AddComponent<Button>();
-        closeBtn.targetGraphic = closeBg;
-        closeBtn.onClick.AddListener(() =>
-        {
-            Destroy(iconPickerPanel);
-            iconPickerPanel = null;
-        });
-        var closeTextObj = new GameObject("Text");
-        closeTextObj.transform.SetParent(closeObj.transform, false);
-        var closeTextRect = closeTextObj.AddComponent<RectTransform>();
-        closeTextRect.anchorMin = Vector2.zero;
-        closeTextRect.anchorMax = Vector2.one;
-        closeTextRect.offsetMin = Vector2.zero;
-        closeTextRect.offsetMax = Vector2.zero;
-        var closeText = closeTextObj.AddComponent<TextMeshProUGUI>();
-        closeText.text = Localization.Get("ui_close");
-        closeText.fontSize = 22;
-        closeText.alignment = TextAlignmentOptions.Center;
-        closeText.color = Color.white;
-        closeText.raycastTarget = false;
+        // ボタンエリア（保存・閉じる横並び）
+        float btnW = 350f;
+        float btnH = 90f;
+        int pillRadius = (int)(btnH / 2);
+        int blur = 20;
+        float btnGap = 30f;
+        float btnY = 75f;
+
+        // 保存ボタン
+        CreatePillButton(card.transform, Localization.Get("profile_save"),
+            new Vector2(-btnW / 2f - btnGap / 2f, btnY), new Vector2(btnW, btnH),
+            pillRadius, blur, () =>
+            {
+                if (DataCarrier.Instance != null)
+                {
+                    DataCarrier.Instance.playerIcon = selectedIcon;
+                    DataCarrier.Instance.SaveProfile();
+                }
+                Destroy(iconPickerPanel);
+                iconPickerPanel = null;
+                StartCoroutine(ShowToast(Localization.Get("profile_icon_saved")));
+            });
+
+        // 閉じるボタン
+        CreatePillButton(card.transform, Localization.Get("ui_close"),
+            new Vector2(btnW / 2f + btnGap / 2f, btnY), new Vector2(btnW, btnH),
+            pillRadius, blur, () =>
+            {
+                Destroy(iconPickerPanel);
+                iconPickerPanel = null;
+            });
     }
 
-    void CreatePickerIcon(int index, float x, float y, float size)
+    void CreatePillButton(Transform parent, string label, Vector2 pos, Vector2 size,
+        int pillRadius, int blur, UnityEngine.Events.UnityAction onClick)
+    {
+        var btnObj = new GameObject("PillButton");
+        btnObj.transform.SetParent(parent, false);
+        var btnRect = btnObj.AddComponent<RectTransform>();
+        btnRect.anchorMin = new Vector2(0.5f, 0);
+        btnRect.anchorMax = new Vector2(0.5f, 0);
+        btnRect.anchoredPosition = pos;
+        btnRect.sizeDelta = size;
+
+        var btnBg = btnObj.AddComponent<Image>();
+        btnBg.sprite = GetPillSprite(pillRadius);
+        btnBg.type = Image.Type.Sliced;
+        btnBg.color = Color.white;
+
+        var btn = btnObj.AddComponent<Button>();
+        btn.targetGraphic = btnBg;
+        btn.onClick.AddListener(onClick);
+        btn.navigation = new Navigation { mode = Navigation.Mode.None };
+        var colors = btn.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = Color.white;
+        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
+        colors.selectedColor = Color.white;
+        colors.fadeDuration = 0.08f;
+        btn.colors = colors;
+
+        // Shadow
+        var shadowObj = new GameObject("Shadow");
+        shadowObj.transform.SetParent(btnObj.transform, false);
+        shadowObj.transform.SetAsFirstSibling();
+        var shadowRect = shadowObj.AddComponent<RectTransform>();
+        shadowRect.anchorMin = Vector2.zero;
+        shadowRect.anchorMax = Vector2.one;
+        shadowRect.offsetMin = new Vector2(-blur, -blur - 4);
+        shadowRect.offsetMax = new Vector2(blur, blur - 4);
+        var shadowImg = shadowObj.AddComponent<Image>();
+        shadowImg.sprite = GetShadowSprite(pillRadius, blur);
+        shadowImg.type = Image.Type.Sliced;
+        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
+        shadowImg.raycastTarget = false;
+
+        // Text
+        var textObj = new GameObject("Text");
+        textObj.transform.SetParent(btnObj.transform, false);
+        var textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+        var tmp = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmp);
+        tmp.text = label;
+        tmp.fontSize = 32;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = new Color(0.45f, 0.45f, 0.5f);
+        tmp.raycastTarget = false;
+
+        // Press animation
+        var trigger = btnObj.AddComponent<UnityEngine.EventSystems.EventTrigger>();
+        var pointerDown = new UnityEngine.EventSystems.EventTrigger.Entry
+            { eventID = UnityEngine.EventSystems.EventTriggerType.PointerDown };
+        pointerDown.callback.AddListener((data) => {
+            btnObj.transform.localScale = new Vector3(0.95f, 0.95f, 1f);
+        });
+        trigger.triggers.Add(pointerDown);
+        var pointerUp = new UnityEngine.EventSystems.EventTrigger.Entry
+            { eventID = UnityEngine.EventSystems.EventTriggerType.PointerUp };
+        pointerUp.callback.AddListener((data) => {
+            btnObj.transform.localScale = Vector3.one;
+        });
+        trigger.triggers.Add(pointerUp);
+        var pointerExit = new UnityEngine.EventSystems.EventTrigger.Entry
+            { eventID = UnityEngine.EventSystems.EventTriggerType.PointerExit };
+        pointerExit.callback.AddListener((data) => {
+            btnObj.transform.localScale = Vector3.one;
+        });
+        trigger.triggers.Add(pointerExit);
+    }
+
+    IEnumerator ShowToast(string message)
+    {
+        float toastW = 700f;
+        float toastH = 100f;
+        int toastPill = (int)(toastH / 2);
+        int toastBlur = 20;
+
+        var toastObj = new GameObject("Toast");
+        toastObj.transform.SetParent(mainCanvas.transform, false);
+        var toastRect = toastObj.AddComponent<RectTransform>();
+        toastRect.anchorMin = new Vector2(0.5f, 0);
+        toastRect.anchorMax = new Vector2(0.5f, 0);
+        toastRect.anchoredPosition = new Vector2(0, 200);
+        toastRect.sizeDelta = new Vector2(toastW, toastH);
+        var toastBg = toastObj.AddComponent<Image>();
+        toastBg.sprite = GetPillSprite(toastPill);
+        toastBg.type = Image.Type.Sliced;
+        toastBg.color = Color.white;
+
+        // Shadow
+        var shadowObj = new GameObject("Shadow");
+        shadowObj.transform.SetParent(toastObj.transform, false);
+        shadowObj.transform.SetAsFirstSibling();
+        var shadowRect = shadowObj.AddComponent<RectTransform>();
+        shadowRect.anchorMin = Vector2.zero;
+        shadowRect.anchorMax = Vector2.one;
+        shadowRect.offsetMin = new Vector2(-toastBlur, -toastBlur - 4);
+        shadowRect.offsetMax = new Vector2(toastBlur, toastBlur - 4);
+        var shadowImg = shadowObj.AddComponent<Image>();
+        shadowImg.sprite = GetShadowSprite(toastPill, toastBlur);
+        shadowImg.type = Image.Type.Sliced;
+        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
+        shadowImg.raycastTarget = false;
+
+        // Text
+        var textObj = new GameObject("Text");
+        textObj.transform.SetParent(toastObj.transform, false);
+        var textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+        var tmp = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmp);
+        tmp.text = message;
+        tmp.fontSize = 32;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = new Color(0.45f, 0.45f, 0.5f);
+        tmp.raycastTarget = false;
+
+        yield return new WaitForSeconds(2f);
+        Destroy(toastObj);
+    }
+
+    void CreatePickerIcon(Transform parent, int index, float x, float y, float size)
     {
         var containerObj = new GameObject($"PickerIcon_{index}");
-        containerObj.transform.SetParent(iconPickerPanel.transform, false);
+        containerObj.transform.SetParent(parent, false);
         var containerRect = containerObj.AddComponent<RectTransform>();
         containerRect.anchorMin = new Vector2(0.5f, 1);
         containerRect.anchorMax = new Vector2(0.5f, 1);
@@ -310,7 +469,7 @@ public class ProfileManager : MonoBehaviour
         borderImg.sprite = GetCircleSprite();
         borderImg.color = (index == selectedIcon)
             ? new Color(1f, 0.84f, 0f) // gold
-            : new Color(0.5f, 0.5f, 0.5f);
+            : new Color(0.82f, 0.82f, 0.85f);
 
         // Mask for circular clipping
         var maskObj = new GameObject("Mask");
@@ -339,9 +498,8 @@ public class ProfileManager : MonoBehaviour
         img.raycastTarget = false;
         img.preserveAspect = true;
 
-        Sprite spr = Resources.Load<Sprite>($"Icons/icon_{index}");
-        if (spr == null && index == 0)
-            spr = Resources.Load<Sprite>("Icons/kayo");
+        string iconName = (index >= 0 && index < iconNames.Length) ? iconNames[index] : iconNames[0];
+        Sprite spr = Resources.Load<Sprite>($"Icons/{iconName}");
 
         if (spr != null)
         {
@@ -365,6 +523,7 @@ public class ProfileManager : MonoBehaviour
             numRect.offsetMin = Vector2.zero;
             numRect.offsetMax = Vector2.zero;
             var numText = numObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(numText);
             numText.text = (index + 1).ToString();
             numText.fontSize = 36;
             numText.fontStyle = FontStyles.Bold;
@@ -379,8 +538,10 @@ public class ProfileManager : MonoBehaviour
         btn.onClick.AddListener(() =>
         {
             SelectIcon(idx);
+            // 選択状態を更新するためにピッカーを再構築
             Destroy(iconPickerPanel);
             iconPickerPanel = null;
+            ShowIconPicker();
         });
     }
 
@@ -423,9 +584,10 @@ public class ProfileManager : MonoBehaviour
         inputTextRect.offsetMin = Vector2.zero;
         inputTextRect.offsetMax = Vector2.zero;
         var inputText = inputTextObj.AddComponent<TextMeshProUGUI>();
-        inputText.fontSize = 32;
+        FontHelper.Apply(inputText);
+        inputText.fontSize = 44;
         inputText.alignment = TextAlignmentOptions.Left;
-        inputText.color = new Color(0.15f, 0.15f, 0.15f);
+        inputText.color = Color.black;
 
         var placeholderObj = new GameObject("Placeholder");
         placeholderObj.transform.SetParent(textAreaObj.transform, false);
@@ -435,6 +597,7 @@ public class ProfileManager : MonoBehaviour
         placeholderRect.offsetMin = Vector2.zero;
         placeholderRect.offsetMax = Vector2.zero;
         var placeholderText = placeholderObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(placeholderText);
         placeholderText.text = Localization.Get("profile_name_placeholder");
         placeholderText.fontSize = 32;
         placeholderText.alignment = TextAlignmentOptions.Left;
@@ -490,6 +653,7 @@ public class ProfileManager : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
         startButtonText = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(startButtonText);
         startButtonText.text = isEditing ? Localization.Get("profile_save") : Localization.Get("profile_start");
         startButtonText.fontSize = 36;
         startButtonText.fontStyle = FontStyles.Bold;
@@ -576,6 +740,7 @@ public class ProfileManager : MonoBehaviour
             textRect.anchoredPosition = new Vector2(slideFrom, yPos);
 
             var tmp = textObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(tmp);
             tmp.text = lines[i];
             tmp.fontSize = 38;
             tmp.color = Color.white;

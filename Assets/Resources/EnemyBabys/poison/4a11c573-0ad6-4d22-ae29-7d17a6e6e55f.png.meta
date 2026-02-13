@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 88cebd11a22244b3db1bd651c7f5d477
+guid: 7f9e8dc2d923d45cc9c69445d2577df6
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -1203762363461176228
-    second: first-boss-shiba_0
+      213: -4634628147310628998
+    second: 4a11c573-0ad6-4d22-ae29-7d17a6e6e55f_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -97,7 +97,7 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
-    buildTarget: Android
+    buildTarget: VisionOS
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
@@ -110,7 +110,20 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
-    buildTarget: WebGL
+    buildTarget: tvOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
@@ -126,7 +139,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: first-boss-shiba_0
+      name: 4a11c573-0ad6-4d22-ae29-7d17a6e6e55f_0
       rect:
         serializedVersion: 2
         x: 0
@@ -141,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: c5479eb12806b4fe0800000000000000
-      internalID: -1203762363461176228
+      spriteID: a7fe58d514e7eafb0800000000000000
+      internalID: -4634628147310628998
       vertices: []
       indices: 
       edges: []
@@ -161,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      first-boss-shiba_0: -1203762363461176228
+      4a11c573-0ad6-4d22-ae29-7d17a6e6e55f_0: -4634628147310628998
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
