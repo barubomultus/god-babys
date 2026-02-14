@@ -4,6 +4,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
 using TMPro;
 using System.Collections;
+using UIE = UnityEngine.UIElements;
 
 public class BattleManager : MonoBehaviour
 {
@@ -47,6 +48,7 @@ public class BattleManager : MonoBehaviour
     int enemyPoisonTurns;      // 毒残りターン
     int playerEvasionBuffTurns;// 回避バフ残りターン
     int playerPoisonTurns;     // プレイヤー毒残りターン
+    int playerAtkDebuffTurns;  // プレイヤーATKデバフ残りターン
     bool isDevilEnemy;         // 悪魔村敵フラグ
     bool cannotRun;            // 逃走不可フラグ（固定エンカウント）
     Color enemyBgColor = Color.clear; // スプライト無し時の背景色
@@ -190,8 +192,12 @@ public class BattleManager : MonoBehaviour
     TextMeshProUGUI attackButtonText;
     TextMeshProUGUI specialButtonText;
 
+    // UI Toolkit overlay
+    UIE.PanelSettings overlayPanelSettings;
+    UIE.VisualElement overlayRoot;
+    UIE.VisualElement menuOverlayEl;
+
     // バトル状態
-    GameObject menuBarObj;
     bool isBattleActive;
     bool isPlayerTurn;
     bool waitingForAction;
@@ -219,9 +225,24 @@ public class BattleManager : MonoBehaviour
         InitializePlayer();
         InitializeEnemy();
         CreateBattleUI();
+
+        // UI Toolkit overlay for menus & dialogs
+        overlayPanelSettings = UIHelper.CreatePanelSettings(10f);
+        var overlayObj = new GameObject("BattleOverlayUI");
+        overlayObj.transform.SetParent(transform, false);
+        overlayRoot = UIHelper.SetupUIDocument(overlayObj,
+            new[] { "UI/CommonStyle", "UI/BattleStyle" }, overlayPanelSettings);
+        overlayRoot.pickingMode = UIE.PickingMode.Ignore;
+
         CreateMenuBar();
 
         StartCoroutine(BattleStart());
+    }
+
+    void OnDestroy()
+    {
+        if (overlayPanelSettings != null)
+            Destroy(overlayPanelSettings);
     }
 
     void InitializePlayer()
@@ -358,7 +379,21 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
-        if (fromMap && bossBattle && area == 2)
+        if (fromMap && bossBattle && area == 4)
+        {
+            // 109 — メロディアス女王
+            enemyName = "メロディアス女王";
+            enemyAge = -1;
+            enemyMaxHp = 800;
+            enemyHp = enemyMaxHp;
+            enemyAtk = 100;
+            enemyDef = 45;
+            enemySpeed = 80;
+            isDevilEnemy = false;
+            enemyBgColor = new Color(0.4f, 0.15f, 0.3f);
+            loadedEnemySprite = Resources.Load<Sprite>("EnemyBabys/boss/melodias");
+        }
+        else if (fromMap && bossBattle && area == 2)
         {
             // デヴィル夫人のやかた — デヴィル夫人
             enemyName = "デヴィル夫人";
@@ -441,12 +476,12 @@ public class BattleManager : MonoBehaviour
             // 小悪魔の街専用テーブル
             enemyDefs = new object[][] {
                 //                    名前              スプライト  HP  ATK DEF SPD 出現月齢  背景色
-                new object[]{ "小悪魔ひとみ", Resources.Load<Sprite>("EnemyBabys/poison/doku-baby"),   160, 45, 30, 40, 14, 17, new Color(0.35f, 0.1f, 0.4f) },
-                new object[]{ "小悪魔あやか", Resources.Load<Sprite>("EnemyBabys/poison/noroi-baby"),  190, 52, 35, 45, 15, 18, new Color(0.3f, 0.05f, 0.35f) },
-                new object[]{ "小悪魔りん",   Resources.Load<Sprite>("EnemyBabys/poison/yami-baby"),   220, 60, 38, 50, 16, 19, new Color(0.2f, 0.05f, 0.3f) },
-                new object[]{ "小悪魔みく",   Resources.Load<Sprite>("EnemyBabys/poison/akuma-baby"),  250, 68, 42, 55, 17, 20, new Color(0.45f, 0.05f, 0.15f) },
-                new object[]{ "小悪魔なな",   Resources.Load<Sprite>("EnemyBabys/poison/jyaaku-baby"), 280, 75, 48, 60, 18, 22, new Color(0.25f, 0.0f, 0.05f) },
-                new object[]{ "小悪魔れい",   Resources.Load<Sprite>("EnemyBabys/poison/maou-baby"),   320, 85, 55, 65, 20, 24, new Color(0.15f, 0.0f, 0.2f) },
+                new object[]{ "小悪魔ひとみ", Resources.Load<Sprite>("EnemyBabys/cute/hitomi"),  160, 45, 30, 40, 14, 17, new Color(0.35f, 0.1f, 0.4f) },
+                new object[]{ "小悪魔あやか", Resources.Load<Sprite>("EnemyBabys/cute/ayaka"),  190, 52, 35, 45, 15, 18, new Color(0.3f, 0.05f, 0.35f) },
+                new object[]{ "小悪魔りん",   Resources.Load<Sprite>("EnemyBabys/cute/rin"),    220, 60, 38, 50, 16, 19, new Color(0.2f, 0.05f, 0.3f) },
+                new object[]{ "小悪魔みく",   Resources.Load<Sprite>("EnemyBabys/cute/miku"),   250, 68, 42, 55, 17, 20, new Color(0.45f, 0.05f, 0.15f) },
+                new object[]{ "小悪魔なな",   Resources.Load<Sprite>("EnemyBabys/cute/nana"),   280, 75, 48, 60, 18, 22, new Color(0.25f, 0.0f, 0.05f) },
+                new object[]{ "小悪魔れい",   Resources.Load<Sprite>("EnemyBabys/cute/rei"),    320, 85, 55, 65, 20, 24, new Color(0.15f, 0.0f, 0.2f) },
             };
         }
         else if (area == 1)
@@ -1962,9 +1997,27 @@ public class BattleManager : MonoBehaviour
         }
         yield return new WaitForSeconds(3.0f);
 
-        battleLogText.text = Localization.Get("battle_start");
+        // バトルスタート画像を表示
+        battleLogText.text = "";
+        var startImgObj = new GameObject("BattleStartImage");
+        startImgObj.transform.SetParent(canvas.transform, false);
+        var startImgRect = startImgObj.AddComponent<RectTransform>();
+        startImgRect.anchorMin = new Vector2(0.5f, 0.5f);
+        startImgRect.anchorMax = new Vector2(0.5f, 0.5f);
+        startImgRect.anchoredPosition = Vector2.zero;
+        startImgRect.sizeDelta = new Vector2(800, 400);
+        var startImg = startImgObj.AddComponent<Image>();
+        var startSpr = Resources.Load<Sprite>("UI/battle-start");
+        if (startSpr != null)
+        {
+            startImg.sprite = startSpr;
+            startImg.preserveAspect = true;
+            startImg.color = Color.white;
+        }
+        startImg.raycastTarget = false;
         if (vsTextObj != null) vsTextObj.SetActive(false);
         yield return new WaitForSeconds(2.0f);
+        Destroy(startImgObj);
 
         // 運動値 vs 敵の素早さで先攻判定
         int playerSpeed = DataCarrier.Instance != null ? DataCarrier.Instance.babyAthletic : 50;
@@ -2018,6 +2071,12 @@ public class BattleManager : MonoBehaviour
             battleLogText.text = Localization.Get("battle_devil_lady_charge");
             yield return new WaitForSeconds(1.5f);
         }
+        // メロディアス女王: 5ターンごとのチャージ警告
+        if (isBoss && enemyName == "メロディアス女王" && (enemyTurnCount + 1) % 5 == 0 && enemyTurnCount > 0)
+        {
+            battleLogText.text = Localization.Get("battle_melodias_charge");
+            yield return new WaitForSeconds(1.5f);
+        }
 
         battleLogText.text = Localization.Get("battle_your_turn");
         actionPanel.SetActive(true);
@@ -2059,6 +2118,7 @@ public class BattleManager : MonoBehaviour
         if (enemyDefDebuffTurns > 0) enemyDefDebuffTurns--;
         if (enemyAtkDebuffTurns > 0) enemyAtkDebuffTurns--;
         if (playerEvasionBuffTurns > 0) playerEvasionBuffTurns--;
+        if (playerAtkDebuffTurns > 0) playerAtkDebuffTurns--;
 
         enemyTurnCount++;
 
@@ -2073,6 +2133,12 @@ public class BattleManager : MonoBehaviour
         if (isBoss && enemyName == "デヴィル夫人" && enemyTurnCount % 4 == 0)
         {
             yield return StartCoroutine(EnemyDoDevilLadyUltimate());
+            yield break;
+        }
+        // メロディアス女王: 5ターン毎に必殺技「魅惑のメロディ」
+        if (isBoss && enemyName == "メロディアス女王" && enemyTurnCount % 5 == 0)
+        {
+            yield return StartCoroutine(EnemyDoMelodiasUltimate());
             yield break;
         }
 
@@ -2280,6 +2346,53 @@ public class BattleManager : MonoBehaviour
         yield return StartCoroutine(CheckPlayerDefeatAndContinue());
     }
 
+    IEnumerator EnemyDoMelodiasUltimate()
+    {
+        // 予告演出
+        battleLogText.text = Localization.Get("battle_melodias_ultimate");
+        yield return new WaitForSeconds(1.0f);
+
+        // 画面フラッシュ（ピンク/ゴールド）
+        StartCoroutine(FlashEffect(new Color(1.0f, 0.4f, 0.7f), 0.5f));
+        yield return new WaitForSeconds(0.3f);
+
+        battleLogText.text = Localization.Get("battle_melodias_ultimate_name");
+        yield return new WaitForSeconds(0.5f);
+
+        // 必殺技演出
+        yield return StartCoroutine(AttackAnimation(enemyPanelRect, playerPanelRect, true));
+        StartCoroutine(FlashEffect(new Color(1.0f, 0.84f, 0.0f), 0.6f));
+        StartCoroutine(ShakeEffect(playerPanelRect, 0.5f, 25f));
+
+        // 固定ダメージ180 + 防御で半減可能
+        int ultimatePower = 180;
+        int damage = CalculateDamage(ultimatePower, playerDef, playerDefending);
+
+        playerHp = Mathf.Max(0, playerHp - damage);
+        UpdatePlayerDisplay();
+        StartCoroutine(DamageFlash(playerFaceImage));
+
+        if (playerDefending)
+        {
+            battleLogText.text = Localization.Get("battle_melodias_ultimate_blocked", damage);
+        }
+        else
+        {
+            battleLogText.text = Localization.Get("battle_melodias_ultimate_hit", damage);
+        }
+        yield return new WaitForSeconds(1.0f);
+
+        // ATKデバフ3ターン付与
+        if (playerHp > 0)
+        {
+            playerAtkDebuffTurns = 3;
+            battleLogText.text = Localization.Get("battle_melodias_debuffed");
+            yield return new WaitForSeconds(1.0f);
+        }
+
+        yield return StartCoroutine(CheckPlayerDefeatAndContinue());
+    }
+
     IEnumerator CheckPlayerDefeatAndContinue()
     {
         if (playerHp <= 0)
@@ -2421,7 +2534,8 @@ public class BattleManager : MonoBehaviour
         yield return StartCoroutine(AttackAnimation(playerPanelRect, enemyPanelRect, false));
 
         int effectiveDef = enemyDefDebuffTurns > 0 ? (int)(enemyDef * 0.6f) : enemyDef;
-        int damage = CalculateDamage(playerAtk, effectiveDef, enemyDefending);
+        int effectivePlayerAtk = playerAtkDebuffTurns > 0 ? (int)(playerAtk * 0.6f) : playerAtk;
+        int damage = CalculateDamage(effectivePlayerAtk, effectiveDef, enemyDefending);
         enemyDefending = false;
         enemyHp = Mathf.Max(0, enemyHp - damage);
         UpdateEnemyDisplay();
@@ -2458,7 +2572,8 @@ public class BattleManager : MonoBehaviour
 
         // ダメージ計算（通常攻撃の70%威力）
         int effectiveDef = enemyDefDebuffTurns > 0 ? (int)(enemyDef * 0.6f) : enemyDef;
-        int damage = CalculateDamage((int)(playerAtk * 0.7f), effectiveDef, enemyDefending);
+        int effectivePlayerAtk = playerAtkDebuffTurns > 0 ? (int)(playerAtk * 0.6f) : playerAtk;
+        int damage = CalculateDamage((int)(effectivePlayerAtk * 0.7f), effectiveDef, enemyDefending);
         enemyDefending = false;
 
         yield return StartCoroutine(AttackAnimation(playerPanelRect, enemyPanelRect, false));
@@ -2540,7 +2655,8 @@ public class BattleManager : MonoBehaviour
             yield return StartCoroutine(AttackAnimation(playerPanelRect, enemyPanelRect, true));
 
             float multiplier = isGodBaby ? 2.5f : 2.0f;
-            int damage = (int)(playerAtk * multiplier) + Random.Range(5, 15);
+            int effectivePlayerAtk = playerAtkDebuffTurns > 0 ? (int)(playerAtk * 0.6f) : playerAtk;
+            int damage = (int)(effectivePlayerAtk * multiplier) + Random.Range(5, 15);
             if (enemyDefending) damage = damage / 2;
             enemyDefending = false;
             enemyHp = Mathf.Max(0, enemyHp - damage);
@@ -2568,6 +2684,7 @@ public class BattleManager : MonoBehaviour
         playerAtk = (int)(playerAtk * 1.15f);
         // 自分のデバフ解除
         playerEvasionBuffTurns = 0;
+        playerAtkDebuffTurns = 0;
         yield return new WaitForSeconds(0.8f);
 
         if (enemyHp <= 0)
@@ -2736,21 +2853,71 @@ public class BattleManager : MonoBehaviour
         }
         else
         {
-            // レベルアップまで足りない — 経験値状況を表示
+            // レベルアップまで足りない — 経験値状況を表示 + プログレスバー
             int remaining = needed - currentExp;
             battleLogText.text = Localization.Get("battle_exp_remaining", remaining, currentExp, needed);
-            yield return new WaitForSeconds(1.5f);
+
+            // プログレスバーを作成（battleLogTextの親パネル内）
+            var logPanel = battleLogText.transform.parent;
+
+            // バー背景
+            var barBgObj = new GameObject("ExpBarBg");
+            barBgObj.transform.SetParent(logPanel, false);
+            var barBgRect = barBgObj.AddComponent<RectTransform>();
+            barBgRect.anchorMin = new Vector2(0.1f, 0f);
+            barBgRect.anchorMax = new Vector2(0.9f, 0f);
+            barBgRect.anchoredPosition = new Vector2(0, 25);
+            barBgRect.sizeDelta = new Vector2(0, 20);
+            var barBgImg = barBgObj.AddComponent<Image>();
+            barBgImg.sprite = CreateRoundedRectSprite(32, 32, 6);
+            barBgImg.type = Image.Type.Sliced;
+            barBgImg.color = new Color(0.3f, 0.3f, 0.3f, 1f);
+            barBgImg.raycastTarget = false;
+
+            // バー本体
+            var barFillObj = new GameObject("ExpBarFill");
+            barFillObj.transform.SetParent(barBgObj.transform, false);
+            var barFillRect = barFillObj.AddComponent<RectTransform>();
+            barFillRect.anchorMin = new Vector2(0, 0);
+            barFillRect.anchorMax = new Vector2(0, 1); // 0から始めてアニメーション
+            barFillRect.offsetMin = new Vector2(2, 2);
+            barFillRect.offsetMax = new Vector2(-2, -2);
+            barFillRect.pivot = new Vector2(0, 0.5f);
+            var barFillImg = barFillObj.AddComponent<Image>();
+            barFillImg.color = new Color(1.0f, 0.85f, 0.0f); // 金色
+            barFillImg.raycastTarget = false;
+
+            // アニメーション: 0% → 現在の割合
+            float targetRatio = Mathf.Clamp01((float)currentExp / needed);
+            float animDuration = 0.8f;
+            float animElapsed = 0f;
+            while (animElapsed < animDuration)
+            {
+                animElapsed += Time.deltaTime;
+                float t = Mathf.SmoothStep(0f, 1f, animElapsed / animDuration);
+                barFillRect.anchorMax = new Vector2(t * targetRatio, 1);
+                yield return null;
+            }
+            barFillRect.anchorMax = new Vector2(targetRatio, 1);
+
+            yield return new WaitForSeconds(1.2f);
+
+            Destroy(barBgObj);
         }
     }
 
     IEnumerator ShowStatGrowth(int oldAtk, int oldDef, int oldHp, int oldAcademic, int oldAthletic, int oldHeight, int oldWeight,
                                 int newAtk, int newDef, int newHp, int newAcademic, int newAthletic, int newHeight, int newWeight)
     {
-        int cardRadius = 32;
         int pillRadius = 30;
         int blur = 16;
+        float rowW = 860f;
+        float rowH = 80f;
+        float rowGap = 14f;
+        int newAge = DataCarrier.Instance != null ? DataCarrier.Instance.babyAge : 0;
+        string babyName = DataCarrier.Instance != null ? DataCarrier.Instance.babyName : "";
 
-        // 全画面オーバーレイ（白背景）
+        // 全画面オーバーレイ
         var overlay = new GameObject("GrowthOverlay");
         overlay.transform.SetParent(canvas.transform, false);
         var overlayRect = overlay.AddComponent<RectTransform>();
@@ -2759,114 +2926,242 @@ public class BattleManager : MonoBehaviour
         overlayRect.offsetMin = Vector2.zero;
         overlayRect.offsetMax = Vector2.zero;
         var overlayImg = overlay.AddComponent<Image>();
-        overlayImg.color = new Color(1f, 1f, 1f, 0.95f);
+        overlayImg.color = new Color(0.953f, 0.969f, 0.973f);
         overlayImg.raycastTarget = true;
 
-        // カード
-        var growthPanel = new GameObject("GrowthPanel");
-        growthPanel.transform.SetParent(overlay.transform, false);
-        var panelRect = growthPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.05f, 0.1f);
-        panelRect.anchorMax = new Vector2(0.95f, 0.9f);
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
-
-        var panelBg = growthPanel.AddComponent<Image>();
-        panelBg.sprite = GetPillSprite(cardRadius);
-        panelBg.type = Image.Type.Sliced;
-        panelBg.color = Color.white;
-        panelBg.raycastTarget = false;
-
-        // カード影
-        var cardShadow = new GameObject("CardShadow");
-        cardShadow.transform.SetParent(growthPanel.transform, false);
-        cardShadow.transform.SetAsFirstSibling();
-        var cardShadowRect = cardShadow.AddComponent<RectTransform>();
-        cardShadowRect.anchorMin = Vector2.zero;
-        cardShadowRect.anchorMax = Vector2.one;
-        cardShadowRect.offsetMin = new Vector2(-blur, -blur - 4);
-        cardShadowRect.offsetMax = new Vector2(blur, blur - 4);
-        var cardShadowImg = cardShadow.AddComponent<Image>();
-        cardShadowImg.sprite = GetShadowSprite(cardRadius, blur);
-        cardShadowImg.type = Image.Type.Sliced;
-        cardShadowImg.color = new Color(0f, 0f, 0f, 0.12f);
-        cardShadowImg.raycastTarget = false;
-
-        // タイトル
+        // === ヘッダー: タイトル ===
+        float topY = -100f;
         var titleObj = new GameObject("Title");
-        titleObj.transform.SetParent(growthPanel.transform, false);
+        titleObj.transform.SetParent(overlay.transform, false);
         var titleRect = titleObj.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0, 1);
-        titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.anchoredPosition = new Vector2(0, -50);
-        titleRect.sizeDelta = new Vector2(0, 80);
+        titleRect.anchorMin = new Vector2(0.5f, 1);
+        titleRect.anchorMax = new Vector2(0.5f, 1);
+        titleRect.anchoredPosition = new Vector2(0, topY);
+        titleRect.sizeDelta = new Vector2(900, 70);
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
         FontHelper.Apply(titleText);
         titleText.text = Localization.Get("battle_growth_title");
-        titleText.fontSize = 64;
+        titleText.fontSize = 52;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.fontStyle = FontStyles.Bold;
         titleText.color = new Color(0.15f, 0.15f, 0.18f);
+        titleText.richText = true;
         titleText.raycastTarget = false;
 
-        // 月齢テキスト
-        int newAge = DataCarrier.Instance != null ? DataCarrier.Instance.babyAge : 0;
-        var ageObj = new GameObject("AgeText");
-        ageObj.transform.SetParent(growthPanel.transform, false);
-        var ageRect = ageObj.AddComponent<RectTransform>();
-        ageRect.anchorMin = new Vector2(0, 1);
-        ageRect.anchorMax = new Vector2(1, 1);
-        ageRect.anchoredPosition = new Vector2(0, -120);
-        ageRect.sizeDelta = new Vector2(0, 50);
-        var ageText = ageObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(ageText);
-        ageText.text = Localization.Get("battle_age_up", newAge);
-        ageText.fontSize = 36;
-        ageText.alignment = TextAlignmentOptions.Center;
-        ageText.color = new Color(0.4f, 0.4f, 0.45f);
-        ageText.raycastTarget = false;
+        // === 名前 + 月齢 ===
+        float subY = topY - 60f;
+        var subObj = new GameObject("SubTitle");
+        subObj.transform.SetParent(overlay.transform, false);
+        var subRect = subObj.AddComponent<RectTransform>();
+        subRect.anchorMin = new Vector2(0.5f, 1);
+        subRect.anchorMax = new Vector2(0.5f, 1);
+        subRect.anchoredPosition = new Vector2(0, subY);
+        subRect.sizeDelta = new Vector2(900, 44);
+        var subText = subObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(subText);
+        subText.text = $"{babyName}    {Localization.GetAge(newAge)}";
+        subText.fontSize = 30;
+        subText.alignment = TextAlignmentOptions.Center;
+        subText.color = new Color(0.50f, 0.50f, 0.55f);
+        subText.raycastTarget = false;
 
-        // ステータス表示エリア
-        var statsObj = new GameObject("Stats");
-        statsObj.transform.SetParent(growthPanel.transform, false);
-        var statsRect = statsObj.AddComponent<RectTransform>();
-        statsRect.anchorMin = new Vector2(0, 0.2f);
-        statsRect.anchorMax = new Vector2(1, 0.8f);
-        statsRect.offsetMin = new Vector2(60, 0);
-        statsRect.offsetMax = new Vector2(-60, -20);
-        var statsText = statsObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(statsText);
-        statsText.fontSize = 44;
-        statsText.lineSpacing = 16;
-        statsText.alignment = TextAlignmentOptions.Left;
-        statsText.color = new Color(0.15f, 0.15f, 0.18f);
-        statsText.richText = true;
-        statsText.raycastTarget = false;
+        // === ステータス行を1つずつ表示 ===
+        float statsStartY = subY - 70f;
 
-        // ステータスを1行ずつ表示
-        string[] statLines = new string[]
-        {
-            $"{Localization.Get("battle_stat_atk")}: {oldAtk}  →  <color=#22AA44>{newAtk}</color>  <color=#DD8800>(+{newAtk - oldAtk})</color>",
-            $"{Localization.Get("battle_stat_def")}: {oldDef}  →  <color=#22AA44>{newDef}</color>  <color=#DD8800>(+{newDef - oldDef})</color>",
-            $"{Localization.Get("battle_stat_hp_label")}: {oldHp}  →  <color=#22AA44>{newHp}</color>  <color=#DD8800>(+{newHp - oldHp})</color>",
-            $"{Localization.Get("battle_stat_athletic")}: {oldAthletic}  →  <color=#22AA44>{newAthletic}</color>  <color=#DD8800>(+{newAthletic - oldAthletic})</color>"
+        // 定義: [label, oldVal, newVal, accentColor]
+        var statDefs = new[] {
+            new { label = Localization.Get("battle_stat_hp_label"), oldV = oldHp, newV = newHp, color = new Color(0.88f, 0.27f, 0.27f) },
+            new { label = Localization.Get("battle_stat_atk"), oldV = oldAtk, newV = newAtk, color = new Color(0.87f, 0.47f, 0.14f) },
+            new { label = Localization.Get("battle_stat_def"), oldV = oldDef, newV = newDef, color = new Color(0.20f, 0.40f, 0.80f) },
+            new { label = Localization.Get("battle_stat_athletic"), oldV = oldAthletic, newV = newAthletic, color = new Color(0.13f, 0.67f, 0.33f) },
         };
 
-        string displayText = "";
-        foreach (string line in statLines)
+        var rowObjects = new GameObject[statDefs.Length];
+
+        for (int i = 0; i < statDefs.Length; i++)
         {
-            displayText += line + "\n";
-            statsText.text = displayText;
-            yield return new WaitForSeconds(0.4f);
+            var sd = statDefs[i];
+            int diff = sd.newV - sd.oldV;
+            float y = statsStartY - i * (rowH + rowGap);
+
+            // Row container
+            var rowObj = new GameObject($"StatRow_{sd.label}");
+            rowObj.transform.SetParent(overlay.transform, false);
+            var rr = rowObj.AddComponent<RectTransform>();
+            rr.anchorMin = new Vector2(0.5f, 1);
+            rr.anchorMax = new Vector2(0.5f, 1);
+            rr.anchoredPosition = new Vector2(0, y);
+            rr.sizeDelta = new Vector2(rowW, rowH);
+            rowObjects[i] = rowObj;
+
+            // White pill bg
+            var rowBg = rowObj.AddComponent<Image>();
+            rowBg.sprite = GetPillSprite(pillRadius);
+            rowBg.type = Image.Type.Sliced;
+            rowBg.color = Color.white;
+            rowBg.raycastTarget = false;
+
+            // Shadow
+            var sh = new GameObject("Shadow");
+            sh.transform.SetParent(rowObj.transform, false);
+            sh.transform.SetAsFirstSibling();
+            var shR = sh.AddComponent<RectTransform>();
+            shR.anchorMin = Vector2.zero;
+            shR.anchorMax = Vector2.one;
+            shR.offsetMin = new Vector2(-blur, -blur - 3);
+            shR.offsetMax = new Vector2(blur, blur - 3);
+            var shImg = sh.AddComponent<Image>();
+            shImg.sprite = GetShadowSprite(pillRadius, blur);
+            shImg.type = Image.Type.Sliced;
+            shImg.color = new Color(0f, 0f, 0f, 0.08f);
+            shImg.raycastTarget = false;
+
+            // Left: Color accent bar
+            var barObj = new GameObject("AccentBar");
+            barObj.transform.SetParent(rowObj.transform, false);
+            var barRect = barObj.AddComponent<RectTransform>();
+            barRect.anchorMin = new Vector2(0, 0.15f);
+            barRect.anchorMax = new Vector2(0, 0.85f);
+            barRect.anchoredPosition = new Vector2(28, 0);
+            barRect.sizeDelta = new Vector2(6, 0);
+            var barImg = barObj.AddComponent<Image>();
+            barImg.color = sd.color;
+            barImg.raycastTarget = false;
+
+            // Stat label
+            var lblObj = new GameObject("Label");
+            lblObj.transform.SetParent(rowObj.transform, false);
+            var lblRect = lblObj.AddComponent<RectTransform>();
+            lblRect.anchorMin = new Vector2(0, 0);
+            lblRect.anchorMax = new Vector2(0, 1);
+            lblRect.anchoredPosition = new Vector2(120, 0);
+            lblRect.sizeDelta = new Vector2(160, 0);
+            var lblText = lblObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(lblText);
+            lblText.text = sd.label;
+            lblText.fontSize = 30;
+            lblText.fontStyle = FontStyles.Bold;
+            lblText.alignment = TextAlignmentOptions.Left;
+            lblText.color = sd.color;
+            lblText.raycastTarget = false;
+
+            // Old value
+            var oldObj = new GameObject("OldVal");
+            oldObj.transform.SetParent(rowObj.transform, false);
+            var oldRect = oldObj.AddComponent<RectTransform>();
+            oldRect.anchorMin = new Vector2(0.5f, 0);
+            oldRect.anchorMax = new Vector2(0.5f, 1);
+            oldRect.anchoredPosition = new Vector2(-80, 0);
+            oldRect.sizeDelta = new Vector2(120, 0);
+            var oldText = oldObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(oldText);
+            oldText.text = sd.oldV.ToString();
+            oldText.fontSize = 34;
+            oldText.alignment = TextAlignmentOptions.Right;
+            oldText.color = new Color(0.55f, 0.55f, 0.6f);
+            oldText.raycastTarget = false;
+
+            // Arrow
+            var arrowObj = new GameObject("Arrow");
+            arrowObj.transform.SetParent(rowObj.transform, false);
+            var arrowRect = arrowObj.AddComponent<RectTransform>();
+            arrowRect.anchorMin = new Vector2(0.5f, 0);
+            arrowRect.anchorMax = new Vector2(0.5f, 1);
+            arrowRect.anchoredPosition = new Vector2(0, 0);
+            arrowRect.sizeDelta = new Vector2(60, 0);
+            var arrowText = arrowObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(arrowText);
+            arrowText.text = "\u2192";
+            arrowText.fontSize = 30;
+            arrowText.alignment = TextAlignmentOptions.Center;
+            arrowText.color = new Color(0.70f, 0.70f, 0.72f);
+            arrowText.raycastTarget = false;
+
+            // New value
+            var newObj = new GameObject("NewVal");
+            newObj.transform.SetParent(rowObj.transform, false);
+            var newRect = newObj.AddComponent<RectTransform>();
+            newRect.anchorMin = new Vector2(0.5f, 0);
+            newRect.anchorMax = new Vector2(0.5f, 1);
+            newRect.anchoredPosition = new Vector2(80, 0);
+            newRect.sizeDelta = new Vector2(120, 0);
+            var newText = newObj.AddComponent<TextMeshProUGUI>();
+            FontHelper.Apply(newText);
+            newText.text = sd.newV.ToString();
+            newText.fontSize = 38;
+            newText.fontStyle = FontStyles.Bold;
+            newText.alignment = TextAlignmentOptions.Left;
+            newText.color = new Color(0.15f, 0.15f, 0.18f);
+            newText.raycastTarget = false;
+
+            // Diff badge (pill)
+            if (diff > 0)
+            {
+                var diffObj = new GameObject("Diff");
+                diffObj.transform.SetParent(rowObj.transform, false);
+                var diffRect = diffObj.AddComponent<RectTransform>();
+                diffRect.anchorMin = new Vector2(1, 0.5f);
+                diffRect.anchorMax = new Vector2(1, 0.5f);
+                diffRect.anchoredPosition = new Vector2(-50, 0);
+                diffRect.sizeDelta = new Vector2(90, 38);
+                var diffBg = diffObj.AddComponent<Image>();
+                diffBg.sprite = GetPillSprite(pillRadius);
+                diffBg.type = Image.Type.Sliced;
+                diffBg.color = new Color(sd.color.r, sd.color.g, sd.color.b, 0.12f);
+                diffBg.raycastTarget = false;
+
+                var diffTextObj = new GameObject("Text");
+                diffTextObj.transform.SetParent(diffObj.transform, false);
+                var dtRect = diffTextObj.AddComponent<RectTransform>();
+                dtRect.anchorMin = Vector2.zero;
+                dtRect.anchorMax = Vector2.one;
+                dtRect.offsetMin = Vector2.zero;
+                dtRect.offsetMax = Vector2.zero;
+                var diffText = diffTextObj.AddComponent<TextMeshProUGUI>();
+                FontHelper.Apply(diffText);
+                diffText.text = $"+{diff}";
+                diffText.fontSize = 22;
+                diffText.fontStyle = FontStyles.Bold;
+                diffText.alignment = TextAlignmentOptions.Center;
+                diffText.color = sd.color;
+                diffText.raycastTarget = false;
+            }
+
+            // Start hidden, reveal with animation
+            rowObj.transform.localScale = new Vector3(0.9f, 0.9f, 1f);
+            var cg = rowObj.AddComponent<CanvasGroup>();
+            cg.alpha = 0f;
         }
 
-        // OKボタン（TitleScene風 pill + shadow）
+        // Animate rows in one by one
+        for (int i = 0; i < rowObjects.Length; i++)
+        {
+            var row = rowObjects[i];
+            var cg = row.GetComponent<CanvasGroup>();
+            float elapsed = 0f;
+            float duration = 0.25f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                float ease = 1f - (1f - t) * (1f - t); // ease-out quad
+                cg.alpha = ease;
+                row.transform.localScale = Vector3.Lerp(new Vector3(0.9f, 0.9f, 1f), Vector3.one, ease);
+                yield return null;
+            }
+            cg.alpha = 1f;
+            row.transform.localScale = Vector3.one;
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        // === OKボタン ===
+        float okY = statsStartY - statDefs.Length * (rowH + rowGap) - 40f;
         var okBtn = new GameObject("OkButton");
-        okBtn.transform.SetParent(growthPanel.transform, false);
+        okBtn.transform.SetParent(overlay.transform, false);
         var okRect = okBtn.AddComponent<RectTransform>();
-        okRect.anchorMin = new Vector2(0.5f, 0);
-        okRect.anchorMax = new Vector2(0.5f, 0);
-        okRect.anchoredPosition = new Vector2(0, 70);
+        okRect.anchorMin = new Vector2(0.5f, 1);
+        okRect.anchorMax = new Vector2(0.5f, 1);
+        okRect.anchoredPosition = new Vector2(0, okY);
         okRect.sizeDelta = new Vector2(600, 100);
 
         var okImg = okBtn.AddComponent<Image>();
@@ -2885,7 +3180,7 @@ public class BattleManager : MonoBehaviour
         var okShadowImg = okShadowObj.AddComponent<Image>();
         okShadowImg.sprite = GetShadowSprite(pillRadius, blur);
         okShadowImg.type = Image.Type.Sliced;
-        okShadowImg.color = new Color(0f, 0f, 0f, 0.18f);
+        okShadowImg.color = new Color(0f, 0f, 0f, 0.15f);
         okShadowImg.raycastTarget = false;
 
         bool dismissed = false;
@@ -2912,13 +3207,24 @@ public class BattleManager : MonoBehaviour
         var okTmp = okTextObj.AddComponent<TextMeshProUGUI>();
         FontHelper.Apply(okTmp);
         okTmp.text = "OK";
-        okTmp.fontSize = 40;
+        okTmp.fontSize = 38;
         okTmp.alignment = TextAlignmentOptions.Center;
         okTmp.color = new Color(0.15f, 0.15f, 0.18f);
         okTmp.fontStyle = FontStyles.Bold;
         okTmp.raycastTarget = false;
 
-        // ボタンが押されるまで待機
+        // Fade in OK button
+        var okCg = okBtn.AddComponent<CanvasGroup>();
+        okCg.alpha = 0f;
+        float okElapsed = 0f;
+        while (okElapsed < 0.2f)
+        {
+            okElapsed += Time.deltaTime;
+            okCg.alpha = Mathf.Clamp01(okElapsed / 0.2f);
+            yield return null;
+        }
+        okCg.alpha = 1f;
+
         while (!dismissed)
             yield return null;
 
@@ -2939,116 +3245,26 @@ public class BattleManager : MonoBehaviour
 
     void ShowGameOverPanel()
     {
-        int cardRadius = 32;
-        int pillRadius = 30;
-        int blur = 16;
+        var overlay = UIHelper.CreateOverlay();
 
-        var resultPanel = new GameObject("ResultPanel");
-        resultPanel.transform.SetParent(canvas.transform, false);
+        var card = new UIE.VisualElement();
+        card.AddToClassList("battle-gameover-card");
 
-        var panelRect = resultPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = Vector2.zero;
-        panelRect.sizeDelta = new Vector2(900, 500);
+        var title = UIHelper.CreateLabel(Localization.Get("battle_game_over"), "battle-gameover-title");
+        card.Add(title);
 
-        var panelBg = resultPanel.AddComponent<Image>();
-        panelBg.sprite = GetPillSprite(cardRadius);
-        panelBg.type = Image.Type.Sliced;
-        panelBg.color = Color.white;
+        string babyName = DataCarrier.Instance != null ? DataCarrier.Instance.babyName : "";
+        var msg = UIHelper.CreateLabel(
+            string.Format(Localization.Get("ui_try_again"), babyName),
+            "battle-gameover-msg");
+        card.Add(msg);
 
-        // GAME OVER テキスト
-        var textObj = new GameObject("ResultText");
-        textObj.transform.SetParent(resultPanel.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = new Vector2(0, 0.45f);
-        textRect.anchorMax = new Vector2(1, 1);
-        textRect.offsetMin = new Vector2(30, 0);
-        textRect.offsetMax = new Vector2(-30, -30);
-        var resultText = textObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(resultText);
-        resultText.text = Localization.Get("battle_game_over");
-        resultText.fontSize = 80;
-        resultText.alignment = TextAlignmentOptions.Center;
-        resultText.fontStyle = FontStyles.Bold;
-        resultText.color = Color.black;
-        resultText.raycastTarget = false;
+        var retryBtn = UIHelper.CreatePillButton(Localization.Get("ui_back_to_title_long"), "pill-button-large");
+        retryBtn.clicked += () => SceneManager.LoadScene("TitleScene");
+        card.Add(retryBtn);
 
-        // 「○○はちからつきた」テキスト
-        var msgObj = new GameObject("DefeatMessage");
-        msgObj.transform.SetParent(resultPanel.transform, false);
-        var msgRect = msgObj.AddComponent<RectTransform>();
-        msgRect.anchorMin = new Vector2(0, 0.3f);
-        msgRect.anchorMax = new Vector2(1, 0.5f);
-        msgRect.offsetMin = new Vector2(30, 0);
-        msgRect.offsetMax = new Vector2(-30, 0);
-        var msgText = msgObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(msgText);
-        msgText.text = string.Format(Localization.Get("ui_try_again"), DataCarrier.Instance.babyName);
-        msgText.fontSize = 36;
-        msgText.alignment = TextAlignmentOptions.Center;
-        msgText.color = new Color(0.3f, 0.3f, 0.35f);
-        msgText.raycastTarget = false;
-
-        // タイトルへ戻るボタン（TitleScene風 pill + shadow + press animation）
-        var retryBtn = new GameObject("RetryButton");
-        retryBtn.transform.SetParent(resultPanel.transform, false);
-        var retryRect = retryBtn.AddComponent<RectTransform>();
-        retryRect.anchorMin = new Vector2(0.5f, 0);
-        retryRect.anchorMax = new Vector2(0.5f, 0);
-        retryRect.anchoredPosition = new Vector2(0, 70);
-        retryRect.sizeDelta = new Vector2(500, 80);
-
-        var retryImg = retryBtn.AddComponent<Image>();
-        retryImg.sprite = GetPillSprite(pillRadius);
-        retryImg.type = Image.Type.Sliced;
-        retryImg.color = Color.white;
-
-        // Shadow
-        var shadowObj = new GameObject("Shadow");
-        shadowObj.transform.SetParent(retryBtn.transform, false);
-        shadowObj.transform.SetAsFirstSibling();
-        var shadowRect = shadowObj.AddComponent<RectTransform>();
-        shadowRect.anchorMin = Vector2.zero;
-        shadowRect.anchorMax = Vector2.one;
-        shadowRect.offsetMin = new Vector2(-blur, -blur - 3);
-        shadowRect.offsetMax = new Vector2(blur, blur - 3);
-        var shadowImg = shadowObj.AddComponent<Image>();
-        shadowImg.sprite = GetShadowSprite(pillRadius, blur);
-        shadowImg.type = Image.Type.Sliced;
-        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
-        shadowImg.raycastTarget = false;
-
-        var retryButton = retryBtn.AddComponent<Button>();
-        retryButton.targetGraphic = retryImg;
-        retryButton.navigation = new Navigation { mode = Navigation.Mode.None };
-        var colors = retryButton.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = Color.white;
-        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
-        colors.selectedColor = Color.white;
-        colors.fadeDuration = 0.08f;
-        retryButton.colors = colors;
-        retryButton.onClick.AddListener(() => SceneManager.LoadScene("TitleScene"));
-
-        var retryTextObj = new GameObject("Text");
-        retryTextObj.transform.SetParent(retryBtn.transform, false);
-        var retryTextRect = retryTextObj.AddComponent<RectTransform>();
-        retryTextRect.anchorMin = Vector2.zero;
-        retryTextRect.anchorMax = Vector2.one;
-        retryTextRect.offsetMin = Vector2.zero;
-        retryTextRect.offsetMax = Vector2.zero;
-        var retryTmp = retryTextObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(retryTmp);
-        retryTmp.text = Localization.Get("ui_back_to_title_long");
-        retryTmp.fontSize = 32;
-        retryTmp.alignment = TextAlignmentOptions.Center;
-        retryTmp.color = new Color(0.15f, 0.15f, 0.18f);
-        retryTmp.fontStyle = FontStyles.Bold;
-        retryTmp.raycastTarget = false;
-
-        // Press animation
-        AddPressAnimation(retryBtn);
+        overlay.Add(card);
+        overlayRoot.Add(overlay);
     }
 
     // ===== 固定エンカウント（傭兵）勝利 → 館に戻る =====
@@ -3074,7 +3290,16 @@ public class BattleManager : MonoBehaviour
         int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
 
         string[] bossLines;
-        if (area == 2 && enemyName == "デヴィル夫人")
+        if (area == 4 && enemyName == "メロディアス女王")
+        {
+            bossLines = new string[]
+            {
+                Localization.Get("melodias_defeat_line1"),
+                Localization.Get("melodias_defeat_line2"),
+                Localization.Get("melodias_defeat_line3"),
+            };
+        }
+        else if (area == 2 && enemyName == "デヴィル夫人")
         {
             bossLines = new string[]
             {
@@ -3188,7 +3413,14 @@ public class BattleManager : MonoBehaviour
             DataCarrier.Instance.isBossBattle = false;
             DataCarrier.Instance.babyCurrentHp = -1; // ボス撃破後は全回復
 
-            if (area == 2 && enemyName == "デヴィル夫人")
+            if (area == 4 && enemyName == "メロディアス女王")
+            {
+                // メロディアス女王撃破 → 暫定で小悪魔の街に戻す
+                DataCarrier.Instance.currentArea = 3;
+                DataCarrier.Instance.mapPlayerX = 5;
+                DataCarrier.Instance.mapPlayerY = 17;
+            }
+            else if (area == 2 && enemyName == "デヴィル夫人")
             {
                 // デヴィル夫人撃破 → 小悪魔の街へ
                 DataCarrier.Instance.currentArea = 3;
@@ -3262,70 +3494,60 @@ public class BattleManager : MonoBehaviour
 
     void CreateMenuBar()
     {
-        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
+        var (safeTop, _, _, _) = UIHelper.GetSafeMargins();
 
-        var bar = new GameObject("MenuBar");
-        bar.transform.SetParent(canvas.transform, false);
-        menuBarObj = bar;
-
-        var barRect = bar.AddComponent<RectTransform>();
-        barRect.anchorMin = new Vector2(1, 1);
-        barRect.anchorMax = new Vector2(1, 1);
-        barRect.pivot = new Vector2(1, 1);
-        barRect.anchoredPosition = new Vector2(-15 - safeRight, -15 - safeTop);
-        barRect.sizeDelta = new Vector2(300, 55);
-
-        var barBg = bar.AddComponent<Image>();
-        barBg.color = new Color(0.15f, 0.15f, 0.2f, 0.85f);
-        barBg.raycastTarget = false;
-
-        var layout = bar.AddComponent<HorizontalLayoutGroup>();
-        layout.spacing = 12;
-        layout.padding = new RectOffset(12, 12, 6, 6);
-        layout.childAlignment = TextAnchor.MiddleRight;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = true;
-
-        CreateMenuButton(bar.transform, Localization.Get("battle_save_button"), OnSave);
-        CreateMenuButton(bar.transform, Localization.Get("battle_top_button"), OnGoTop);
-
-        bar.SetActive(false);
+        // Hamburger button
+        var menuBtn = new UIE.Button();
+        menuBtn.AddToClassList("battle-menu-btn");
+        menuBtn.style.top = 10 + safeTop;
+        for (int i = 0; i < 3; i++)
+        {
+            var line = new UIE.VisualElement();
+            line.AddToClassList("battle-menu-line");
+            menuBtn.Add(line);
+        }
+        menuBtn.clicked += ToggleMenuPanel;
+        overlayRoot.Add(menuBtn);
     }
 
-    void CreateMenuButton(Transform parent, string label, UnityEngine.Events.UnityAction action)
+    void ToggleMenuPanel()
     {
-        var btnObj = new GameObject(label);
-        btnObj.transform.SetParent(parent, false);
+        if (menuOverlayEl != null)
+        {
+            menuOverlayEl.RemoveFromHierarchy();
+            menuOverlayEl = null;
+            return;
+        }
 
-        var btnImage = btnObj.AddComponent<Image>();
-        btnImage.color = new Color(0.3f, 0.3f, 0.45f, 1f);
+        var (safeTop, _, _, _) = UIHelper.GetSafeMargins();
 
-        var btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnImage;
+        menuOverlayEl = UIHelper.CreateOverlay();
+        menuOverlayEl.RegisterCallback<UIE.ClickEvent>(evt =>
+        {
+            if (evt.target == menuOverlayEl)
+            { menuOverlayEl.RemoveFromHierarchy(); menuOverlayEl = null; }
+        });
 
-        var colors = btn.colors;
-        colors.highlightedColor = new Color(0.45f, 0.45f, 0.65f, 1f);
-        colors.pressedColor = new Color(0.2f, 0.2f, 0.35f, 1f);
-        btn.colors = colors;
+        var card = new UIE.VisualElement();
+        card.AddToClassList("battle-menu-card");
+        card.style.top = 100 + safeTop;
 
-        btn.onClick.AddListener(action);
+        var saveBtn = new UIE.Button();
+        saveBtn.AddToClassList("battle-menu-item-btn");
+        UIHelper.ApplyFont(saveBtn);
+        saveBtn.text = Localization.Get("battle_save_button");
+        saveBtn.clicked += () => { menuOverlayEl?.RemoveFromHierarchy(); menuOverlayEl = null; OnSave(); };
+        card.Add(saveBtn);
 
-        var textObj = new GameObject("Text");
-        textObj.transform.SetParent(btnObj.transform, false);
+        var topBtn = new UIE.Button();
+        topBtn.AddToClassList("battle-menu-item-btn");
+        UIHelper.ApplyFont(topBtn);
+        topBtn.text = Localization.Get("battle_top_button");
+        topBtn.clicked += () => { menuOverlayEl?.RemoveFromHierarchy(); menuOverlayEl = null; OnGoTop(); };
+        card.Add(topBtn);
 
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-
-        var tmp = textObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(tmp);
-        tmp.text = label;
-        tmp.fontSize = 42;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = Color.white;
-        tmp.raycastTarget = false;
+        menuOverlayEl.Add(card);
+        overlayRoot.Add(menuOverlayEl);
     }
 
     void OnSave()

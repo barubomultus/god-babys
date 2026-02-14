@@ -1,0 +1,151 @@
+/* ======================================== */
+/* DQ Village Map Tiles (Area 0)            */
+/* Pixel Crawler palette + procedural tiles */
+/* ======================================== */
+
+/* --- Custom Properties (Design Tokens) --- */
+:root {
+    /* Grass */
+    --grass-base-r: 64;
+    --grass-base-g: 140;
+    --grass-base-b: 46;
+    /* Path */
+    --path-base-r: 184;
+    --path-base-g: 148;
+    --path-base-b: 97;
+    /* Water */
+    --water-base-r: 51;
+    --water-base-g: 115;
+    --water-base-b: 191;
+}
+
+/* --- Map Background --- */
+.map-background {
+    background-color: rgb(31, 77, 26);
+    overflow: visible;
+}
+
+/* --- Tile Grid Container --- */
+.tile-grid {
+    position: absolute;
+    left: -74.4px;
+    top: -24px;
+    width: 1228.8px;
+    height: 2048px;
+    overflow: visible;
+}
+
+/* --- Base Tile --- */
+.dq-tile {
+    position: absolute;
+    width: 102.4px;
+    height: 102.4px;
+    overflow: visible;
+}
+
+/* --- Fence Container --- */
+.fence-container {
+    position: absolute;
+    width: 102.4px;
+    height: 102.4px;
+    overflow: visible;
+}
+
+/* ======== Grass Tile ======== */
+.dq-grass {
+    background-color: rgb(64, 140, 46);
+}
+
+.dq-grass-border {
+    background-color: rgba(38, 89, 26, 0.5);
+}
+
+.grass-tuft {
+    position: absolute;
+    width: 6px;
+    height: 10px;
+    background-color: rgba(89, 179, 71, 0.5);
+}
+
+/* ======== Path Tile ======== */
+.dq-path {
+    background-color: rgb(184, 148, 97);
+}
+
+.dq-path-border {
+    background-color: rgba(140, 107, 64, 0.4);
+}
+
+.path-stone {
+    position: absolute;
+    background-color: rgba(140, 119, 91, 0.4);
+}
+
+/* ======== Water Tile ======== */
+.dq-water {
+    background-color: rgb(51, 115, 191);
+}
+
+.dq-water-border {
+    background-color: rgba(26, 64, 128, 0.5);
+}
+
+.water-wave {
+    position: absolute;
+    height: 3px;
+    background-color: rgba(115, 179, 242, 0.35);
+}
+
+/* ======== Dirt Tile ======== */
+.dq-dirt {
+    background-color: rgb(133, 97, 56);
+}
+
+.dq-dirt-border {
+    background-color: rgba(89, 64, 38, 0.4);
+}
+
+/* ======== Dark Dirt Tile ======== */
+.dq-dark-dirt {
+    background-color: rgb(77, 56, 38);
+}
+
+.dq-dark-dirt-border {
+    background-color: rgba(46, 31, 20, 0.5);
+}
+
+/* ======== Tile Border (shared structure) ======== */
+.tile-border-top {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    height: 2px;
+}
+
+.tile-border-left {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+}
+
+/* ======== Fence ======== */
+.fence-rail {
+    position: absolute;
+    height: 6px;
+    background-color: rgb(140, 97, 56);
+}
+
+.fence-post {
+    position: absolute;
+    width: 5px;
+    background-color: rgb(122, 82, 46);
+}
+
+/* ======== House Door ======== */
+.house-door {
+    position: absolute;
+    background-color: rgb(31, 20, 15);
+}

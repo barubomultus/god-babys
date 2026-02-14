@@ -2,10 +2,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.InputSystem;
-using UnityEngine.EventSystems;
 using TMPro;
 using System.Collections;
 using System.Collections.Generic;
+using UIE = UnityEngine.UIElements;
 
 public class MapManager : MonoBehaviour
 {
@@ -60,16 +60,23 @@ public class MapManager : MonoBehaviour
     GameObject mapPanel;
     RectTransform tilesContainerRect;
     GameObject tilesContainer;
-    TextMeshProUGUI statusText;
     Texture2D tilesetTexture;
     Dictionary<int, Sprite> tileSprites = new Dictionary<int, Sprite>();
+
+    // Pixel Crawler テクスチャ（area==0 村マップ用）
+    Texture2D pcTreesTex, pcVegetationTex, pcRocksTex, pcRoofsTex, pcWallsTex;
+
+    // UI Toolkit（area==0 DQタイル描画用）
+    UIE.UIDocument villageUIDoc;
+    UIE.PanelSettings villagePanelSettings;
+    UIE.VisualElement tileGridRoot;
 
     // プレイヤースプライト
     Image playerImage;
     int playerDirection = 0; // 0=下(正面), 1=上(背面), 2=左, 3=右
 
     // メニュー
-    GameObject menuPanel;
+    UIE.VisualElement menuOverlayEl;
     bool menuOpen = false;
 
     // エンカウント
@@ -90,13 +97,17 @@ public class MapManager : MonoBehaviour
     bool milkCutinActive = false;
 
     // 持ち物パネル
-    GameObject inventoryPanel;
-    GameObject statusPanel;
-    GameObject savePanel;
+    UIE.VisualElement inventoryOverlayEl;
+    UIE.VisualElement statusDetailEl;
+    UIE.VisualElement saveOverlayEl;
 
+    // UI Toolkit overlay layer
+    UIE.PanelSettings overlayPanelSettings;
+    UIE.VisualElement overlayRoot;
+    UIE.Label statusLabel;
 
     // タッチ操作
-    GameObject touchControlsObj;
+    UIE.VisualElement touchSwipeEl;
     int touchDx, touchDy;
     bool touchInteract;
     bool touchMenuPressed;
@@ -130,7 +141,9 @@ public class MapManager : MonoBehaviour
         LoadTileset();
 
         int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
-        if (area == 3)
+        if (area == 4)
+            Generate109MapData();
+        else if (area == 3)
             GenerateImpTownMapData();
         else if (area == 2)
             GenerateMansionMapData();
@@ -141,10 +154,12 @@ public class MapManager : MonoBehaviour
 
         CreateMapUI();
         CreatePlayer();
-        CreateStatusUI();
-        CreateMenuButton();
 
-        if (area == 3)
+        if (area == 4)
+        {
+            // 109館内: ランダムエンカウントなし、ミルクポイントなし、傭兵なし
+        }
+        else if (area == 3)
         {
             milkPointX = 3;
             milkPointY = 8;
@@ -168,6 +183,18 @@ public class MapManager : MonoBehaviour
             CreateMilkPoint();
         }
 
+        // UI Toolkit overlay layer (above Canvas, separate GameObject to avoid UIDocument conflict)
+        overlayPanelSettings = UIHelper.CreatePanelSettings(10f);
+        var overlayObj = new GameObject("MapOverlayUI");
+        overlayObj.transform.SetParent(transform, false);
+        overlayRoot = UIHelper.SetupUIDocument(overlayObj,
+            new[] { "UI/CommonStyle", "UI/MapStyle" }, overlayPanelSettings);
+        overlayRoot.pickingMode = UIE.PickingMode.Ignore;
+        overlayRoot.focusable = false;
+
+        CreateStatusUI();
+        CreateMenuButton();
+
         if (SafeAreaHelper.IsTouchDevice())
             CreateTouchControls();
 
@@ -178,6 +205,15 @@ public class MapManager : MonoBehaviour
 
     void LoadTileset()
     {
+        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+
+        if (area == 0)
+        {
+            // 村マップ: Pixel Crawlerテクスチャをロード（DQ風プロシージャル + スプライトオーバーレイ）
+            LoadPixelCrawlerTextures();
+        }
+
+        // 全エリアで Serene_Village をロード（area!=0 で使用、area==0 でもフォールバック用）
         tilesetTexture = Resources.Load<Texture2D>("Map/Serene_Village_32x32");
         if (tilesetTexture == null)
         {
@@ -197,6 +233,285 @@ public class MapManager : MonoBehaviour
         tileSprites[TILE_HOUSE_RED] = CreateTileSprite(0, 4);
         tileSprites[TILE_HOUSE_GREEN] = CreateTileSprite(2, 4);
         tileSprites[TILE_HOUSE_BLUE] = CreateTileSprite(4, 4);
+    }
+
+    void LoadPixelCrawlerTextures()
+    {
+        pcTreesTex = Resources.Load<Texture2D>("Map/Pixel Crawler - Free Pack/Environment/Props/Static/Trees/Model_01/Size_02");
+        pcVegetationTex = Resources.Load<Texture2D>("Map/Pixel Crawler - Free Pack/Environment/Props/Static/Vegetation");
+        pcRocksTex = Resources.Load<Texture2D>("Map/Pixel Crawler - Free Pack/Environment/Props/Static/Rocks");
+        pcRoofsTex = Resources.Load<Texture2D>("Map/Pixel Crawler - Free Pack/Environment/Structures/Buildings/Roofs");
+        pcWallsTex = Resources.Load<Texture2D>("Map/Pixel Crawler - Free Pack/Environment/Structures/Buildings/Walls");
+
+        if (pcTreesTex == null) Debug.LogWarning("[MapManager] PC Trees テクスチャが見つかりません");
+        if (pcVegetationTex == null) Debug.LogWarning("[MapManager] PC Vegetation テクスチャが見つかりません");
+        if (pcRocksTex == null) Debug.LogWarning("[MapManager] PC Rocks テクスチャが見つかりません");
+        if (pcRoofsTex == null) Debug.LogWarning("[MapManager] PC Roofs テクスチャが見つかりません");
+        if (pcWallsTex == null) Debug.LogWarning("[MapManager] PC Walls テクスチャが見つかりません");
+    }
+
+    // 画像左上座標指定 → Unity底辺原点に変換して Sprite.Create()
+    Sprite CreatePCSprite(Texture2D tex, int fromLeftX, int fromTopY, int w, int h)
+    {
+        if (tex == null) return null;
+        int unityY = tex.height - fromTopY - h;
+        if (fromLeftX < 0 || unityY < 0 || fromLeftX + w > tex.width || unityY + h > tex.height)
+        {
+            Debug.LogWarning($"[MapManager] PC Sprite 座標範囲外: tex={tex.name} x={fromLeftX} y={fromTopY} w={w} h={h}");
+            return null;
+        }
+        Rect rect = new Rect(fromLeftX, unityY, w, h);
+        return Sprite.Create(tex, rect, new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    // ========== UI Toolkit セットアップ（area==0 DQタイル用） ==========
+
+    void CreateVillageTileGrid()
+    {
+        // PanelSettings を動的生成
+        villagePanelSettings = ScriptableObject.CreateInstance<UIE.PanelSettings>();
+        villagePanelSettings.scaleMode = UIE.PanelScaleMode.ScaleWithScreenSize;
+        villagePanelSettings.referenceResolution = new Vector2Int(1080, 1920);
+        villagePanelSettings.screenMatchMode = UIE.PanelScreenMatchMode.MatchWidthOrHeight;
+        villagePanelSettings.match = 0f;
+        villagePanelSettings.sortingOrder = -1f; // Canvas より背面に描画
+
+        // UIDocument を独立した子GameObjectに追加（親にUIDocumentがあると子が継承して衝突する）
+        var villageObj = new GameObject("VillageTileUI");
+        villageObj.transform.SetParent(transform, false);
+        villageUIDoc = villageObj.AddComponent<UIE.UIDocument>();
+        villageUIDoc.panelSettings = villagePanelSettings;
+
+        var root = villageUIDoc.rootVisualElement;
+        root.pickingMode = UIE.PickingMode.Ignore;
+        root.focusable = false;
+
+        // USS ロード
+        var styleSheet = Resources.Load<UIE.StyleSheet>("UI/MapVillageStyle");
+        if (styleSheet != null)
+            root.styleSheets.Add(styleSheet);
+        else
+            Debug.LogWarning("[MapManager] MapVillageStyle.uss が見つかりません");
+
+        root.AddToClassList("map-background");
+
+        // タイルグリッドコンテナ
+        tileGridRoot = new UIE.VisualElement();
+        tileGridRoot.name = "tile-grid";
+        tileGridRoot.AddToClassList("tile-grid");
+        root.Add(tileGridRoot);
+    }
+
+    void CreateDQTileElement(int x, int y, int tileType)
+    {
+        if (tileGridRoot == null) return;
+
+        var tile = new UIE.VisualElement();
+        tile.name = $"tile-{x}-{y}";
+        tile.AddToClassList("dq-tile");
+        tile.style.left = x * DISPLAY_TILE;
+        tile.style.top = (MAP_HEIGHT - 1 - y) * DISPLAY_TILE;
+
+        Random.State oldState = Random.state;
+        Random.InitState(x * 100 + y);
+
+        switch (tileType)
+        {
+            case TILE_GRASS:
+            case TILE_TREE:
+            case TILE_ROCK:
+            case TILE_FLOWER:
+            case TILE_FENCE:
+            case TILE_HOUSE_RED:
+            case TILE_HOUSE_GREEN:
+            case TILE_HOUSE_BLUE:
+                ApplyDQGrassStyle(tile);
+                break;
+            case TILE_PATH:
+                ApplyDQPathStyle(tile);
+                break;
+            case TILE_WATER:
+                ApplyDQWaterStyle(tile);
+                break;
+            case TILE_DIRT:
+                ApplyDQDirtStyle(tile, false);
+                break;
+            case TILE_DARK_DIRT:
+            case TILE_BOSS_MANSION:
+            case TILE_BOSS_GATE:
+                ApplyDQDirtStyle(tile, true);
+                break;
+            default:
+                Color c = GetTileColor(tileType);
+                tile.style.backgroundColor = c;
+                break;
+        }
+
+        Random.state = oldState;
+        tileGridRoot.Add(tile);
+    }
+
+    void ApplyDQGrassStyle(UIE.VisualElement tile)
+    {
+        tile.AddToClassList("dq-grass");
+
+        // Per-tile color variation (USS base をランダムでオーバーライド)
+        float h = Random.Range(-0.02f, 0.02f);
+        float b = Random.Range(-0.03f, 0.03f);
+        tile.style.backgroundColor = new Color(0.25f + h, 0.55f + b, 0.18f + h);
+
+        // タイル境界線
+        AddDQTileBorder(tile, "dq-grass-border");
+
+        // 40%の確率で草タフト
+        if (Random.Range(0f, 1f) < 0.4f)
+        {
+            int count = Random.Range(1, 3);
+            for (int i = 0; i < count; i++)
+            {
+                var tuft = new UIE.VisualElement();
+                tuft.AddToClassList("grass-tuft");
+                float cx = DISPLAY_TILE * 0.5f;
+                float cy = DISPLAY_TILE * 0.5f;
+                tuft.style.left = cx + Random.Range(-DISPLAY_TILE * 0.3f, DISPLAY_TILE * 0.3f) - 3f;
+                tuft.style.top = cy + Random.Range(-DISPLAY_TILE * 0.3f, DISPLAY_TILE * 0.3f) - 5f;
+                tuft.transform.rotation = Quaternion.Euler(0, 0, Random.Range(-20f, 20f));
+                tile.Add(tuft);
+            }
+        }
+    }
+
+    void ApplyDQPathStyle(UIE.VisualElement tile)
+    {
+        tile.AddToClassList("dq-path");
+
+        float h = Random.Range(-0.02f, 0.02f);
+        float b = Random.Range(-0.03f, 0.03f);
+        tile.style.backgroundColor = new Color(0.72f + h, 0.58f + b, 0.38f + h);
+
+        AddDQTileBorder(tile, "dq-path-border");
+
+        // 小石パターン 2〜3個
+        int stoneCount = Random.Range(2, 4);
+        for (int i = 0; i < stoneCount; i++)
+        {
+            var stone = new UIE.VisualElement();
+            stone.AddToClassList("path-stone");
+            float cx = DISPLAY_TILE * 0.5f;
+            float cy = DISPLAY_TILE * 0.5f;
+            float sz = Random.Range(3f, 7f);
+            stone.style.left = cx + Random.Range(-DISPLAY_TILE * 0.35f, DISPLAY_TILE * 0.35f) - sz / 2f;
+            stone.style.top = cy + Random.Range(-DISPLAY_TILE * 0.35f, DISPLAY_TILE * 0.35f) - sz * 0.35f;
+            stone.style.width = sz;
+            stone.style.height = sz * 0.7f;
+            tile.Add(stone);
+        }
+    }
+
+    void ApplyDQWaterStyle(UIE.VisualElement tile)
+    {
+        tile.AddToClassList("dq-water");
+
+        float h = Random.Range(-0.02f, 0.02f);
+        float b = Random.Range(-0.03f, 0.03f);
+        tile.style.backgroundColor = new Color(0.20f + h, 0.45f + b, 0.75f + h);
+
+        AddDQTileBorder(tile, "dq-water-border");
+
+        // 波紋ライン 2〜3本
+        int waveCount = Random.Range(2, 4);
+        for (int i = 0; i < waveCount; i++)
+        {
+            var wave = new UIE.VisualElement();
+            wave.AddToClassList("water-wave");
+            float cy = DISPLAY_TILE * 0.5f;
+            float ww = Random.Range(DISPLAY_TILE * 0.3f, DISPLAY_TILE * 0.7f);
+            wave.style.left = DISPLAY_TILE * 0.5f + Random.Range(-DISPLAY_TILE * 0.15f, DISPLAY_TILE * 0.15f) - ww / 2f;
+            wave.style.top = cy + Random.Range(-DISPLAY_TILE * 0.35f, DISPLAY_TILE * 0.35f) - 1.5f;
+            wave.style.width = ww;
+            tile.Add(wave);
+        }
+    }
+
+    void ApplyDQDirtStyle(UIE.VisualElement tile, bool dark)
+    {
+        tile.AddToClassList(dark ? "dq-dark-dirt" : "dq-dirt");
+
+        float h = Random.Range(-0.02f, 0.02f);
+        if (dark)
+            tile.style.backgroundColor = new Color(0.30f + h, 0.22f + h, 0.15f + h);
+        else
+            tile.style.backgroundColor = new Color(0.52f + h, 0.38f + h, 0.22f + h);
+
+        AddDQTileBorder(tile, dark ? "dq-dark-dirt-border" : "dq-dirt-border");
+    }
+
+    void AddDQTileBorder(UIE.VisualElement tile, string borderClass)
+    {
+        var borderTop = new UIE.VisualElement();
+        borderTop.AddToClassList("tile-border-top");
+        borderTop.AddToClassList(borderClass);
+        tile.Add(borderTop);
+
+        var borderLeft = new UIE.VisualElement();
+        borderLeft.AddToClassList("tile-border-left");
+        borderLeft.AddToClassList(borderClass);
+        tile.Add(borderLeft);
+    }
+
+    // ========== UI Toolkit 柵オーバーレイ（area==0） ==========
+
+    void CreateDQFenceElement(int tileX, int tileY)
+    {
+        if (tileGridRoot == null) return;
+
+        var fence = new UIE.VisualElement();
+        fence.name = $"fence-{tileX}-{tileY}";
+        fence.AddToClassList("fence-container");
+        fence.style.left = tileX * DISPLAY_TILE;
+        fence.style.top = (MAP_HEIGHT - 1 - tileY) * DISPLAY_TILE;
+
+        // 横棒2本
+        for (int i = 0; i < 2; i++)
+        {
+            float ry = (i == 0) ? DISPLAY_TILE * 0.35f : DISPLAY_TILE * 0.65f;
+            var rail = new UIE.VisualElement();
+            rail.AddToClassList("fence-rail");
+            rail.style.left = DISPLAY_TILE * 0.05f;
+            rail.style.top = ry - 3f;
+            rail.style.width = DISPLAY_TILE * 0.9f;
+            fence.Add(rail);
+        }
+        // 縦柱3本
+        for (int i = 0; i < 3; i++)
+        {
+            float px = (i * 0.35f + 0.15f) * DISPLAY_TILE;
+            var post = new UIE.VisualElement();
+            post.AddToClassList("fence-post");
+            post.style.left = px - 2.5f;
+            post.style.top = DISPLAY_TILE * 0.2f;
+            post.style.height = DISPLAY_TILE * 0.6f;
+            fence.Add(post);
+        }
+
+        tileGridRoot.Add(fence);
+    }
+
+    // ========== UI Toolkit 家ドアオーバーレイ（area==0） ==========
+
+    void CreateDQHouseDoorElement(float centerLeft, float centerTop)
+    {
+        if (tileGridRoot == null) return;
+
+        var door = new UIE.VisualElement();
+        door.AddToClassList("house-door");
+        float doorW = DISPLAY_TILE * 0.4f;
+        float doorH = DISPLAY_TILE * 0.55f;
+        door.style.left = centerLeft - doorW / 2f;
+        door.style.top = centerTop + DISPLAY_TILE * 0.55f - doorH / 2f;
+        door.style.width = doorW;
+        door.style.height = doorH;
+        tileGridRoot.Add(door);
     }
 
     Sprite CreateTileSprite(int col, int row)
@@ -602,6 +917,14 @@ public class MapManager : MonoBehaviour
         mapData[10, 16] = TILE_FLOWER;
         mapData[7, 17] = TILE_FLOWER;
 
+        // === 109 館 (小道の終点付近) ===
+        // 館本体 (3x2: x=4〜6, y=18)
+        for (int x = 4; x <= 6; x++)
+        {
+            mapData[x, 18] = TILE_BOSS_MANSION;
+            walkable[x, 18] = false;
+        }
+
         // === 追加の木（内部に散在） ===
         mapData[1, 3] = TILE_TREE;
         walkable[1, 3] = false;
@@ -729,6 +1052,70 @@ public class MapManager : MonoBehaviour
         walkable[playerTileX, playerTileY] = true;
     }
 
+    void Generate109MapData()
+    {
+        mapData = new int[MAP_WIDTH, MAP_HEIGHT];
+        walkable = new bool[MAP_WIDTH, MAP_HEIGHT];
+
+        // 全て壁で埋める
+        for (int x = 0; x < MAP_WIDTH; x++)
+        {
+            for (int y = 0; y < MAP_HEIGHT; y++)
+            {
+                mapData[x, y] = TILE_MANSION_WALL;
+                walkable[x, y] = false;
+            }
+        }
+
+        // === 床エリア ===
+        // ボス部屋 (y=14〜18, x=2〜9)
+        for (int x = 2; x <= 9; x++)
+        {
+            for (int y = 14; y <= 18; y++)
+            {
+                mapData[x, y] = TILE_MANSION_FLOOR;
+                walkable[x, y] = true;
+            }
+        }
+
+        // 中央通路 (y=13, x=5〜6) — 壁の中の通路
+        mapData[5, 13] = TILE_MANSION_FLOOR;
+        walkable[5, 13] = true;
+        mapData[6, 13] = TILE_MANSION_FLOOR;
+        walkable[6, 13] = true;
+
+        // ボス扉 (y=12, x=5〜6) — 直接開く（傭兵チェック不要）
+        mapData[5, 12] = TILE_BOSS_DOOR;
+        walkable[5, 12] = false;
+        mapData[6, 12] = TILE_BOSS_DOOR;
+        walkable[6, 12] = false;
+
+        // メインホール (y=2〜11, x=2〜9)
+        for (int x = 2; x <= 9; x++)
+        {
+            for (int y = 2; y <= 11; y++)
+            {
+                mapData[x, y] = TILE_MANSION_FLOOR;
+                walkable[x, y] = true;
+            }
+        }
+
+        // y=1: 壁 + 中央通路 (x=5〜6)
+        mapData[5, 1] = TILE_MANSION_FLOOR;
+        walkable[5, 1] = true;
+        mapData[6, 1] = TILE_MANSION_FLOOR;
+        walkable[6, 1] = true;
+
+        // y=0: 出口 (x=5〜6)
+        mapData[5, 0] = TILE_MANSION_EXIT;
+        walkable[5, 0] = false;
+        mapData[6, 0] = TILE_MANSION_EXIT;
+        walkable[6, 0] = false;
+
+        // プレイヤー初期位置は歩けるようにする
+        walkable[playerTileX, playerTileY] = true;
+    }
+
     void CreateMansionNPCs()
     {
         if (tilesContainer == null || DataCarrier.Instance == null) return;
@@ -781,6 +1168,12 @@ public class MapManager : MonoBehaviour
     {
         if (canvas == null) return;
 
+        int areaForColor = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+
+        // area==0: UI Toolkit でDQタイルを描画（Canvas背面）
+        if (areaForColor == 0)
+            CreateVillageTileGrid();
+
         // マップパネル（画面全体の背景）
         mapPanel = new GameObject("MapPanel");
         mapPanel.transform.SetParent(canvas.transform, false);
@@ -790,19 +1183,20 @@ public class MapManager : MonoBehaviour
         mapRect.offsetMin = Vector2.zero;
         mapRect.offsetMax = Vector2.zero;
 
-        var bg = mapPanel.AddComponent<Image>();
-        int areaForColor = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
-        if (areaForColor == 3)
+        var bg = mapPanel.AddComponent<UnityEngine.UI.Image>();
+        if (areaForColor == 0)
+            bg.color = Color.clear;  // 村: UI Toolkit が背景を担当
+        else if (areaForColor == 3)
             bg.color = new Color(0.12f, 0.06f, 0.18f);  // 小悪魔の森: 暗い紫
         else if (areaForColor == 2)
             bg.color = new Color(0.1f, 0.08f, 0.08f);   // 館内: 暗灰
         else if (areaForColor == 1)
             bg.color = new Color(0.2f, 0.08f, 0.15f);   // 悪魔村: 暗い赤紫
         else
-            bg.color = new Color(0.15f, 0.35f, 0.15f);  // 村: 緑
+            bg.color = new Color(0.15f, 0.35f, 0.15f);  // フォールバック
         bg.raycastTarget = false;
 
-        // タイルコンテナ（9:16縦画面: マップを上寄りに配置、下はタッチ操作エリア）
+        // タイルコンテナ（オーバーレイ・プレイヤー配置用、area==0 でもuGUIコンテナは維持）
         tilesContainer = new GameObject("TilesContainer");
         tilesContainer.transform.SetParent(mapPanel.transform, false);
         tilesContainerRect = tilesContainer.AddComponent<RectTransform>();
@@ -816,12 +1210,19 @@ public class MapManager : MonoBehaviour
         {
             for (int y = 0; y < MAP_HEIGHT; y++)
             {
-                CreateTile(x, y, mapData[x, y]);
+                if (areaForColor == 0)
+                    CreateDQTileElement(x, y, mapData[x, y]); // UI Toolkit
+                else
+                    CreateTile(x, y, mapData[x, y]); // uGUI
             }
         }
 
         // ボスの館オーバーレイ（タイルの上に大きな館を描画）
         CreateBossMansionOverlay();
+
+        // 村マップ（area==0）: スプライトオーバーレイ（uGUI、UI Toolkit の上に表示）
+        if (areaForColor == 0)
+            CreateVillageOverlays();
     }
 
     void CreateBossMansionOverlay()
@@ -916,6 +1317,7 @@ public class MapManager : MonoBehaviour
         signText.raycastTarget = false;
     }
 
+    // CreateTile: area!=0 専用（area==0 は CreateDQTileElement で UI Toolkit 描画）
     void CreateTile(int x, int y, int tileType)
     {
         if (tilesContainer == null) return;
@@ -929,10 +1331,11 @@ public class MapManager : MonoBehaviour
         rect.anchoredPosition = new Vector2(posX, posY);
         rect.sizeDelta = new Vector2(DISPLAY_TILE, DISPLAY_TILE);
 
-        var img = tileObj.AddComponent<Image>();
+        var img = tileObj.AddComponent<UnityEngine.UI.Image>();
         img.raycastTarget = false;
 
-        // 草タイルはモダンな見た目をプログラムで生成
+        int areaForTile = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+
         if (tileType == TILE_GRASS)
         {
             CreateModernGrassTile(tileObj.transform, img, x, y);
@@ -940,10 +1343,8 @@ public class MapManager : MonoBehaviour
         else if (tileSprites.ContainsKey(tileType) && tileSprites[tileType] != null)
         {
             img.sprite = tileSprites[tileType];
-            // エリアごとの水タイル色変更
-            int areaForTile = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
             if (areaForTile == 3 && tileType == TILE_WATER)
-                img.color = new Color(0.6f, 0.3f, 0.8f);  // 毒沼: 紫
+                img.color = new Color(0.6f, 0.3f, 0.8f);
             else if (areaForTile == 1 && tileType == TILE_WATER)
                 img.color = new Color(1f, 0.4f, 0.3f);
             else
@@ -1038,6 +1439,161 @@ public class MapManager : MonoBehaviour
         }
 
         Random.state = oldState;
+    }
+
+    // ========== DQ風オーバーレイシステム（area==0 専用） ==========
+
+    void CreateVillageOverlays()
+    {
+        if (tilesContainer == null || mapData == null) return;
+
+        // 木オーバーレイ
+        Sprite treeSprite = CreatePCSprite(pcTreesTex, 8, 4, 48, 56);
+
+        // 岩オーバーレイ (Rocks.png: 最初の大きめ岩 — 左上付近)
+        Sprite rockSprite = CreatePCSprite(pcRocksTex, 0, 16, 32, 32);
+
+        // 花オーバーレイ (Vegetation.png: 小さな花 — 中段左付近の黄色い花)
+        Sprite flowerSprite = CreatePCSprite(pcVegetationTex, 0, 224, 16, 16);
+
+        // 柵はプロシージャルで描画（Pixel Crawlerに適した柵なし）
+
+        for (int x = 0; x < MAP_WIDTH; x++)
+        {
+            for (int y = 0; y < MAP_HEIGHT; y++)
+            {
+                int tile = mapData[x, y];
+                switch (tile)
+                {
+                    case TILE_TREE:
+                        if (treeSprite != null)
+                            CreateSpriteOverlay(x, y, treeSprite, 2.0f, 2.0f, DISPLAY_TILE * 0.25f);
+                        break;
+                    case TILE_ROCK:
+                        if (rockSprite != null)
+                            CreateSpriteOverlay(x, y, rockSprite, 2.8f, 2.8f, 0f);
+                        break;
+                    case TILE_FLOWER:
+                        if (flowerSprite != null)
+                            CreateSpriteOverlay(x, y, flowerSprite, 4.0f, 4.0f, 0f);
+                        break;
+                    case TILE_FENCE:
+                        CreateDQFenceElement(x, y); // UI Toolkit
+                        break;
+                }
+            }
+        }
+
+        // 家オーバーレイ: 2×2タイルブロックを検出して描画
+        CreateHouseOverlays();
+    }
+
+    void CreateSpriteOverlay(int tileX, int tileY, Sprite sprite, float scaleX, float scaleY, float offsetY)
+    {
+        if (tilesContainer == null || sprite == null) return;
+
+        var overlayObj = new GameObject($"Overlay_{tileX}_{tileY}");
+        overlayObj.transform.SetParent(tilesContainer.transform, false);
+
+        var rect = overlayObj.AddComponent<RectTransform>();
+        float posX = (tileX - MAP_WIDTH / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (tileY - MAP_HEIGHT / 2f + 0.5f) * DISPLAY_TILE + offsetY;
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(sprite.rect.width * scaleX, sprite.rect.height * scaleY);
+
+        var img = overlayObj.AddComponent<Image>();
+        img.sprite = sprite;
+        img.color = Color.white;
+        img.raycastTarget = false;
+        img.preserveAspect = true;
+    }
+
+    void CreateHouseOverlays()
+    {
+        // 家のタイプと位置を検出（2×2の左下タイルを基準）
+        HashSet<string> processed = new HashSet<string>();
+
+        // 屋根スプライト (Roofs.png 400×400)
+        // 茶屋根(赤家用): 左上の茶色い屋根
+        Sprite roofBrown = CreatePCSprite(pcRoofsTex, 0, 0, 128, 96);
+        // 緑屋根(緑家用): 中央の緑屋根
+        Sprite roofGreen = CreatePCSprite(pcRoofsTex, 144, 0, 112, 96);
+        // 青灰屋根(青家用): 右の青灰屋根
+        Sprite roofBlue = CreatePCSprite(pcRoofsTex, 280, 0, 112, 96);
+
+        // 壁スプライト (Walls.png 672×800): 丸太壁テクスチャ
+        Sprite wallLog = CreatePCSprite(pcWallsTex, 0, 0, 96, 64);
+
+        for (int x = 0; x < MAP_WIDTH; x++)
+        {
+            for (int y = 0; y < MAP_HEIGHT; y++)
+            {
+                int tile = mapData[x, y];
+                if (tile != TILE_HOUSE_RED && tile != TILE_HOUSE_GREEN && tile != TILE_HOUSE_BLUE) continue;
+
+                string key = $"{x},{y}";
+                if (processed.Contains(key)) continue;
+
+                // 2×2ブロックの左下を探す
+                int bx = x, by = y;
+                // この位置が2×2ブロックの左下かチェック
+                if (x + 1 < MAP_WIDTH && y + 1 < MAP_HEIGHT &&
+                    mapData[x + 1, y] == tile && mapData[x, y + 1] == tile && mapData[x + 1, y + 1] == tile)
+                {
+                    // (x,y) が左下
+                    processed.Add($"{x},{y}");
+                    processed.Add($"{x + 1},{y}");
+                    processed.Add($"{x},{y + 1}");
+                    processed.Add($"{x + 1},{y + 1}");
+                }
+                else
+                {
+                    processed.Add(key);
+                    continue;
+                }
+
+                // 家の中心座標
+                float centerX = (bx + 0.5f - MAP_WIDTH / 2f + 0.5f) * DISPLAY_TILE;
+                float centerY = (by + 0.5f - MAP_HEIGHT / 2f + 0.5f) * DISPLAY_TILE;
+
+                // 壁（下半分）
+                if (wallLog != null)
+                {
+                    var wallObj = new GameObject($"HouseWall_{bx}_{by}");
+                    wallObj.transform.SetParent(tilesContainer.transform, false);
+                    var wallRect = wallObj.AddComponent<RectTransform>();
+                    wallRect.anchoredPosition = new Vector2(centerX, centerY - DISPLAY_TILE * 0.15f);
+                    wallRect.sizeDelta = new Vector2(DISPLAY_TILE * 1.9f, DISPLAY_TILE * 1.2f);
+                    var wallImg = wallObj.AddComponent<Image>();
+                    wallImg.sprite = wallLog;
+                    wallImg.color = Color.white;
+                    wallImg.raycastTarget = false;
+                }
+
+                // 屋根（上半分）
+                Sprite roof = (tile == TILE_HOUSE_RED) ? roofBrown :
+                              (tile == TILE_HOUSE_GREEN) ? roofGreen : roofBlue;
+                if (roof != null)
+                {
+                    var roofObj = new GameObject($"HouseRoof_{bx}_{by}");
+                    roofObj.transform.SetParent(tilesContainer.transform, false);
+                    var roofRect = roofObj.AddComponent<RectTransform>();
+                    roofRect.anchoredPosition = new Vector2(centerX, centerY + DISPLAY_TILE * 0.55f);
+                    roofRect.sizeDelta = new Vector2(DISPLAY_TILE * 2.2f, DISPLAY_TILE * 1.1f);
+                    var roofImg = roofObj.AddComponent<Image>();
+                    roofImg.sprite = roof;
+                    roofImg.color = Color.white;
+                    roofImg.raycastTarget = false;
+                    roofImg.preserveAspect = true;
+                }
+
+                // ドア（UI Toolkit — USS .house-door でスタイル定義）
+                // UI Toolkit座標: uGUI中心座標 → 左上座標に変換
+                float doorGridLeft = (bx + 0.5f) * DISPLAY_TILE;
+                float doorGridTop = (MAP_HEIGHT - 1 - by - 0.5f) * DISPLAY_TILE;
+                CreateDQHouseDoorElement(doorGridLeft, doorGridTop);
+            }
+        }
     }
 
     Color GetTileColor(int tileType)
@@ -1367,121 +1923,45 @@ public class MapManager : MonoBehaviour
 
     void CreateStatusUI()
     {
-        if (canvas == null) return;
+        if (overlayRoot == null) return;
+        var (safeTop, _, _, _) = UIHelper.GetSafeMargins();
 
-        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
+        var bar = new UIE.VisualElement();
+        bar.AddToClassList("map-status-bar");
+        bar.style.top = safeTop;
+        overlayRoot.Add(bar);
 
-        // ステータスパネル（上部）
-        var statusPanel = new GameObject("StatusPanel");
-        statusPanel.transform.SetParent(canvas.transform, false);
-        var statusRect = statusPanel.AddComponent<RectTransform>();
-        statusRect.anchorMin = new Vector2(0, 1);
-        statusRect.anchorMax = new Vector2(1, 1);
-        statusRect.pivot = new Vector2(0.5f, 1);
-        statusRect.anchoredPosition = new Vector2(0, -safeTop);
-        statusRect.sizeDelta = new Vector2(0, 80);
-
-        var statusBg = statusPanel.AddComponent<Image>();
-        statusBg.color = new Color(0.05f, 0.05f, 0.15f, 0.85f);
-        statusBg.raycastTarget = false;
-
-        var textObj = new GameObject("StatusText");
-        textObj.transform.SetParent(statusPanel.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = new Vector2(15, 5);
-        textRect.offsetMax = new Vector2(-100, -5);
-
-        statusText = textObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(statusText);
-        statusText.fontSize = 28;
-        statusText.alignment = TextAlignmentOptions.Left;
-        statusText.color = Color.white;
-        statusText.raycastTarget = false;
-        statusText.richText = true;
+        statusLabel = UIHelper.CreateLabel("", "map-status-text");
+        statusLabel.enableRichText = true;
+        bar.Add(statusLabel);
 
         UpdateStatusText();
     }
 
     void CreateMenuButton()
     {
-        if (canvas == null) return;
+        if (overlayRoot == null) return;
+        var (safeTop, _, _, _) = UIHelper.GetSafeMargins();
 
-        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
+        var btn = new UIE.Button();
+        btn.AddToClassList("map-menu-btn");
+        btn.focusable = false;
+        btn.style.top = 24 + safeTop;
+        btn.clicked += ToggleMenu;
 
-        int btnSize = 80;
-        int circleRadius = btnSize / 2;
-        int blur = 16;
-
-        // 右上のメニューボタン（白円形＋影＋ハンバーガーアイコン）
-        var btnObj = new GameObject("MenuButton");
-        btnObj.transform.SetParent(canvas.transform, false);
-        var btnRect = btnObj.AddComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(1, 1);
-        btnRect.anchorMax = new Vector2(1, 1);
-        btnRect.pivot = new Vector2(1, 1);
-        btnRect.anchoredPosition = new Vector2(-24 - safeRight, -24 - safeTop);
-        btnRect.sizeDelta = new Vector2(btnSize, btnSize);
-
-        // 白い円形背景
-        var btnImg = btnObj.AddComponent<Image>();
-        btnImg.sprite = GetCircleSprite(circleRadius);
-        btnImg.type = Image.Type.Sliced;
-        btnImg.color = Color.white;
-
-        // Box shadow
-        var shadowObj = new GameObject("Shadow");
-        shadowObj.transform.SetParent(btnObj.transform, false);
-        shadowObj.transform.SetAsFirstSibling();
-        var shadowRect = shadowObj.AddComponent<RectTransform>();
-        shadowRect.anchorMin = Vector2.zero;
-        shadowRect.anchorMax = Vector2.one;
-        shadowRect.offsetMin = new Vector2(-blur, -blur - 3);
-        shadowRect.offsetMax = new Vector2(blur, blur - 3);
-        var shadowImg = shadowObj.AddComponent<Image>();
-        shadowImg.sprite = GetCircleShadowSprite(circleRadius, blur);
-        shadowImg.type = Image.Type.Sliced;
-        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
-        shadowImg.raycastTarget = false;
-
-        // ハンバーガー3本線（グレー）
-        float lineW = 30f;
-        float lineH = 3.5f;
-        float gap = 8f;
-        Color lineColor = new Color(0.45f, 0.45f, 0.5f);
-        for (int i = -1; i <= 1; i++)
+        for (int i = 0; i < 3; i++)
         {
-            var line = new GameObject("Line" + (i + 2));
-            line.transform.SetParent(btnObj.transform, false);
-            var lr = line.AddComponent<RectTransform>();
-            lr.anchorMin = new Vector2(0.5f, 0.5f);
-            lr.anchorMax = new Vector2(0.5f, 0.5f);
-            lr.anchoredPosition = new Vector2(0, -i * gap);
-            lr.sizeDelta = new Vector2(lineW, lineH);
-            var lineImg = line.AddComponent<Image>();
-            lineImg.color = lineColor;
-            lineImg.raycastTarget = false;
+            var line = new UIE.VisualElement();
+            line.AddToClassList("map-menu-line");
+            btn.Add(line);
         }
 
-        var btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnImg;
-        btn.onClick.AddListener(ToggleMenu);
-        btn.navigation = new Navigation { mode = Navigation.Mode.None };
-        var colors = btn.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = Color.white;
-        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
-        colors.selectedColor = Color.white;
-        colors.fadeDuration = 0.08f;
-        btn.colors = colors;
-
-        AddPressAnimation(btnObj);
+        overlayRoot.Add(btn);
     }
 
     void UpdateStatusText()
     {
-        if (statusText == null) return;
+        if (statusLabel == null) return;
 
         string babyName = DataCarrier.Instance?.babyName ?? "???";
         int age = DataCarrier.Instance?.babyAge ?? 0;
@@ -1497,8 +1977,8 @@ public class MapManager : MonoBehaviour
         string godLabel = isGod ? " <color=#FFD700>GOD BABY</color>" : "";
         string poisonLabel = poisonTurns > 0 ? $" <color=#AA00FF>毒({poisonTurns})</color>" : "";
 
-        statusText.text = $"{nameColor}{babyName}</color>  {Localization.GetAge(age)}{godLabel}\n" +
-                          $"HP:<color=#00FF00>{currentHp}/{maxHp}</color>  ATK:<color=#FF6666>{atk}</color>  DEF:<color=#6699FF>{def}</color>{poisonLabel}";
+        statusLabel.text = $"{nameColor}{babyName}</color>  {Localization.GetAge(age)}{godLabel}\n" +
+                           $"HP:<color=#00FF00>{currentHp}/{maxHp}</color>  ATK:<color=#FF6666>{atk}</color>  DEF:<color=#6699FF>{def}</color>{poisonLabel}";
     }
 
     void Update()
@@ -1507,17 +1987,17 @@ public class MapManager : MonoBehaviour
         bool escPressed = (kb != null && kb.escapeKey.wasPressedThisFrame) || touchMenuPressed;
 
         // ESCでパネルを閉じる
-        if (savePanel != null)
+        if (saveOverlayEl != null)
         {
             if (escPressed) { touchMenuPressed = false; CloseSavePanel(); }
             return;
         }
-        if (statusPanel != null)
+        if (statusDetailEl != null)
         {
             if (escPressed) { touchMenuPressed = false; CloseStatusPanel(); }
             return;
         }
-        if (inventoryPanel != null)
+        if (inventoryOverlayEl != null)
         {
             if (escPressed) { touchMenuPressed = false; CloseInventoryPanel(); }
             return;
@@ -1601,10 +2081,16 @@ public class MapManager : MonoBehaviour
             return;
         }
         // 悪魔村: 館に歩いて入ろうとした場合 → 館内（area 2）へ
+        // 小悪魔の街: 館に歩いて入ろうとした場合 → 109（area 4）へ
         if (mapData[newX, newY] == TILE_BOSS_MANSION)
         {
             int areaForGate = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
-            if (areaForGate == 1)
+            if (areaForGate == 3)
+            {
+                StartCoroutine(Enter109());
+                return;
+            }
+            else if (areaForGate == 1)
             {
                 StartCoroutine(EnterMansionArea());
                 return;
@@ -1631,6 +2117,13 @@ public class MapManager : MonoBehaviour
         }
         if (tileAtDest == TILE_BOSS_DOOR)
         {
+            int areaForDoor = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+            if (areaForDoor == 4)
+            {
+                // 109: 傭兵なし、直接ボス戦
+                StartCoroutine(EnterMelodiasQueen());
+                return;
+            }
             bool mercADone = DataCarrier.Instance != null && DataCarrier.Instance.HasDefeatedEnemy("デヴィル傭兵A");
             bool mercBDone = DataCarrier.Instance != null && DataCarrier.Instance.HasDefeatedEnemy("デヴィル傭兵B");
             if (mercADone && mercBDone)
@@ -1646,7 +2139,11 @@ public class MapManager : MonoBehaviour
         }
         if (tileAtDest == TILE_MANSION_EXIT)
         {
-            ExitMansion();
+            int areaForExit = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+            if (areaForExit == 4)
+                Exit109();
+            else
+                ExitMansion();
             return;
         }
 
@@ -1737,21 +2234,14 @@ public class MapManager : MonoBehaviour
 
     IEnumerator StartBattle()
     {
-        // 入力を無効化
         menuOpen = true;
 
-        // エンカウント演出（フラッシュ）
-        var flashObj = new GameObject("EncounterFlash");
-        flashObj.transform.SetParent(canvas.transform, false);
-        var flashRect = flashObj.AddComponent<RectTransform>();
-        flashRect.anchorMin = Vector2.zero;
-        flashRect.anchorMax = Vector2.one;
-        flashRect.offsetMin = Vector2.zero;
-        flashRect.offsetMax = Vector2.zero;
-
-        var flashImg = flashObj.AddComponent<Image>();
-        flashImg.color = new Color(1, 1, 1, 0);
-        flashImg.raycastTarget = false;
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.justifyContent = UIE.Justify.Center;
+        overlay.style.backgroundColor = new Color(1, 1, 1, 0);
+        overlayRoot.Add(overlay);
 
         // フラッシュエフェクト
         for (int i = 0; i < 3; i++)
@@ -1762,35 +2252,18 @@ public class MapManager : MonoBehaviour
             {
                 elapsed += Time.deltaTime;
                 float t = elapsed / flashTime;
-                flashImg.color = new Color(1, 1, 1, 1f - t);
+                overlay.style.backgroundColor = new Color(1, 1, 1, 1f - t);
                 yield return null;
             }
             yield return new WaitForSeconds(0.05f);
         }
 
-        // テキスト演出
-        var textObj = new GameObject("EncounterText");
-        textObj.transform.SetParent(flashObj.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = new Vector2(0.5f, 0.5f);
-        textRect.anchorMax = new Vector2(0.5f, 0.5f);
-        textRect.anchoredPosition = Vector2.zero;
-        textRect.sizeDelta = new Vector2(800, 100);
-
-        var tmpText = textObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(tmpText);
-        tmpText.text = Localization.Get("map_encounter");
-        tmpText.fontSize = 42;
-        tmpText.alignment = TextAlignmentOptions.Center;
-        tmpText.color = Color.white;
-        tmpText.fontStyle = FontStyles.Bold;
-        tmpText.raycastTarget = false;
-
-        flashImg.color = new Color(0, 0, 0, 0.7f);
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.7f);
+        var label = UIHelper.CreateLabel(Localization.Get("map_encounter"), "map-encounter-text");
+        overlay.Add(label);
 
         yield return new WaitForSeconds(1.0f);
 
-        // セーブしてからバトルシーンへ
         if (DataCarrier.Instance != null)
         {
             DataCarrier.Instance.cameFromMap = true;
@@ -1807,6 +2280,12 @@ public class MapManager : MonoBehaviour
         if (IsAdjacentTo(TILE_BOSS_GATE) || IsAdjacentTo(TILE_BOSS_MANSION))
         {
             int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+            if (area == 3)
+            {
+                // 小悪魔の街: 109（area 4）に入る
+                StartCoroutine(Enter109());
+                return;
+            }
             if (area == 1)
             {
                 // 悪魔村: 館内（area 2）に入る
@@ -1845,106 +2324,21 @@ public class MapManager : MonoBehaviour
 
     IEnumerator EnterBossMansion()
     {
-        menuOpen = true; // 入力無効化
+        yield return StartCoroutine(ShowTransitionOverlay(Localization.Get("map_boss_enter")));
 
-        // 演出
-        var overlay = new GameObject("BossOverlay");
-        overlay.transform.SetParent(canvas.transform, false);
-        var overlayRect = overlay.AddComponent<RectTransform>();
-        overlayRect.anchorMin = Vector2.zero;
-        overlayRect.anchorMax = Vector2.one;
-        overlayRect.offsetMin = Vector2.zero;
-        overlayRect.offsetMax = Vector2.zero;
-
-        var overlayImg = overlay.AddComponent<Image>();
-        overlayImg.color = new Color(0, 0, 0, 0);
-        overlayImg.raycastTarget = false;
-
-        // 暗転
-        float fadeTime = 0.8f;
-        float elapsed = 0f;
-        while (elapsed < fadeTime)
-        {
-            elapsed += Time.deltaTime;
-            overlayImg.color = new Color(0, 0, 0, elapsed / fadeTime);
-            yield return null;
-        }
-
-        // テキスト
-        var textObj = new GameObject("BossText");
-        textObj.transform.SetParent(overlay.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = new Vector2(0.5f, 0.5f);
-        textRect.anchorMax = new Vector2(0.5f, 0.5f);
-        textRect.anchoredPosition = Vector2.zero;
-        textRect.sizeDelta = new Vector2(800, 200);
-
-        var tmpText = textObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(tmpText);
-        tmpText.text = Localization.Get("map_boss_enter");
-        tmpText.fontSize = 36;
-        tmpText.alignment = TextAlignmentOptions.Center;
-        tmpText.color = Color.white;
-        tmpText.fontStyle = FontStyles.Bold;
-        tmpText.raycastTarget = false;
-
-        yield return new WaitForSeconds(2.0f);
-
-        // ボス戦へ
         if (DataCarrier.Instance != null)
         {
             DataCarrier.Instance.cameFromMap = true;
             DataCarrier.Instance.isBossBattle = true;
             DataCarrier.Instance.SaveData();
         }
-
         SceneManager.LoadScene("BattleScene");
     }
 
     // 悪魔村から館内（area 2）に入る
     IEnumerator EnterMansionArea()
     {
-        menuOpen = true;
-
-        var overlay = new GameObject("MansionOverlay");
-        overlay.transform.SetParent(canvas.transform, false);
-        var overlayRect = overlay.AddComponent<RectTransform>();
-        overlayRect.anchorMin = Vector2.zero;
-        overlayRect.anchorMax = Vector2.one;
-        overlayRect.offsetMin = Vector2.zero;
-        overlayRect.offsetMax = Vector2.zero;
-
-        var overlayImg = overlay.AddComponent<Image>();
-        overlayImg.color = new Color(0, 0, 0, 0);
-        overlayImg.raycastTarget = false;
-
-        float fadeTime = 0.8f;
-        float elapsed = 0f;
-        while (elapsed < fadeTime)
-        {
-            elapsed += Time.deltaTime;
-            overlayImg.color = new Color(0, 0, 0, elapsed / fadeTime);
-            yield return null;
-        }
-
-        var textObj = new GameObject("MansionText");
-        textObj.transform.SetParent(overlay.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = new Vector2(0.5f, 0.5f);
-        textRect.anchorMax = new Vector2(0.5f, 0.5f);
-        textRect.anchoredPosition = Vector2.zero;
-        textRect.sizeDelta = new Vector2(800, 200);
-
-        var tmpText = textObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(tmpText);
-        tmpText.text = Localization.Get("map_mansion_enter");
-        tmpText.fontSize = 36;
-        tmpText.alignment = TextAlignmentOptions.Center;
-        tmpText.color = Color.white;
-        tmpText.fontStyle = FontStyles.Bold;
-        tmpText.raycastTarget = false;
-
-        yield return new WaitForSeconds(2.0f);
+        yield return StartCoroutine(ShowTransitionOverlay(Localization.Get("map_mansion_enter")));
 
         if (DataCarrier.Instance != null)
         {
@@ -1953,7 +2347,6 @@ public class MapManager : MonoBehaviour
             DataCarrier.Instance.mapPlayerY = 2;
             DataCarrier.Instance.SaveData();
         }
-
         SceneManager.LoadScene("MapScene");
     }
 
@@ -1973,47 +2366,7 @@ public class MapManager : MonoBehaviour
     // デヴィル夫人ボス戦へ
     IEnumerator EnterDevilLadyBoss()
     {
-        menuOpen = true;
-
-        var overlay = new GameObject("DevilLadyOverlay");
-        overlay.transform.SetParent(canvas.transform, false);
-        var overlayRect = overlay.AddComponent<RectTransform>();
-        overlayRect.anchorMin = Vector2.zero;
-        overlayRect.anchorMax = Vector2.one;
-        overlayRect.offsetMin = Vector2.zero;
-        overlayRect.offsetMax = Vector2.zero;
-
-        var overlayImg = overlay.AddComponent<Image>();
-        overlayImg.color = new Color(0, 0, 0, 0);
-        overlayImg.raycastTarget = false;
-
-        float fadeTime = 0.8f;
-        float elapsed = 0f;
-        while (elapsed < fadeTime)
-        {
-            elapsed += Time.deltaTime;
-            overlayImg.color = new Color(0, 0, 0, elapsed / fadeTime);
-            yield return null;
-        }
-
-        var textObj = new GameObject("BossText");
-        textObj.transform.SetParent(overlay.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = new Vector2(0.5f, 0.5f);
-        textRect.anchorMax = new Vector2(0.5f, 0.5f);
-        textRect.anchoredPosition = Vector2.zero;
-        textRect.sizeDelta = new Vector2(800, 200);
-
-        var tmpText = textObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(tmpText);
-        tmpText.text = Localization.Get("map_mansion_boss_enter");
-        tmpText.fontSize = 36;
-        tmpText.alignment = TextAlignmentOptions.Center;
-        tmpText.color = Color.white;
-        tmpText.fontStyle = FontStyles.Bold;
-        tmpText.raycastTarget = false;
-
-        yield return new WaitForSeconds(2.0f);
+        yield return StartCoroutine(ShowTransitionOverlay(Localization.Get("map_mansion_boss_enter")));
 
         if (DataCarrier.Instance != null)
         {
@@ -2021,7 +2374,6 @@ public class MapManager : MonoBehaviour
             DataCarrier.Instance.isBossBattle = true;
             DataCarrier.Instance.SaveData();
         }
-
         SceneManager.LoadScene("BattleScene");
     }
 
@@ -2033,6 +2385,75 @@ public class MapManager : MonoBehaviour
             DataCarrier.Instance.currentArea = 1;
             DataCarrier.Instance.mapPlayerX = 8;
             DataCarrier.Instance.mapPlayerY = 14;
+            DataCarrier.Instance.SaveData();
+        }
+        SceneManager.LoadScene("MapScene");
+    }
+
+    // 小悪魔の街から109（area 4）に入る
+    IEnumerator Enter109()
+    {
+        yield return StartCoroutine(ShowTransitionOverlay(Localization.Get("map_109_enter")));
+
+        if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.currentArea = 4;
+            DataCarrier.Instance.mapPlayerX = 5;
+            DataCarrier.Instance.mapPlayerY = 2;
+            DataCarrier.Instance.SaveData();
+        }
+        SceneManager.LoadScene("MapScene");
+    }
+
+    // メロディアス女王ボス戦へ
+    IEnumerator EnterMelodiasQueen()
+    {
+        yield return StartCoroutine(ShowTransitionOverlay(Localization.Get("map_109_boss_enter")));
+
+        if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.cameFromMap = true;
+            DataCarrier.Instance.isBossBattle = true;
+            DataCarrier.Instance.SaveData();
+        }
+        SceneManager.LoadScene("BattleScene");
+    }
+
+    // 共通トランジションオーバーレイ
+    IEnumerator ShowTransitionOverlay(string text, float fadeTime = 0.8f, float holdTime = 2.0f)
+    {
+        menuOpen = true;
+
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.justifyContent = UIE.Justify.Center;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlayRoot.Add(overlay);
+
+        float elapsed = 0f;
+        while (elapsed < fadeTime)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, elapsed / fadeTime);
+            yield return null;
+        }
+        overlay.style.backgroundColor = Color.black;
+
+        var label = UIHelper.CreateLabel(text, "map-transition-text");
+        overlay.Add(label);
+
+        yield return new WaitForSeconds(holdTime);
+    }
+
+    // 109から小悪魔の街に戻る
+    void Exit109()
+    {
+        if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.currentArea = 3;
+            DataCarrier.Instance.mapPlayerX = 5;
+            DataCarrier.Instance.mapPlayerY = 17;
             DataCarrier.Instance.SaveData();
         }
         SceneManager.LoadScene("MapScene");
@@ -2058,7 +2479,7 @@ public class MapManager : MonoBehaviour
 
     void ToggleMenu()
     {
-        if (menuOpen && menuPanel != null)
+        if (menuOpen && menuOverlayEl != null)
         {
             CloseMenu();
         }
@@ -2073,144 +2494,57 @@ public class MapManager : MonoBehaviour
         menuOpen = true;
         SetTouchControlsVisible(false);
 
-        // 半透明オーバーレイ
-        menuPanel = new GameObject("MenuPanel");
-        menuPanel.transform.SetParent(canvas.transform, false);
-        var overlayRect = menuPanel.AddComponent<RectTransform>();
-        overlayRect.anchorMin = Vector2.zero;
-        overlayRect.anchorMax = Vector2.one;
-        overlayRect.offsetMin = Vector2.zero;
-        overlayRect.offsetMax = Vector2.zero;
-        var overlayImg = menuPanel.AddComponent<Image>();
-        overlayImg.color = new Color(0, 0, 0, 0.4f);
+        menuOverlayEl = UIHelper.CreateOverlay();
+        menuOverlayEl.RegisterCallback<UIE.ClickEvent>(evt =>
+        {
+            if (evt.target == menuOverlayEl) CloseMenu();
+        });
 
-        // タップでメニュー閉じる
-        var overlayBtn = menuPanel.AddComponent<Button>();
-        overlayBtn.targetGraphic = overlayImg;
-        overlayBtn.onClick.AddListener(() => CloseMenu());
-        var overlayColors = overlayBtn.colors;
-        overlayColors.normalColor = overlayColors.highlightedColor = overlayColors.pressedColor = overlayColors.selectedColor = new Color(0, 0, 0, 0.4f);
-        overlayBtn.colors = overlayColors;
+        var card = new UIE.VisualElement();
+        card.AddToClassList("map-menu-card");
 
-        // 白カード
-        var cardObj = new GameObject("MenuCard");
-        cardObj.transform.SetParent(menuPanel.transform, false);
-        var cardRect = cardObj.AddComponent<RectTransform>();
-        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
-        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
-        cardRect.anchoredPosition = Vector2.zero;
-        cardRect.sizeDelta = new Vector2(700, 720);
-        var cardBg = cardObj.AddComponent<Image>();
-        int cardRadius = 32;
-        cardBg.sprite = GetPillSprite(cardRadius);
-        cardBg.type = Image.Type.Sliced;
-        cardBg.color = Color.white;
-        cardBg.raycastTarget = true; // カード内タップがオーバーレイに伝播しないように
+        var title = UIHelper.CreateLabel("MENU", "map-menu-title");
+        card.Add(title);
 
-        // タイトル
-        var titleObj = new GameObject("MenuTitle");
-        titleObj.transform.SetParent(cardObj.transform, false);
-        var titleRect = titleObj.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0, 1);
-        titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.anchoredPosition = new Vector2(0, -40);
-        titleRect.sizeDelta = new Vector2(0, 60);
-        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(titleText);
-        titleText.text = "MENU";
-        titleText.fontSize = 40;
-        titleText.alignment = TextAlignmentOptions.Center;
-        titleText.fontStyle = FontStyles.Bold;
-        titleText.color = Color.black;
-        titleText.raycastTarget = false;
+        string[] labels = {
+            Localization.Get("map_menu_status"),
+            Localization.Get("map_menu_inventory"),
+            Localization.Get("map_menu_home"),
+            Localization.Get("map_menu_save"),
+            Localization.Get("map_menu_title"),
+            Localization.Get("map_menu_close")
+        };
+        System.Action[] actions = {
+            () => { CloseMenu(); OpenStatusPanel(); },
+            () => { CloseMenu(); OpenInventoryPanel(); },
+            () => OnGoHome(),
+            () => OnSave(),
+            () => OnGoTitle(),
+            () => CloseMenu()
+        };
 
-        // ボタン群
-        float btnY = -100;
-        float btnSpacing = 90;
-        CreateMenuItemButton(cardObj.transform, Localization.Get("map_menu_status"), btnY, () => { CloseMenu(); OpenStatusPanel(); });
-        btnY -= btnSpacing;
-        CreateMenuItemButton(cardObj.transform, Localization.Get("map_menu_inventory"), btnY, () => { CloseMenu(); OpenInventoryPanel(); });
-        btnY -= btnSpacing;
-        CreateMenuItemButton(cardObj.transform, Localization.Get("map_menu_home"), btnY, OnGoHome);
-        btnY -= btnSpacing;
-        CreateMenuItemButton(cardObj.transform, Localization.Get("map_menu_save"), btnY, OnSave);
-        btnY -= btnSpacing;
-        CreateMenuItemButton(cardObj.transform, Localization.Get("map_menu_title"), btnY, OnGoTitle);
-        btnY -= btnSpacing;
-        CreateMenuItemButton(cardObj.transform, Localization.Get("map_menu_close"), btnY, () => CloseMenu());
-    }
+        for (int i = 0; i < labels.Length; i++)
+        {
+            var btn = new UIE.Button();
+            btn.AddToClassList("map-menu-item-btn");
+            btn.text = labels[i];
+            UIHelper.ApplyFont(btn);
+            int idx = i;
+            btn.clicked += () => actions[idx]();
+            card.Add(btn);
+        }
 
-    void CreateMenuItemButton(Transform parent, string label, float yPos, UnityEngine.Events.UnityAction action)
-    {
-        int pillRadius = 30;
-        int blur = 16;
-
-        var btnObj = new GameObject(label + "Button");
-        btnObj.transform.SetParent(parent, false);
-        var btnRect = btnObj.AddComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(0.5f, 1);
-        btnRect.anchorMax = new Vector2(0.5f, 1);
-        btnRect.anchoredPosition = new Vector2(0, yPos);
-        btnRect.sizeDelta = new Vector2(580, 70);
-
-        var btnImg = btnObj.AddComponent<Image>();
-        btnImg.sprite = GetPillSprite(pillRadius);
-        btnImg.type = Image.Type.Sliced;
-        btnImg.color = Color.white;
-
-        // Shadow
-        var shadowObj = new GameObject("Shadow");
-        shadowObj.transform.SetParent(btnObj.transform, false);
-        shadowObj.transform.SetAsFirstSibling();
-        var shadowRect = shadowObj.AddComponent<RectTransform>();
-        shadowRect.anchorMin = Vector2.zero;
-        shadowRect.anchorMax = Vector2.one;
-        shadowRect.offsetMin = new Vector2(-blur, -blur - 3);
-        shadowRect.offsetMax = new Vector2(blur, blur - 3);
-        var shadowImg = shadowObj.AddComponent<Image>();
-        shadowImg.sprite = GetShadowSprite(pillRadius, blur);
-        shadowImg.type = Image.Type.Sliced;
-        shadowImg.color = new Color(0f, 0f, 0f, 0.15f);
-        shadowImg.raycastTarget = false;
-
-        var btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnImg;
-        var colors = btn.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = Color.white;
-        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
-        colors.selectedColor = Color.white;
-        colors.fadeDuration = 0.08f;
-        btn.colors = colors;
-        btn.navigation = new Navigation { mode = Navigation.Mode.None };
-        btn.onClick.AddListener(action);
-
-        var textObj = new GameObject("Text");
-        textObj.transform.SetParent(btnObj.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-        var tmp = textObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(tmp);
-        tmp.text = label;
-        tmp.fontSize = 32;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.fontStyle = FontStyles.Bold;
-        tmp.color = new Color(0.15f, 0.15f, 0.18f);
-        tmp.raycastTarget = false;
-
-        AddPressAnimation(btnObj);
+        menuOverlayEl.Add(card);
+        overlayRoot.Add(menuOverlayEl);
     }
 
     void CloseMenu()
     {
         menuOpen = false;
-        if (menuPanel != null)
+        if (menuOverlayEl != null)
         {
-            Destroy(menuPanel);
-            menuPanel = null;
+            menuOverlayEl.RemoveFromHierarchy();
+            menuOverlayEl = null;
         }
         SetTouchControlsVisible(true);
     }
@@ -2223,177 +2557,90 @@ public class MapManager : MonoBehaviour
 
     void OpenSavePanel()
     {
-        if (savePanel != null) return;
+        if (saveOverlayEl != null) return;
         menuOpen = true;
         SetTouchControlsVisible(false);
 
-        // 全画面白背景オーバーレイ
-        savePanel = new GameObject("SavePanel");
-        savePanel.transform.SetParent(canvas.transform, false);
-        var panelRect = savePanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = Vector2.zero;
-        panelRect.anchorMax = Vector2.one;
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
+        saveOverlayEl = new UIE.VisualElement();
+        saveOverlayEl.AddToClassList("map-save-panel");
 
-        var panelBg = savePanel.AddComponent<Image>();
-        panelBg.color = new Color(1f, 1f, 1f, 0.97f);
+        var title = UIHelper.CreateLabel(Localization.Get("map_save_title"), "map-save-title");
+        saveOverlayEl.Add(title);
 
-        // タイトル
-        var titleObj = new GameObject("SaveTitle");
-        titleObj.transform.SetParent(savePanel.transform, false);
-        var titleRect = titleObj.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0, 1);
-        titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.anchoredPosition = new Vector2(0, -50);
-        titleRect.sizeDelta = new Vector2(0, 70);
-        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(titleText);
-        titleText.text = Localization.Get("map_save_title");
-        titleText.fontSize = 36;
-        titleText.alignment = TextAlignmentOptions.Center;
-        titleText.fontStyle = FontStyles.Bold;
-        titleText.color = new Color(0.15f, 0.15f, 0.18f);
-        titleText.raycastTarget = false;
-
-        // スロット一覧
-        float slotY = -130;
-        float slotSpacing = 90;
         for (int i = 0; i < DataCarrier.MAX_SAVE_SLOTS; i++)
         {
-            CreateSaveSlotEntry(i, slotY);
-            slotY -= slotSpacing;
+            int idx = i;
+            bool exists = DataCarrier.SlotExists(idx);
+
+            var slotBtn = new UIE.Button();
+            slotBtn.AddToClassList("map-save-slot");
+            slotBtn.AddToClassList(exists ? "map-save-slot-exists" : "map-save-slot-empty");
+            slotBtn.enableRichText = true;
+            UIHelper.ApplyFont(slotBtn);
+
+            if (exists)
+            {
+                string babyName = DataCarrier.GetSlotBabyName(idx);
+                int age = DataCarrier.GetSlotAge(idx);
+                bool isGod = DataCarrier.GetSlotIsGodBaby(idx);
+                string godMark = isGod ? " <color=#FFD700>\u2605</color>" : "";
+                slotBtn.text = $"{Localization.Get("map_save_slot", idx + 1)}{babyName}{godMark}  ({Localization.GetAge(age)})";
+            }
+            else
+            {
+                slotBtn.text = $"{Localization.Get("map_save_slot", idx + 1)}{Localization.Get("map_save_slot_empty")}";
+            }
+
+            slotBtn.clicked += () => OnSaveSlotSelected(idx);
+            saveOverlayEl.Add(slotBtn);
         }
 
-        // とじる
-        CreateMenuItemButton(savePanel.transform, Localization.Get("ui_close"), slotY - 20, () => CloseSavePanel());
-    }
+        var closeBtn = new UIE.Button();
+        closeBtn.AddToClassList("map-menu-item-btn");
+        closeBtn.text = Localization.Get("ui_close");
+        UIHelper.ApplyFont(closeBtn);
+        closeBtn.clicked += () => CloseSavePanel();
+        saveOverlayEl.Add(closeBtn);
 
-    void CreateSaveSlotEntry(int slot, float yPos)
-    {
-        bool exists = DataCarrier.SlotExists(slot);
-        int pillRadius = 30;
-        int blur = 16;
-
-        var slotObj = new GameObject($"SaveSlot{slot}");
-        slotObj.transform.SetParent(savePanel.transform, false);
-        var slotRect = slotObj.AddComponent<RectTransform>();
-        slotRect.anchorMin = new Vector2(0.5f, 1);
-        slotRect.anchorMax = new Vector2(0.5f, 1);
-        slotRect.anchoredPosition = new Vector2(0, yPos);
-        slotRect.sizeDelta = new Vector2(580, 70);
-
-        var slotBg = slotObj.AddComponent<Image>();
-        slotBg.sprite = GetPillSprite(pillRadius);
-        slotBg.type = Image.Type.Sliced;
-        slotBg.color = exists ? new Color(0.95f, 0.95f, 1f) : new Color(0.92f, 0.92f, 0.92f);
-
-        // Shadow
-        var shadowObj = new GameObject("Shadow");
-        shadowObj.transform.SetParent(slotObj.transform, false);
-        shadowObj.transform.SetAsFirstSibling();
-        var shadowRect = shadowObj.AddComponent<RectTransform>();
-        shadowRect.anchorMin = Vector2.zero;
-        shadowRect.anchorMax = Vector2.one;
-        shadowRect.offsetMin = new Vector2(-blur, -blur - 3);
-        shadowRect.offsetMax = new Vector2(blur, blur - 3);
-        var shadowImg = shadowObj.AddComponent<Image>();
-        shadowImg.sprite = GetShadowSprite(pillRadius, blur);
-        shadowImg.type = Image.Type.Sliced;
-        shadowImg.color = new Color(0f, 0f, 0f, 0.12f);
-        shadowImg.raycastTarget = false;
-
-        // スロット情報テキスト
-        var infoObj = new GameObject("Info");
-        infoObj.transform.SetParent(slotObj.transform, false);
-        var infoRect = infoObj.AddComponent<RectTransform>();
-        infoRect.anchorMin = Vector2.zero;
-        infoRect.anchorMax = Vector2.one;
-        infoRect.offsetMin = new Vector2(20, 5);
-        infoRect.offsetMax = new Vector2(-20, -5);
-        var infoText = infoObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(infoText);
-        infoText.fontSize = 28;
-        infoText.alignment = TextAlignmentOptions.Center;
-        infoText.fontStyle = FontStyles.Bold;
-        infoText.color = new Color(0.15f, 0.15f, 0.18f);
-        infoText.richText = true;
-        infoText.raycastTarget = false;
-
-        if (exists)
-        {
-            string babyName = DataCarrier.GetSlotBabyName(slot);
-            int age = DataCarrier.GetSlotAge(slot);
-            bool isGod = DataCarrier.GetSlotIsGodBaby(slot);
-            string godMark = isGod ? " <color=#FFD700>★</color>" : "";
-            infoText.text = $"{Localization.Get("map_save_slot", slot + 1)}{babyName}{godMark}  ({Localization.GetAge(age)})";
-        }
-        else
-        {
-            infoText.text = $"{Localization.Get("map_save_slot", slot + 1)}{Localization.Get("map_save_slot_empty")}";
-        }
-
-        // スロット全体をボタンにする
-        var btn = slotObj.AddComponent<Button>();
-        btn.targetGraphic = slotBg;
-        var colors = btn.colors;
-        colors.normalColor = exists ? new Color(0.95f, 0.95f, 1f) : new Color(0.92f, 0.92f, 0.92f);
-        colors.highlightedColor = exists ? new Color(0.95f, 0.95f, 1f) : new Color(0.92f, 0.92f, 0.92f);
-        colors.pressedColor = new Color(0.85f, 0.85f, 0.9f);
-        colors.selectedColor = exists ? new Color(0.95f, 0.95f, 1f) : new Color(0.92f, 0.92f, 0.92f);
-        colors.fadeDuration = 0.08f;
-        btn.colors = colors;
-        btn.navigation = new Navigation { mode = Navigation.Mode.None };
-
-        int idx = slot;
-        btn.onClick.AddListener(() => OnSaveSlotSelected(idx));
-
-        AddPressAnimation(slotObj);
+        overlayRoot.Add(saveOverlayEl);
     }
 
     void OnSaveSlotSelected(int slot)
     {
         if (DataCarrier.SlotExists(slot))
         {
-            // 上書き確認
             ShowOverwriteConfirm(slot);
         }
         else
         {
-            // 空きスロット → そのままセーブ
             DoSaveToSlot(slot);
         }
     }
 
     void ShowOverwriteConfirm(int slot)
     {
-        // セーブパネルの中身を消して確認UIに差し替え
-        foreach (Transform child in savePanel.transform)
-            Destroy(child.gameObject);
+        if (saveOverlayEl == null) return;
+        saveOverlayEl.Clear();
 
         string babyName = DataCarrier.GetSlotBabyName(slot);
+        var msg = UIHelper.CreateLabel(
+            Localization.Get("map_save_overwrite_msg", slot + 1, babyName), "map-confirm-text");
+        msg.enableRichText = true;
+        saveOverlayEl.Add(msg);
 
-        // 確認メッセージ
-        var msgObj = new GameObject("ConfirmMsg");
-        msgObj.transform.SetParent(savePanel.transform, false);
-        var msgRect = msgObj.AddComponent<RectTransform>();
-        msgRect.anchorMin = new Vector2(0, 0.5f);
-        msgRect.anchorMax = new Vector2(1, 0.5f);
-        msgRect.anchoredPosition = new Vector2(0, 60);
-        msgRect.sizeDelta = new Vector2(-60, 140);
-        var msgText = msgObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(msgText);
-        msgText.text = Localization.Get("map_save_overwrite_msg", slot + 1, babyName);
-        msgText.fontSize = 32;
-        msgText.alignment = TextAlignmentOptions.Center;
-        msgText.fontStyle = FontStyles.Bold;
-        msgText.color = new Color(0.15f, 0.15f, 0.18f);
-        msgText.richText = true;
-        msgText.raycastTarget = false;
+        var yesBtn = new UIE.Button();
+        yesBtn.AddToClassList("map-menu-item-btn");
+        yesBtn.text = Localization.Get("map_save_overwrite");
+        UIHelper.ApplyFont(yesBtn);
+        yesBtn.clicked += () => DoSaveToSlot(slot);
+        saveOverlayEl.Add(yesBtn);
 
-        // はい / キャンセル
-        CreateMenuItemButton(savePanel.transform, Localization.Get("map_save_overwrite"), -40, () => DoSaveToSlot(slot));
-        CreateMenuItemButton(savePanel.transform, Localization.Get("map_save_cancel"), -130, () => { CloseSavePanel(); OpenSavePanel(); });
+        var cancelBtn = new UIE.Button();
+        cancelBtn.AddToClassList("map-menu-item-btn");
+        cancelBtn.text = Localization.Get("map_save_cancel");
+        UIHelper.ApplyFont(cancelBtn);
+        cancelBtn.clicked += () => { CloseSavePanel(); OpenSavePanel(); };
+        saveOverlayEl.Add(cancelBtn);
     }
 
     void DoSaveToSlot(int slot)
@@ -2408,10 +2655,10 @@ public class MapManager : MonoBehaviour
 
     void CloseSavePanel()
     {
-        if (savePanel != null)
+        if (saveOverlayEl != null)
         {
-            Destroy(savePanel);
-            savePanel = null;
+            saveOverlayEl.RemoveFromHierarchy();
+            saveOverlayEl = null;
             menuOpen = false;
             SetTouchControlsVisible(true);
         }
@@ -2604,97 +2851,47 @@ public class MapManager : MonoBehaviour
     IEnumerator ShowMilkCutin()
     {
         milkCutinActive = true;
-        menuOpen = true; // 入力無効化
+        menuOpen = true;
 
-        // 半透明黒背景
-        var overlay = new GameObject("MilkCutinOverlay");
-        overlay.transform.SetParent(canvas.transform, false);
-        var overlayRect = overlay.AddComponent<RectTransform>();
-        overlayRect.anchorMin = Vector2.zero;
-        overlayRect.anchorMax = Vector2.one;
-        overlayRect.offsetMin = Vector2.zero;
-        overlayRect.offsetMax = Vector2.zero;
-        var overlayBg = overlay.AddComponent<Image>();
-        overlayBg.color = new Color(0, 0, 0, 0f);
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.justifyContent = UIE.Justify.Center;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlayRoot.Add(overlay);
 
         // フェードイン
         float elapsed = 0f;
         while (elapsed < 0.3f)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / 0.3f;
-            overlayBg.color = new Color(0, 0, 0, 0.6f * t);
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.6f * (elapsed / 0.3f));
             yield return null;
         }
-        overlayBg.color = new Color(0, 0, 0, 0.6f);
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.6f);
 
-        // カットインパネル（中央）
-        var cutinPanel = new GameObject("CutinPanel");
-        cutinPanel.transform.SetParent(overlay.transform, false);
-        var cutinRect = cutinPanel.AddComponent<RectTransform>();
-        cutinRect.anchorMin = new Vector2(0.5f, 0.5f);
-        cutinRect.anchorMax = new Vector2(0.5f, 0.5f);
-        cutinRect.anchoredPosition = new Vector2(0, 50);
-        cutinRect.sizeDelta = new Vector2(500, 500);
+        // 背景円
+        var circle = new UIE.VisualElement();
+        circle.AddToClassList("milk-cutin-circle");
+        overlay.Add(circle);
 
-        // 背景円（柔らかいピンク）
-        var circle = FacePart("Circle", cutinPanel.transform, Vector2.zero, new Vector2(350, 350));
-        circle.AddComponent<Image>().color = new Color(1f, 0.9f, 0.92f, 0.9f);
+        // 哺乳瓶（Canvas FacePart で描画）
+        var bottleHost = new GameObject("MilkBottleHost");
+        bottleHost.transform.SetParent(canvas.transform, false);
+        var hostRect = bottleHost.AddComponent<RectTransform>();
+        hostRect.anchorMin = new Vector2(0.5f, 0.5f);
+        hostRect.anchorMax = new Vector2(0.5f, 0.5f);
+        hostRect.anchoredPosition = new Vector2(0, 50);
+        hostRect.sizeDelta = new Vector2(300, 300);
+        DrawBabyBottle(bottleHost.transform, 2.5f);
 
-        // 大きい哺乳瓶
-        var bottleContainer = new GameObject("BigBottle");
-        bottleContainer.transform.SetParent(cutinPanel.transform, false);
-        var bottleRect = bottleContainer.AddComponent<RectTransform>();
-        bottleRect.anchoredPosition = Vector2.zero;
-        bottleRect.sizeDelta = new Vector2(300, 300);
-        DrawBabyBottle(bottleContainer.transform, 2.5f);
+        // テキスト帯
+        var textBg = new UIE.VisualElement();
+        textBg.AddToClassList("milk-cutin-text-bg");
+        var label = UIHelper.CreateLabel(Localization.Get("map_milk_heal"), "milk-cutin-text");
+        textBg.Add(label);
+        overlay.Add(textBg);
 
-        // キラキラエフェクト
-        Vector2[] sparklePositions = {
-            new Vector2(-120, 100), new Vector2(130, 80), new Vector2(-80, -90),
-            new Vector2(100, -60), new Vector2(0, 140)
-        };
-        foreach (var sp in sparklePositions)
-        {
-            var sparkle = FacePart("Sparkle", cutinPanel.transform, sp, new Vector2(16, 16));
-            sparkle.AddComponent<Image>().color = new Color(1f, 1f, 0.7f, 0.8f);
-        }
-
-        // テキスト
-        var textObj = new GameObject("MilkText");
-        textObj.transform.SetParent(overlay.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = new Vector2(0.5f, 0.5f);
-        textRect.anchorMax = new Vector2(0.5f, 0.5f);
-        textRect.anchoredPosition = new Vector2(0, -200);
-        textRect.sizeDelta = new Vector2(800, 80);
-
-        var textBg = new GameObject("TextBg");
-        textBg.transform.SetParent(textObj.transform, false);
-        var textBgRect = textBg.AddComponent<RectTransform>();
-        textBgRect.anchorMin = Vector2.zero;
-        textBgRect.anchorMax = Vector2.one;
-        textBgRect.offsetMin = Vector2.zero;
-        textBgRect.offsetMax = Vector2.zero;
-        textBg.AddComponent<Image>().color = new Color(1f, 0.85f, 0.9f, 0.9f);
-
-        var milkText = new GameObject("Text");
-        milkText.transform.SetParent(textObj.transform, false);
-        var milkTextRect = milkText.AddComponent<RectTransform>();
-        milkTextRect.anchorMin = Vector2.zero;
-        milkTextRect.anchorMax = Vector2.one;
-        milkTextRect.offsetMin = new Vector2(20, 5);
-        milkTextRect.offsetMax = new Vector2(-20, -5);
-
-        var tmp = milkText.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(tmp);
-        tmp.text = Localization.Get("map_milk_heal");
-        tmp.fontSize = 28;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = new Color(0.6f, 0.2f, 0.3f);
-        tmp.fontStyle = FontStyles.Bold;
-
-        // 2.5秒表示
         yield return new WaitForSeconds(2.5f);
 
         // フェードアウト
@@ -2702,16 +2899,14 @@ public class MapManager : MonoBehaviour
         while (elapsed < 0.3f)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / 0.3f;
-            overlayBg.color = new Color(0, 0, 0, 0.6f * (1 - t));
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.6f * (1 - elapsed / 0.3f));
             yield return null;
         }
 
-        Destroy(overlay);
+        overlay.RemoveFromHierarchy();
+        if (bottleHost != null) Destroy(bottleHost);
         menuOpen = false;
         milkCutinActive = false;
-
-        // ステータス更新
         UpdateStatusText();
     }
 
@@ -2719,88 +2914,62 @@ public class MapManager : MonoBehaviour
 
     void OpenStatusPanel()
     {
-        if (statusPanel != null) return;
+        if (statusDetailEl != null) return;
         menuOpen = true;
         SetTouchControlsVisible(false);
 
         var dc = DataCarrier.Instance;
         if (dc == null) return;
 
-        statusPanel = new GameObject("StatusPanel");
-        statusPanel.transform.SetParent(canvas.transform, false);
-        var panelRect = statusPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = Vector2.zero;
-        panelRect.sizeDelta = new Vector2(400, 480);
+        var overlay = UIHelper.CreateOverlay();
+        overlay.RegisterCallback<UIE.ClickEvent>(evt =>
+        {
+            if (evt.target == overlay) CloseStatusPanel();
+        });
 
-        var panelBg = statusPanel.AddComponent<Image>();
-        panelBg.color = new Color(0.08f, 0.08f, 0.18f, 0.95f);
+        statusDetailEl = new UIE.VisualElement();
+        statusDetailEl.AddToClassList("map-detail-panel");
 
-        // タイトル
-        var titleObj = new GameObject("StatusTitle");
-        titleObj.transform.SetParent(statusPanel.transform, false);
-        var titleRect = titleObj.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0, 1);
-        titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.anchoredPosition = new Vector2(0, -25);
-        titleRect.sizeDelta = new Vector2(0, 50);
-        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(titleText);
-        titleText.text = Localization.Get("map_status_title");
-        titleText.fontSize = 28;
-        titleText.alignment = TextAlignmentOptions.Center;
-        titleText.fontStyle = FontStyles.Bold;
-        titleText.color = new Color(0.9f, 0.9f, 0.5f);
-        titleText.raycastTarget = false;
+        var title = UIHelper.CreateLabel(Localization.Get("map_status_title"), "map-detail-title");
+        statusDetailEl.Add(title);
 
-        // ステータス内容
-        string genderColor = dc.babyGender == "男の子" ? "#00BFFF" : "#FF69B4";
-        string traitColor = dc.trait1 == "覇王色" ? "#FF4500" : "#FFA500";
-        string godLabel = dc.isGodBaby ? "  <color=#FFD700>★GOD BABY★</color>" : "";
+        string genderColor = dc.babyGender == "\u7537\u306e\u5b50" ? "#00BFFF" : "#FF69B4";
+        string traitColor = dc.trait1 == "\u8987\u738b\u8272" ? "#FF4500" : "#FFA500";
+        string godLabel = dc.isGodBaby ? "  <color=#FFD700>\u2605GOD BABY\u2605</color>" : "";
 
         string content = $"<b>{dc.babyName}</b>{godLabel}\n" +
-            $"<color={genderColor}>{Localization.GetGender(dc.babyGender)}</color>　　{Localization.GetAge(dc.babyAge)}\n" +
+            $"<color={genderColor}>{Localization.GetGender(dc.babyGender)}</color>\u3000\u3000{Localization.GetAge(dc.babyAge)}\n" +
             "\n" +
-            $"{Localization.Get("map_status_hp")} {dc.babyHp}　　{Localization.Get("map_status_atk")} {dc.babyAtk}　　{Localization.Get("map_status_def")} {dc.babyDef}\n" +
-            $"{Localization.Get("map_status_academic")} {dc.babyAcademic}　　{Localization.Get("map_status_athletic")} {dc.babyAthletic}\n" +
-            $"{Localization.Get("map_status_height")} {dc.babyHeight} cm　　{Localization.Get("map_status_weight")} {dc.babyWeight} g\n" +
+            $"{Localization.Get("map_status_hp")} {dc.babyHp}\u3000\u3000{Localization.Get("map_status_atk")} {dc.babyAtk}\u3000\u3000{Localization.Get("map_status_def")} {dc.babyDef}\n" +
+            $"{Localization.Get("map_status_academic")} {dc.babyAcademic}\u3000\u3000{Localization.Get("map_status_athletic")} {dc.babyAthletic}\n" +
+            $"{Localization.Get("map_status_height")} {dc.babyHeight} cm\u3000\u3000{Localization.Get("map_status_weight")} {dc.babyWeight} g\n" +
             "\n" +
             $"{Localization.Get("map_status_trait")} <color={traitColor}>{Localization.GetTrait(dc.trait1)}</color>\n" +
             "\n" +
-            $"{Localization.Get("map_status_father")} {dc.fatherName}　　{Localization.Get("map_status_mother")} {dc.motherName}\n" +
+            $"{Localization.Get("map_status_father")} {dc.fatherName}\u3000\u3000{Localization.Get("map_status_mother")} {dc.motherName}\n" +
             "\n" +
             $"{Localization.Get("map_status_exp")} {dc.babyExp} / {DataCarrier.ExpForNextAge(dc.babyAge)}\n" +
             $"{Localization.Get("map_status_enemies")} {dc.defeatedEnemies}";
 
-        var contentObj = new GameObject("StatusContent");
-        contentObj.transform.SetParent(statusPanel.transform, false);
-        var contentRect = contentObj.AddComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0, 1);
-        contentRect.anchorMax = new Vector2(1, 1);
-        contentRect.anchoredPosition = new Vector2(0, -80);
-        contentRect.sizeDelta = new Vector2(-40, 300);
-        contentRect.pivot = new Vector2(0.5f, 1);
-        var contentText = contentObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(contentText);
-        contentText.text = content;
-        contentText.fontSize = 22;
-        contentText.alignment = TextAlignmentOptions.TopLeft;
-        contentText.color = Color.white;
-        contentText.richText = true;
-        contentText.lineSpacing = 8;
-        contentText.raycastTarget = false;
+        var contentLabel = UIHelper.CreateLabel(content, "map-detail-content");
+        contentLabel.enableRichText = true;
+        statusDetailEl.Add(contentLabel);
 
-        // とじるボタン
-        CreateMenuItemButton(statusPanel.transform, Localization.Get("ui_close"), -430, () => CloseStatusPanel());
+        var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "pill-button-small");
+        closeBtn.style.marginTop = 20;
+        closeBtn.clicked += () => CloseStatusPanel();
+        statusDetailEl.Add(closeBtn);
+
+        overlay.Add(statusDetailEl);
+        overlayRoot.Add(overlay);
     }
 
     void CloseStatusPanel()
     {
-        if (statusPanel != null)
+        if (statusDetailEl != null)
         {
-            Destroy(statusPanel);
-            statusPanel = null;
+            statusDetailEl.parent?.RemoveFromHierarchy();
+            statusDetailEl = null;
             menuOpen = false;
             SetTouchControlsVisible(true);
         }
@@ -2823,92 +2992,56 @@ public class MapManager : MonoBehaviour
 
     void OpenInventoryPanel()
     {
-        if (inventoryPanel != null) return;
+        if (inventoryOverlayEl != null) return;
         menuOpen = true;
         SetTouchControlsVisible(false);
 
-        inventoryPanel = new GameObject("InventoryPanel");
-        inventoryPanel.transform.SetParent(canvas.transform, false);
-        var panelRect = inventoryPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = Vector2.zero;
-        panelRect.sizeDelta = new Vector2(350, 300);
+        var overlay = UIHelper.CreateOverlay();
+        overlay.RegisterCallback<UIE.ClickEvent>(evt =>
+        {
+            if (evt.target == overlay) CloseInventoryPanel();
+        });
 
-        var panelBg = inventoryPanel.AddComponent<Image>();
-        panelBg.color = new Color(0.08f, 0.08f, 0.18f, 0.95f);
+        inventoryOverlayEl = new UIE.VisualElement();
+        inventoryOverlayEl.AddToClassList("map-inv-panel");
 
-        // タイトル
-        var titleObj = new GameObject("InvTitle");
-        titleObj.transform.SetParent(inventoryPanel.transform, false);
-        var titleRect = titleObj.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0, 1);
-        titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.anchoredPosition = new Vector2(0, -25);
-        titleRect.sizeDelta = new Vector2(0, 50);
-        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(titleText);
-        titleText.text = Localization.Get("map_inventory_title");
-        titleText.fontSize = 28;
-        titleText.alignment = TextAlignmentOptions.Center;
-        titleText.fontStyle = FontStyles.Bold;
-        titleText.color = new Color(0.9f, 0.9f, 0.5f);
-        titleText.raycastTarget = false;
+        var title = UIHelper.CreateLabel(Localization.Get("map_inventory_title"), "map-detail-title");
+        inventoryOverlayEl.Add(title);
 
-        // アイテム一覧
         string[] items = DataCarrier.Instance != null ? DataCarrier.Instance.GetItemList() : new string[0];
 
-        float itemY = -70;
         if (items.Length == 0)
         {
-            var emptyObj = new GameObject("Empty");
-            emptyObj.transform.SetParent(inventoryPanel.transform, false);
-            var emptyRect = emptyObj.AddComponent<RectTransform>();
-            emptyRect.anchorMin = new Vector2(0, 1);
-            emptyRect.anchorMax = new Vector2(1, 1);
-            emptyRect.anchoredPosition = new Vector2(0, itemY);
-            emptyRect.sizeDelta = new Vector2(0, 40);
-            var emptyText = emptyObj.AddComponent<TextMeshProUGUI>();
-            FontHelper.Apply(emptyText);
-            emptyText.text = Localization.Get("map_inventory_empty");
-            emptyText.fontSize = 22;
-            emptyText.alignment = TextAlignmentOptions.Center;
-            emptyText.color = new Color(0.6f, 0.6f, 0.6f);
-            emptyText.raycastTarget = false;
+            var emptyLabel = UIHelper.CreateLabel(Localization.Get("map_inventory_empty"), "map-inv-empty");
+            inventoryOverlayEl.Add(emptyLabel);
         }
         else
         {
             foreach (var item in items)
             {
-                var itemObj = new GameObject("Item_" + item);
-                itemObj.transform.SetParent(inventoryPanel.transform, false);
-                var itemRect = itemObj.AddComponent<RectTransform>();
-                itemRect.anchorMin = new Vector2(0, 1);
-                itemRect.anchorMax = new Vector2(1, 1);
-                itemRect.anchoredPosition = new Vector2(0, itemY);
-                itemRect.sizeDelta = new Vector2(0, 40);
-                var itemText = itemObj.AddComponent<TextMeshProUGUI>();
-                FontHelper.Apply(itemText);
-                itemText.text = item == "金のたまご" ? "<color=#FFD700>★ " + Localization.Get("map_item_golden_egg") + "</color>" : item;
-                itemText.fontSize = 22;
-                itemText.alignment = TextAlignmentOptions.Center;
-                itemText.color = Color.white;
-                itemText.richText = true;
-                itemText.raycastTarget = false;
-                itemY -= 40;
+                string displayText = item == "\u91d1\u306e\u305f\u307e\u3054" ?
+                    "<color=#FFD700>\u2605 " + Localization.Get("map_item_golden_egg") + "</color>" : item;
+                var itemLabel = UIHelper.CreateLabel(displayText, "map-inv-item");
+                itemLabel.enableRichText = true;
+                inventoryOverlayEl.Add(itemLabel);
             }
         }
 
-        // とじるボタン
-        CreateMenuItemButton(inventoryPanel.transform, Localization.Get("ui_close"), -240, () => CloseInventoryPanel());
+        var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "pill-button-small");
+        closeBtn.style.marginTop = 20;
+        closeBtn.clicked += () => CloseInventoryPanel();
+        inventoryOverlayEl.Add(closeBtn);
+
+        overlay.Add(inventoryOverlayEl);
+        overlayRoot.Add(overlay);
     }
 
     void CloseInventoryPanel()
     {
-        if (inventoryPanel != null)
+        if (inventoryOverlayEl != null)
         {
-            Destroy(inventoryPanel);
-            inventoryPanel = null;
+            inventoryOverlayEl.parent?.RemoveFromHierarchy();
+            inventoryOverlayEl = null;
             menuOpen = false;
             SetTouchControlsVisible(true);
         }
@@ -2917,225 +3050,99 @@ public class MapManager : MonoBehaviour
     // ===== メッセージ表示 =====
 
     Coroutine messageCoroutine;
+    UIE.VisualElement currentMessageBox;
+
     void ShowMessage(string msg)
     {
         if (messageCoroutine != null)
             StopCoroutine(messageCoroutine);
+        if (currentMessageBox != null)
+        {
+            currentMessageBox.RemoveFromHierarchy();
+            currentMessageBox = null;
+        }
         messageCoroutine = StartCoroutine(ShowMessageCoroutine(msg));
     }
 
     IEnumerator ShowMessageCoroutine(string msg)
     {
-        var msgBox = new GameObject("MessageBox");
-        msgBox.transform.SetParent(canvas.transform, false);
-        var boxRect = msgBox.AddComponent<RectTransform>();
-        boxRect.anchorMin = new Vector2(0.5f, 0.5f);
-        boxRect.anchorMax = new Vector2(0.5f, 0.5f);
-        boxRect.anchoredPosition = new Vector2(0, -200);
-        boxRect.sizeDelta = new Vector2(800, 90);
+        var box = new UIE.VisualElement();
+        box.AddToClassList("map-message-box");
+        box.style.bottom = new UIE.StyleLength(new UIE.Length(35, UIE.LengthUnit.Percent));
 
-        var boxBg = msgBox.AddComponent<Image>();
-        boxBg.color = new Color(0, 0, 0, 0.85f);
+        var label = UIHelper.CreateLabel(msg, "map-message-text");
+        label.enableRichText = true;
+        box.Add(label);
 
-        var textObj = new GameObject("Text");
-        textObj.transform.SetParent(msgBox.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = new Vector2(20, 10);
-        textRect.offsetMax = new Vector2(-20, -10);
-
-        var text = textObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(text);
-        text.text = msg;
-        text.fontSize = 24;
-        text.alignment = TextAlignmentOptions.Center;
-        text.color = Color.white;
-        text.richText = true;
+        overlayRoot.Add(box);
+        currentMessageBox = box;
 
         yield return new WaitForSeconds(2f);
 
-        Destroy(msgBox);
+        box.RemoveFromHierarchy();
+        if (currentMessageBox == box) currentMessageBox = null;
     }
 
     // ===== タッチコントロール =====
 
     void CreateTouchControls()
     {
-        if (canvas == null) return;
+        if (overlayRoot == null) return;
 
-        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
+        touchSwipeEl = new UIE.VisualElement();
+        touchSwipeEl.AddToClassList("map-swipe-area");
 
-        touchControlsObj = new GameObject("TouchControls");
-        touchControlsObj.transform.SetParent(canvas.transform, false);
-        var touchRect = touchControlsObj.AddComponent<RectTransform>();
-        touchRect.anchorMin = Vector2.zero;
-        touchRect.anchorMax = Vector2.one;
-        touchRect.offsetMin = Vector2.zero;
-        touchRect.offsetMax = Vector2.zero;
-
-        // === スワイプ移動エリア（画面左半分） ===
-        var swipeObj = new GameObject("SwipeArea");
-        swipeObj.transform.SetParent(touchControlsObj.transform, false);
-        var swipeRect = swipeObj.AddComponent<RectTransform>();
-        swipeRect.anchorMin = new Vector2(0, 0);
-        swipeRect.anchorMax = new Vector2(0.5f, 1);
-        swipeRect.offsetMin = Vector2.zero;
-        swipeRect.offsetMax = Vector2.zero;
-        var swipeImg = swipeObj.AddComponent<Image>();
-        swipeImg.color = Color.clear;
-
-        var trigger = swipeObj.AddComponent<EventTrigger>();
-
-        var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-        down.callback.AddListener((data) => {
-            var ped = (PointerEventData)data;
-            touchStartPos = ped.position;
+        touchSwipeEl.RegisterCallback<UIE.PointerDownEvent>(evt =>
+        {
+            touchStartPos = new Vector2(evt.position.x, evt.position.y);
             isTouchDragging = true;
             touchDx = 0; touchDy = 0;
         });
-        trigger.triggers.Add(down);
 
-        var drag = new EventTrigger.Entry { eventID = EventTriggerType.Drag };
-        drag.callback.AddListener((data) => {
+        touchSwipeEl.RegisterCallback<UIE.PointerMoveEvent>(evt =>
+        {
             if (!isTouchDragging) return;
-            var ped = (PointerEventData)data;
-            Vector2 delta = ped.position - touchStartPos;
-            if (delta.magnitude < SWIPE_THRESHOLD) {
+            Vector2 current = new Vector2(evt.position.x, evt.position.y);
+            Vector2 delta = current - touchStartPos;
+            if (delta.magnitude < SWIPE_THRESHOLD)
+            {
                 touchDx = 0; touchDy = 0;
                 return;
             }
-            if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y)) {
+            if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
+            {
                 touchDx = delta.x > 0 ? 1 : -1;
                 touchDy = 0;
-            } else {
+            }
+            else
+            {
                 touchDx = 0;
-                touchDy = delta.y > 0 ? 1 : -1;
+                // UI Toolkit Y is inverted vs screen coords
+                touchDy = delta.y < 0 ? 1 : -1;
             }
         });
-        trigger.triggers.Add(drag);
 
-        var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-        up.callback.AddListener((_) => {
+        touchSwipeEl.RegisterCallback<UIE.PointerUpEvent>(evt =>
+        {
             isTouchDragging = false;
             touchDx = 0; touchDy = 0;
         });
-        trigger.triggers.Add(up);
 
+        overlayRoot.Add(touchSwipeEl);
     }
 
     void SetTouchControlsVisible(bool visible)
     {
-        if (touchControlsObj != null)
-            touchControlsObj.SetActive(visible);
+        if (touchSwipeEl != null)
+            touchSwipeEl.style.display = visible ?
+                UIE.DisplayStyle.Flex : UIE.DisplayStyle.None;
     }
 
-    // ── Pill / Shadow sprite helpers ──
-    static Sprite _pillSprite, _shadowSprite;
-
-    static Sprite GetPillSprite(int radius)
+    void OnDestroy()
     {
-        if (_pillSprite != null) return _pillSprite;
-        int size = radius * 2 + 2;
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        float center = (size - 1) / 2f;
-        for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float dist = Mathf.Sqrt((x - center) * (x - center) + (y - center) * (y - center)) - radius;
-                if (dist <= -1f) tex.SetPixel(x, y, Color.white);
-                else if (dist <= 0f) tex.SetPixel(x, y, new Color(1, 1, 1, -dist));
-                else tex.SetPixel(x, y, new Color(0, 0, 0, 0));
-            }
-        tex.Apply();
-        var border = new Vector4(radius, radius, radius, radius);
-        _pillSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
-            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
-        return _pillSprite;
-    }
-
-    static Sprite GetShadowSprite(int radius, int blur)
-    {
-        if (_shadowSprite != null) return _shadowSprite;
-        int size = (radius + blur) * 2 + 2;
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        float center = (size - 1) / 2f;
-        for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float dist = Mathf.Sqrt((x - center) * (x - center) + (y - center) * (y - center)) - radius;
-                float alpha;
-                if (dist <= 0f) alpha = 0f;
-                else if (dist >= blur) alpha = 0f;
-                else { float t = dist / blur; alpha = (1f - t) * (1f - t); }
-                tex.SetPixel(x, y, new Color(1, 1, 1, alpha));
-            }
-        tex.Apply();
-        int borderVal = radius + blur;
-        var border = new Vector4(borderVal, borderVal, borderVal, borderVal);
-        _shadowSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
-            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
-        return _shadowSprite;
-    }
-
-    static Sprite _circleSprite;
-    static Sprite GetCircleSprite(int radius)
-    {
-        if (_circleSprite != null) return _circleSprite;
-        int size = radius * 2 + 2;
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        float center = (size - 1) / 2f;
-        for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float dist = Mathf.Sqrt((x - center) * (x - center) + (y - center) * (y - center)) - radius;
-                if (dist < -1f) tex.SetPixel(x, y, Color.white);
-                else if (dist <= 0f) tex.SetPixel(x, y, new Color(1, 1, 1, -dist));
-                else tex.SetPixel(x, y, new Color(0, 0, 0, 0));
-            }
-        tex.Apply();
-        var border = new Vector4(radius, radius, radius, radius);
-        _circleSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
-            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
-        return _circleSprite;
-    }
-
-    static Sprite _circleShadowSprite;
-    static Sprite GetCircleShadowSprite(int radius, int blur)
-    {
-        if (_circleShadowSprite != null) return _circleShadowSprite;
-        int size = (radius + blur) * 2 + 2;
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        float center = (size - 1) / 2f;
-        for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float dist = Mathf.Sqrt((x - center) * (x - center) + (y - center) * (y - center)) - radius;
-                float alpha;
-                if (dist <= 0f) alpha = 0f;
-                else if (dist >= blur) alpha = 0f;
-                else { float t = dist / blur; alpha = (1f - t) * (1f - t); }
-                tex.SetPixel(x, y, new Color(1, 1, 1, alpha));
-            }
-        tex.Apply();
-        int borderVal = radius + blur;
-        var border = new Vector4(borderVal, borderVal, borderVal, borderVal);
-        _circleShadowSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
-            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
-        return _circleShadowSprite;
-    }
-
-    void AddPressAnimation(GameObject obj)
-    {
-        var trigger = obj.AddComponent<EventTrigger>();
-        var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-        down.callback.AddListener((_) => obj.transform.localScale = new Vector3(0.95f, 0.95f, 1f));
-        trigger.triggers.Add(down);
-        var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-        up.callback.AddListener((_) => obj.transform.localScale = Vector3.one);
-        trigger.triggers.Add(up);
-        var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-        exit.callback.AddListener((_) => obj.transform.localScale = Vector3.one);
-        trigger.triggers.Add(exit);
+        if (villagePanelSettings != null)
+            Destroy(villagePanelSettings);
+        if (overlayPanelSettings != null)
+            Destroy(overlayPanelSettings);
     }
 }

@@ -1,0 +1,218 @@
+/* ======================================== */
+/* BirthStyle.uss — BirthScene              */
+/* ======================================== */
+
+/* --- Menu button (top-right circle) --- */
+.birth-menu-btn {
+    position: absolute;
+    right: 24px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: white;
+    align-items: center;
+    justify-content: center;
+    border-width: 0;
+    padding: 0;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.birth-menu-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(235, 235, 235);
+}
+
+.birth-menu-line {
+    width: 30px;
+    height: 3.5px;
+    background-color: rgb(115, 115, 128);
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+/* --- Menu dropdown --- */
+.birth-menu-card {
+    position: absolute;
+    right: 24px;
+    width: 280px;
+    border-radius: 24px;
+    background-color: white;
+    align-items: center;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.birth-menu-item-btn {
+    width: 260px;
+    height: 60px;
+    border-radius: 16px;
+    background-color: white;
+    align-items: center;
+    justify-content: center;
+    border-width: 0;
+    padding: 0;
+    font-size: 30px;
+    color: rgb(26, 26, 33);
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.birth-menu-item-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(240, 240, 243);
+}
+
+/* --- Name input dialog --- */
+.birth-name-card {
+    width: 900px;
+    border-radius: 24px;
+    background-color: white;
+    align-items: center;
+    padding-top: 40px;
+    padding-bottom: 30px;
+}
+
+.birth-name-title {
+    font-size: 36px;
+    -unity-font-style: bold;
+    color: rgb(64, 64, 77);
+    -unity-text-align: middle-center;
+    margin-bottom: 25px;
+}
+
+.birth-name-field .unity-text-field__input {
+    width: 750px;
+    height: 80px;
+    font-size: 32px;
+    color: rgb(38, 38, 38);
+    background-color: rgb(240, 240, 245);
+    border-radius: 16px;
+    border-width: 0;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+.birth-name-field {
+    width: 750px;
+    margin-bottom: 25px;
+}
+
+/* --- Save confirm dialog --- */
+.birth-save-panel {
+    width: 400px;
+    background-color: rgba(26, 26, 51, 0.95);
+    border-radius: 12px;
+    padding: 30px 20px 20px 20px;
+    align-items: center;
+}
+
+.birth-save-title {
+    font-size: 32px;
+    -unity-font-style: bold;
+    color: white;
+    -unity-text-align: middle-center;
+    margin-bottom: 20px;
+}
+
+.birth-save-yes {
+    width: 120px;
+    height: 50px;
+    border-radius: 8px;
+    background-color: rgb(77, 179, 102);
+    align-items: center;
+    justify-content: center;
+    border-width: 0;
+    padding: 0;
+    font-size: 26px;
+    -unity-font-style: bold;
+    color: white;
+    margin-right: 16px;
+    transition-property: scale;
+    transition-duration: 0.08s;
+}
+
+.birth-save-yes:active {
+    scale: 0.95 0.95;
+}
+
+.birth-save-no {
+    width: 120px;
+    height: 50px;
+    border-radius: 8px;
+    background-color: rgb(153, 77, 77);
+    align-items: center;
+    justify-content: center;
+    border-width: 0;
+    padding: 0;
+    font-size: 26px;
+    -unity-font-style: bold;
+    color: white;
+    transition-property: scale;
+    transition-duration: 0.08s;
+}
+
+.birth-save-no:active {
+    scale: 0.95 0.95;
+}
+
+/* --- Parent bio panel --- */
+.birth-bio-card {
+    width: 940px;
+    background-color: rgba(26, 36, 71, 0.98);
+    border-radius: 24px;
+    border-color: rgba(64, 89, 153, 0.95);
+    border-width: 6px;
+    align-items: center;
+    padding-top: 30px;
+    padding-bottom: 20px;
+}
+
+.birth-bio-name {
+    font-size: 40px;
+    -unity-font-style: bold;
+    color: rgb(255, 230, 128);
+    -unity-text-align: middle-center;
+    margin-bottom: 10px;
+}
+
+.birth-bio-separator {
+    width: 90%;
+    height: 2px;
+    background-color: rgba(102, 128, 191, 0.5);
+    align-self: center;
+    margin-bottom: 15px;
+}
+
+.birth-bio-text {
+    font-size: 32px;
+    color: white;
+    -unity-text-align: upper-left;
+    white-space: normal;
+    padding-left: 36px;
+    padding-right: 36px;
+    margin-bottom: 15px;
+    -unity-line-height: 120%;
+}
+
+.birth-bio-close {
+    position: absolute;
+    right: 24px;
+    top: 24px;
+    width: 52px;
+    height: 52px;
+    border-radius: 26px;
+    background-color: rgba(255, 255, 255, 0.15);
+    align-items: center;
+    justify-content: center;
+    border-width: 0;
+    padding: 0;
+    font-size: 36px;
+    color: white;
+    transition-property: background-color;
+    transition-duration: 0.08s;
+}
+
+.birth-bio-close:active {
+    background-color: rgba(255, 255, 255, 0.3);
+}

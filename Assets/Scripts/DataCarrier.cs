@@ -29,7 +29,7 @@ public class DataCarrier : MonoBehaviour
     public bool isGodBaby;
     public bool cameFromMap = false;
     public bool isBossBattle = false;
-    public int currentArea = 0;     // 0=村, 1=悪魔村, 2=デヴィル夫人のやかた, 3=小悪魔の街
+    public int currentArea = 0;     // 0=村, 1=悪魔村, 2=デヴィル夫人のやかた, 3=小悪魔の街, 4=109
     public string fixedEncounterEnemy = "";  // 固定エンカウント敵名（空=ランダム）
     public int babyCurrentHp = -1;  // 戦闘間HP持越し（-1=maxHP）
     public int babyPoisonTurns = 0;  // 毒残りターン

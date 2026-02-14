@@ -1,0 +1,341 @@
+/* ======================================== */
+/* CommonStyle.uss                          */
+/* Shared styles for God Babys UI Toolkit   */
+/* ======================================== */
+
+/* --- Design Tokens --- */
+:root {
+    --bg-light: rgb(243, 247, 248);         /* #f3f7f8 */
+    --text-dark: rgb(13, 13, 20);           /* #0d0d14 */
+    --text-body: rgb(115, 115, 128);        /* #737380 */
+    --text-label: rgb(102, 102, 115);       /* #666673 */
+    --pink: rgb(242, 78, 128);              /* #F24E80 */
+    --gold: rgb(217, 166, 33);              /* #D9A621 */
+    --purple: rgb(140, 89, 166);            /* #8C59A6 */
+    --blue-accent: rgb(77, 128, 230);       /* #4D80E6 */
+    --btn-pressed: rgb(235, 235, 235);      /* #EBEBEB */
+    --shadow-color: rgba(0, 0, 0, 0.06);
+    --border-gray: rgb(209, 209, 217);      /* #D1D1D9 */
+}
+
+/* --- Full-screen background --- */
+.bg-screen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-light);
+}
+
+/* --- Pill Button (white, with shadow feel) --- */
+.pill-button {
+    height: 120px;
+    width: 700px;
+    border-radius: 60px;
+    background-color: white;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(115, 115, 128);
+    border-width: 1px;
+    border-color: rgb(200, 200, 210);
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+    padding: 0;
+    margin: 0;
+}
+
+.pill-button:active {
+    scale: 0.95 0.95;
+    background-color: var(--btn-pressed);
+}
+
+.pill-button:hover {
+    background-color: rgb(248, 248, 248);
+}
+
+/* Pill button variants */
+.pill-button-small {
+    height: 64px;
+    width: 280px;
+    border-radius: 32px;
+    background-color: white;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    -unity-font-style: bold;
+    color: rgb(115, 115, 128);
+    border-width: 0;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+    padding: 0;
+    margin: 0;
+}
+
+.pill-button-small:active {
+    scale: 0.95 0.95;
+    background-color: var(--btn-pressed);
+}
+
+.pill-button-medium {
+    height: 100px;
+    width: 500px;
+    border-radius: 50px;
+    background-color: white;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    -unity-font-style: bold;
+    color: rgb(115, 115, 128);
+    border-width: 0;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+    padding: 0;
+    margin: 0;
+}
+
+.pill-button-medium:active {
+    scale: 0.95 0.95;
+    background-color: var(--btn-pressed);
+}
+
+/* --- Shadow Layer --- */
+.shadow-layer {
+    position: absolute;
+    left: -4px;
+    right: -4px;
+    top: -2px;
+    bottom: -6px;
+    border-radius: 64px;
+    background-color: var(--shadow-color);
+}
+
+.shadow-layer-small {
+    position: absolute;
+    left: -12px;
+    right: -12px;
+    top: -10px;
+    bottom: -14px;
+    border-radius: 44px;
+    background-color: rgba(0, 0, 0, 0.12);
+}
+
+/* --- Circle Mask --- */
+.circle-mask {
+    border-radius: 50%;
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- Overlay (dark backdrop) --- */
+.overlay-dark {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    align-items: center;
+    justify-content: center;
+}
+
+.overlay-fade {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0);
+    transition-property: background-color;
+    transition-duration: 0.5s;
+}
+
+/* --- Modal Panel --- */
+.modal-panel {
+    background-color: white;
+    border-radius: 24px;
+    padding: 40px;
+    align-items: center;
+}
+
+.modal-panel-dark {
+    background-color: rgba(20, 15, 36, 0.97);
+    border-radius: 24px;
+    padding: 40px;
+    align-items: center;
+}
+
+/* --- Typography --- */
+.text-title {
+    font-size: 44px;
+    -unity-font-style: bold;
+    color: var(--text-dark);
+    -unity-text-align: middle-center;
+}
+
+.text-body {
+    font-size: 30px;
+    color: rgb(64, 64, 64);
+    -unity-text-align: upper-left;
+    white-space: normal;
+}
+
+.text-label {
+    font-size: 24px;
+    color: var(--text-label);
+    -unity-text-align: middle-center;
+}
+
+.text-subtitle {
+    font-size: 36px;
+    -unity-font-style: bold;
+    color: var(--text-body);
+    -unity-text-align: middle-center;
+}
+
+/* --- Layout Utilities --- */
+.row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.column {
+    flex-direction: column;
+    align-items: center;
+}
+
+.center {
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* --- Separator --- */
+.separator {
+    height: 4px;
+    width: 900px;
+    background-color: rgb(204, 204, 204);
+    align-self: center;
+}
+
+/* --- Back button (transparent tap area + text) --- */
+.back-button {
+    position: absolute;
+    left: 30px;
+    height: 60px;
+    width: 100px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    font-size: 28px;
+    -unity-font-style: bold;
+    color: rgb(77, 128, 230);
+    -unity-text-align: middle-center;
+    transition-property: scale;
+    transition-duration: 0.08s;
+    padding: 0;
+}
+
+.back-button:active {
+    scale: 0.95 0.95;
+}
+
+/* --- Pill badge --- */
+.pill-badge {
+    border-radius: 16px;
+    height: 32px;
+    padding-left: 12px;
+    padding-right: 12px;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: white;
+}
+
+/* --- Bordered pill button --- */
+.bordered-pill {
+    border-radius: 64px;
+    border-width: 4px;
+    background-color: white;
+    height: 120px;
+    width: 700px;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+    padding: 0;
+    margin: 0;
+}
+
+.bordered-pill:active {
+    scale: 0.95 0.95;
+    background-color: rgb(248, 248, 250);
+}
+
+/* --- Card --- */
+.card {
+    background-color: white;
+    border-radius: 32px;
+    align-items: center;
+}
+
+.card-shadow {
+    position: absolute;
+    left: -16px;
+    right: -16px;
+    top: -12px;
+    bottom: -20px;
+    border-radius: 48px;
+    background-color: rgba(0, 0, 0, 0.10);
+}
+
+/* --- Fade / Transition helpers --- */
+.fade-in {
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: 0.3s;
+}
+
+.fade-visible {
+    opacity: 1;
+}
+
+/* --- Safe Area placeholder --- */
+.safe-area-top {
+    flex-shrink: 0;
+}
+
+.safe-area-bottom {
+    flex-shrink: 0;
+}
+
+/* --- ScrollView reset --- */
+.clean-scroll .unity-scroll-view__content-and-vertical-scroll-container {
+    flex-grow: 1;
+}
+
+.clean-scroll .unity-scroll-view__content-viewport {
+    flex-grow: 1;
+}

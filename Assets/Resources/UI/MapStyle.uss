@@ -1,0 +1,278 @@
+/* ======================================== */
+/* MapStyle.uss — MapScene UI overlay       */
+/* ======================================== */
+
+/* --- Game layer (tiles, player, overlays) --- */
+.map-game-layer {
+    position: absolute;
+    overflow: visible;
+}
+
+/* --- Status bar (top) --- */
+.map-status-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background-color: rgba(13, 13, 38, 0.85);
+    padding-left: 15px;
+    padding-right: 100px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    justify-content: center;
+}
+
+.map-status-text {
+    font-size: 28px;
+    color: white;
+    white-space: normal;
+}
+
+/* --- Menu button (top-right circle) --- */
+.map-menu-btn {
+    position: absolute;
+    right: 24px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: white;
+    align-items: center;
+    justify-content: center;
+    border-width: 0;
+    padding: 0;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.map-menu-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(235, 235, 235);
+}
+
+.map-menu-line {
+    width: 30px;
+    height: 3.5px;
+    background-color: rgb(115, 115, 128);
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+/* --- Menu card --- */
+.map-menu-card {
+    width: 700px;
+    border-radius: 32px;
+    background-color: white;
+    align-items: center;
+    padding-top: 40px;
+    padding-bottom: 30px;
+}
+
+.map-menu-title {
+    font-size: 40px;
+    -unity-font-style: bold;
+    color: rgb(13, 13, 20);
+    -unity-text-align: middle-center;
+    margin-bottom: 20px;
+}
+
+.map-menu-item-btn {
+    width: 580px;
+    height: 70px;
+    border-radius: 35px;
+    background-color: white;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    border-width: 0;
+    padding: 0;
+    font-size: 32px;
+    -unity-font-style: bold;
+    color: rgb(38, 38, 46);
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.map-menu-item-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(235, 235, 235);
+}
+
+/* --- Save panel --- */
+.map-save-panel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.97);
+    align-items: center;
+    padding-top: 50px;
+}
+
+.map-save-title {
+    font-size: 36px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(38, 38, 46);
+    margin-bottom: 20px;
+}
+
+.map-save-slot {
+    width: 580px;
+    height: 70px;
+    border-radius: 35px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    border-width: 0;
+    padding: 0;
+    font-size: 28px;
+    -unity-font-style: bold;
+    color: rgb(38, 38, 46);
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.map-save-slot:active {
+    scale: 0.95 0.95;
+}
+
+.map-save-slot-exists {
+    background-color: rgb(243, 243, 255);
+}
+
+.map-save-slot-empty {
+    background-color: rgb(235, 235, 235);
+}
+
+/* --- Status detail panel (dark) --- */
+.map-detail-panel {
+    width: 400px;
+    background-color: rgba(20, 20, 46, 0.95);
+    border-radius: 12px;
+    padding: 25px 20px 20px 20px;
+    align-items: center;
+}
+
+.map-detail-title {
+    font-size: 28px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(230, 230, 128);
+    margin-bottom: 15px;
+}
+
+.map-detail-content {
+    font-size: 22px;
+    color: white;
+    white-space: normal;
+    -unity-text-align: upper-left;
+    width: 360px;
+}
+
+/* --- Inventory panel (dark) --- */
+.map-inv-panel {
+    width: 350px;
+    background-color: rgba(20, 20, 46, 0.95);
+    border-radius: 12px;
+    padding: 25px 20px 20px 20px;
+    align-items: center;
+}
+
+.map-inv-item {
+    font-size: 22px;
+    color: white;
+    -unity-text-align: middle-center;
+    margin-bottom: 8px;
+}
+
+.map-inv-empty {
+    font-size: 22px;
+    color: rgb(153, 153, 153);
+    -unity-text-align: middle-center;
+}
+
+/* --- Message toast --- */
+.map-message-box {
+    position: absolute;
+    left: 140px;
+    right: 140px;
+    height: 90px;
+    background-color: rgba(0, 0, 0, 0.85);
+    align-items: center;
+    justify-content: center;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.map-message-text {
+    font-size: 24px;
+    -unity-text-align: middle-center;
+    color: white;
+    white-space: normal;
+}
+
+/* --- Transition overlay text --- */
+.map-transition-text {
+    font-size: 36px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: white;
+    white-space: normal;
+    width: 800px;
+}
+
+.map-encounter-text {
+    font-size: 42px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: white;
+    width: 800px;
+}
+
+/* --- Confirm text --- */
+.map-confirm-text {
+    font-size: 32px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(38, 38, 46);
+    white-space: normal;
+    padding-left: 30px;
+    padding-right: 30px;
+    margin-bottom: 20px;
+}
+
+/* --- Milk cutin --- */
+.milk-cutin-circle {
+    width: 350px;
+    height: 350px;
+    border-radius: 50%;
+    background-color: rgba(255, 230, 235, 0.9);
+    align-items: center;
+    justify-content: center;
+}
+
+.milk-cutin-text-bg {
+    width: 800px;
+    height: 80px;
+    background-color: rgba(255, 217, 230, 0.9);
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.milk-cutin-text {
+    font-size: 28px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(153, 51, 77);
+}
+
+/* --- Touch swipe area --- */
+.map-swipe-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 50%;
+    height: 100%;
+}

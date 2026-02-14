@@ -1,0 +1,92 @@
+/* ======================================== */
+/* BattleStyle.uss — BattleScene            */
+/* ======================================== */
+
+/* --- Menu button (top-right circle) --- */
+.battle-menu-btn {
+    position: absolute;
+    right: 24px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: white;
+    align-items: center;
+    justify-content: center;
+    border-width: 0;
+    padding: 0;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.battle-menu-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(235, 235, 235);
+}
+
+.battle-menu-line {
+    width: 30px;
+    height: 3.5px;
+    background-color: rgb(115, 115, 128);
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+/* --- Menu dropdown --- */
+.battle-menu-card {
+    position: absolute;
+    right: 24px;
+    width: 280px;
+    border-radius: 24px;
+    background-color: white;
+    align-items: center;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.battle-menu-item-btn {
+    width: 260px;
+    height: 60px;
+    border-radius: 16px;
+    background-color: white;
+    align-items: center;
+    justify-content: center;
+    border-width: 0;
+    padding: 0;
+    font-size: 30px;
+    color: rgb(26, 26, 33);
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.battle-menu-item-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(240, 240, 243);
+}
+
+/* --- Game Over panel --- */
+.battle-gameover-card {
+    width: 900px;
+    border-radius: 32px;
+    background-color: white;
+    align-items: center;
+    padding-top: 60px;
+    padding-bottom: 40px;
+}
+
+.battle-gameover-title {
+    font-size: 80px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(0, 0, 0);
+    margin-bottom: 10px;
+}
+
+.battle-gameover-msg {
+    font-size: 36px;
+    -unity-text-align: middle-center;
+    color: rgb(77, 77, 89);
+    margin-bottom: 30px;
+    padding-left: 30px;
+    padding-right: 30px;
+    white-space: normal;
+}

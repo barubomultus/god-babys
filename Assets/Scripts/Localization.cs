@@ -178,10 +178,10 @@ public static class Localization
         Add("parent_ルナ", "ルナ", "Luna");
 
         // ===== Phase Cut-in =====
-        Add("cutin_who_father", "父親は誰だろう！？", "Who will be the father!?");
+        Add("cutin_who_father", "呼び声に応えるのは――", "Answering the call――");
         Add("birth_find_mother", "宿命を定める", "Determine Destiny");
         Add("birth_nurture_love", "愛を育む", "Nurture Love");
-        Add("cutin_who_mother", "運命の人は誰だ？", "Who is your destiny?");
+        Add("cutin_who_mother", "惹かれ合う、もう一つの魂", "Another soul, drawn together");
         Add("cutin_baby_born", "子宝に恵まれた！", "Blessed with a child!");
         Add("birth_love_begin", "二人の物語を紡ぐ", "Weave Their Story");
 
@@ -445,6 +445,30 @@ public static class Localization
             "悪魔村の奥深くに建つ館の主。かつては高名な薬師だったが、禁断の毒を研究するうちに闇に堕ちた。その美貌は年齢を超越し、毒の力で永遠の若さを保っているとされる。館に足を踏み入れた者は、彼女の「毒の洗礼」から逃れることはできない。しかし、その瞳の奥には薬師だった頃の面影が残っており、本当は世界を救いたいという想いが眠っているのかもしれない。必殺技「毒の洗礼」は触れた者の魂まで蝕む。",
             "The mistress of the mansion deep in Devil Village. Once a renowned pharmacist, she fell to darkness while researching forbidden poisons. Her beauty transcends age, preserved eternally by poisonous power. Those who enter her mansion cannot escape her 'Poison Baptism.' Yet deep in her eyes lingers the shadow of her pharmacist days—perhaps a sleeping wish to save the world. Her ultimate technique 'Poison Baptism' corrodes even the soul of those it touches.");
 
+        // 小悪魔の街
+        Add("enemy_bio_小悪魔ひとみ",
+            "くりっとした大きな瞳で見つめるだけで、誰もが心を奪われてしまう小悪魔ベイビー。泣き顔すら反則級にかわいく、周囲の大人たちは全員メロメロ。本人は無自覚だが、その瞳には相手の心を映し出す不思議な力があるらしい。「見つめられたら最後」と小悪魔の街では恐れられている。趣味はウインクの練習。",
+            "A little imp baby whose round, sparkling eyes steal everyone's heart with a single glance. Even her crying face is unfairly adorable, turning every adult around her to mush. She's unaware of it, but her eyes seem to hold a mysterious power to reflect people's hearts. In Imp Town they say 'one look and it's over.' Her hobby is practicing winks.");
+        Add("enemy_bio_小悪魔あやか",
+            "天使のような笑顔の裏に、したたかな計算が隠された小悪魔ベイビー。おやつをおねだりする時の上目遣いは破壊力抜群で、断れた者は歴史上一人もいない。周囲のベイビーたちからは「あやかに頼まれたら何でもやっちゃう」と恐れられつつも慕われている。将来の夢は世界征服。でもまずはおやつの確保から。",
+            "An imp baby hiding cunning calculations behind an angelic smile. Her upward glance when begging for snacks is devastatingly effective—no one in history has ever refused. Other babies both fear and adore her, saying 'if Ayaka asks, you'll do anything.' Her dream is world domination—but securing snacks comes first.");
+        Add("enemy_bio_小悪魔りん",
+            "ミステリアスな雰囲気で周囲を翻弄する小悪魔ベイビー。普段は無口でクールだが、ふとした瞬間に見せるはにかんだ笑顔のギャップで全員がノックアウトされる。影の中に溶け込むような闇の力を持ち、気づいた時にはすぐそばにいる。「りんに見つめられると動けなくなる」は小悪魔の街の常識。好きな場所は暗い路地裏。",
+            "A mysterious imp baby who bewilders everyone around her. Usually quiet and cool, the gap when she suddenly shows a shy smile knocks everyone out. She has shadow powers that let her melt into darkness—before you know it, she's right beside you. In Imp Town it's common knowledge that 'if Rin stares at you, you can't move.' Her favorite spot is dark alleyways.");
+        Add("enemy_bio_小悪魔みく",
+            "明るくおしゃべりで、出会った瞬間から相手をトリコにしてしまう小悪魔ベイビー。初対面でもまるで昔からの親友のように振る舞い、いつの間にか相手のハートを鷲掴みにする天性の才能の持ち主。歌うように話す独特のリズムは催眠効果があるとも噂され、「みくの話を聞いてるとなぜか幸せになる」と評判。口癖は「ねぇねぇ、あのね！」",
+            "A bright, chatty imp baby who captivates everyone from the moment they meet. She treats strangers like lifelong friends, naturally seizing their hearts before they realize it. Her sing-song way of speaking is rumored to have hypnotic effects—'listening to Miku just makes you happy somehow.' Her catchphrase is 'Hey hey, you know what!'");
+        Add("enemy_bio_小悪魔なな",
+            "圧倒的なカリスマ性を持つ小悪魔ベイビー界のアイドル的存在。どんな場所に現れても自然と中心になり、周囲のベイビーたちが勝手にファンクラブを結成してしまうほど。仕草の一つひとつが絵になり、ハイハイする姿すらランウェイのよう。本人は「ただ普通にしてるだけなのに」と首を傾げるが、その仕草すらメロメロポイント。将来はスーパーモデルかアイドルか、あるいはその両方。",
+            "The idol of the imp baby world with overwhelming charisma. Wherever she appears, she naturally becomes the center of attention—other babies spontaneously form fan clubs. Every gesture is picture-perfect; even her crawling looks like a runway walk. She tilts her head saying 'I'm just being normal though,' but even that gesture is a knockout. Her future: supermodel, idol, or both.");
+        Add("enemy_bio_小悪魔れい",
+            "小悪魔の街に君臨する伝説のベイビー。その美しさは「見た者は3日間メロメロになる」と語り継がれるほど。普段は街の奥深くに潜み、めったに姿を見せないが、現れた時の衝撃は絶大。氷のように冷たい表情の中に、触れれば溶けるような甘さが共存する究極のギャップ。敵味方問わず全員を虜にする「魅了のオーラ」は生まれながらの才能。小悪魔の街の住人たちは「れい様」と呼び、畏敬の念を込めて崇めている。",
+            "A legendary baby who reigns over Imp Town. Her beauty is so great that 'anyone who sees her is lovestruck for three days.' She usually hides deep in town and rarely appears, but when she does, the impact is immense. Within her ice-cold expression coexists a sweetness that melts at a touch—the ultimate gap. Her 'Charm Aura' captivates friend and foe alike, a talent she was born with. The residents of Imp Town call her 'Lady Rei' with reverence.");
+
+        Add("enemy_bio_メロディアス女王",
+            "109の最上階に君臨する音楽の女王。かつては世界中を魅了した伝説の歌姫だったが、その歌声に宿る魔力に目覚め、音楽で人々を支配するようになった。彼女の「魅惑のメロディ」を聴いた者は、身体の力が抜け、抵抗する気力すら失ってしまう。しかしその旋律の奥底には、ただ「誰かに自分の歌を聴いてほしい」という純粋な願いが隠されている。ステージの上で孤独に歌い続ける姿は、美しくも悲しい。",
+            "The queen of music who reigns atop 109. Once a legendary diva who captivated the entire world, she awakened to the magic in her voice and began ruling people through music. Those who hear her 'Enchanting Melody' lose all strength and will to resist. Yet deep within her song hides a pure wish—to simply have someone listen. Her figure, singing alone on stage, is as beautiful as it is sorrowful.");
+
         // Battle UI labels
         Add("battle_normal_attack", "通常攻撃", "Attack");
         Add("battle_special_attack", "特殊攻撃", "Sp. Attack");
@@ -621,6 +645,34 @@ public static class Localization
         Add("devil_lady_defeat_line3", "館に 静寂が 戻った。\n毒の霧が 晴れていく…\n",
             "Silence returns to the mansion.\nThe poisonous mist clears...\n");
 
+        // 109 mansion
+        Add("map_109_sign", "<color=#FF69B4>109</color>", "<color=#FF69B4>109</color>");
+        Add("map_109_enter", "<color=#FF69B4><size=130%>109に\n足を踏み入れた…</size></color>",
+            "<color=#FF69B4><size=130%>You entered\n109...</size></color>");
+        Add("map_109_boss_enter", "<color=#FF69B4><size=130%>メロディアス女王 が 立ちはだかる！</size></color>",
+            "<color=#FF69B4><size=130%>Queen Melodias stands in your way!</size></color>");
+
+        // Melodias Queen battle
+        Add("battle_melodias_charge", "<color=#FF69B4><size=130%>メロディアス女王が 魅惑の力を 溜めている…！</size></color>\n<color=#FFAA00>つぎのターン ひっさつわざが くる！</color>",
+            "<color=#FF69B4><size=130%>Queen Melodias is gathering enchanting power...!</size></color>\n<color=#FFAA00>An ultimate attack is coming next turn!</color>");
+        Add("battle_melodias_ultimate", "<color=#FF69B4><size=150%>メロディアス女王「聴きなさい…」</size></color>",
+            "<color=#FF69B4><size=150%>Queen Melodias: \"Listen...\"</size></color>");
+        Add("battle_melodias_ultimate_name", "<color=#FFD700><size=140%>\u266B 魅惑のメロディ \u266B</size></color>",
+            "<color=#FFD700><size=140%>\u266B Enchanting Melody \u266B</size></color>");
+        Add("battle_melodias_ultimate_hit", "<color=#FF69B4>魅惑のメロディ が さくれつ！</color>\n<color=#FF4444>{0} の だいダメージ！</color>",
+            "<color=#FF69B4>Enchanting Melody explodes!</color>\n<color=#FF4444>{0} massive damage!</color>");
+        Add("battle_melodias_ultimate_blocked", "<color=#4488FF>ぼうぎょで こらえた！</color>\n{0} ダメージ！",
+            "<color=#4488FF>Held on with defense!</color>\n{0} damage!");
+        Add("battle_melodias_debuffed", "<color=#FF69B4>魅惑の力で こうげきりょくが さがった！ 3ターン！</color>",
+            "<color=#FF69B4>Attack power dropped from enchanting power! 3 turns!</color>");
+
+        // Melodias Queen defeat
+        Add("melodias_defeat_line1", "メロディアス女王 が たおれた...\n", "Queen Melodias has fallen...\n");
+        Add("melodias_defeat_line2", "「…私の メロディが…\n届かなかった というの…？」\n",
+            "\"...My melody...\ndidn't reach you...?\"\n");
+        Add("melodias_defeat_line3", "109に 静寂が 戻った。\n魅惑の音色が 消えていく…\n",
+            "Silence returns to 109.\nThe enchanting melody fades...\n");
+
         // Victory screen
         Add("battle_saved_return", "<color=#FFD700>{0}({1}ヶ月)</color>\n<color=#00FF00>セーブしました！</color>",
             "<color=#FFD700>{0}({1} months)</color>\n<color=#00FF00>Saved!</color>");
@@ -668,7 +720,7 @@ public static class Localization
         Add("home_no_save", "未セーブ", "Not Saved");
         Add("home_meet", "運命のガチャ", "Destiny Gacha");
         Add("home_gacha_desc", "運命のガチャを引くことができます。", "You can pull the gacha of destiny.");
-        Add("home_babys", "babys", "babys");
+        Add("home_babys", "旅に出る", "Go on a Journey");
         Add("home_enishi", "縁（えにし）の書", "Book of Bonds");
         Add("enishi_title", "縁（えにし）の書", "Book of Bonds");
         Add("enishi_added", "{0}が縁（えにし）の書に追加された。", "{0} was added to the Book of Bonds.");

@@ -1,34 +1,26 @@
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-using UnityEngine.EventSystems;
-using TMPro;
-
+using UIE = UnityEngine.UIElements;
 
 public class HomeManager : MonoBehaviour
 {
-    private Canvas mainCanvas;
-    private Image playerIconImg;
+    private UIE.PanelSettings panelSettings;
+    private UIE.VisualElement root;
     private int selectedIcon;
 
-    private static Sprite _circleSprite;
-    private static Sprite _pillSprite;
-    private static Sprite _shadowSprite;
-    private CanvasGroup koimikoshiGroup;
-    private const float BTN_WIDTH = 700f;
-    private const float BTN_HEIGHT = 120f;
-    private const int BTN_BLUR = 20;
+    private UIE.VisualElement koimikoshiContainer;
+    private float sparkleTimer = 0f;
+
+    private static readonly string[] iconNames = new string[]
+    {
+        "kayo", "ikemen", "inteli", "matcho", "old-women", "sexy-lady"
+    };
 
     void Start()
     {
-        mainCanvas = FindObjectOfType<Canvas>();
-
-        var canvasScaler = mainCanvas.GetComponent<CanvasScaler>();
-        if (canvasScaler != null)
-        {
-            canvasScaler.referenceResolution = new Vector2(1080, 1920);
-            canvasScaler.matchWidthOrHeight = 0f;
-        }
+        panelSettings = UIHelper.CreatePanelSettings(0f);
+        root = UIHelper.SetupUIDocument(gameObject,
+            new[] { "UI/CommonStyle", "UI/HomeStyle" }, panelSettings);
 
         var dc = DataCarrier.Instance;
         selectedIcon = dc != null ? dc.playerIcon : DataCarrier.GetProfileIcon();
@@ -36,621 +28,203 @@ public class HomeManager : MonoBehaviour
         BuildUI();
     }
 
-    private float sparkleTimer = 0f;
+    void OnDestroy()
+    {
+        if (panelSettings != null)
+            Destroy(panelSettings);
+    }
 
     void Update()
     {
-        if (koimikoshiGroup == null) return;
+        if (koimikoshiContainer == null) return;
 
         sparkleTimer += Time.deltaTime;
 
-        // Gentle pulsing glow (20% subtler)
         float pulse = 0.94f + 0.06f * Mathf.Sin(sparkleTimer * Mathf.PI);
-
-        // Quick bright flash every 3 seconds
         float cycle = sparkleTimer % 3f;
         float flash = 0f;
         if (cycle < 0.15f)
             flash = Mathf.Sin(cycle / 0.15f * Mathf.PI) * 0.10f;
 
-        koimikoshiGroup.alpha = Mathf.Clamp01(pulse + flash);
-
-        // Slight scale bounce with the flash
+        koimikoshiContainer.style.opacity = Mathf.Clamp01(pulse + flash);
         float s = 1f + flash * 0.24f;
-        koimikoshiGroup.transform.localScale = new Vector3(s, s, 1f);
+        koimikoshiContainer.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(s, s, 1f)));
     }
 
     void BuildUI()
     {
         var dc = DataCarrier.Instance;
 
-        // Background — same as TitleScene (#f3f7f8)
-        var bgObj = new GameObject("Background");
-        bgObj.transform.SetParent(mainCanvas.transform, false);
-        bgObj.transform.SetAsFirstSibling();
-        var bgRect = bgObj.AddComponent<RectTransform>();
-        bgRect.anchorMin = Vector2.zero;
-        bgRect.anchorMax = Vector2.one;
-        bgRect.offsetMin = Vector2.zero;
-        bgRect.offsetMax = Vector2.zero;
-        var bgImg = bgObj.AddComponent<Image>();
-        bgImg.color = new Color(0.953f, 0.969f, 0.973f); // #f3f7f8
-        bgImg.raycastTarget = false;
+        // Background
+        var bg = new UIE.VisualElement();
+        bg.AddToClassList("bg-screen");
+        root.Add(bg);
 
-        // Player icon — centered, circular (160x160)
-        float iconY = -124f;
-        float iconSize = 160f;
+        // Content column
+        var content = new UIE.VisualElement();
+        content.style.position = UIE.Position.Absolute;
+        content.style.left = 0;
+        content.style.right = 0;
+        content.style.top = 0;
+        content.style.bottom = 0;
+        content.style.alignItems = UIE.Align.Center;
+        root.Add(content);
 
-        // Circle border ring (behind mask)
-        var borderObj = new GameObject("IconBorder");
-        borderObj.transform.SetParent(mainCanvas.transform, false);
-        var borderRect = borderObj.AddComponent<RectTransform>();
-        borderRect.anchorMin = new Vector2(0.5f, 1f);
-        borderRect.anchorMax = new Vector2(0.5f, 1f);
-        borderRect.anchoredPosition = new Vector2(0, iconY);
-        borderRect.sizeDelta = new Vector2(iconSize + 8, iconSize + 8);
-        var borderImg = borderObj.AddComponent<Image>();
-        borderImg.sprite = GetCircleSprite();
-        borderImg.type = Image.Type.Simple;
-        borderImg.color = new Color(0.82f, 0.82f, 0.82f);
-        borderImg.raycastTarget = false;
+        // Safe area top spacer
+        var (safeTop, _, _, _) = UIHelper.GetSafeMargins();
+        var topSpacer = new UIE.VisualElement();
+        topSpacer.style.height = 140 + safeTop;
+        content.Add(topSpacer);
 
-        // Circle mask container (tappable → ProfileScene)
-        var maskObj = new GameObject("IconMask");
-        maskObj.transform.SetParent(mainCanvas.transform, false);
-        var maskRect = maskObj.AddComponent<RectTransform>();
-        maskRect.anchorMin = new Vector2(0.5f, 1f);
-        maskRect.anchorMax = new Vector2(0.5f, 1f);
-        maskRect.anchoredPosition = new Vector2(0, iconY);
-        maskRect.sizeDelta = new Vector2(iconSize, iconSize);
-        var maskImg = maskObj.AddComponent<Image>();
-        maskImg.sprite = GetCircleSprite();
-        maskImg.type = Image.Type.Simple;
-        maskImg.color = Color.white;
-        var mask = maskObj.AddComponent<Mask>();
-        mask.showMaskGraphic = false;
+        // Player icon (circle with border)
+        CreatePlayerIcon(content);
 
-        // Make icon tappable
-        var iconBtn = maskObj.AddComponent<Button>();
-        iconBtn.targetGraphic = maskImg;
-        maskImg.raycastTarget = true;
-        iconBtn.onClick.AddListener(() => SceneManager.LoadScene("ProfileScene"));
-
-        // Icon image inside mask
-        var iconObj = new GameObject("PlayerIcon");
-        iconObj.transform.SetParent(maskObj.transform, false);
-        var iconRect = iconObj.AddComponent<RectTransform>();
-        iconRect.anchorMin = Vector2.zero;
-        iconRect.anchorMax = Vector2.one;
-        iconRect.offsetMin = Vector2.zero;
-        iconRect.offsetMax = Vector2.zero;
-        playerIconImg = iconObj.AddComponent<Image>();
-        playerIconImg.raycastTarget = false;
-        ApplyIconSprite(selectedIcon);
-
-        // Player name (below icon)
-        float nameY = iconY - iconSize / 2 - 30f;
-        var nameObj = new GameObject("PlayerName");
-        nameObj.transform.SetParent(mainCanvas.transform, false);
-        var nameRect = nameObj.AddComponent<RectTransform>();
-        nameRect.anchorMin = new Vector2(0.5f, 1f);
-        nameRect.anchorMax = new Vector2(0.5f, 1f);
-        nameRect.anchoredPosition = new Vector2(0, nameY);
-        nameRect.sizeDelta = new Vector2(800, 60);
-        var nameText = nameObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(nameText);
+        // Player name
         string pName = dc != null ? dc.playerName : DataCarrier.GetProfileName();
-        nameText.text = string.IsNullOrEmpty(pName) ? "???" : pName;
-        nameText.fontSize = 40;
-        nameText.fontStyle = FontStyles.Bold;
-        nameText.alignment = TextAlignmentOptions.Center;
-        nameText.color = new Color(0.05f, 0.05f, 0.08f);
-        nameText.raycastTarget = false;
+        var nameLabel = UIHelper.CreateLabel(
+            string.IsNullOrEmpty(pName) ? "???" : pName, "home-player-name");
+        content.Add(nameLabel);
 
         // Separator
-        float sepY = nameY - 50f;
-        var sepObj = new GameObject("Separator");
-        sepObj.transform.SetParent(mainCanvas.transform, false);
-        var sepRect = sepObj.AddComponent<RectTransform>();
-        sepRect.anchorMin = new Vector2(0.5f, 1f);
-        sepRect.anchorMax = new Vector2(0.5f, 1f);
-        sepRect.anchoredPosition = new Vector2(0, sepY);
-        sepRect.sizeDelta = new Vector2(900, 4);
-        var sepImg = sepObj.AddComponent<Image>();
-        sepImg.color = new Color(0.8f, 0.8f, 0.8f);
-        sepImg.raycastTarget = false;
+        var sep = new UIE.VisualElement();
+        sep.AddToClassList("separator");
+        sep.style.marginTop = 20;
+        content.Add(sep);
 
-        // Koimikoshi image (same position/size as TitleScene logo) with borderRadius 32
+        // Gacha description
+        var descLabel = UIHelper.CreateLabel(Localization.Get("home_gacha_desc"), "gacha-desc");
+        content.Add(descLabel);
+
+        // Koimikoshi image
         var koimikoshiSprite = Resources.Load<Sprite>("UI/koimikoshi");
         if (koimikoshiSprite != null)
         {
-            var koimiContainer = new GameObject("KoimikoshiContainer");
-            koimiContainer.transform.SetParent(mainCanvas.transform, false);
-            var containerRect = koimiContainer.AddComponent<RectTransform>();
-            containerRect.anchorMin = new Vector2(0.5f, 0.5f);
-            containerRect.anchorMax = new Vector2(0.5f, 0.5f);
-            containerRect.anchoredPosition = new Vector2(0, 200);
-            containerRect.sizeDelta = new Vector2(1040, 498);
+            koimikoshiContainer = new UIE.VisualElement();
+            koimikoshiContainer.AddToClassList("koimikoshi-container");
 
-            // Image (fills container)
-            var koimiObj = new GameObject("KoimikoshiImg");
-            koimiObj.transform.SetParent(koimiContainer.transform, false);
-            var koimiRect = koimiObj.AddComponent<RectTransform>();
-            koimiRect.anchorMin = Vector2.zero;
-            koimiRect.anchorMax = Vector2.one;
-            koimiRect.offsetMin = Vector2.zero;
-            koimiRect.offsetMax = Vector2.zero;
-            var koimiImg = koimiObj.AddComponent<Image>();
-            koimiImg.sprite = koimikoshiSprite;
-            koimiImg.preserveAspect = true;
-            koimiImg.raycastTarget = false;
+            var koimiImg = new UIE.VisualElement();
+            koimiImg.AddToClassList("koimikoshi-image");
+            koimiImg.style.backgroundImage = new UIE.StyleBackground(koimikoshiSprite);
+            koimikoshiContainer.Add(koimiImg);
 
-            // Corner overlays (background-colored rounded corners on top)
-            Color bgColor = new Color(0.953f, 0.969f, 0.973f);
-            CreateCornerOverlays(koimiContainer.transform, 32, bgColor);
-
-            // CanvasGroup for sparkle pulse + scale animation
-            koimikoshiGroup = koimiContainer.AddComponent<CanvasGroup>();
+            content.Add(koimikoshiContainer);
         }
 
-        // Description text above koimikoshi
-        var descObj = new GameObject("GachaDesc");
-        descObj.transform.SetParent(mainCanvas.transform, false);
-        var descRect = descObj.AddComponent<RectTransform>();
-        descRect.anchorMin = new Vector2(0.5f, 0.5f);
-        descRect.anchorMax = new Vector2(0.5f, 0.5f);
-        descRect.anchoredPosition = new Vector2(0, 200 + 498f / 2f + 40f);
-        descRect.sizeDelta = new Vector2(900, 50);
-        var descText = descObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(descText);
-        descText.text = Localization.Get("home_gacha_desc");
-        descText.fontSize = 30;
-        descText.alignment = TextAlignmentOptions.Center;
-        descText.color = new Color(0.1f, 0.1f, 0.13f);
-        descText.raycastTarget = false;
+        // Spacer
+        var spacer = new UIE.VisualElement();
+        spacer.style.flexGrow = 1;
+        content.Add(spacer);
 
-        // ===== "運命のガチャ" Button (same Y as TitleScene start button) =====
-        CreateMeetButton(-220f);
+        // === Buttons ===
 
-        // ===== "babys" Button (same Y as TitleScene continue button) =====
-        // babys button with gold border
-        float babysY = -220f - BTN_HEIGHT - 40f;
-        CreateBorderedPillButton(babysY, Localization.Get("home_babys"),
-            new Color(0.85f, 0.65f, 0.13f), // gold border
-            new Color(0.45f, 0.45f, 0.5f),  // text color
+        // Meet button (pink border)
+        CreateMeetButton(content);
+
+        // Babys button (gold border)
+        CreateBorderedButton(content, Localization.Get("home_babys"),
+            new Color(0.85f, 0.65f, 0.13f),
+            new Color(0.45f, 0.45f, 0.5f),
             () => SceneManager.LoadScene("BabysScene"));
 
-        // ===== "縁の書" Button =====
-        float enishiY = babysY - BTN_HEIGHT - 40f;
-        CreateBorderedPillButton(enishiY, Localization.Get("home_enishi"),
-            new Color(0.55f, 0.35f, 0.65f), // purple border
-            new Color(0.45f, 0.45f, 0.5f),  // text color
+        // Enishi button (purple border)
+        CreateBorderedButton(content, Localization.Get("home_enishi"),
+            new Color(0.55f, 0.35f, 0.65f),
+            new Color(0.45f, 0.45f, 0.5f),
             () => SceneManager.LoadScene("EnishiScene"));
+
+        // Bottom spacer
+        var bottomSpacer = new UIE.VisualElement();
+        bottomSpacer.style.height = 260;
+        content.Add(bottomSpacer);
     }
 
-    // ===== Pill Buttons =====
-
-    static readonly Color PINK = new Color(0.95f, 0.30f, 0.55f);
-
-    void CreateMeetButton(float yPos)
+    void CreatePlayerIcon(UIE.VisualElement parent)
     {
-        int pillRadius = (int)(BTN_HEIGHT / 2);
+        var border = new UIE.VisualElement();
+        border.AddToClassList("home-icon-border");
 
-        // Pink border (behind the button on canvas)
-        var pinkBorderObj = new GameObject("MeetBorder");
-        pinkBorderObj.transform.SetParent(mainCanvas.transform, false);
-        var pinkBorderRect = pinkBorderObj.AddComponent<RectTransform>();
-        pinkBorderRect.anchorMin = new Vector2(0.5f, 0.5f);
-        pinkBorderRect.anchorMax = new Vector2(0.5f, 0.5f);
-        pinkBorderRect.anchoredPosition = new Vector2(0, yPos);
-        pinkBorderRect.sizeDelta = new Vector2(BTN_WIDTH + 8, BTN_HEIGHT + 8);
-        var pinkBorderImg = pinkBorderObj.AddComponent<Image>();
-        pinkBorderImg.sprite = GetPillSprite(pillRadius);
-        pinkBorderImg.type = Image.Type.Sliced;
-        pinkBorderImg.color = PINK;
-        pinkBorderImg.raycastTarget = false;
+        var maskBtn = new UIE.Button();
+        maskBtn.AddToClassList("home-icon-mask");
+        maskBtn.clicked += () => SceneManager.LoadScene("ProfileScene");
 
-        // White button (on top of border)
-        var btnObj = new GameObject("MeetButton");
-        btnObj.transform.SetParent(mainCanvas.transform, false);
-        var btnRect = btnObj.AddComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(0.5f, 0.5f);
-        btnRect.anchorMax = new Vector2(0.5f, 0.5f);
-        btnRect.anchoredPosition = new Vector2(0, yPos);
-        btnRect.sizeDelta = new Vector2(BTN_WIDTH, BTN_HEIGHT);
+        var iconImg = new UIE.VisualElement();
+        iconImg.AddToClassList("home-icon-image");
+        ApplyIconSprite(iconImg, selectedIcon);
+        maskBtn.Add(iconImg);
 
-        var btnBg = btnObj.AddComponent<Image>();
-        btnBg.sprite = GetPillSprite(pillRadius);
-        btnBg.type = Image.Type.Sliced;
-        btnBg.color = Color.white;
-
-        var btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnBg;
-        btn.navigation = new Navigation { mode = Navigation.Mode.None };
-        var colors = btn.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = Color.white;
-        colors.pressedColor = new Color(1f, 0.92f, 0.95f);
-        colors.selectedColor = Color.white;
-        colors.fadeDuration = 0.08f;
-        btn.colors = colors;
-        btn.onClick.AddListener(() =>
-        {
-            if (DataCarrier.Instance != null)
-                DataCarrier.Instance.currentSlot = -1;
-            SceneManager.LoadScene("BirthScene");
-        });
-
-        // Shadow
-        var shadowObj = new GameObject("Shadow");
-        shadowObj.transform.SetParent(pinkBorderObj.transform, false);
-        shadowObj.transform.SetAsFirstSibling();
-        var shadowRect = shadowObj.AddComponent<RectTransform>();
-        shadowRect.anchorMin = Vector2.zero;
-        shadowRect.anchorMax = Vector2.one;
-        shadowRect.offsetMin = new Vector2(-BTN_BLUR, -BTN_BLUR - 4);
-        shadowRect.offsetMax = new Vector2(BTN_BLUR, BTN_BLUR - 4);
-        var shadowImg = shadowObj.AddComponent<Image>();
-        shadowImg.sprite = GetShadowSprite(pillRadius, BTN_BLUR);
-        shadowImg.type = Image.Type.Sliced;
-        shadowImg.color = new Color(0.95f, 0.30f, 0.55f, 0.15f);
-        shadowImg.raycastTarget = false;
-
-        // Heart icon + text
-        var textObj = new GameObject("Text");
-        textObj.transform.SetParent(btnObj.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-        var tmpText = textObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(tmpText);
-        tmpText.text = "<color=#F24E80>\u2665</color>  " + Localization.Get("home_meet");
-        tmpText.fontSize = 36;
-        tmpText.alignment = TextAlignmentOptions.Center;
-        tmpText.color = PINK;
-        tmpText.fontStyle = FontStyles.Bold;
-        tmpText.raycastTarget = false;
-
-        AddPressAnimation(btnObj);
+        border.Add(maskBtn);
+        parent.Add(border);
     }
 
-    void CreatePillButton(float yPos, string label, UnityEngine.Events.UnityAction onClick)
-    {
-        int pillRadius = (int)(BTN_HEIGHT / 2);
-
-        var btnObj = new GameObject("PillButton");
-        btnObj.transform.SetParent(mainCanvas.transform, false);
-        var btnRect = btnObj.AddComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(0.5f, 0.5f);
-        btnRect.anchorMax = new Vector2(0.5f, 0.5f);
-        btnRect.anchoredPosition = new Vector2(0, yPos);
-        btnRect.sizeDelta = new Vector2(BTN_WIDTH, BTN_HEIGHT);
-
-        var btnBg = btnObj.AddComponent<Image>();
-        btnBg.sprite = GetPillSprite(pillRadius);
-        btnBg.type = Image.Type.Sliced;
-        btnBg.color = Color.white;
-
-        var btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnBg;
-        btn.navigation = new Navigation { mode = Navigation.Mode.None };
-        var colors = btn.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = Color.white;
-        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
-        colors.selectedColor = Color.white;
-        colors.fadeDuration = 0.08f;
-        btn.colors = colors;
-        btn.onClick.AddListener(onClick);
-
-        var shadowObj = new GameObject("Shadow");
-        shadowObj.transform.SetParent(btnObj.transform, false);
-        shadowObj.transform.SetAsFirstSibling();
-        var shadowRect = shadowObj.AddComponent<RectTransform>();
-        shadowRect.anchorMin = Vector2.zero;
-        shadowRect.anchorMax = Vector2.one;
-        shadowRect.offsetMin = new Vector2(-BTN_BLUR, -BTN_BLUR - 4);
-        shadowRect.offsetMax = new Vector2(BTN_BLUR, BTN_BLUR - 4);
-        var shadowImg = shadowObj.AddComponent<Image>();
-        shadowImg.sprite = GetShadowSprite(pillRadius, BTN_BLUR);
-        shadowImg.type = Image.Type.Sliced;
-        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
-        shadowImg.raycastTarget = false;
-
-        var textObj = new GameObject("Text");
-        textObj.transform.SetParent(btnObj.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-        var tmpText = textObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(tmpText);
-        tmpText.text = label;
-        tmpText.fontSize = 36;
-        tmpText.alignment = TextAlignmentOptions.Center;
-        tmpText.color = new Color(0.15f, 0.15f, 0.18f);
-        tmpText.fontStyle = FontStyles.Bold;
-        tmpText.raycastTarget = false;
-
-        AddPressAnimation(btnObj);
-    }
-
-    void CreateBorderedPillButton(float yPos, string label, Color borderColor, Color textColor,
-        UnityEngine.Events.UnityAction onClick)
-    {
-        int pillRadius = (int)(BTN_HEIGHT / 2);
-
-        // Border (behind)
-        var borderObj = new GameObject("PillBorder");
-        borderObj.transform.SetParent(mainCanvas.transform, false);
-        var borderRect = borderObj.AddComponent<RectTransform>();
-        borderRect.anchorMin = new Vector2(0.5f, 0.5f);
-        borderRect.anchorMax = new Vector2(0.5f, 0.5f);
-        borderRect.anchoredPosition = new Vector2(0, yPos);
-        borderRect.sizeDelta = new Vector2(BTN_WIDTH + 8, BTN_HEIGHT + 8);
-        var borderImg = borderObj.AddComponent<Image>();
-        borderImg.sprite = GetPillSprite(pillRadius);
-        borderImg.type = Image.Type.Sliced;
-        borderImg.color = borderColor;
-        borderImg.raycastTarget = false;
-
-        // Shadow
-        var shadowObj = new GameObject("Shadow");
-        shadowObj.transform.SetParent(borderObj.transform, false);
-        shadowObj.transform.SetAsFirstSibling();
-        var shadowRect = shadowObj.AddComponent<RectTransform>();
-        shadowRect.anchorMin = Vector2.zero;
-        shadowRect.anchorMax = Vector2.one;
-        shadowRect.offsetMin = new Vector2(-BTN_BLUR, -BTN_BLUR - 4);
-        shadowRect.offsetMax = new Vector2(BTN_BLUR, BTN_BLUR - 4);
-        var shadowImg = shadowObj.AddComponent<Image>();
-        shadowImg.sprite = GetShadowSprite(pillRadius, BTN_BLUR);
-        shadowImg.type = Image.Type.Sliced;
-        shadowImg.color = new Color(borderColor.r, borderColor.g, borderColor.b, 0.15f);
-        shadowImg.raycastTarget = false;
-
-        // White button (on top)
-        var btnObj = new GameObject("PillButton");
-        btnObj.transform.SetParent(mainCanvas.transform, false);
-        var btnRect = btnObj.AddComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(0.5f, 0.5f);
-        btnRect.anchorMax = new Vector2(0.5f, 0.5f);
-        btnRect.anchoredPosition = new Vector2(0, yPos);
-        btnRect.sizeDelta = new Vector2(BTN_WIDTH, BTN_HEIGHT);
-
-        var btnBg = btnObj.AddComponent<Image>();
-        btnBg.sprite = GetPillSprite(pillRadius);
-        btnBg.type = Image.Type.Sliced;
-        btnBg.color = Color.white;
-
-        var btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnBg;
-        btn.navigation = new Navigation { mode = Navigation.Mode.None };
-        var colors = btn.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = Color.white;
-        colors.pressedColor = new Color(0.95f, 0.95f, 0.95f);
-        colors.selectedColor = Color.white;
-        colors.fadeDuration = 0.08f;
-        btn.colors = colors;
-        btn.onClick.AddListener(onClick);
-
-        // Text
-        var textObj = new GameObject("Text");
-        textObj.transform.SetParent(btnObj.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-        var tmpText = textObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(tmpText);
-        tmpText.text = label;
-        tmpText.fontSize = 36;
-        tmpText.alignment = TextAlignmentOptions.Center;
-        tmpText.color = textColor;
-        tmpText.fontStyle = FontStyles.Bold;
-        tmpText.raycastTarget = false;
-
-        AddPressAnimation(btnObj);
-    }
-
-    // ===== Corner Overlays for border-radius =====
-
-    void CreateCornerOverlays(Transform parent, int radius, Color bgColor)
-    {
-        Sprite cornerSprite = GetCornerSprite(radius);
-
-        // Top-left
-        CreateCorner(parent, cornerSprite, bgColor, radius,
-            new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, false, false);
-        // Top-right
-        CreateCorner(parent, cornerSprite, bgColor, radius,
-            new Vector2(1, 1), new Vector2(1, 1), Vector2.zero, true, false);
-        // Bottom-left
-        CreateCorner(parent, cornerSprite, bgColor, radius,
-            new Vector2(0, 0), new Vector2(0, 0), Vector2.zero, false, true);
-        // Bottom-right
-        CreateCorner(parent, cornerSprite, bgColor, radius,
-            new Vector2(1, 0), new Vector2(1, 0), Vector2.zero, true, true);
-    }
-
-    void CreateCorner(Transform parent, Sprite sprite, Color color, int radius,
-        Vector2 anchorMin, Vector2 anchorMax, Vector2 pos, bool flipX, bool flipY)
-    {
-        var obj = new GameObject("Corner");
-        obj.transform.SetParent(parent, false);
-        var rt = obj.AddComponent<RectTransform>();
-        rt.anchorMin = anchorMin;
-        rt.anchorMax = anchorMax;
-        rt.pivot = anchorMin;
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = new Vector2(radius, radius);
-        var img = obj.AddComponent<Image>();
-        img.sprite = sprite;
-        img.color = color;
-        img.raycastTarget = false;
-        // Flip via scale
-        rt.localScale = new Vector3(flipX ? -1 : 1, flipY ? -1 : 1, 1);
-    }
-
-    static Sprite _cornerSprite;
-
-    static Sprite GetCornerSprite(int radius)
-    {
-        if (_cornerSprite != null) return _cornerSprite;
-        int size = radius;
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                // Distance from inner corner (radius, radius) = bottom-right of this quad
-                float dx = radius - x - 0.5f;
-                float dy = radius - y - 0.5f;
-                float dist = Mathf.Sqrt(dx * dx + dy * dy);
-                // Outside the circle = background color (opaque), inside = transparent
-                float alpha;
-                if (dist >= radius + 1f)
-                    alpha = 1f;
-                else if (dist >= radius)
-                    alpha = dist - radius;
-                else
-                    alpha = 0f;
-                tex.SetPixel(x, y, new Color(1, 1, 1, alpha));
-            }
-        }
-        tex.Apply();
-        _cornerSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
-            new Vector2(0, 0), 100);
-        return _cornerSprite;
-    }
-
-    private static readonly string[] iconNames = new string[]
-    {
-        "kayo", "ikemen", "inteli", "matcho", "old-women", "sexy-lady"
-    };
-
-    void ApplyIconSprite(int index)
+    void ApplyIconSprite(UIE.VisualElement target, int index)
     {
         string name = (index >= 0 && index < iconNames.Length) ? iconNames[index] : iconNames[0];
         Sprite spr = Resources.Load<Sprite>($"Icons/{name}");
         if (spr != null)
         {
-            playerIconImg.sprite = spr;
-            playerIconImg.color = Color.white;
-            playerIconImg.preserveAspect = true;
+            target.style.backgroundImage = new UIE.StyleBackground(spr);
+            target.style.backgroundColor = UIE.StyleKeyword.None;
         }
         else
         {
-            playerIconImg.sprite = null;
-            playerIconImg.color = new Color(0.7f, 0.7f, 0.7f);
+            target.style.backgroundImage = UIE.StyleKeyword.None;
+            target.style.backgroundColor = new Color(0.7f, 0.7f, 0.7f);
         }
     }
 
-    // ===== Circle Sprite =====
-
-    static Sprite GetCircleSprite()
+    void CreateMeetButton(UIE.VisualElement parent)
     {
-        if (_circleSprite != null) return _circleSprite;
+        var wrapper = new UIE.VisualElement();
+        wrapper.style.alignItems = UIE.Align.Center;
+        wrapper.style.marginTop = 20;
 
-        int size = 128;
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        float center = size / 2f;
-        float radius = size / 2f;
+        // Pink border behind
+        var borderEl = new UIE.VisualElement();
+        borderEl.AddToClassList("meet-btn-border");
+        borderEl.style.backgroundColor = new Color(0.95f, 0.30f, 0.55f);
 
-        for (int y = 0; y < size; y++)
+        // Shadow
+        var shadow = new UIE.VisualElement();
+        shadow.AddToClassList("shadow-layer");
+        shadow.style.backgroundColor = new Color(0.95f, 0.30f, 0.55f, 0.15f);
+        borderEl.Add(shadow);
+
+        // White button
+        var btn = new UIE.Button();
+        btn.AddToClassList("meet-btn");
+        UIHelper.ApplyFont(btn);
+        btn.text = "\u2665  " + Localization.Get("home_meet");
+        btn.clicked += () =>
         {
-            for (int x = 0; x < size; x++)
-            {
-                float dx = x - center + 0.5f;
-                float dy = y - center + 0.5f;
-                float dist = Mathf.Sqrt(dx * dx + dy * dy);
-                float alpha = Mathf.Clamp01(radius - dist);
-                tex.SetPixel(x, y, new Color(1, 1, 1, alpha));
-            }
-        }
-        tex.Apply();
-        _circleSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
-            new Vector2(0.5f, 0.5f), 100);
-        return _circleSprite;
+            if (DataCarrier.Instance != null)
+                DataCarrier.Instance.currentSlot = -1;
+            SceneManager.LoadScene("BirthScene");
+        };
+        borderEl.Add(btn);
+
+        wrapper.Add(borderEl);
+        parent.Add(wrapper);
     }
 
-    // ===== Pill / Shadow Sprites (same as TitleScene) =====
-
-    static Sprite GetPillSprite(int radius)
+    void CreateBorderedButton(UIE.VisualElement parent, string label, Color borderColor,
+        Color textColor, System.Action onClick)
     {
-        if (_pillSprite != null) return _pillSprite;
-        int size = radius * 2 + 2;
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        float center = (size - 1) / 2f;
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                float px = x - center;
-                float py = y - center;
-                float dist = Mathf.Sqrt(px * px + py * py) - radius;
-                if (dist <= -1f) tex.SetPixel(x, y, Color.white);
-                else if (dist <= 0f) tex.SetPixel(x, y, new Color(1, 1, 1, -dist));
-                else tex.SetPixel(x, y, new Color(0, 0, 0, 0));
-            }
-        }
-        tex.Apply();
-        var border = new Vector4(radius, radius, radius, radius);
-        _pillSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
-            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
-        return _pillSprite;
+        var wrapper = new UIE.VisualElement();
+        wrapper.style.alignItems = UIE.Align.Center;
+        wrapper.style.marginTop = 20;
+
+        var btn = new UIE.Button();
+        btn.AddToClassList("bordered-pill");
+        btn.style.borderTopColor = borderColor;
+        btn.style.borderBottomColor = borderColor;
+        btn.style.borderLeftColor = borderColor;
+        btn.style.borderRightColor = borderColor;
+        btn.style.color = textColor;
+        UIHelper.ApplyFont(btn);
+        btn.text = label;
+        btn.clicked += () => onClick();
+
+        wrapper.Add(btn);
+        parent.Add(wrapper);
     }
-
-    static Sprite GetShadowSprite(int radius, int blur)
-    {
-        if (_shadowSprite != null) return _shadowSprite;
-        int size = (radius + blur) * 2 + 2;
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        float center = (size - 1) / 2f;
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                float px = x - center;
-                float py = y - center;
-                float dist = Mathf.Sqrt(px * px + py * py) - radius;
-                float alpha;
-                if (dist <= 0f) alpha = 0f;
-                else if (dist >= blur) alpha = 0f;
-                else { float t = dist / blur; alpha = (1f - t) * (1f - t); }
-                tex.SetPixel(x, y, new Color(1, 1, 1, alpha));
-            }
-        }
-        tex.Apply();
-        int borderVal = radius + blur;
-        var border = new Vector4(borderVal, borderVal, borderVal, borderVal);
-        _shadowSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
-            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
-        return _shadowSprite;
-    }
-
-    void AddPressAnimation(GameObject button)
-    {
-        var trigger = button.GetComponent<EventTrigger>();
-        if (trigger == null) trigger = button.AddComponent<EventTrigger>();
-        trigger.triggers.Clear();
-
-        var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-        down.callback.AddListener((d) => button.transform.localScale = new Vector3(0.95f, 0.95f, 1f));
-        trigger.triggers.Add(down);
-
-        var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-        up.callback.AddListener((d) => button.transform.localScale = Vector3.one);
-        trigger.triggers.Add(up);
-
-        var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-        exit.callback.AddListener((d) => button.transform.localScale = Vector3.one);
-        trigger.triggers.Add(exit);
-    }
-
 }

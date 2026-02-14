@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
 using System.Collections;
 using System.IO;
+using UIE = UnityEngine.UIElements;
 
 public class BirthSystem : MonoBehaviour
 {
@@ -28,6 +29,14 @@ public class BirthSystem : MonoBehaviour
     public GameObject anotherGalButton;
     public GameObject gotoBattleButton;
 
+    // UI Toolkit overlay
+    UIE.PanelSettings overlayPanelSettings;
+    UIE.VisualElement overlayRoot;
+    UIE.VisualElement menuOverlayEl;
+    UIE.VisualElement nameInputOverlayEl;
+    UIE.TextField nameTextField;
+    UIE.VisualElement saveConfirmOverlayEl;
+
     // 自動生成される親UI
     GameObject parentPanel;
     GameObject fatherCard;
@@ -40,7 +49,6 @@ public class BirthSystem : MonoBehaviour
     TextMeshProUGUI motherIntroText;
     GameObject nextButton;
     bool waitingForNext;
-    GameObject menuPanel;
     GameObject birthResultCard;
     GameObject statusCardObj;
 
@@ -62,7 +70,7 @@ public class BirthSystem : MonoBehaviour
 
     // 親情報パネル
     GameObject parentInfoButton;
-    GameObject parentBioPanel;
+    UIE.VisualElement parentBioOverlayEl;
 
     // 画像アップロードボタン
     GameObject uploadImageBtn;
@@ -76,13 +84,10 @@ public class BirthSystem : MonoBehaviour
     string selectedGender;
 
     // 名前入力UI
-    GameObject nameInputPanel;
-    TMP_InputField nameInputField;
     string enteredName;
     bool waitingForNameInput;
 
     // セーブ確認UI
-    GameObject saveConfirmPanel;
     bool waitingForSaveConfirm;
     bool saveConfirmResult;
 
@@ -262,13 +267,26 @@ public class BirthSystem : MonoBehaviour
         CreateFlashOverlay();
         CreateLightningOverlay();
         CreateIntroPanel();
-        CreateNameInputUI();
-        CreateSaveConfirmUI();
         CreateStoryUI();
         //CreateCharacterListUI();
-        CreateMenuBar();
         if (parentPanel != null) parentPanel.SetActive(false);
 
+        // UI Toolkit overlay (menu, name input, save confirm, parent bio)
+        overlayPanelSettings = UIHelper.CreatePanelSettings(10f);
+        var overlayObj = new GameObject("BirthOverlayUI");
+        overlayObj.transform.SetParent(transform, false);
+        overlayRoot = UIHelper.SetupUIDocument(overlayObj,
+            new[] { "UI/CommonStyle", "UI/BirthStyle" }, overlayPanelSettings);
+        overlayRoot.pickingMode = UIE.PickingMode.Ignore;
+        CreateMenuBar();
+        CreateNameInputUI();
+        CreateSaveConfirmUI();
+    }
+
+    void OnDestroy()
+    {
+        if (overlayPanelSettings != null)
+            Destroy(overlayPanelSettings);
     }
 
     // ===== ボタンから呼ばれるメソッド =====
@@ -442,23 +460,18 @@ public class BirthSystem : MonoBehaviour
         if (anotherGalButton != null) anotherGalButton.SetActive(false);
 
         // 名前入力ダイアログ表示
-        if (nameInputPanel != null)
+        if (nameInputOverlayEl != null && nameTextField != null)
         {
-            nameInputPanel.transform.SetAsLastSibling();
-            nameInputPanel.SetActive(true);
-            if (nameInputField != null)
-            {
-                nameInputField.text = "";
-                nameInputField.Select();
-                nameInputField.ActivateInputField();
-            }
+            nameTextField.value = "";
+            overlayRoot.Add(nameInputOverlayEl);
+            nameTextField.Focus();
         }
 
         waitingForNameInput = true;
         while (waitingForNameInput)
             yield return null;
 
-        nameInputPanel.SetActive(false);
+        nameInputOverlayEl?.RemoveFromHierarchy();
 
         // DataCarrierに名前を保存（スロットへの自動セーブはしない）
         if (DataCarrier.Instance != null)
@@ -471,15 +484,14 @@ public class BirthSystem : MonoBehaviour
         SceneManager.LoadScene("BattleScene");
     }
 
-    public void OnNameConfirm()
+    void OnNameConfirmUIToolkit()
     {
-        if (nameInputField == null) return;
+        if (nameTextField == null) return;
 
-        string text = nameInputField.text != null ? nameInputField.text.Trim() : "";
+        string text = nameTextField.value != null ? nameTextField.value.Trim() : "";
         if (string.IsNullOrEmpty(text))
         {
-            // 空欄の場合は入力フィールドを揺らして拒否
-            StartCoroutine(ShakeInputField());
+            StartCoroutine(ShakeNameField());
             return;
         }
 
@@ -487,22 +499,20 @@ public class BirthSystem : MonoBehaviour
         waitingForNameInput = false;
     }
 
-    IEnumerator ShakeInputField()
+    IEnumerator ShakeNameField()
     {
-        if (nameInputField == null) yield break;
-        var rect = nameInputField.GetComponent<RectTransform>();
-        Vector2 orig = rect.anchoredPosition;
+        if (nameTextField == null) yield break;
         float duration = 0.3f;
         float elapsed = 0f;
         float magnitude = 15f;
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            float x = orig.x + Mathf.Sin(elapsed * 40f) * magnitude * (1f - elapsed / duration);
-            rect.anchoredPosition = new Vector2(x, orig.y);
+            float x = Mathf.Sin(elapsed * 40f) * magnitude * (1f - elapsed / duration);
+            nameTextField.style.translate = new UIE.Translate(x, 0);
             yield return null;
         }
-        rect.anchoredPosition = orig;
+        nameTextField.style.translate = new UIE.Translate(0, 0);
     }
 
     public void OnSaveYes()
@@ -628,8 +638,8 @@ public class BirthSystem : MonoBehaviour
         DestroyParentInfoButton();
         SetButtonText(nextButton, Localization.Get("birth_next"));
 
-        // ── フェーズ3: 「運命の人は誰だ？」カットイン → 母親ルーレット ──
-        yield return StartCoroutine(ShowCutinText(Localization.Get("cutin_who_mother")));
+        // ── フェーズ3: 「惹かれ合う、もう一つの魂」カットイン → 母親ルーレット ──
+        yield return StartCoroutine(ShowMotherCutinText(Localization.Get("cutin_who_mother")));
 
         if (fatherCard != null) fatherCard.SetActive(false);
         if (motherCard != null) motherCard.SetActive(true);
@@ -697,7 +707,7 @@ public class BirthSystem : MonoBehaviour
             if (!lunaSuccess)
             {
                 // 失敗演出
-                yield return StartCoroutine(ShowLunaFailure());
+                yield return StartCoroutine(ShowFailureSequence("birth_luna", new Color(0.8f, 0.8f, 1f)));
                 isAnimating = false;
                 yield break; // ここで終了
             }
@@ -720,7 +730,7 @@ public class BirthSystem : MonoBehaviour
             bool sakuraSuccess = Random.Range(0, 100) < 80; // 80%で成功
             if (!sakuraSuccess)
             {
-                yield return StartCoroutine(ShowSakuraFailure());
+                yield return StartCoroutine(ShowFailureSequence("birth_sakura", new Color(1f, 0.8f, 0.85f)));
                 isAnimating = false;
                 yield break;
             }
@@ -732,7 +742,7 @@ public class BirthSystem : MonoBehaviour
             bool misatoSuccess = Random.Range(0, 100) < 70; // 70%で成功
             if (!misatoSuccess)
             {
-                yield return StartCoroutine(ShowMisatoFailure());
+                yield return StartCoroutine(ShowFailureSequence("birth_misato", new Color(0.7f, 0.9f, 1f)));
                 isAnimating = false;
                 yield break;
             }
@@ -755,7 +765,7 @@ public class BirthSystem : MonoBehaviour
             bool hinataSuccess = Random.Range(0, 100) < 50; // 50%で成功
             if (!hinataSuccess)
             {
-                yield return StartCoroutine(ShowHinataFailure());
+                yield return StartCoroutine(ShowFailureSequence("birth_hinata", new Color(0.8f, 0.7f, 1f)));
                 isAnimating = false;
                 yield break;
             }
@@ -778,7 +788,7 @@ public class BirthSystem : MonoBehaviour
             bool kaedeSuccess = Random.Range(0, 100) < 90; // 90%で成功
             if (!kaedeSuccess)
             {
-                yield return StartCoroutine(ShowKaedeFailure());
+                yield return StartCoroutine(ShowFailureSequence("birth_kaede", new Color(0.6f, 1f, 0.8f)));
                 isAnimating = false;
                 yield break;
             }
@@ -829,8 +839,8 @@ public class BirthSystem : MonoBehaviour
             GenerateBabyFace(c_weight, c_height, c_atk, c_academic, c_athletic, selectedGender, isGodBaby);
         }
 
-        // 画像アップロードボタン（顔生成後に追加）
-        if (babyFace != null) CreateUploadButton(babyFace);
+        // 画像アップロードボタン（赤ちゃん画像の下に配置）
+        if (birthResultCard != null) CreateUploadButton(birthResultCard.transform);
 
         bool isPromisingBaby = !isGodBaby && IsPromisingBaby(c_atk, c_def, c_hp, c_academic, c_athletic);
 
@@ -1824,155 +1834,52 @@ public class BirthSystem : MonoBehaviour
 
     void ShowParentBioPanel(string parentName)
     {
-        if (parentBioPanel != null) return; // 既に開いている
+        if (parentBioOverlayEl != null) return;
 
-        parentBioPanel = new GameObject("ParentBioPanel");
-        parentBioPanel.transform.SetParent(canvas.transform, false);
-        parentBioPanel.transform.SetAsLastSibling();
+        parentBioOverlayEl = UIHelper.CreateOverlay();
+        parentBioOverlayEl.RegisterCallback<UIE.ClickEvent>(evt =>
+        {
+            if (evt.target == parentBioOverlayEl) CloseParentBioPanel();
+        });
 
-        var panelRect = parentBioPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = Vector2.zero;
-        panelRect.anchorMax = Vector2.one;
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
+        var card = new UIE.VisualElement();
+        card.AddToClassList("birth-bio-card");
 
-        // 半透明オーバーレイ（タップで閉じる）
-        var overlay = parentBioPanel.AddComponent<Image>();
-        overlay.color = new Color(0f, 0f, 0f, 0.6f);
+        // Close button
+        var closeBtn = new UIE.Button();
+        closeBtn.AddToClassList("birth-bio-close");
+        UIHelper.ApplyFont(closeBtn);
+        closeBtn.text = "\u00d7";
+        closeBtn.clicked += CloseParentBioPanel;
+        card.Add(closeBtn);
 
-        var overlayBtn = parentBioPanel.AddComponent<Button>();
-        overlayBtn.targetGraphic = overlay;
-        overlayBtn.navigation = new Navigation { mode = Navigation.Mode.None };
-        var oc = overlayBtn.colors;
-        var overlayColor = new Color(0f, 0f, 0f, 0.6f);
-        oc.normalColor = overlayColor;
-        oc.highlightedColor = overlayColor;
-        oc.pressedColor = overlayColor;
-        oc.selectedColor = overlayColor;
-        overlayBtn.colors = oc;
-        overlayBtn.onClick.AddListener(CloseParentBioPanel);
+        // Name
+        var nameLabel = UIHelper.CreateLabel(Localization.GetParent(parentName), "birth-bio-name");
+        card.Add(nameLabel);
 
-        // カード
-        var cardObj = new GameObject("BioCard");
-        cardObj.transform.SetParent(parentBioPanel.transform, false);
-        var cardRect = cardObj.AddComponent<RectTransform>();
-        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
-        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
-        cardRect.anchoredPosition = Vector2.zero;
-        cardRect.sizeDelta = new Vector2(940, 750);
+        // Separator
+        var sep = new UIE.VisualElement();
+        sep.AddToClassList("birth-bio-separator");
+        card.Add(sep);
 
-        var cardBorder = cardObj.AddComponent<Image>();
-        cardBorder.sprite = GetRoundedRectSprite(24);
-        cardBorder.type = Image.Type.Sliced;
-        cardBorder.color = new Color(0.25f, 0.35f, 0.6f, 0.95f);
-        cardBorder.raycastTarget = false;
+        // Bio text
+        string bio = Localization.GetParentBio(parentName);
+        if (!string.IsNullOrEmpty(bio))
+        {
+            var bioLabel = UIHelper.CreateLabel(bio, "birth-bio-text");
+            card.Add(bioLabel);
+        }
 
-        var innerObj = new GameObject("Inner");
-        innerObj.transform.SetParent(cardObj.transform, false);
-        var innerRect = innerObj.AddComponent<RectTransform>();
-        innerRect.anchorMin = Vector2.zero;
-        innerRect.anchorMax = Vector2.one;
-        innerRect.offsetMin = new Vector2(6, 6);
-        innerRect.offsetMax = new Vector2(-6, -6);
-        var innerBg = innerObj.AddComponent<Image>();
-        innerBg.sprite = GetRoundedRectSprite(20);
-        innerBg.type = Image.Type.Sliced;
-        innerBg.color = new Color(0.1f, 0.14f, 0.28f, 0.98f);
-        innerBg.raycastTarget = false;
-
-        // タイトル（父親名）
-        var titleObj = new GameObject("Title");
-        titleObj.transform.SetParent(cardObj.transform, false);
-        var titleRect = titleObj.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0, 1f);
-        titleRect.anchorMax = new Vector2(1, 1f);
-        titleRect.anchoredPosition = new Vector2(0, -40);
-        titleRect.sizeDelta = new Vector2(-48, 60);
-        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(titleText);
-        titleText.text = Localization.GetParent(parentName);
-        titleText.fontSize = 40;
-        titleText.fontStyle = FontStyles.Bold;
-        titleText.alignment = TextAlignmentOptions.Center;
-        titleText.color = new Color(1f, 0.9f, 0.5f);
-        titleText.raycastTarget = false;
-
-        // 区切り線
-        var lineObj = new GameObject("Separator");
-        lineObj.transform.SetParent(cardObj.transform, false);
-        var lineRect = lineObj.AddComponent<RectTransform>();
-        lineRect.anchorMin = new Vector2(0.05f, 1f);
-        lineRect.anchorMax = new Vector2(0.95f, 1f);
-        lineRect.anchoredPosition = new Vector2(0, -75);
-        lineRect.sizeDelta = new Vector2(0, 2);
-        var lineImg = lineObj.AddComponent<Image>();
-        lineImg.color = new Color(0.4f, 0.5f, 0.75f, 0.5f);
-        lineImg.raycastTarget = false;
-
-        // 本文
-        var bodyObj = new GameObject("Body");
-        bodyObj.transform.SetParent(cardObj.transform, false);
-        var bodyRect = bodyObj.AddComponent<RectTransform>();
-        bodyRect.anchorMin = Vector2.zero;
-        bodyRect.anchorMax = Vector2.one;
-        bodyRect.offsetMin = new Vector2(36, 80);
-        bodyRect.offsetMax = new Vector2(-36, -90);
-        var bodyText = bodyObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(bodyText);
-        bodyText.text = Localization.GetParentBio(parentName);
-        bodyText.fontSize = 32;
-        bodyText.lineSpacing = 8;
-        bodyText.alignment = TextAlignmentOptions.TopLeft;
-        bodyText.color = Color.white;
-        bodyText.raycastTarget = false;
-
-        // 閉じるボタン（右上 ×）
-        var closeObj = new GameObject("CloseButton");
-        closeObj.transform.SetParent(cardObj.transform, false);
-        var closeRect = closeObj.AddComponent<RectTransform>();
-        closeRect.anchorMin = new Vector2(1f, 1f);
-        closeRect.anchorMax = new Vector2(1f, 1f);
-        closeRect.anchoredPosition = new Vector2(-24, -24);
-        closeRect.sizeDelta = new Vector2(52, 52);
-
-        var closeBg = closeObj.AddComponent<Image>();
-        closeBg.sprite = GetRoundedRectSprite(26);
-        closeBg.type = Image.Type.Sliced;
-        closeBg.color = new Color(1f, 1f, 1f, 0.15f);
-
-        var closeTextObj = new GameObject("X");
-        closeTextObj.transform.SetParent(closeObj.transform, false);
-        var closeTextRect = closeTextObj.AddComponent<RectTransform>();
-        closeTextRect.anchorMin = Vector2.zero;
-        closeTextRect.anchorMax = Vector2.one;
-        closeTextRect.offsetMin = Vector2.zero;
-        closeTextRect.offsetMax = Vector2.zero;
-        var closeText = closeTextObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(closeText);
-        closeText.text = "\u00d7";
-        closeText.fontSize = 36;
-        closeText.alignment = TextAlignmentOptions.Center;
-        closeText.color = Color.white;
-        closeText.raycastTarget = false;
-
-        var closeBtn = closeObj.AddComponent<Button>();
-        closeBtn.targetGraphic = closeBg;
-        closeBtn.navigation = new Navigation { mode = Navigation.Mode.None };
-        var cc = closeBtn.colors;
-        cc.normalColor = new Color(1f, 1f, 1f, 0.15f);
-        cc.highlightedColor = new Color(1f, 1f, 1f, 0.3f);
-        cc.pressedColor = new Color(1f, 1f, 1f, 0.1f);
-        cc.selectedColor = new Color(1f, 1f, 1f, 0.15f);
-        closeBtn.colors = cc;
-        closeBtn.onClick.AddListener(CloseParentBioPanel);
+        parentBioOverlayEl.Add(card);
+        overlayRoot.Add(parentBioOverlayEl);
     }
 
     void CloseParentBioPanel()
     {
-        if (parentBioPanel != null)
+        if (parentBioOverlayEl != null)
         {
-            Destroy(parentBioPanel);
-            parentBioPanel = null;
+            parentBioOverlayEl.RemoveFromHierarchy();
+            parentBioOverlayEl = null;
         }
     }
 
@@ -2129,7 +2036,7 @@ public class BirthSystem : MonoBehaviour
         border.color = new Color(0.82f, 0.82f, 0.85f, 1f);
         border.raycastTarget = false;
 
-        // カード内側背景
+        // カード内側背景（baby-background画像を使用）
         var innerObj = new GameObject("Inner");
         innerObj.transform.SetParent(birthResultCard.transform, false);
         var innerRect = innerObj.AddComponent<RectTransform>();
@@ -2138,9 +2045,20 @@ public class BirthSystem : MonoBehaviour
         innerRect.offsetMin = new Vector2(6, 6);
         innerRect.offsetMax = new Vector2(-6, -6);
         var innerBg = innerObj.AddComponent<Image>();
-        innerBg.sprite = GetRoundedRectSprite(20);
-        innerBg.type = Image.Type.Sliced;
-        innerBg.color = new Color(0.953f, 0.969f, 0.973f, 1f);
+        Sprite babyBgSprite = Resources.Load<Sprite>("backgrounds/baby-background");
+        if (babyBgSprite != null)
+        {
+            innerBg.sprite = babyBgSprite;
+            innerBg.type = Image.Type.Simple;
+            innerBg.preserveAspect = false;
+            innerBg.color = Color.white;
+        }
+        else
+        {
+            innerBg.sprite = GetRoundedRectSprite(20);
+            innerBg.type = Image.Type.Sliced;
+            innerBg.color = new Color(0.953f, 0.969f, 0.973f, 1f);
+        }
         innerBg.raycastTarget = false;
         innerObj.AddComponent<RectMask2D>();
 
@@ -2173,7 +2091,7 @@ public class BirthSystem : MonoBehaviour
         lineImg.color = new Color(0.78f, 0.78f, 0.82f, 0.6f);
         lineImg.raycastTarget = false;
 
-        // babyFaceをinnerObjの子にして配置（ステータスカードの48px上、幅を合わせる）
+        // babyFaceをinnerObjの子にして配置（ステータスカードの32px上、幅を合わせる）
         if (babyFace != null)
         {
             babyFace.SetParent(innerObj.transform, false);
@@ -2182,10 +2100,9 @@ public class BirthSystem : MonoBehaviour
             // ステータスカード上端 = birthResultCard高さ(1300) * 0.3 = 390 (bottom起算)
             // innerObj内での上端 = 390 - 6(padding) = 384 (innerObj bottom起算)
             // innerObj中央からの距離 = 384 - (1300-12)/2 = 384 - 644 = -260
-            // babyFace下端 = -260 + 48 = -212, 中央 = -212 + 955/2 = 265.5
             float statusCardTopInInner = 1300f * 0.3f - 6f - (1300f - 12f) / 2f; // -260
             float faceSize = 1016f * 0.94f; // ステータスカードと同じ幅 ≈ 955
-            float faceCenterY = statusCardTopInInner + 48f + faceSize / 2f;
+            float faceCenterY = statusCardTopInInner + 32f + faceSize / 2f;
             babyFace.anchoredPosition = new Vector2(0, faceCenterY);
             babyFace.sizeDelta = new Vector2(faceSize, faceSize);
             babyFace.SetAsLastSibling();
@@ -2290,10 +2207,8 @@ public class BirthSystem : MonoBehaviour
             childStatusText.lineSpacing = 0;
         }
 
-        // uploadImageBtnはbabyFaceの子で上で破棄済み
+        // birthResultCardを削除（genderLabel, statusCardObj, uploadImageBtnはその子なので一緒に破棄される）
         uploadImageBtn = null;
-
-        // birthResultCardを削除（genderLabel, statusCardObjはその子なので一緒に破棄される）
         if (birthResultCard != null)
         {
             Destroy(birthResultCard);
@@ -2340,17 +2255,18 @@ public class BirthSystem : MonoBehaviour
         uploadImageBtn = new GameObject("UploadImageBtn");
         uploadImageBtn.transform.SetParent(parent, false);
 
+        // ステータスカード上端のすぐ上に配置（ステータスカードはanchorMax.y=0.3）
         var btnRect = uploadImageBtn.AddComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(1f, 0f);
-        btnRect.anchorMax = new Vector2(1f, 0f);
-        btnRect.anchoredPosition = new Vector2(-40, 40);
-        btnRect.sizeDelta = new Vector2(80, 80);
+        btnRect.anchorMin = new Vector2(0.5f, 0.3f);
+        btnRect.anchorMax = new Vector2(0.5f, 0.3f);
+        btnRect.anchoredPosition = new Vector2(0, 16);
+        btnRect.sizeDelta = new Vector2(64, 64);
 
-        // 青い円形背景
+        // 円形背景
         var bg = uploadImageBtn.AddComponent<Image>();
-        bg.color = new Color(0.2f, 0.5f, 0.9f, 0.9f);
+        bg.color = new Color(0.35f, 0.35f, 0.4f, 0.8f);
 
-        // カメラアイコンテキスト
+        // カメラアイコン
         var iconObj = new GameObject("Icon");
         iconObj.transform.SetParent(uploadImageBtn.transform, false);
         var iconRect = iconObj.AddComponent<RectTransform>();
@@ -2360,46 +2276,87 @@ public class BirthSystem : MonoBehaviour
         iconRect.offsetMax = Vector2.zero;
         var iconText = iconObj.AddComponent<TextMeshProUGUI>();
         FontHelper.Apply(iconText);
-        iconText.text = "写真";
-        iconText.fontSize = 24;
+        iconText.text = "\u270E";
+        iconText.fontSize = 28;
         iconText.alignment = TextAlignmentOptions.Center;
         iconText.color = Color.white;
-        iconText.fontStyle = FontStyles.Bold;
         iconText.raycastTarget = false;
 
         var btn = uploadImageBtn.AddComponent<Button>();
         btn.targetGraphic = bg;
         var colors = btn.colors;
-        colors.normalColor = new Color(0.2f, 0.5f, 0.9f, 0.9f);
-        colors.highlightedColor = new Color(0.3f, 0.6f, 1.0f, 1f);
-        colors.pressedColor = new Color(0.15f, 0.4f, 0.8f, 1f);
+        colors.normalColor = new Color(0.35f, 0.35f, 0.4f, 0.8f);
+        colors.highlightedColor = new Color(0.45f, 0.45f, 0.5f, 0.9f);
+        colors.pressedColor = new Color(0.25f, 0.25f, 0.3f, 1f);
         btn.colors = colors;
         btn.onClick.AddListener(PickImageFromGallery);
     }
 
     void PickImageFromGallery()
     {
+        // パーミッションチェック
+        var permission = NativeGallery.CheckPermission(NativeGallery.PermissionType.Read, NativeGallery.MediaType.Image);
+        if (permission == NativeGallery.Permission.Denied)
+        {
+            // 一度拒否された場合は設定画面を開く
+            Debug.Log("[BirthSystem] Gallery permission denied, opening settings");
+            NativeGallery.OpenSettings();
+            return;
+        }
+        if (permission == NativeGallery.Permission.ShouldAsk)
+        {
+            NativeGallery.RequestPermission(NativeGallery.PermissionType.Read, NativeGallery.MediaType.Image);
+        }
+
         NativeGallery.GetImageFromGallery((path) =>
         {
-            if (path == null) return;
+            if (string.IsNullOrEmpty(path)) return;
 
-            // ファイルをそのままコピーして保存
-            byte[] fileData = File.ReadAllBytes(path);
-            string fileName = "baby_custom.png";
-            string savePath = Path.Combine(Application.persistentDataPath, fileName);
-            File.WriteAllBytes(savePath, fileData);
+            try
+            {
+                byte[] fileData = File.ReadAllBytes(path);
+                string fileName = "baby_custom.png";
+                string savePath = Path.Combine(Application.persistentDataPath, fileName);
+                File.WriteAllBytes(savePath, fileData);
 
-            // 読み取り可能なテクスチャとして読み込み（表示用）
-            var tex = new Texture2D(2, 2);
-            tex.LoadImage(fileData);
+                var tex = new Texture2D(2, 2);
+                if (!tex.LoadImage(fileData))
+                {
+                    Debug.LogError("[BirthSystem] Failed to load image from gallery");
+                    Destroy(tex);
+                    return;
+                }
 
-            // DataCarrierに保存
-            if (DataCarrier.Instance != null)
-                DataCarrier.Instance.customBabyImagePath = fileName;
+                // モバイルで大きすぎる画像はリサイズ（メモリ節約）
+                int maxSize = 1024;
+                if (tex.width > maxSize || tex.height > maxSize)
+                {
+                    float scale = Mathf.Min((float)maxSize / tex.width, (float)maxSize / tex.height);
+                    int newW = Mathf.RoundToInt(tex.width * scale);
+                    int newH = Mathf.RoundToInt(tex.height * scale);
+                    var rt = RenderTexture.GetTemporary(newW, newH);
+                    Graphics.Blit(tex, rt);
+                    var prev = RenderTexture.active;
+                    RenderTexture.active = rt;
+                    var resized = new Texture2D(newW, newH, TextureFormat.RGBA32, false);
+                    resized.ReadPixels(new Rect(0, 0, newW, newH), 0, 0);
+                    resized.Apply();
+                    RenderTexture.active = prev;
+                    RenderTexture.ReleaseTemporary(rt);
+                    Destroy(tex);
+                    tex = resized;
+                }
 
-            // 表示を更新
-            Sprite spr = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-            UpdateBabyFaceWithCustomImage(spr);
+                if (DataCarrier.Instance != null)
+                    DataCarrier.Instance.customBabyImagePath = fileName;
+
+                Sprite spr = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+                UpdateBabyFaceWithCustomImage(spr);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[BirthSystem] Gallery image load failed: {e.Message}");
+            }
         }, "赤ちゃんの画像を選択");
     }
 
@@ -2407,14 +2364,16 @@ public class BirthSystem : MonoBehaviour
     {
         if (babyFace == null) return;
 
-        // 既存の動的パーツを削除（babyFaceImageとintroText、uploadImageBtn以外）
+        // GenerateBabyFaceでlocalScaleが拡大されている場合があるのでリセット
+        babyFace.localScale = Vector3.one;
+
+        // 既存の動的パーツを削除（babyFaceImageとintroText以外）
         for (int i = babyFace.childCount - 1; i >= 0; i--)
         {
             Transform child = babyFace.GetChild(i);
             bool isPreserved = false;
             if (babyFaceImage != null && child.gameObject == babyFaceImage.gameObject) isPreserved = true;
             if (introText != null && child.gameObject == introText.gameObject) isPreserved = true;
-            if (uploadImageBtn != null && child.gameObject == uploadImageBtn) isPreserved = true;
             if (!isPreserved)
                 Destroy(child.gameObject);
         }
@@ -2436,6 +2395,12 @@ public class BirthSystem : MonoBehaviour
         else
         {
             targetImage.gameObject.SetActive(true);
+            // アンカーをfill（babyFace内に収まるように）にリセット
+            var rt = targetImage.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
         }
 
         targetImage.enabled = true;
@@ -2554,274 +2519,58 @@ public class BirthSystem : MonoBehaviour
 
     void CreateNameInputUI()
     {
-        if (canvas == null) return;
+        nameInputOverlayEl = UIHelper.CreateOverlay();
 
-        // 全画面オーバーレイ
-        nameInputPanel = new GameObject("NameInputPanel");
-        nameInputPanel.transform.SetParent(canvas.transform, false);
-        var overlayRect = nameInputPanel.AddComponent<RectTransform>();
-        overlayRect.anchorMin = Vector2.zero;
-        overlayRect.anchorMax = Vector2.one;
-        overlayRect.offsetMin = Vector2.zero;
-        overlayRect.offsetMax = Vector2.zero;
-        var overlayBg = nameInputPanel.AddComponent<Image>();
-        overlayBg.color = new Color(0f, 0f, 0f, 0.5f);
+        var card = new UIE.VisualElement();
+        card.AddToClassList("birth-name-card");
 
-        // 白カード
-        var card = new GameObject("Card");
-        card.transform.SetParent(nameInputPanel.transform, false);
-        var cardRect = card.AddComponent<RectTransform>();
-        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
-        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
-        cardRect.anchoredPosition = new Vector2(0, -100);
-        cardRect.sizeDelta = new Vector2(900, 450);
-        var cardBg = card.AddComponent<Image>();
-        cardBg.sprite = GetRoundedRectSprite(24);
-        cardBg.type = Image.Type.Sliced;
-        cardBg.color = Color.white;
+        var title = UIHelper.CreateLabel(Localization.Get("birth_name_input_title"), "birth-name-title");
+        card.Add(title);
 
-        // タイトルテキスト
-        var titleObj = new GameObject("Title");
-        titleObj.transform.SetParent(card.transform, false);
-        var titleRect = titleObj.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0, 1);
-        titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.anchoredPosition = new Vector2(0, -50);
-        titleRect.sizeDelta = new Vector2(0, 60);
-        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(titleText);
-        titleText.text = Localization.Get("birth_name_input_title");
-        titleText.fontSize = 36;
-        titleText.alignment = TextAlignmentOptions.Center;
-        titleText.color = new Color(0.25f, 0.25f, 0.3f);
-        titleText.fontStyle = FontStyles.Bold;
-        titleText.raycastTarget = false;
+        nameTextField = new UIE.TextField();
+        nameTextField.AddToClassList("birth-name-field");
+        nameTextField.maxLength = 12;
+        UIHelper.ApplyFont(nameTextField);
+        card.Add(nameTextField);
 
-        // 入力フィールド
-        var inputObj = new GameObject("InputField");
-        inputObj.transform.SetParent(card.transform, false);
-        var inputRect = inputObj.AddComponent<RectTransform>();
-        inputRect.anchorMin = new Vector2(0.5f, 0.5f);
-        inputRect.anchorMax = new Vector2(0.5f, 0.5f);
-        inputRect.anchoredPosition = new Vector2(0, 15);
-        inputRect.sizeDelta = new Vector2(750, 80);
+        var confirmBtn = UIHelper.CreatePillButton(Localization.Get("ui_confirm"), "pill-button-medium");
+        confirmBtn.clicked += OnNameConfirmUIToolkit;
+        card.Add(confirmBtn);
 
-        var inputBg = inputObj.AddComponent<Image>();
-        inputBg.sprite = GetRoundedRectSprite(16);
-        inputBg.type = Image.Type.Sliced;
-        inputBg.color = new Color(0.94f, 0.94f, 0.96f);
-
-        nameInputField = inputObj.AddComponent<TMP_InputField>();
-        nameInputField.characterLimit = 12;
-
-        // テキストエリア
-        var textAreaObj = new GameObject("TextArea");
-        textAreaObj.transform.SetParent(inputObj.transform, false);
-        var textAreaRect = textAreaObj.AddComponent<RectTransform>();
-        textAreaRect.anchorMin = Vector2.zero;
-        textAreaRect.anchorMax = Vector2.one;
-        textAreaRect.offsetMin = new Vector2(15, 5);
-        textAreaRect.offsetMax = new Vector2(-15, -5);
-        textAreaObj.AddComponent<RectMask2D>();
-
-        // 入力テキスト
-        var inputTextObj = new GameObject("Text");
-        inputTextObj.transform.SetParent(textAreaObj.transform, false);
-        var inputTextRect = inputTextObj.AddComponent<RectTransform>();
-        inputTextRect.anchorMin = Vector2.zero;
-        inputTextRect.anchorMax = Vector2.one;
-        inputTextRect.offsetMin = Vector2.zero;
-        inputTextRect.offsetMax = Vector2.zero;
-        var inputText = inputTextObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(inputText);
-        inputText.fontSize = 32;
-        inputText.alignment = TextAlignmentOptions.Left;
-        inputText.color = new Color(0.15f, 0.15f, 0.15f);
-        nameInputField.textComponent = inputText;
-        nameInputField.textViewport = textAreaRect;
-
-        // 確定ボタン（pill style）
-        float btnW = 500f;
-        float btnH = 100f;
-        int pillRadius = (int)(btnH / 2);
-        int blur = 20;
-
-        var confirmObj = new GameObject("ConfirmButton");
-        confirmObj.transform.SetParent(card.transform, false);
-        var confirmRect = confirmObj.AddComponent<RectTransform>();
-        confirmRect.anchorMin = new Vector2(0.5f, 0);
-        confirmRect.anchorMax = new Vector2(0.5f, 0);
-        confirmRect.anchoredPosition = new Vector2(0, 75);
-        confirmRect.sizeDelta = new Vector2(btnW, btnH);
-
-        var confirmBg = confirmObj.AddComponent<Image>();
-        confirmBg.sprite = GetPillSprite(pillRadius);
-        confirmBg.type = Image.Type.Sliced;
-        confirmBg.color = Color.white;
-
-        var confirmBtn = confirmObj.AddComponent<Button>();
-        confirmBtn.targetGraphic = confirmBg;
-        confirmBtn.onClick.AddListener(OnNameConfirm);
-        confirmBtn.navigation = new Navigation { mode = Navigation.Mode.None };
-        var colors = confirmBtn.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = Color.white;
-        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
-        colors.selectedColor = Color.white;
-        colors.fadeDuration = 0.08f;
-        confirmBtn.colors = colors;
-
-        // Shadow
-        var shadowObj = new GameObject("Shadow");
-        shadowObj.transform.SetParent(confirmObj.transform, false);
-        shadowObj.transform.SetAsFirstSibling();
-        var shadowRect = shadowObj.AddComponent<RectTransform>();
-        shadowRect.anchorMin = Vector2.zero;
-        shadowRect.anchorMax = Vector2.one;
-        shadowRect.offsetMin = new Vector2(-blur, -blur - 4);
-        shadowRect.offsetMax = new Vector2(blur, blur - 4);
-        var shadowImg = shadowObj.AddComponent<Image>();
-        shadowImg.sprite = GetShadowSprite(pillRadius, blur);
-        shadowImg.type = Image.Type.Sliced;
-        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
-        shadowImg.raycastTarget = false;
-
-        // Button text
-        var confirmTextObj = new GameObject("Text");
-        confirmTextObj.transform.SetParent(confirmObj.transform, false);
-        var confirmTextRect = confirmTextObj.AddComponent<RectTransform>();
-        confirmTextRect.anchorMin = Vector2.zero;
-        confirmTextRect.anchorMax = Vector2.one;
-        confirmTextRect.offsetMin = Vector2.zero;
-        confirmTextRect.offsetMax = Vector2.zero;
-        var confirmText = confirmTextObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(confirmText);
-        confirmText.text = Localization.Get("ui_confirm");
-        confirmText.fontSize = 36;
-        confirmText.alignment = TextAlignmentOptions.Center;
-        confirmText.color = new Color(0.45f, 0.45f, 0.5f);
-        confirmText.fontStyle = FontStyles.Bold;
-        confirmText.raycastTarget = false;
-
-        // Press animation
-        var trigger = confirmObj.AddComponent<EventTrigger>();
-        var pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-        pointerDown.callback.AddListener((data) => {
-            confirmObj.transform.localScale = new Vector3(0.95f, 0.95f, 1f);
-        });
-        trigger.triggers.Add(pointerDown);
-        var pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-        pointerUp.callback.AddListener((data) => {
-            confirmObj.transform.localScale = Vector3.one;
-        });
-        trigger.triggers.Add(pointerUp);
-        var pointerExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-        pointerExit.callback.AddListener((data) => {
-            confirmObj.transform.localScale = Vector3.one;
-        });
-        trigger.triggers.Add(pointerExit);
-
-        nameInputPanel.SetActive(false);
+        nameInputOverlayEl.Add(card);
+        // Not added to overlayRoot yet — shown on demand
     }
 
     void CreateSaveConfirmUI()
     {
-        if (canvas == null) return;
+        saveConfirmOverlayEl = UIHelper.CreateOverlay();
 
-        saveConfirmPanel = new GameObject("SaveConfirmPanel");
-        saveConfirmPanel.transform.SetParent(canvas.transform, false);
+        var panel = new UIE.VisualElement();
+        panel.AddToClassList("birth-save-panel");
 
-        var panelRect = saveConfirmPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = Vector2.zero;
-        panelRect.sizeDelta = new Vector2(400, 180);
+        var title = UIHelper.CreateLabel(Localization.Get("birth_save_confirm"), "birth-save-title");
+        panel.Add(title);
 
-        var panelBg = saveConfirmPanel.AddComponent<Image>();
-        panelBg.color = new Color(0.1f, 0.1f, 0.2f, 0.95f);
+        var btnRow = new UIE.VisualElement();
+        btnRow.AddToClassList("row");
 
-        // タイトルテキスト
-        var titleObj = new GameObject("Title");
-        titleObj.transform.SetParent(saveConfirmPanel.transform, false);
-        var titleRect = titleObj.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0, 1);
-        titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.anchoredPosition = new Vector2(0, -40);
-        titleRect.sizeDelta = new Vector2(0, 60);
-        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(titleText);
-        titleText.text = Localization.Get("birth_save_confirm");
-        titleText.fontSize = 32;
-        titleText.alignment = TextAlignmentOptions.Center;
-        titleText.color = Color.white;
-        titleText.fontStyle = FontStyles.Bold;
-        titleText.raycastTarget = false;
+        var yesBtn = new UIE.Button();
+        yesBtn.AddToClassList("birth-save-yes");
+        UIHelper.ApplyFont(yesBtn);
+        yesBtn.text = Localization.Get("ui_yes");
+        yesBtn.clicked += OnSaveYes;
+        btnRow.Add(yesBtn);
 
-        // はいボタン
-        var yesObj = new GameObject("YesButton");
-        yesObj.transform.SetParent(saveConfirmPanel.transform, false);
-        var yesRect = yesObj.AddComponent<RectTransform>();
-        yesRect.anchorMin = new Vector2(0.5f, 0);
-        yesRect.anchorMax = new Vector2(0.5f, 0);
-        yesRect.anchoredPosition = new Vector2(-80, 50);
-        yesRect.sizeDelta = new Vector2(120, 50);
+        var noBtn = new UIE.Button();
+        noBtn.AddToClassList("birth-save-no");
+        UIHelper.ApplyFont(noBtn);
+        noBtn.text = Localization.Get("ui_no");
+        noBtn.clicked += OnSaveNo;
+        btnRow.Add(noBtn);
 
-        var yesBg = yesObj.AddComponent<Image>();
-        yesBg.color = new Color(0.3f, 0.7f, 0.4f);
-
-        var yesBtn = yesObj.AddComponent<Button>();
-        yesBtn.targetGraphic = yesBg;
-        yesBtn.onClick.AddListener(OnSaveYes);
-
-        var yesTextObj = new GameObject("Text");
-        yesTextObj.transform.SetParent(yesObj.transform, false);
-        var yesTextRect = yesTextObj.AddComponent<RectTransform>();
-        yesTextRect.anchorMin = Vector2.zero;
-        yesTextRect.anchorMax = Vector2.one;
-        yesTextRect.offsetMin = Vector2.zero;
-        yesTextRect.offsetMax = Vector2.zero;
-        var yesText = yesTextObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(yesText);
-        yesText.text = Localization.Get("ui_yes");
-        yesText.fontSize = 26;
-        yesText.alignment = TextAlignmentOptions.Center;
-        yesText.color = Color.white;
-        yesText.fontStyle = FontStyles.Bold;
-        yesText.raycastTarget = false;
-
-        // いいえボタン
-        var noObj = new GameObject("NoButton");
-        noObj.transform.SetParent(saveConfirmPanel.transform, false);
-        var noRect = noObj.AddComponent<RectTransform>();
-        noRect.anchorMin = new Vector2(0.5f, 0);
-        noRect.anchorMax = new Vector2(0.5f, 0);
-        noRect.anchoredPosition = new Vector2(80, 50);
-        noRect.sizeDelta = new Vector2(120, 50);
-
-        var noBg = noObj.AddComponent<Image>();
-        noBg.color = new Color(0.6f, 0.3f, 0.3f);
-
-        var noBtn = noObj.AddComponent<Button>();
-        noBtn.targetGraphic = noBg;
-        noBtn.onClick.AddListener(OnSaveNo);
-
-        var noTextObj = new GameObject("Text");
-        noTextObj.transform.SetParent(noObj.transform, false);
-        var noTextRect = noTextObj.AddComponent<RectTransform>();
-        noTextRect.anchorMin = Vector2.zero;
-        noTextRect.anchorMax = Vector2.one;
-        noTextRect.offsetMin = Vector2.zero;
-        noTextRect.offsetMax = Vector2.zero;
-        var noText = noTextObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(noText);
-        noText.text = Localization.Get("ui_no");
-        noText.fontSize = 26;
-        noText.alignment = TextAlignmentOptions.Center;
-        noText.color = Color.white;
-        noText.fontStyle = FontStyles.Bold;
-        noText.raycastTarget = false;
-
-        saveConfirmPanel.SetActive(false);
+        panel.Add(btnRow);
+        saveConfirmOverlayEl.Add(panel);
+        // Not added to overlayRoot yet — shown on demand
     }
 
     void SetButtonText(GameObject button, string text)
@@ -3623,6 +3372,90 @@ public class BirthSystem : MonoBehaviour
         Destroy(bandObj);
     }
 
+    IEnumerator ShowMotherCutinText(string cutinText)
+    {
+        if (canvas == null || string.IsNullOrEmpty(cutinText)) yield break;
+
+        // ── 帯（画面中央の横帯） ──
+        var bandObj = new GameObject("CutinBand");
+        bandObj.transform.SetParent(canvas.transform, false);
+        bandObj.transform.SetAsLastSibling();
+        var bandRect = bandObj.AddComponent<RectTransform>();
+        bandRect.anchorMin = new Vector2(0, 0.38f);
+        bandRect.anchorMax = new Vector2(1, 0.62f);
+        bandRect.offsetMin = Vector2.zero;
+        bandRect.offsetMax = Vector2.zero;
+        var bandImg = bandObj.AddComponent<Image>();
+        bandImg.color = new Color(0, 0, 0, 0);
+        bandImg.raycastTarget = true;
+
+        // ── テキスト（帯の中央、スケールアップ + フェードイン） ──
+        var textObj = new GameObject("CutinText");
+        textObj.transform.SetParent(bandObj.transform, false);
+        var textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(40, 0);
+        textRect.offsetMax = new Vector2(-40, 0);
+        var tmp = textObj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmp);
+        tmp.text = cutinText;
+        tmp.fontSize = 52;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = new Color(1, 1, 1, 0);
+        tmp.enableWordWrapping = false;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        tmp.raycastTarget = false;
+
+        // ── アニメーション: じわ〜っとフェードイン + スケールアップ ──
+        float fadeInDuration = 0.8f;
+        float holdDuration = 1.2f;
+        float fadeOutDuration = 0.5f;
+        float scaleFrom = 0.6f;
+        float scaleTo = 1.0f;
+
+        // フェードイン（中央からじわ〜っと浮き上がる）
+        float elapsed = 0;
+        while (elapsed < fadeInDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / fadeInDuration);
+            // ease-out cubic: ゆっくり加速してなめらかに到達
+            float easeT = 1f - (1f - t) * (1f - t) * (1f - t);
+            float alpha = easeT;
+            float scale = Mathf.Lerp(scaleFrom, scaleTo, easeT);
+            bandImg.color = new Color(0, 0, 0, 0.8f * easeT);
+            tmp.color = new Color(1, 1, 1, alpha);
+            textRect.localScale = new Vector3(scale, scale, 1f);
+            textRect.anchoredPosition = Vector2.zero;
+            yield return null;
+        }
+        bandImg.color = new Color(0, 0, 0, 0.8f);
+        tmp.color = Color.white;
+        textRect.localScale = Vector3.one;
+        textRect.anchoredPosition = Vector2.zero;
+
+        // 余韻（1.2秒の情緒的な間）
+        yield return new WaitForSeconds(holdDuration);
+
+        // フェードアウト（ゆっくり消える）
+        elapsed = 0;
+        while (elapsed < fadeOutDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / fadeOutDuration);
+            float easeT = t * t; // ease-in quad: ゆっくり始まり加速して消える
+            bandImg.color = new Color(0, 0, 0, 0.8f * (1f - easeT));
+            tmp.color = new Color(1, 1, 1, 1f - easeT);
+            float scale = Mathf.Lerp(1.0f, 1.05f, easeT); // 微かに広がりながら消える
+            textRect.localScale = new Vector3(scale, scale, 1f);
+            yield return null;
+        }
+
+        Destroy(bandObj);
+    }
+
     IEnumerator ShowLoveStory(ParentData father, ParentData mother, int fIdx, int mIdx)
     {
         string story = Localization.GetLoveStory(father.name, mother.name);
@@ -3692,130 +3525,16 @@ public class BirthSystem : MonoBehaviour
         yield return new WaitForSeconds(0.6f);
     }
 
-    IEnumerator ShowLunaFailure()
-    {
-        // 親パネルを非表示
-        if (parentPanel != null) parentPanel.SetActive(false);
-        if (statusTextBackground != null) statusTextBackground.SetActive(false);
-        childStatusText.text = "";
-
-        // タイトルイントロと同じスライドイン演出
-        Canvas canvas = FindObjectOfType<Canvas>();
-
-        // 暗転パネル
-        var panel = new GameObject("LunaFailPanel");
-        panel.transform.SetParent(canvas.transform, false);
-        var panelRect = panel.AddComponent<RectTransform>();
-        panelRect.anchorMin = Vector2.zero;
-        panelRect.anchorMax = Vector2.one;
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
-        var panelImage = panel.AddComponent<Image>();
-        panelImage.color = new Color(0f, 0f, 0f, 0f);
-        panelImage.raycastTarget = true;
-
-        // フェードイン
-        float fadeInDuration = 0.5f;
-        float elapsed = 0f;
-        while (elapsed < fadeInDuration)
-        {
-            elapsed += Time.deltaTime;
-            panelImage.color = new Color(0f, 0f, 0f, Mathf.Lerp(0f, 0.9f, elapsed / fadeInDuration));
-            yield return null;
-        }
-        panelImage.color = new Color(0f, 0f, 0f, 0.9f);
-
-        // スライドインパラメータ（タイトルと同じ）
-        float slideDuration = 1.5f;
-        float lineInterval = 2.0f;
-        float startOffsetX = -800f;
-        float verticalStart = 200f;
-        float lineSpacing = 200f;
-
-        string[] sadLines = new string[]
-        {
-            Localization.Get("birth_luna_line1"),
-            Localization.Get("birth_luna_line2"),
-            Localization.Get("birth_luna_line3"),
-            Localization.Get("birth_luna_line4"),
-        };
-
-        for (int i = 0; i < sadLines.Length; i++)
-        {
-            var textObj = new GameObject("LunaLine_" + i);
-            textObj.transform.SetParent(panel.transform, false);
-            var textRect = textObj.AddComponent<RectTransform>();
-            var tmp = textObj.AddComponent<TextMeshProUGUI>();
-            FontHelper.Apply(tmp);
-
-            tmp.text = sadLines[i];
-            tmp.fontSize = i == 0 ? 72 : 60;
-            tmp.color = i == 0 ? Color.white : new Color(0.8f, 0.8f, 1f);
-            tmp.alignment = TextAlignmentOptions.Center;
-            tmp.enableWordWrapping = true;
-            tmp.raycastTarget = false;
-
-            float yPos = verticalStart - (i * lineSpacing);
-            textRect.sizeDelta = new Vector2(900f, 180f);
-            textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
-
-            // スライドインアニメーション
-            float slideElapsed = 0f;
-            Vector2 startPos = new Vector2(startOffsetX, yPos);
-            Vector2 endPos = new Vector2(0f, yPos);
-
-            while (slideElapsed < slideDuration)
-            {
-                slideElapsed += Time.deltaTime;
-                float t = Mathf.SmoothStep(0f, 1f, slideElapsed / slideDuration);
-                textRect.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
-                yield return null;
-            }
-            textRect.anchoredPosition = endPos;
-
-            if (i < sadLines.Length - 1)
-            {
-                yield return new WaitForSeconds(lineInterval);
-            }
-        }
-
-        yield return new WaitForSeconds(4.0f);
-
-        // フェードアウト
-        CanvasGroup canvasGroup = panel.AddComponent<CanvasGroup>();
-        canvasGroup.alpha = 1f;
-        elapsed = 0f;
-        float fadeOutDuration = 1.0f;
-        while (elapsed < fadeOutDuration)
-        {
-            elapsed += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeOutDuration);
-            yield return null;
-        }
-
-        Destroy(panel);
-
-        // 背景をbirth-backgroundに戻す
-        ResetBackgroundToBirth();
-
-        // やり直しボタンのみ表示
-        childStatusText.text = "";
-        if (generateLifeButton != null) generateLifeButton.SetActive(true);
-
-        if (anotherGalButton != null) anotherGalButton.SetActive(false);
-        if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
-    }
-
-    IEnumerator ShowSakuraFailure()
+    IEnumerator ShowFailureSequence(string locPrefix, Color lineColor)
     {
         if (parentPanel != null) parentPanel.SetActive(false);
         if (statusTextBackground != null) statusTextBackground.SetActive(false);
         childStatusText.text = "";
 
-        Canvas canvas = FindObjectOfType<Canvas>();
+        Canvas cv = FindObjectOfType<Canvas>();
 
-        var panel = new GameObject("SakuraFailPanel");
-        panel.transform.SetParent(canvas.transform, false);
+        var panel = new GameObject("FailPanel");
+        panel.transform.SetParent(cv.transform, false);
         var panelRect = panel.AddComponent<RectTransform>();
         panelRect.anchorMin = Vector2.zero;
         panelRect.anchorMax = Vector2.one;
@@ -3838,20 +3557,20 @@ public class BirthSystem : MonoBehaviour
         float slideDuration = 1.5f;
         float lineInterval = 2.0f;
         float startOffsetX = -800f;
-        float verticalStart = 200f;
-        float lineSpacing = 200f;
+        float verticalStart = 350f;
+        float lineSpacing = 250f;
 
         string[] sadLines = new string[]
         {
-            Localization.Get("birth_sakura_line1"),
-            Localization.Get("birth_sakura_line2"),
-            Localization.Get("birth_sakura_line3"),
-            Localization.Get("birth_sakura_line4"),
+            Localization.Get(locPrefix + "_line1"),
+            Localization.Get(locPrefix + "_line2"),
+            Localization.Get(locPrefix + "_line3"),
+            Localization.Get(locPrefix + "_line4"),
         };
 
         for (int i = 0; i < sadLines.Length; i++)
         {
-            var textObj = new GameObject("SakuraLine_" + i);
+            var textObj = new GameObject("FailLine_" + i);
             textObj.transform.SetParent(panel.transform, false);
             var textRect = textObj.AddComponent<RectTransform>();
             var tmp = textObj.AddComponent<TextMeshProUGUI>();
@@ -3859,13 +3578,13 @@ public class BirthSystem : MonoBehaviour
 
             tmp.text = sadLines[i];
             tmp.fontSize = i == 0 ? 72 : 60;
-            tmp.color = i == 0 ? Color.white : new Color(1f, 0.8f, 0.85f);
+            tmp.color = i == 0 ? Color.white : lineColor;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.enableWordWrapping = true;
             tmp.raycastTarget = false;
 
             float yPos = verticalStart - (i * lineSpacing);
-            textRect.sizeDelta = new Vector2(900f, 180f);
+            textRect.sizeDelta = new Vector2(900f, 220f);
             textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
 
             float slideElapsed = 0f;
@@ -3905,319 +3624,6 @@ public class BirthSystem : MonoBehaviour
         ResetBackgroundToBirth();
         childStatusText.text = "";
         if (generateLifeButton != null) generateLifeButton.SetActive(true);
-
-        if (anotherGalButton != null) anotherGalButton.SetActive(false);
-        if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
-    }
-
-    IEnumerator ShowMisatoFailure()
-    {
-        if (parentPanel != null) parentPanel.SetActive(false);
-        if (statusTextBackground != null) statusTextBackground.SetActive(false);
-        childStatusText.text = "";
-
-        Canvas canvas = FindObjectOfType<Canvas>();
-
-        var panel = new GameObject("MisatoFailPanel");
-        panel.transform.SetParent(canvas.transform, false);
-        var panelRect = panel.AddComponent<RectTransform>();
-        panelRect.anchorMin = Vector2.zero;
-        panelRect.anchorMax = Vector2.one;
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
-        var panelImage = panel.AddComponent<Image>();
-        panelImage.color = new Color(0f, 0f, 0f, 0f);
-        panelImage.raycastTarget = true;
-
-        float fadeInDuration = 0.5f;
-        float elapsed = 0f;
-        while (elapsed < fadeInDuration)
-        {
-            elapsed += Time.deltaTime;
-            panelImage.color = new Color(0f, 0f, 0f, Mathf.Lerp(0f, 0.9f, elapsed / fadeInDuration));
-            yield return null;
-        }
-        panelImage.color = new Color(0f, 0f, 0f, 0.9f);
-
-        float slideDuration = 1.5f;
-        float lineInterval = 2.0f;
-        float startOffsetX = -800f;
-        float verticalStart = 200f;
-        float lineSpacing = 200f;
-
-        string[] sadLines = new string[]
-        {
-            Localization.Get("birth_misato_line1"),
-            Localization.Get("birth_misato_line2"),
-            Localization.Get("birth_misato_line3"),
-            Localization.Get("birth_misato_line4"),
-        };
-
-        for (int i = 0; i < sadLines.Length; i++)
-        {
-            var textObj = new GameObject("MisatoLine_" + i);
-            textObj.transform.SetParent(panel.transform, false);
-            var textRect = textObj.AddComponent<RectTransform>();
-            var tmp = textObj.AddComponent<TextMeshProUGUI>();
-            FontHelper.Apply(tmp);
-
-            tmp.text = sadLines[i];
-            tmp.fontSize = i == 0 ? 72 : 60;
-            tmp.color = i == 0 ? Color.white : new Color(0.7f, 0.9f, 1f);
-            tmp.alignment = TextAlignmentOptions.Center;
-            tmp.enableWordWrapping = true;
-            tmp.raycastTarget = false;
-
-            float yPos = verticalStart - (i * lineSpacing);
-            textRect.sizeDelta = new Vector2(900f, 180f);
-            textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
-
-            float slideElapsed = 0f;
-            Vector2 startPos = new Vector2(startOffsetX, yPos);
-            Vector2 endPos = new Vector2(0f, yPos);
-
-            while (slideElapsed < slideDuration)
-            {
-                slideElapsed += Time.deltaTime;
-                float t = Mathf.SmoothStep(0f, 1f, slideElapsed / slideDuration);
-                textRect.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
-                yield return null;
-            }
-            textRect.anchoredPosition = endPos;
-
-            if (i < sadLines.Length - 1)
-            {
-                yield return new WaitForSeconds(lineInterval);
-            }
-        }
-
-        yield return new WaitForSeconds(4.0f);
-
-        CanvasGroup canvasGroup = panel.AddComponent<CanvasGroup>();
-        canvasGroup.alpha = 1f;
-        elapsed = 0f;
-        float fadeOutDuration = 1.0f;
-        while (elapsed < fadeOutDuration)
-        {
-            elapsed += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeOutDuration);
-            yield return null;
-        }
-
-        Destroy(panel);
-
-        ResetBackgroundToBirth();
-        childStatusText.text = "";
-        if (generateLifeButton != null) generateLifeButton.SetActive(true);
-
-        if (anotherGalButton != null) anotherGalButton.SetActive(false);
-        if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
-    }
-
-    IEnumerator ShowHinataFailure()
-    {
-        if (parentPanel != null) parentPanel.SetActive(false);
-        if (statusTextBackground != null) statusTextBackground.SetActive(false);
-        childStatusText.text = "";
-
-        Canvas canvas = FindObjectOfType<Canvas>();
-
-        var panel = new GameObject("HinataFailPanel");
-        panel.transform.SetParent(canvas.transform, false);
-        var panelRect = panel.AddComponent<RectTransform>();
-        panelRect.anchorMin = Vector2.zero;
-        panelRect.anchorMax = Vector2.one;
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
-        var panelImage = panel.AddComponent<Image>();
-        panelImage.color = new Color(0f, 0f, 0f, 0f);
-        panelImage.raycastTarget = true;
-
-        float fadeInDuration = 0.5f;
-        float elapsed = 0f;
-        while (elapsed < fadeInDuration)
-        {
-            elapsed += Time.deltaTime;
-            panelImage.color = new Color(0f, 0f, 0f, Mathf.Lerp(0f, 0.9f, elapsed / fadeInDuration));
-            yield return null;
-        }
-        panelImage.color = new Color(0f, 0f, 0f, 0.9f);
-
-        float slideDuration = 1.5f;
-        float lineInterval = 2.0f;
-        float startOffsetX = -800f;
-        float verticalStart = 200f;
-        float lineSpacing = 200f;
-
-        string[] sadLines = new string[]
-        {
-            Localization.Get("birth_hinata_line1"),
-            Localization.Get("birth_hinata_line2"),
-            Localization.Get("birth_hinata_line3"),
-            Localization.Get("birth_hinata_line4"),
-        };
-
-        for (int i = 0; i < sadLines.Length; i++)
-        {
-            var textObj = new GameObject("HinataLine_" + i);
-            textObj.transform.SetParent(panel.transform, false);
-            var textRect = textObj.AddComponent<RectTransform>();
-            var tmp = textObj.AddComponent<TextMeshProUGUI>();
-            FontHelper.Apply(tmp);
-
-            tmp.text = sadLines[i];
-            tmp.fontSize = i == 0 ? 72 : 60;
-            tmp.color = i == 0 ? Color.white : new Color(0.8f, 0.7f, 1f);
-            tmp.alignment = TextAlignmentOptions.Center;
-            tmp.enableWordWrapping = true;
-            tmp.raycastTarget = false;
-
-            float yPos = verticalStart - (i * lineSpacing);
-            textRect.sizeDelta = new Vector2(900f, 180f);
-            textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
-
-            float slideElapsed = 0f;
-            Vector2 startPos = new Vector2(startOffsetX, yPos);
-            Vector2 endPos = new Vector2(0f, yPos);
-
-            while (slideElapsed < slideDuration)
-            {
-                slideElapsed += Time.deltaTime;
-                float t = Mathf.SmoothStep(0f, 1f, slideElapsed / slideDuration);
-                textRect.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
-                yield return null;
-            }
-            textRect.anchoredPosition = endPos;
-
-            if (i < sadLines.Length - 1)
-            {
-                yield return new WaitForSeconds(lineInterval);
-            }
-        }
-
-        yield return new WaitForSeconds(4.0f);
-
-        CanvasGroup canvasGroup = panel.AddComponent<CanvasGroup>();
-        canvasGroup.alpha = 1f;
-        elapsed = 0f;
-        float fadeOutDuration = 1.0f;
-        while (elapsed < fadeOutDuration)
-        {
-            elapsed += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeOutDuration);
-            yield return null;
-        }
-
-        Destroy(panel);
-
-        ResetBackgroundToBirth();
-        childStatusText.text = "";
-        if (generateLifeButton != null) generateLifeButton.SetActive(true);
-
-        if (anotherGalButton != null) anotherGalButton.SetActive(false);
-        if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
-    }
-
-    IEnumerator ShowKaedeFailure()
-    {
-        if (parentPanel != null) parentPanel.SetActive(false);
-        if (statusTextBackground != null) statusTextBackground.SetActive(false);
-        childStatusText.text = "";
-
-        Canvas canvas = FindObjectOfType<Canvas>();
-
-        var panel = new GameObject("KaedeFailPanel");
-        panel.transform.SetParent(canvas.transform, false);
-        var panelRect = panel.AddComponent<RectTransform>();
-        panelRect.anchorMin = Vector2.zero;
-        panelRect.anchorMax = Vector2.one;
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
-        var panelImage = panel.AddComponent<Image>();
-        panelImage.color = new Color(0f, 0f, 0f, 0f);
-        panelImage.raycastTarget = true;
-
-        float fadeInDuration = 0.5f;
-        float elapsed = 0f;
-        while (elapsed < fadeInDuration)
-        {
-            elapsed += Time.deltaTime;
-            panelImage.color = new Color(0f, 0f, 0f, Mathf.Lerp(0f, 0.9f, elapsed / fadeInDuration));
-            yield return null;
-        }
-        panelImage.color = new Color(0f, 0f, 0f, 0.9f);
-
-        float slideDuration = 1.5f;
-        float lineInterval = 2.0f;
-        float startOffsetX = -800f;
-        float verticalStart = 200f;
-        float lineSpacing = 200f;
-
-        string[] sadLines = new string[]
-        {
-            Localization.Get("birth_kaede_line1"),
-            Localization.Get("birth_kaede_line2"),
-            Localization.Get("birth_kaede_line3"),
-            Localization.Get("birth_kaede_line4"),
-        };
-
-        for (int i = 0; i < sadLines.Length; i++)
-        {
-            var textObj = new GameObject("KaedeLine_" + i);
-            textObj.transform.SetParent(panel.transform, false);
-            var textRect = textObj.AddComponent<RectTransform>();
-            var tmp = textObj.AddComponent<TextMeshProUGUI>();
-            FontHelper.Apply(tmp);
-
-            tmp.text = sadLines[i];
-            tmp.fontSize = i == 0 ? 72 : 60;
-            tmp.color = i == 0 ? Color.white : new Color(0.6f, 1f, 0.8f);
-            tmp.alignment = TextAlignmentOptions.Center;
-            tmp.enableWordWrapping = true;
-            tmp.raycastTarget = false;
-
-            float yPos = verticalStart - (i * lineSpacing);
-            textRect.sizeDelta = new Vector2(900f, 180f);
-            textRect.anchoredPosition = new Vector2(startOffsetX, yPos);
-
-            float slideElapsed = 0f;
-            Vector2 startPos = new Vector2(startOffsetX, yPos);
-            Vector2 endPos = new Vector2(0f, yPos);
-
-            while (slideElapsed < slideDuration)
-            {
-                slideElapsed += Time.deltaTime;
-                float t = Mathf.SmoothStep(0f, 1f, slideElapsed / slideDuration);
-                textRect.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
-                yield return null;
-            }
-            textRect.anchoredPosition = endPos;
-
-            if (i < sadLines.Length - 1)
-            {
-                yield return new WaitForSeconds(lineInterval);
-            }
-        }
-
-        yield return new WaitForSeconds(4.0f);
-
-        CanvasGroup canvasGroup = panel.AddComponent<CanvasGroup>();
-        canvasGroup.alpha = 1f;
-        elapsed = 0f;
-        float fadeOutDuration = 1.0f;
-        while (elapsed < fadeOutDuration)
-        {
-            elapsed += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeOutDuration);
-            yield return null;
-        }
-
-        Destroy(panel);
-
-        ResetBackgroundToBirth();
-        childStatusText.text = "";
-        if (generateLifeButton != null) generateLifeButton.SetActive(true);
-
         if (anotherGalButton != null) anotherGalButton.SetActive(false);
         if (gotoBattleButton != null) gotoBattleButton.SetActive(false);
     }
@@ -4226,184 +3632,96 @@ public class BirthSystem : MonoBehaviour
 
     void CreateMenuBar()
     {
-        if (canvas == null) return;
+        var (safeTop, _, _, _) = UIHelper.GetSafeMargins();
 
-        var (safeLeft, safeRight, safeTop, safeBottom) = SafeAreaHelper.GetSafeAreaInsets(canvas);
-
-        int btnSize = 80;
-        int circleRadius = btnSize / 2;
-        int blur = 16;
-
-        var btnObj = new GameObject("MenuButton");
-        btnObj.transform.SetParent(canvas.transform, false);
-
-        var btnRect = btnObj.AddComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(1, 1);
-        btnRect.anchorMax = new Vector2(1, 1);
-        btnRect.pivot = new Vector2(1, 1);
-        btnRect.anchoredPosition = new Vector2(-24 - safeRight, -24 - safeTop);
-        btnRect.sizeDelta = new Vector2(btnSize, btnSize);
-
-        var btnBg = btnObj.AddComponent<Image>();
-        btnBg.sprite = GetCircleSprite(circleRadius);
-        btnBg.type = Image.Type.Sliced;
-        btnBg.color = Color.white;
-
-        // Box shadow（子要素、中央透明）
-        var shadowObj = new GameObject("Shadow");
-        shadowObj.transform.SetParent(btnObj.transform, false);
-        shadowObj.transform.SetAsFirstSibling();
-        var shadowRect = shadowObj.AddComponent<RectTransform>();
-        shadowRect.anchorMin = Vector2.zero;
-        shadowRect.anchorMax = Vector2.one;
-        shadowRect.offsetMin = new Vector2(-blur, -blur - 3);
-        shadowRect.offsetMax = new Vector2(blur, blur - 3);
-        var shadowImg = shadowObj.AddComponent<Image>();
-        shadowImg.sprite = GetCircleShadowSprite(circleRadius, blur);
-        shadowImg.type = Image.Type.Sliced;
-        shadowImg.color = new Color(0f, 0f, 0f, 0.18f);
-        shadowImg.raycastTarget = false;
-
-        // ハンバーガーアイコン（3本線）
-        float lineWidth = 30f;
-        float lineHeight = 3.5f;
-        float gap = 8f;
-        Color lineColor = new Color(0.45f, 0.45f, 0.5f);
-
-        for (int i = -1; i <= 1; i++)
+        // Menu button (top-right)
+        var menuBtn = new UIE.Button();
+        menuBtn.AddToClassList("birth-menu-btn");
+        menuBtn.style.top = 24 + safeTop;
+        for (int i = 0; i < 3; i++)
         {
-            var lineObj = new GameObject($"Line{i + 2}");
-            lineObj.transform.SetParent(btnObj.transform, false);
-            var lineRect = lineObj.AddComponent<RectTransform>();
-            lineRect.anchorMin = new Vector2(0.5f, 0.5f);
-            lineRect.anchorMax = new Vector2(0.5f, 0.5f);
-            lineRect.anchoredPosition = new Vector2(0, -i * gap);
-            lineRect.sizeDelta = new Vector2(lineWidth, lineHeight);
-            var lineImg = lineObj.AddComponent<Image>();
-            lineImg.color = lineColor;
-            lineImg.raycastTarget = false;
+            var line = new UIE.VisualElement();
+            line.AddToClassList("birth-menu-line");
+            menuBtn.Add(line);
         }
+        menuBtn.clicked += ToggleMenuPanel;
+        overlayRoot.Add(menuBtn);
 
-        var btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnBg;
-        btn.onClick.AddListener(ToggleMenuPanel);
-        btn.navigation = new Navigation { mode = Navigation.Mode.None };
-        var colors = btn.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = Color.white;
-        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f);
-        colors.selectedColor = Color.white;
-        colors.fadeDuration = 0.08f;
-        btn.colors = colors;
+        // Menu dropdown
+        menuOverlayEl = new UIE.VisualElement();
+        menuOverlayEl.AddToClassList("birth-menu-card");
+        menuOverlayEl.style.top = 114 + safeTop;
 
-        // 押下スケールアニメーション
-        var trigger = btnObj.AddComponent<EventTrigger>();
-        var pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-        pointerDown.callback.AddListener((data) => { btnObj.transform.localScale = new Vector3(0.9f, 0.9f, 1f); });
-        trigger.triggers.Add(pointerDown);
-        var pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-        pointerUp.callback.AddListener((data) => { btnObj.transform.localScale = Vector3.one; });
-        trigger.triggers.Add(pointerUp);
-        var pointerExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-        pointerExit.callback.AddListener((data) => { btnObj.transform.localScale = Vector3.one; });
-        trigger.triggers.Add(pointerExit);
+        // User icon + name
+        var userRow = new UIE.VisualElement();
+        userRow.style.flexDirection = UIE.FlexDirection.Row;
+        userRow.style.alignItems = UIE.Align.Center;
+        userRow.style.alignSelf = UIE.Align.Center;
+        userRow.style.marginTop = 8;
+        userRow.style.marginBottom = 8;
 
-        // ── メニューパネル（ドロップダウン） ──
-        CreateMenuPanel(btnObj.GetComponent<RectTransform>(), safeRight, safeTop);
-    }
+        var iconMask = new UIE.VisualElement();
+        iconMask.style.width = 48;
+        iconMask.style.height = 48;
+        iconMask.style.borderTopLeftRadius = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+        iconMask.style.borderTopRightRadius = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+        iconMask.style.borderBottomLeftRadius = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+        iconMask.style.borderBottomRightRadius = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+        iconMask.style.overflow = UIE.Overflow.Hidden;
+        iconMask.style.backgroundColor = new Color(0.85f, 0.85f, 0.85f);
 
-    void CreateMenuPanel(RectTransform menuBtnRect, float safeRight, float safeTop)
-    {
-        menuPanel = new GameObject("MenuPanel");
-        menuPanel.transform.SetParent(canvas.transform, false);
+        string[] iconNames = { "kayo", "ikemen", "inteli", "matcho", "old-women", "sexy-lady" };
+        int iconIdx = DataCarrier.Instance != null ? DataCarrier.Instance.playerIcon : DataCarrier.GetProfileIcon();
+        string icoName = (iconIdx >= 0 && iconIdx < iconNames.Length) ? iconNames[iconIdx] : iconNames[0];
+        Sprite icoSpr = Resources.Load<Sprite>($"Icons/{icoName}");
+        if (icoSpr != null)
+        {
+            iconMask.style.backgroundImage = new UIE.StyleBackground(icoSpr);
+        }
+        userRow.Add(iconMask);
 
-        var panelRect = menuPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(1, 1);
-        panelRect.anchorMax = new Vector2(1, 1);
-        panelRect.pivot = new Vector2(1, 1);
-        panelRect.anchoredPosition = new Vector2(-24 - safeRight, -114 - safeTop);
-        panelRect.sizeDelta = new Vector2(280, 140);
+        string pName = DataCarrier.Instance != null ? DataCarrier.Instance.playerName : DataCarrier.GetProfileName();
+        var nameLabel = UIHelper.CreateLabel(string.IsNullOrEmpty(pName) ? "???" : pName);
+        nameLabel.style.fontSize = 24;
+        nameLabel.style.color = new Color(0.2f, 0.2f, 0.25f);
+        nameLabel.style.marginLeft = 12;
+        userRow.Add(nameLabel);
 
-        var panelBg = menuPanel.AddComponent<Image>();
-        panelBg.sprite = GetRoundedRectSprite(24);
-        panelBg.type = Image.Type.Sliced;
-        panelBg.color = Color.white;
-        panelBg.raycastTarget = true;
+        menuOverlayEl.Add(userRow);
 
-        // Shadow for panel
-        int panelBlur = 20;
-        var panelShadow = new GameObject("Shadow");
-        panelShadow.transform.SetParent(menuPanel.transform, false);
-        panelShadow.transform.SetAsFirstSibling();
-        var pShadowRect = panelShadow.AddComponent<RectTransform>();
-        pShadowRect.anchorMin = Vector2.zero;
-        pShadowRect.anchorMax = Vector2.one;
-        pShadowRect.offsetMin = new Vector2(-panelBlur, -panelBlur - 3);
-        pShadowRect.offsetMax = new Vector2(panelBlur, panelBlur - 3);
-        var pShadowImg = panelShadow.AddComponent<Image>();
-        pShadowImg.sprite = GetShadowSprite(60, panelBlur);
-        pShadowImg.type = Image.Type.Sliced;
-        pShadowImg.color = new Color(0f, 0f, 0f, 0.15f);
-        pShadowImg.raycastTarget = false;
+        // Separator
+        var sep = new UIE.VisualElement();
+        sep.style.width = 240;
+        sep.style.height = 1;
+        sep.style.backgroundColor = new Color(0.82f, 0.82f, 0.85f);
+        sep.style.alignSelf = UIE.Align.Center;
+        sep.style.marginBottom = 4;
+        menuOverlayEl.Add(sep);
 
-        // 「ホーム」ボタン
-        CreateMenuPanelItem(menuPanel.transform, "GoHome", Localization.Get("map_menu_home"),
-            new Vector2(0, 0.5f), new Vector2(1, 1), () => SceneManager.LoadScene("HomeScene"));
+        var homeBtn = new UIE.Button();
+        homeBtn.AddToClassList("birth-menu-item-btn");
+        UIHelper.ApplyFont(homeBtn);
+        homeBtn.text = Localization.Get("map_menu_home");
+        homeBtn.clicked += () => SceneManager.LoadScene("HomeScene");
+        menuOverlayEl.Add(homeBtn);
 
-        // 「トップへ戻る」ボタン
-        CreateMenuPanelItem(menuPanel.transform, "BackToTitle", Localization.Get("ui_back_to_title"),
-            Vector2.zero, new Vector2(1, 0.5f), () => SceneManager.LoadScene("TitleScene"));
+        var titleBtn = new UIE.Button();
+        titleBtn.AddToClassList("birth-menu-item-btn");
+        UIHelper.ApplyFont(titleBtn);
+        titleBtn.text = Localization.Get("ui_back_to_title");
+        titleBtn.clicked += () => SceneManager.LoadScene("TitleScene");
+        menuOverlayEl.Add(titleBtn);
 
-        menuPanel.SetActive(false);
-    }
-
-    void CreateMenuPanelItem(Transform parent, string name, string label, Vector2 anchorMin, Vector2 anchorMax, UnityEngine.Events.UnityAction action)
-    {
-        var itemObj = new GameObject(name);
-        itemObj.transform.SetParent(parent, false);
-        var itemRect = itemObj.AddComponent<RectTransform>();
-        itemRect.anchorMin = anchorMin;
-        itemRect.anchorMax = anchorMax;
-        itemRect.offsetMin = Vector2.zero;
-        itemRect.offsetMax = Vector2.zero;
-
-        var itemImg = itemObj.AddComponent<Image>();
-        itemImg.sprite = GetRoundedRectSprite(24);
-        itemImg.type = Image.Type.Sliced;
-        itemImg.color = new Color(1, 1, 1, 0);
-
-        var itemBtn = itemObj.AddComponent<Button>();
-        itemBtn.targetGraphic = itemImg;
-        itemBtn.onClick.AddListener(action);
-        itemBtn.navigation = new Navigation { mode = Navigation.Mode.None };
-        var itemColors = itemBtn.colors;
-        itemColors.normalColor = new Color(1, 1, 1, 0);
-        itemColors.highlightedColor = new Color(0.95f, 0.95f, 0.97f, 1f);
-        itemColors.pressedColor = new Color(0.9f, 0.9f, 0.93f, 1f);
-        itemColors.selectedColor = new Color(1, 1, 1, 0);
-        itemColors.fadeDuration = 0.08f;
-        itemBtn.colors = itemColors;
-
-        var itemTextObj = new GameObject("Text");
-        itemTextObj.transform.SetParent(itemObj.transform, false);
-        var itemTextRect = itemTextObj.AddComponent<RectTransform>();
-        itemTextRect.anchorMin = Vector2.zero;
-        itemTextRect.anchorMax = Vector2.one;
-        itemTextRect.offsetMin = Vector2.zero;
-        itemTextRect.offsetMax = Vector2.zero;
-        var itemText = itemTextObj.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(itemText);
-        itemText.text = label;
-        itemText.fontSize = 30;
-        itemText.alignment = TextAlignmentOptions.Center;
-        itemText.color = new Color(0.1f, 0.1f, 0.13f);
-        itemText.raycastTarget = false;
+        // Hidden initially
     }
 
     void ToggleMenuPanel()
     {
-        if (menuPanel == null) return;
-        menuPanel.SetActive(!menuPanel.activeSelf);
+        if (menuOverlayEl == null) return;
+        if (menuOverlayEl.parent != null)
+            menuOverlayEl.RemoveFromHierarchy();
+        else
+            overlayRoot.Add(menuOverlayEl);
     }
 
     static Sprite _circleSprite;
@@ -4426,31 +3744,6 @@ public class BirthSystem : MonoBehaviour
         _circleSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
             new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
         return _circleSprite;
-    }
-
-    static Sprite _circleShadowSprite;
-    static Sprite GetCircleShadowSprite(int radius, int blur)
-    {
-        if (_circleShadowSprite != null) return _circleShadowSprite;
-        int size = (radius + blur) * 2 + 2;
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        float center = (size - 1) / 2f;
-        for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float dist = Mathf.Sqrt((x - center) * (x - center) + (y - center) * (y - center)) - radius;
-                float alpha;
-                if (dist <= 0f) alpha = 0f;
-                else if (dist >= blur) alpha = 0f;
-                else { float t = dist / blur; alpha = (1f - t) * (1f - t); }
-                tex.SetPixel(x, y, new Color(1, 1, 1, alpha));
-            }
-        tex.Apply();
-        int borderVal = radius + blur;
-        var border = new Vector4(borderVal, borderVal, borderVal, borderVal);
-        _circleShadowSprite = Sprite.Create(tex, new Rect(0, 0, size, size),
-            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
-        return _circleShadowSprite;
     }
 
     // ===== 角丸スプライト生成 =====
