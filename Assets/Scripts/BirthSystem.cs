@@ -110,6 +110,28 @@ public class BirthSystem : MonoBehaviour
         new ParentData("ルナ",     "luna",    55, 40, 135, 50, 70, 75, 70, new Color(1.0f, 1.0f, 0.6f), "世界的スーパーモデル / 身長: 180cm"),
     };
 
+    // 新父親6パターン
+    static readonly ParentData[] NewFathers = new[]
+    {
+        new ParentData("ゼニガタ", "zenigata", 30, 90, 140, 99, 85, 99, 40, new Color(1.0f, 0.85f, 0.3f), "石油王 / 口癖は『金で買えないものはない』。ゆりかごはプラチナ製。"),
+        new ParentData("ツクモ",   "tsukumo",  20, 35, 110,  5, 99, 60, 45, new Color(0.6f, 0.4f, 1.0f), "自称・予言者 / IQ300。常に宇宙と交信しており、育児中も上の空。"),
+        new ParentData("サトシ",   "satoshi",  55, 50, 150, 50, 55, 45, 55, new Color(0.7f, 0.8f, 0.7f), "中堅企業の係長 / 趣味は洗車。突出した能力はないが、安定した愛を注ぐ。"),
+        new ParentData("イワオ",   "iwao",     95, 85, 200, 20, 15, 10, 80, new Color(0.8f, 0.6f, 0.4f), "元・土木作業員 / 素手で巨大な岩を砕くが、極度の貧乏でプロテインが買えない。"),
+        new ParentData("マサシ",   "masashi",  45, 25, 130, 99, 30,  5, 75, new Color(1.0f, 0.4f, 0.4f), "プロギャンブラー / 通帳記入が趣味(残高は常に0)。おくるみは新聞紙。"),
+        new ParentData("ネオ",     "neo",      15, 10,  90, 10, 70,  2, 20, new Color(0.5f, 0.5f, 0.6f), "永遠のニート / 30年間一度も実家から出たことがない。初期資産はほぼゼロ。"),
+    };
+
+    // 新母親6パターン
+    static readonly ParentData[] NewMothers = new[]
+    {
+        new ParentData("イザナミ", "izanami",  85, 80, 180, 90, 95, 99, 70, new Color(0.9f, 0.3f, 0.5f), "伝説の女帝 / その一言で国家予算が動く。最高級の教育を約束する。"),
+        new ParentData("アンジェラ", "angela",  35, 40, 130, 75, 40, 25, 65, new Color(1.0f, 0.6f, 0.8f), "自称・モデル / フォロワー数は多いが、内情は火の車。見栄えだけは良い。"),
+        new ParentData("カヨコ",   "mitsuko",  40, 65, 160, 65, 55, 50, 60, new Color(1.0f, 0.85f, 0.7f), "商店街の看板娘 / 資産はないが、街の人からお裾分け（アイテム）をもらえる。"),
+        new ParentData("ラッキー", "lucky",    20, 20, 120,150, 25, 65, 45, new Color(1.0f, 1.0f, 0.4f), "宝くじ1等当選者 / 才能は皆無だが、強運だけで修羅場を潜り抜けてきた。"),
+        new ParentData("ヨネ",     "yone",     20, 15, 110, 45, 60, 10, 50, new Color(0.7f, 0.65f, 0.6f), "内職の鬼 / ティッシュ配りの速さは音速。赤ちゃんのスタイは自作。"),
+        new ParentData("ドクコ",   "dokuko",   80, 70, 170, 15, 75,  5, 90, new Color(0.4f, 0.2f, 0.5f), "闇金の取り立て屋 / 赤ちゃんの最初の言葉を『トイチ』に教育しようとしている。"),
+    };
+
     // 特徴リスト
     static readonly string[] Traits =
     {
