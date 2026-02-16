@@ -877,14 +877,14 @@ public class BattleManager : MonoBehaviour
     {
         ClearFaceParts(parent);
 
-        int atk = 50, academic = 60, athletic = 60;
+        int atk = 50, intelligence = 60, athletic = 60;
         string gender = "男の子";
         bool godBaby = false;
 
         if (DataCarrier.Instance != null)
         {
             atk = DataCarrier.Instance.babyAtk;
-            academic = DataCarrier.Instance.babyAcademic;
+            intelligence = DataCarrier.Instance.babyIntelligence;
             athletic = DataCarrier.Instance.babyAthletic;
             gender = DataCarrier.Instance.babyGender;
             godBaby = DataCarrier.Instance.isGodBaby;
@@ -897,7 +897,7 @@ public class BattleManager : MonoBehaviour
         Color skinShadow = new Color(skin.r * 0.85f, skin.g * 0.82f, skin.b * 0.8f);
 
         Color[] hairTones = { new Color(0.08f, 0.06f, 0.05f), new Color(0.2f, 0.12f, 0.08f), new Color(0.35f, 0.22f, 0.12f), new Color(0.55f, 0.38f, 0.2f) };
-        Color hair = hairTones[Mathf.Clamp(academic / 25, 0, 3)];
+        Color hair = hairTones[Mathf.Clamp(intelligence / 25, 0, 3)];
         Color hairShadow = new Color(hair.r * 0.6f, hair.g * 0.6f, hair.b * 0.6f);
 
         if (godBaby)
@@ -2132,9 +2132,9 @@ public class BattleManager : MonoBehaviour
         if (DataCarrier.Instance == null) yield break;
 
         int baseExp = (enemyMaxHp + enemyAtk * 3 + enemyDef * 2) / 4 + battleTurnCount * 3;
-        int academic = DataCarrier.Instance.babyAcademic;
-        float academicBonus = 1.0f + academic * 0.005f;
-        int expGained = Mathf.RoundToInt(baseExp * academicBonus);
+        int intelligence = DataCarrier.Instance.babyIntelligence;
+        float intelligenceBonus = 1.0f + intelligence * 0.005f;
+        int expGained = Mathf.RoundToInt(baseExp * intelligenceBonus);
         DataCarrier.Instance.babyExp += expGained;
         DataCarrier.Instance.defeatedEnemies++;
 
@@ -2150,7 +2150,7 @@ public class BattleManager : MonoBehaviour
             int oldAtk = DataCarrier.Instance.babyAtk;
             int oldDef = DataCarrier.Instance.babyDef;
             int oldHp = DataCarrier.Instance.babyHp;
-            int oldAcademic = DataCarrier.Instance.babyAcademic;
+            int oldIntelligence = DataCarrier.Instance.babyIntelligence;
             int oldAthletic = DataCarrier.Instance.babyAthletic;
 
             DataCarrier.Instance.babyExp -= needed;
@@ -2161,9 +2161,9 @@ public class BattleManager : MonoBehaviour
             yield return new WaitForSeconds(1.5f);
 
             yield return StartCoroutine(ShowStatGrowth(
-                oldAtk, oldDef, oldHp, oldAcademic, oldAthletic,
+                oldAtk, oldDef, oldHp, oldIntelligence, oldAthletic,
                 DataCarrier.Instance.babyAtk, DataCarrier.Instance.babyDef,
-                DataCarrier.Instance.babyHp, DataCarrier.Instance.babyAcademic,
+                DataCarrier.Instance.babyHp, DataCarrier.Instance.babyIntelligence,
                 DataCarrier.Instance.babyAthletic
             ));
 
@@ -2219,8 +2219,8 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    IEnumerator ShowStatGrowth(int oldAtk, int oldDef, int oldHp, int oldAcademic, int oldAthletic,
-                                int newAtk, int newDef, int newHp, int newAcademic, int newAthletic)
+    IEnumerator ShowStatGrowth(int oldAtk, int oldDef, int oldHp, int oldIntelligence, int oldAthletic,
+                                int newAtk, int newDef, int newHp, int newIntelligence, int newAthletic)
     {
         int newAge = DataCarrier.Instance != null ? DataCarrier.Instance.babyAge : 0;
         string babyName = DataCarrier.Instance != null ? DataCarrier.Instance.babyName : "";
@@ -2592,8 +2592,10 @@ public class BattleManager : MonoBehaviour
         PlayerPrefs.SetInt("babyAtk", dc.babyAtk);
         PlayerPrefs.SetInt("babyDef", dc.babyDef);
         PlayerPrefs.SetInt("babyHp", dc.babyHp);
-        PlayerPrefs.SetInt("babyAcademic", dc.babyAcademic);
+        PlayerPrefs.SetInt("babyIntelligence", dc.babyIntelligence);
         PlayerPrefs.SetInt("babyAthletic", dc.babyAthletic);
+        PlayerPrefs.SetInt("babyLuck", dc.babyLuck);
+        PlayerPrefs.SetInt("babyFortune", dc.babyFortune);
         PlayerPrefs.SetString("trait1", dc.trait1 ?? "");
         PlayerPrefs.SetString("fatherName", dc.fatherName ?? "");
         PlayerPrefs.SetString("motherName", dc.motherName ?? "");

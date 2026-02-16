@@ -80,13 +80,13 @@ public static class Localization
 
         // Birth - Status labels
         Add("birth_stat_gender", "<b>性別:</b>", "<b>Gender:</b>");
-        Add("birth_stat_height", "<b>身長:</b>", "<b>Height:</b>");
-        Add("birth_stat_weight", "<b>体重:</b>", "<b>Weight:</b>");
         Add("birth_stat_hp", "<b>HP:</b>", "<b>HP:</b>");
         Add("birth_stat_atk", "<b>攻撃:</b>", "<b>ATK:</b>");
         Add("birth_stat_def", "<b>防御:</b>", "<b>DEF:</b>");
-        Add("birth_stat_academic", "<b>学力:</b>", "<b>INT:</b>");
+        Add("birth_stat_intelligence", "<b>知力:</b>", "<b>INT:</b>");
         Add("birth_stat_athletic", "<b>運動:</b>", "<b>AGI:</b>");
+        Add("birth_stat_luck", "<b>運勢:</b>", "<b>LUK:</b>");
+        Add("birth_stat_fortune", "<b>資産:</b>", "<b>FTN:</b>");
         Add("birth_stat_trait", "<b>特徴:</b>", "<b>Trait:</b>");
 
         // Birth - Love story
@@ -738,10 +738,10 @@ public static class Localization
         Add("map_status_hp", "<b>HP:</b>", "<b>HP:</b>");
         Add("map_status_atk", "<b>攻撃:</b>", "<b>ATK:</b>");
         Add("map_status_def", "<b>防御:</b>", "<b>DEF:</b>");
-        Add("map_status_academic", "<b>学力:</b>", "<b>INT:</b>");
+        Add("map_status_intelligence", "<b>知力:</b>", "<b>INT:</b>");
         Add("map_status_athletic", "<b>運動:</b>", "<b>AGI:</b>");
-        Add("map_status_height", "<b>身長:</b>", "<b>Height:</b>");
-        Add("map_status_weight", "<b>体重:</b>", "<b>Weight:</b>");
+        Add("map_status_luck", "<b>運勢:</b>", "<b>LUK:</b>");
+        Add("map_status_fortune", "<b>資産:</b>", "<b>FTN:</b>");
         Add("map_status_trait", "<b>特徴:</b>", "<b>Trait:</b>");
         Add("map_status_exp", "<b>経験値:</b>", "<b>EXP:</b>");
         Add("map_status_enemies", "<b>倒した敵:</b>", "<b>Defeated:</b>");

@@ -10,8 +10,10 @@ public class DataCarrier : MonoBehaviour
     public int babyAtk;
     public int babyDef;
     public int babyHp;
-    public int babyAcademic;
+    public int babyIntelligence;
     public int babyAthletic;
+    public int babyLuck;
+    public int babyFortune;
 
     [Header("Age & Experience")]
     public int babyAge = 0;
@@ -74,8 +76,10 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.SetInt(p + "babyAtk", babyAtk);
         PlayerPrefs.SetInt(p + "babyDef", babyDef);
         PlayerPrefs.SetInt(p + "babyHp", babyHp);
-        PlayerPrefs.SetInt(p + "babyAcademic", babyAcademic);
+        PlayerPrefs.SetInt(p + "babyIntelligence", babyIntelligence);
         PlayerPrefs.SetInt(p + "babyAthletic", babyAthletic);
+        PlayerPrefs.SetInt(p + "babyLuck", babyLuck);
+        PlayerPrefs.SetInt(p + "babyFortune", babyFortune);
         PlayerPrefs.SetInt(p + "babyAge", babyAge);
         PlayerPrefs.SetInt(p + "babyExp", babyExp);
         PlayerPrefs.SetInt(p + "defeatedEnemies", defeatedEnemies);
@@ -107,8 +111,10 @@ public class DataCarrier : MonoBehaviour
         babyAtk = PlayerPrefs.GetInt(p + "babyAtk", 0);
         babyDef = PlayerPrefs.GetInt(p + "babyDef", 0);
         babyHp = PlayerPrefs.GetInt(p + "babyHp", 0);
-        babyAcademic = PlayerPrefs.GetInt(p + "babyAcademic", 0);
+        babyIntelligence = PlayerPrefs.GetInt(p + "babyIntelligence", 0);
         babyAthletic = PlayerPrefs.GetInt(p + "babyAthletic", 0);
+        babyLuck = PlayerPrefs.GetInt(p + "babyLuck", 0);
+        babyFortune = PlayerPrefs.GetInt(p + "babyFortune", 0);
         babyAge = PlayerPrefs.GetInt(p + "babyAge", 0);
         babyExp = PlayerPrefs.GetInt(p + "babyExp", 0);
         defeatedEnemies = PlayerPrefs.GetInt(p + "defeatedEnemies", 0);
@@ -167,8 +173,10 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.DeleteKey(p + "babyAtk");
         PlayerPrefs.DeleteKey(p + "babyDef");
         PlayerPrefs.DeleteKey(p + "babyHp");
-        PlayerPrefs.DeleteKey(p + "babyAcademic");
+        PlayerPrefs.DeleteKey(p + "babyIntelligence");
         PlayerPrefs.DeleteKey(p + "babyAthletic");
+        PlayerPrefs.DeleteKey(p + "babyLuck");
+        PlayerPrefs.DeleteKey(p + "babyFortune");
         PlayerPrefs.DeleteKey(p + "babyAge");
         PlayerPrefs.DeleteKey(p + "babyExp");
         PlayerPrefs.DeleteKey(p + "defeatedEnemies");
@@ -280,7 +288,7 @@ public class DataCarrier : MonoBehaviour
         babyAtk += Mathf.RoundToInt(2 * growthRate);
         babyDef += Mathf.RoundToInt(1 * growthRate);
         babyHp += Mathf.RoundToInt(8 * growthRate);
-        // babyAcademic は生まれつきの値で変化しない
+        // babyIntelligence は生まれつきの値で変化しない
         babyAthletic += Mathf.RoundToInt(2 * growthRate);
     }
 

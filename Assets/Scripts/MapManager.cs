@@ -1659,13 +1659,13 @@ public class MapManager : MonoBehaviour
     {
         string gender = "男の子";
         bool godBaby = false;
-        int academic = 60;
+        int intelligence = 60;
 
         if (DataCarrier.Instance != null)
         {
             gender = DataCarrier.Instance.babyGender;
             godBaby = DataCarrier.Instance.isGodBaby;
-            academic = DataCarrier.Instance.babyAcademic;
+            intelligence = DataCarrier.Instance.babyIntelligence;
         }
 
         bool isFemale = gender == "女の子";
@@ -1680,7 +1680,7 @@ public class MapManager : MonoBehaviour
             new Color(0.35f, 0.22f, 0.12f),
             new Color(0.55f, 0.38f, 0.2f)
         };
-        Color hair = hairTones[Mathf.Clamp(academic / 25, 0, 3)];
+        Color hair = hairTones[Mathf.Clamp(intelligence / 25, 0, 3)];
         Color clothMain = isFemale
             ? new Color(0.95f, 0.45f, 0.6f)
             : new Color(0.3f, 0.5f, 0.85f);
@@ -2944,7 +2944,8 @@ public class MapManager : MonoBehaviour
             $"<color={genderColor}>{Localization.GetGender(dc.babyGender)}</color>\u3000\u3000{Localization.GetAge(dc.babyAge)}\n" +
             "\n" +
             $"{Localization.Get("map_status_hp")} {dc.babyHp}\u3000\u3000{Localization.Get("map_status_atk")} {dc.babyAtk}\u3000\u3000{Localization.Get("map_status_def")} {dc.babyDef}\n" +
-            $"{Localization.Get("map_status_academic")} {dc.babyAcademic}\u3000\u3000{Localization.Get("map_status_athletic")} {dc.babyAthletic}\n" +
+            $"{Localization.Get("map_status_intelligence")} {dc.babyIntelligence}\u3000\u3000{Localization.Get("map_status_athletic")} {dc.babyAthletic}\n" +
+            $"{Localization.Get("map_status_luck")} {dc.babyLuck}\u3000\u3000{Localization.Get("map_status_fortune")} {dc.babyFortune}\n" +
             "\n" +
             $"{Localization.Get("map_status_trait")} <color={traitColor}>{Localization.GetTrait(dc.trait1)}</color>\n" +
             "\n" +
