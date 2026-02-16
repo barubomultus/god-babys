@@ -16,7 +16,6 @@ public class BattleManager : MonoBehaviour
 
     // プレイヤーステータス
     int playerHp, playerMaxHp, playerAtk, playerDef;
-    int playerHeight, playerWeight;
     bool playerDefending;
     bool enemyDefending;
     bool isMale;
@@ -225,23 +224,16 @@ public class BattleManager : MonoBehaviour
             playerAtk = DataCarrier.Instance.babyAtk;
             playerDef = DataCarrier.Instance.babyDef;
 
-            playerHeight = DataCarrier.Instance.babyHeight;
-            playerWeight = DataCarrier.Instance.babyWeight;
-
             isMale = DataCarrier.Instance.babyGender == "男の子";
 
             if (isMale)
             {
                 playerAtk = (int)(playerAtk * 1.5f);
-                int heightBonus = Mathf.Max(0, (100 - playerHeight) / 5);
-                int weightBonus = Mathf.Max(0, (10000 - playerWeight) / 667);
-                playerEvasion = 5 + heightBonus + weightBonus;
+                playerEvasion = 5;
             }
             else
             {
-                int heightBonus = Mathf.Max(0, (100 - playerHeight) / 3);
-                int weightBonus = Mathf.Max(0, (10000 - playerWeight) / 333);
-                playerEvasion = 15 + heightBonus + weightBonus;
+                playerEvasion = 15;
             }
 
             playerEvasion = Mathf.Min(playerEvasion, 70);
@@ -303,8 +295,6 @@ public class BattleManager : MonoBehaviour
             playerHp = playerMaxHp;
             playerAtk = 30;
             playerDef = 20;
-            playerHeight = 100;
-            playerWeight = 3000;
             isMale = true;
             isGodBaby = false;
             playerEvasion = 5;
@@ -887,14 +877,12 @@ public class BattleManager : MonoBehaviour
     {
         ClearFaceParts(parent);
 
-        int weight = 10000, height = 100, atk = 50, academic = 60, athletic = 60;
+        int atk = 50, academic = 60, athletic = 60;
         string gender = "男の子";
         bool godBaby = false;
 
         if (DataCarrier.Instance != null)
         {
-            weight = DataCarrier.Instance.babyWeight;
-            height = DataCarrier.Instance.babyHeight;
             atk = DataCarrier.Instance.babyAtk;
             academic = DataCarrier.Instance.babyAcademic;
             athletic = DataCarrier.Instance.babyAthletic;
@@ -2164,8 +2152,6 @@ public class BattleManager : MonoBehaviour
             int oldHp = DataCarrier.Instance.babyHp;
             int oldAcademic = DataCarrier.Instance.babyAcademic;
             int oldAthletic = DataCarrier.Instance.babyAthletic;
-            int oldHeight = DataCarrier.Instance.babyHeight;
-            int oldWeight = DataCarrier.Instance.babyWeight;
 
             DataCarrier.Instance.babyExp -= needed;
             DataCarrier.Instance.AgeUp();
@@ -2175,11 +2161,10 @@ public class BattleManager : MonoBehaviour
             yield return new WaitForSeconds(1.5f);
 
             yield return StartCoroutine(ShowStatGrowth(
-                oldAtk, oldDef, oldHp, oldAcademic, oldAthletic, oldHeight, oldWeight,
+                oldAtk, oldDef, oldHp, oldAcademic, oldAthletic,
                 DataCarrier.Instance.babyAtk, DataCarrier.Instance.babyDef,
                 DataCarrier.Instance.babyHp, DataCarrier.Instance.babyAcademic,
-                DataCarrier.Instance.babyAthletic, DataCarrier.Instance.babyHeight,
-                DataCarrier.Instance.babyWeight
+                DataCarrier.Instance.babyAthletic
             ));
 
             playerAtk = DataCarrier.Instance.babyAtk;
@@ -2189,8 +2174,6 @@ public class BattleManager : MonoBehaviour
             DataCarrier.Instance.babyCurrentHp = -1;
             playerPoisonTurns = 0;
             DataCarrier.Instance.babyPoisonTurns = 0;
-            playerHeight = DataCarrier.Instance.babyHeight;
-            playerWeight = DataCarrier.Instance.babyWeight;
 
             if (isMale)
                 playerAtk = (int)(playerAtk * 1.5f);
@@ -2236,8 +2219,8 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    IEnumerator ShowStatGrowth(int oldAtk, int oldDef, int oldHp, int oldAcademic, int oldAthletic, int oldHeight, int oldWeight,
-                                int newAtk, int newDef, int newHp, int newAcademic, int newAthletic, int newHeight, int newWeight)
+    IEnumerator ShowStatGrowth(int oldAtk, int oldDef, int oldHp, int oldAcademic, int oldAthletic,
+                                int newAtk, int newDef, int newHp, int newAcademic, int newAthletic)
     {
         int newAge = DataCarrier.Instance != null ? DataCarrier.Instance.babyAge : 0;
         string babyName = DataCarrier.Instance != null ? DataCarrier.Instance.babyName : "";
@@ -2610,9 +2593,7 @@ public class BattleManager : MonoBehaviour
         PlayerPrefs.SetInt("babyDef", dc.babyDef);
         PlayerPrefs.SetInt("babyHp", dc.babyHp);
         PlayerPrefs.SetInt("babyAcademic", dc.babyAcademic);
-        PlayerPrefs.SetInt("babyWeight", dc.babyWeight);
         PlayerPrefs.SetInt("babyAthletic", dc.babyAthletic);
-        PlayerPrefs.SetInt("babyHeight", dc.babyHeight);
         PlayerPrefs.SetString("trait1", dc.trait1 ?? "");
         PlayerPrefs.SetString("fatherName", dc.fatherName ?? "");
         PlayerPrefs.SetString("motherName", dc.motherName ?? "");

@@ -91,23 +91,23 @@ public class BirthSystem : MonoBehaviour
     // 父親6パターン
     static readonly ParentData[] Fathers = new[]
     {
-        new ParentData("タケシ",   "takeshi", 70, 30, 180, 178, 40, 80, 85, new Color(0.9f, 0.7f, 0.5f), "元・格闘技世界王者 / 握力: 180kg"),
-        new ParentData("ユウキ",   "yuuki",   50, 50, 150, 172, 70, 68, 60, new Color(0.6f, 0.8f, 1.0f), "天才ハッカー / 特許数: 3,200件"),
-        new ParentData("ゴウ",     "gou",     80, 25, 190, 185, 30, 88, 90, new Color(1.0f, 0.5f, 0.4f), "伝説の傭兵 / 戦闘力: 計測不能"),
-        new ParentData("シンジ",   "shinji",  30, 70, 140, 168, 95, 62, 35, new Color(0.7f, 0.7f, 1.0f), "ノーベル賞3回受賞 / IQ: 250"),
-        new ParentData("リョウマ", "ryouma",  60, 60, 170, 180, 55, 75, 70, new Color(0.5f, 1.0f, 0.6f), "総資産: 43兆円 / 世界一の実業家"),
-        new ParentData("テツヤ",   "tetuya", 45, 45, 160, 170, 60, 72, 55, new Color(1.0f, 0.9f, 0.5f), "伝説のロックスター / ファン数: 8億人"),
+        new ParentData("タケシ",   "takeshi", 70, 30, 180, 40, 85, new Color(0.9f, 0.7f, 0.5f), "元・格闘技世界王者 / 握力: 180kg"),
+        new ParentData("ユウキ",   "yuuki",   50, 50, 150, 70, 60, new Color(0.6f, 0.8f, 1.0f), "天才ハッカー / 特許数: 3,200件"),
+        new ParentData("ゴウ",     "gou",     80, 25, 190, 30, 90, new Color(1.0f, 0.5f, 0.4f), "伝説の傭兵 / 戦闘力: 計測不能"),
+        new ParentData("シンジ",   "shinji",  30, 70, 140, 95, 35, new Color(0.7f, 0.7f, 1.0f), "ノーベル賞3回受賞 / IQ: 250"),
+        new ParentData("リョウマ", "ryouma",  60, 60, 170, 55, 70, new Color(0.5f, 1.0f, 0.6f), "総資産: 43兆円 / 世界一の実業家"),
+        new ParentData("テツヤ",   "tetuya",  45, 45, 160, 60, 55, new Color(1.0f, 0.9f, 0.5f), "伝説のロックスター / ファン数: 8億人"),
     };
 
     // 母親6パターン
     static readonly ParentData[] Mothers = new[]
     {
-        new ParentData("サクラ",   "sakura",  40, 60, 150, 162, 60, 55, 65, new Color(1.0f, 0.7f, 0.8f), "暗殺拳の継承者 / 全戦全勝"),
-        new ParentData("ヒナタ",   "hinata",  50, 50, 145, 165, 70, 52, 60, new Color(0.8f, 0.6f, 1.0f), "総資産: 28兆円 / 美容帝国CEO"),
-        new ParentData("アキラ",   "akira",   65, 30, 160, 170, 45, 58, 80, new Color(1.0f, 0.6f, 0.4f), "五輪金メダル7個 / 100m走: 10.1秒"),
-        new ParentData("ミサト",   "misato",  35, 55, 140, 155, 90, 48, 30, new Color(0.6f, 0.9f, 1.0f), "量子物理学者 / IQ: 270"),
-        new ParentData("カエデ",   "kaede",   25, 70, 130, 158, 85, 50, 40, new Color(0.5f, 1.0f, 0.7f), "天才外科医 / 手術成功率: 100%"),
-        new ParentData("ルナ",     "luna",    55, 40, 135, 160, 50, 46, 70, new Color(1.0f, 1.0f, 0.6f), "世界的スーパーモデル / 身長: 180cm"),
+        new ParentData("サクラ",   "sakura",  40, 60, 150, 60, 65, new Color(1.0f, 0.7f, 0.8f), "暗殺拳の継承者 / 全戦全勝"),
+        new ParentData("ヒナタ",   "hinata",  50, 50, 145, 70, 60, new Color(0.8f, 0.6f, 1.0f), "総資産: 28兆円 / 美容帝国CEO"),
+        new ParentData("アキラ",   "akira",   65, 30, 160, 45, 80, new Color(1.0f, 0.6f, 0.4f), "五輪金メダル7個 / 100m走: 10.1秒"),
+        new ParentData("ミサト",   "misato",  35, 55, 140, 90, 30, new Color(0.6f, 0.9f, 1.0f), "量子物理学者 / IQ: 270"),
+        new ParentData("カエデ",   "kaede",   25, 70, 130, 85, 40, new Color(0.5f, 1.0f, 0.7f), "天才外科医 / 手術成功率: 100%"),
+        new ParentData("ルナ",     "luna",    55, 40, 135, 50, 70, new Color(1.0f, 1.0f, 0.6f), "世界的スーパーモデル / 身長: 180cm"),
     };
 
     // 特徴リスト
@@ -547,25 +547,12 @@ public class BirthSystem : MonoBehaviour
         int c_academic = (father.academic + mother.academic) / 2 + GaussianRandomRange(-30, 30);
         int c_athletic = (father.athletic + mother.athletic) / 2 + GaussianRandomRange(-30, 30);
 
-        // 身長: 基準100cm、±30cmの範囲（大半は90-110cm程度）
-        int c_height   = 100 + GaussianRandomRange(-30, 30);
-        // 体重: 基準10000g(10kg)、±5000gの範囲（大半は8000-12000g程度）
-        int c_weight   = 10000 + GaussianRandomRange(-5000, 5000);
-
         // 最低値の保証
         c_atk = Mathf.Max(1, c_atk);
         c_def = Mathf.Max(1, c_def);
         c_hp = Mathf.Max(50, c_hp);
         c_academic = Mathf.Max(1, c_academic);
         c_athletic = Mathf.Max(1, c_athletic);
-        c_height = Mathf.Max(60, c_height);
-        c_weight = Mathf.Max(5000, c_weight);
-
-        // リョウマの子供は体重2倍
-        if (father.name == "リョウマ")
-        {
-            c_weight *= 2;
-        }
 
         string trait1 = Traits[Random.Range(0, Traits.Length)];
 
@@ -667,15 +654,6 @@ public class BirthSystem : MonoBehaviour
         if (fatherCard != null) fatherCard.style.display = UIE.DisplayStyle.None;
         if (motherCard != null) motherCard.style.display = UIE.DisplayStyle.None;
 
-        // 女の子は身長・体重が小さくなる（男の子の70-90%程度）
-        if (selectedGender == "女の子")
-        {
-            float sizeMultiplier = 0.7f + Random.value * 0.2f; // 0.7〜0.9
-            c_height = Mathf.RoundToInt(c_height * sizeMultiplier);
-            c_weight = Mathf.RoundToInt(c_weight * sizeMultiplier);
-            c_height = Mathf.Max(50, c_height);
-            c_weight = Mathf.Max(4000, c_weight);
-        }
 
         // ── フェーズ4.4: 「運命が重なる刻」光の引力カットイン ──
         yield return StartCoroutine(ShowFateCutin(father.faceColor, mother.faceColor));
@@ -702,8 +680,6 @@ public class BirthSystem : MonoBehaviour
                 c_hp = Mathf.RoundToInt(c_hp * 1.2f);
                 c_academic = Mathf.RoundToInt(c_academic * 1.2f);
                 c_athletic = Mathf.RoundToInt(c_athletic * 1.2f);
-                c_height = Mathf.RoundToInt(c_height * 1.1f);
-                c_weight = Mathf.RoundToInt(c_weight * 1.1f);
             }
         }
 
@@ -737,8 +713,6 @@ public class BirthSystem : MonoBehaviour
                 c_hp = Mathf.RoundToInt(c_hp * 1.03f);
                 c_academic = Mathf.RoundToInt(c_academic * 1.03f);
                 c_athletic = Mathf.RoundToInt(c_athletic * 1.03f);
-                c_height = Mathf.RoundToInt(c_height * 1.03f);
-                c_weight = Mathf.RoundToInt(c_weight * 1.03f);
             }
         }
 
@@ -760,8 +734,6 @@ public class BirthSystem : MonoBehaviour
                 c_hp = Mathf.RoundToInt(c_hp * 1.05f);
                 c_academic = Mathf.RoundToInt(c_academic * 1.05f);
                 c_athletic = Mathf.RoundToInt(c_athletic * 1.05f);
-                c_height = Mathf.RoundToInt(c_height * 1.05f);
-                c_weight = Mathf.RoundToInt(c_weight * 1.05f);
             }
         }
 
@@ -783,8 +755,6 @@ public class BirthSystem : MonoBehaviour
                 c_hp = Mathf.RoundToInt(c_hp * 1.05f);
                 c_academic = Mathf.RoundToInt(c_academic * 1.05f);
                 c_athletic = Mathf.RoundToInt(c_athletic * 1.05f);
-                c_height = Mathf.RoundToInt(c_height * 1.05f);
-                c_weight = Mathf.RoundToInt(c_weight * 1.05f);
             }
         }
 
@@ -816,7 +786,7 @@ public class BirthSystem : MonoBehaviour
         else
         {
             // 専用画像がない場合は自動生成
-            GenerateBabyFace(c_weight, c_height, c_atk, c_academic, c_athletic, selectedGender, isGodBaby);
+            GenerateBabyFace(c_atk, c_academic, c_athletic, selectedGender, isGodBaby);
         }
 
         // 画像アップロードボタン（赤ちゃん画像の下に配置）
@@ -841,18 +811,15 @@ public class BirthSystem : MonoBehaviour
             genderLabelEl.text = $"{Localization.Get("birth_stat_gender")}  <color={genderColor}>{displayGender}</color>";
         }
 
-        string stat1 = $"{Localization.Get("birth_stat_height")} {c_height} cm    {Localization.Get("birth_stat_weight")} {c_weight} g";
-        string stat2 = $"{Localization.Get("birth_stat_hp")} {c_hp}    {Localization.Get("birth_stat_atk")} {c_atk}    {Localization.Get("birth_stat_def")} {c_def}";
-        string stat3 = $"{Localization.Get("birth_stat_academic")} {c_academic}    {Localization.Get("birth_stat_athletic")} {c_athletic}";
-        string stat4 = $"{Localization.Get("birth_stat_trait")}  <color=#FFA500>{Localization.GetTrait(trait1)}</color>";
+        string stat1 = $"{Localization.Get("birth_stat_hp")} {c_hp}    {Localization.Get("birth_stat_atk")} {c_atk}    {Localization.Get("birth_stat_def")} {c_def}";
+        string stat2 = $"{Localization.Get("birth_stat_academic")} {c_academic}    {Localization.Get("birth_stat_athletic")} {c_athletic}";
+        string stat3 = $"{Localization.Get("birth_stat_trait")}  <color=#FFA500>{Localization.GetTrait(trait1)}</color>";
 
         if (childStatusText != null) childStatusText.text = stat1;
         yield return new WaitForSeconds(0.2f);
         if (childStatusText != null) childStatusText.text = stat1 + "\n\n" + stat2;
-        yield return new WaitForSeconds(0.15f);
-        if (childStatusText != null) childStatusText.text = stat1 + "\n\n" + stat2 + "\n\n" + stat3;
         yield return new WaitForSeconds(0.25f);
-        if (childStatusText != null) childStatusText.text = stat1 + "\n\n" + stat2 + "\n\n" + stat3 + "\n\n" + stat4;
+        if (childStatusText != null) childStatusText.text = stat1 + "\n\n" + stat2 + "\n\n" + stat3;
 
         // ── DataCarrier に保存 ──
         if (DataCarrier.Instance != null)
@@ -861,9 +828,7 @@ public class BirthSystem : MonoBehaviour
             DataCarrier.Instance.babyDef = c_def;
             DataCarrier.Instance.babyHp = c_hp;
             DataCarrier.Instance.babyAcademic = c_academic;
-            DataCarrier.Instance.babyWeight = c_weight;
             DataCarrier.Instance.babyAthletic = c_athletic;
-            DataCarrier.Instance.babyHeight = c_height;
             DataCarrier.Instance.trait1 = trait1;
             DataCarrier.Instance.fatherName = father.name;
             DataCarrier.Instance.motherName = mother.name;
@@ -1291,7 +1256,7 @@ public class BirthSystem : MonoBehaviour
         // ステータステキストの位置はInspectorで設定されたままにする（変更しない）
     }
 
-    void GenerateBabyFace(int weight, int height, int atk, int academic, int athletic, string gender, bool isGodBaby)
+    void GenerateBabyFace(int atk, int academic, int athletic, string gender, bool isGodBaby)
     {
         Debug.Log($"[BirthSystem] GenerateBabyFace called - babyFace: {babyFace != null}");
         if (babyFace == null)
@@ -1326,7 +1291,7 @@ public class BirthSystem : MonoBehaviour
             babyFaceImage.enabled = false;
         }
 
-        float faceScale = 1.8f + (weight / 20000f) * 0.4f; // 大きいスケール（450x450に合わせて）
+        float faceScale = 2.0f;
         babyFace.localScale = new Vector3(faceScale, faceScale, 1f);
 
         // 肌色のバリエーション
@@ -1411,7 +1376,7 @@ public class BirthSystem : MonoBehaviour
         Create3DEyebrow(babyFace, 24, 32, -browAngle, hairBase);
 
         // 鼻（3D風）
-        Create3DNose(babyFace, baseSkin, shadowSkin, height);
+        Create3DNose(babyFace, baseSkin, shadowSkin);
 
         // 口
         Create3DMouth(babyFace, athletic, isGodBaby, baseSkin);
@@ -1555,9 +1520,9 @@ public class BirthSystem : MonoBehaviour
         browThick.AddComponent<Image>().color = browColor;
     }
 
-    void Create3DNose(Transform parent, Color skinColor, Color shadowColor, int height)
+    void Create3DNose(Transform parent, Color skinColor, Color shadowColor)
     {
-        float noseLen = 12 + height / 15f;
+        float noseLen = 19f;
 
         // 鼻筋ハイライト
         var noseHL = CreatePart("NoseHL", parent, new Vector2(1, -2), new Vector2(6, noseLen));
@@ -3826,20 +3791,18 @@ public struct ParentData
 {
     public string name;
     public string imageName; // 英語名（小文字）
-    public int atk, def, hp, height, academic, weight, athletic;
+    public int atk, def, hp, academic, athletic;
     public Color faceColor;
     public string intro;
 
-    public ParentData(string name, string imageName, int atk, int def, int hp, int height, int academic, int weight, int athletic, Color faceColor, string intro)
+    public ParentData(string name, string imageName, int atk, int def, int hp, int academic, int athletic, Color faceColor, string intro)
     {
         this.name = name;
         this.imageName = imageName;
         this.atk = atk;
         this.def = def;
         this.hp = hp;
-        this.height = height;
         this.academic = academic;
-        this.weight = weight;
         this.athletic = athletic;
         this.faceColor = faceColor;
         this.intro = intro;

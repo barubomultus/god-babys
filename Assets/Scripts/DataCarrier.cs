@@ -11,9 +11,7 @@ public class DataCarrier : MonoBehaviour
     public int babyDef;
     public int babyHp;
     public int babyAcademic;
-    public int babyWeight;
     public int babyAthletic;
-    public int babyHeight;
 
     [Header("Age & Experience")]
     public int babyAge = 0;
@@ -77,9 +75,7 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.SetInt(p + "babyDef", babyDef);
         PlayerPrefs.SetInt(p + "babyHp", babyHp);
         PlayerPrefs.SetInt(p + "babyAcademic", babyAcademic);
-        PlayerPrefs.SetInt(p + "babyWeight", babyWeight);
         PlayerPrefs.SetInt(p + "babyAthletic", babyAthletic);
-        PlayerPrefs.SetInt(p + "babyHeight", babyHeight);
         PlayerPrefs.SetInt(p + "babyAge", babyAge);
         PlayerPrefs.SetInt(p + "babyExp", babyExp);
         PlayerPrefs.SetInt(p + "defeatedEnemies", defeatedEnemies);
@@ -112,9 +108,7 @@ public class DataCarrier : MonoBehaviour
         babyDef = PlayerPrefs.GetInt(p + "babyDef", 0);
         babyHp = PlayerPrefs.GetInt(p + "babyHp", 0);
         babyAcademic = PlayerPrefs.GetInt(p + "babyAcademic", 0);
-        babyWeight = PlayerPrefs.GetInt(p + "babyWeight", 0);
         babyAthletic = PlayerPrefs.GetInt(p + "babyAthletic", 0);
-        babyHeight = PlayerPrefs.GetInt(p + "babyHeight", 0);
         babyAge = PlayerPrefs.GetInt(p + "babyAge", 0);
         babyExp = PlayerPrefs.GetInt(p + "babyExp", 0);
         defeatedEnemies = PlayerPrefs.GetInt(p + "defeatedEnemies", 0);
@@ -174,9 +168,7 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.DeleteKey(p + "babyDef");
         PlayerPrefs.DeleteKey(p + "babyHp");
         PlayerPrefs.DeleteKey(p + "babyAcademic");
-        PlayerPrefs.DeleteKey(p + "babyWeight");
         PlayerPrefs.DeleteKey(p + "babyAthletic");
-        PlayerPrefs.DeleteKey(p + "babyHeight");
         PlayerPrefs.DeleteKey(p + "babyAge");
         PlayerPrefs.DeleteKey(p + "babyExp");
         PlayerPrefs.DeleteKey(p + "defeatedEnemies");
@@ -290,7 +282,6 @@ public class DataCarrier : MonoBehaviour
         babyHp += Mathf.RoundToInt(8 * growthRate);
         // babyAcademic は生まれつきの値で変化しない
         babyAthletic += Mathf.RoundToInt(2 * growthRate);
-        // babyHeight, babyWeight は生まれつきの値で変化しない（回避率に影響）
     }
 
     // ===== グローバルプロフィール =====

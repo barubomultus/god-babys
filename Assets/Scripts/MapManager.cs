@@ -2945,7 +2945,6 @@ public class MapManager : MonoBehaviour
             "\n" +
             $"{Localization.Get("map_status_hp")} {dc.babyHp}\u3000\u3000{Localization.Get("map_status_atk")} {dc.babyAtk}\u3000\u3000{Localization.Get("map_status_def")} {dc.babyDef}\n" +
             $"{Localization.Get("map_status_academic")} {dc.babyAcademic}\u3000\u3000{Localization.Get("map_status_athletic")} {dc.babyAthletic}\n" +
-            $"{Localization.Get("map_status_height")} {dc.babyHeight} cm\u3000\u3000{Localization.Get("map_status_weight")} {dc.babyWeight} g\n" +
             "\n" +
             $"{Localization.Get("map_status_trait")} <color={traitColor}>{Localization.GetTrait(dc.trait1)}</color>\n" +
             "\n" +
