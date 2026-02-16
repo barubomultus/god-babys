@@ -13,10 +13,9 @@ public class TitleManager : MonoBehaviour
 
     // UI references
     private UIE.VisualElement saveDataListPanel;
+    private UIE.VisualElement titleButtons;
     private UIE.Button langJaBtn;
     private UIE.Button langEnBtn;
-    private UIE.Label startButtonLabel;
-    private UIE.Label saveDataButtonLabel;
     private bool hasProfile;
 
     void Start()
@@ -48,10 +47,30 @@ public class TitleManager : MonoBehaviour
             Localization.Get("intro_line4")
         };
 
-        // 全画面背景
+        // 全画面背景（装飾用）
         var bg = new UIE.VisualElement();
         bg.AddToClassList("bg-screen");
         root.Add(bg);
+
+        // フレックスボックスのルートコンテナ
+        var titleRoot = new UIE.VisualElement();
+        titleRoot.AddToClassList("title-root");
+        root.Add(titleRoot);
+
+        // --- 上部: セーフエリア + devリセット ---
+        var (safeTop, _, _, safeBottom) = UIHelper.GetSafeMargins();
+
+        var topRow = new UIE.VisualElement();
+        topRow.AddToClassList("title-top-row");
+        topRow.style.paddingTop = 30 + safeTop;
+        titleRoot.Add(topRow);
+
+        CreateDevResetButton(topRow);
+
+        // --- 中央: ロゴ + ボタン群 ---
+        var center = new UIE.VisualElement();
+        center.AddToClassList("title-center");
+        titleRoot.Add(center);
 
         // タイトルロゴ
         var logoSprite = Resources.Load<Sprite>("UI/title-logo");
@@ -60,101 +79,75 @@ public class TitleManager : MonoBehaviour
             var logo = new UIE.VisualElement();
             logo.AddToClassList("title-logo");
             logo.style.backgroundImage = new UIE.StyleBackground(logoSprite);
-            logo.style.position = UIE.Position.Absolute;
-            logo.style.top = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
-            logo.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
-            logo.style.translate = new UIE.StyleTranslate(
-                new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent),
-                    new UIE.Length(-70, UIE.LengthUnit.Percent)));
-            root.Add(logo);
+            center.Add(logo);
         }
 
+        // ボタン群コンテナ
         hasProfile = DataCarrier.HasProfile();
+
+        titleButtons = new UIE.VisualElement();
+        titleButtons.AddToClassList("title-buttons");
+        center.Add(titleButtons);
 
         if (hasProfile)
         {
-            CreateStartButton(200);
+            CreateStartButton();
         }
         else
         {
             bool hasSave = DataCarrier.HasAnySaveData();
             if (hasSave)
             {
-                CreateSaveDataButton(200);
-                CreateStartButton(200 + 120 + 40);
+                CreateSaveDataButton();
+                CreateStartButton();
             }
             else
             {
-                CreateStartButton(280);
+                CreateStartButton();
             }
         }
 
-        CreateLanguageButtons();
-        CreateDevResetButton();
+        // --- 下部: 言語ボタン ---
+        var langPanel = new UIE.VisualElement();
+        langPanel.AddToClassList("lang-panel");
+        langPanel.style.paddingBottom = 40 + safeBottom;
+        titleRoot.Add(langPanel);
+
+        CreateLanguageButtons(langPanel);
     }
 
-    void CreateStartButton(float yOffset)
+    void CreateStartButton()
     {
-        var wrapper = new UIE.VisualElement();
-        wrapper.style.position = UIE.Position.Absolute;
-        wrapper.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
-        wrapper.style.top = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
-        wrapper.style.translate = new UIE.StyleTranslate(
-            new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent), yOffset));
-
-        // Shadow
-        var shadow = new UIE.VisualElement();
-        shadow.AddToClassList("shadow-layer");
-        wrapper.Add(shadow);
+        var row = new UIE.VisualElement();
+        row.AddToClassList("title-btn-row");
 
         var btn = new UIE.Button();
         btn.AddToClassList("pill-button");
         UIHelper.ApplyFont(btn);
-        startButtonLabel = btn.Q<UIE.Label>();
-
         btn.text = Localization.Get(hasProfile ? "title_tap_start" : "title_new_game");
         btn.clicked += StartGame;
-        wrapper.Add(btn);
+        row.Add(btn);
 
-        // Store label reference for language switch
-        startButtonLabel = btn.Q<UIE.TextElement>() as UIE.Label;
-
-        root.Add(wrapper);
+        titleButtons.Add(row);
     }
 
-    void CreateSaveDataButton(float yOffset)
+    void CreateSaveDataButton()
     {
-        var wrapper = new UIE.VisualElement();
-        wrapper.style.position = UIE.Position.Absolute;
-        wrapper.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
-        wrapper.style.top = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
-        wrapper.style.translate = new UIE.StyleTranslate(
-            new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent), yOffset));
-
-        var shadow = new UIE.VisualElement();
-        shadow.AddToClassList("shadow-layer");
-        wrapper.Add(shadow);
+        var row = new UIE.VisualElement();
+        row.AddToClassList("title-btn-row");
 
         var btn = new UIE.Button();
         btn.AddToClassList("pill-button");
         UIHelper.ApplyFont(btn);
         btn.text = Localization.Get("title_save_data");
         btn.clicked += LoadFirstSaveAndGoHome;
-        wrapper.Add(btn);
+        row.Add(btn);
 
-        saveDataButtonLabel = btn.Q<UIE.TextElement>() as UIE.Label;
-
-        root.Add(wrapper);
+        titleButtons.Add(row);
     }
 
-    void CreateLanguageButtons()
+    void CreateLanguageButtons(UIE.VisualElement panel)
     {
-        var (_, _, safeTop, safeBottom) = UIHelper.GetSafeMargins();
-
-        var panel = new UIE.VisualElement();
-        panel.AddToClassList("lang-panel");
-        panel.style.bottom = 40 + safeBottom;
-
         langJaBtn = new UIE.Button();
         langJaBtn.AddToClassList("lang-btn");
         UIHelper.ApplyFont(langJaBtn);
@@ -170,7 +163,6 @@ public class TitleManager : MonoBehaviour
         panel.Add(langEnBtn);
 
         UpdateLanguageButtonColors();
-        root.Add(panel);
     }
 
     void SwitchLanguage(string lang)
@@ -232,35 +224,41 @@ public class TitleManager : MonoBehaviour
             return;
         }
 
+        // overlay-darkで全画面覆い、flexboxで中央配置
         saveDataListPanel = new UIE.VisualElement();
-        saveDataListPanel.style.position = UIE.Position.Absolute;
-        saveDataListPanel.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
-        saveDataListPanel.style.top = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
-        saveDataListPanel.style.translate = new UIE.StyleTranslate(
-            new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent),
-                new UIE.Length(-50, UIE.LengthUnit.Percent)));
-        saveDataListPanel.AddToClassList("save-panel");
+        saveDataListPanel.AddToClassList("overlay-dark");
+
+        var panel = new UIE.VisualElement();
+        panel.AddToClassList("save-panel");
 
         // Title
         var title = UIHelper.CreateLabel(Localization.Get("title_save_data_list"), "save-panel-title");
-        saveDataListPanel.Add(title);
+        panel.Add(title);
 
-        // Slots
+        // Slots container
+        var slotsContainer = new UIE.VisualElement();
+        slotsContainer.AddToClassList("save-panel-slots");
         for (int i = 0; i < DataCarrier.MAX_SAVE_SLOTS; i++)
-            CreateSlotEntry(i);
+            CreateSlotEntry(slotsContainer, i);
+        panel.Add(slotsContainer);
 
-        // Close button
+        // Close button row
+        var closeRow = new UIE.VisualElement();
+        closeRow.AddToClassList("save-panel-close-row");
+
         var closeBtn = new UIE.Button();
         closeBtn.AddToClassList("close-btn-gray");
         UIHelper.ApplyFont(closeBtn);
         closeBtn.text = Localization.Get("ui_close");
         closeBtn.clicked += CloseSaveDataList;
-        saveDataListPanel.Add(closeBtn);
+        closeRow.Add(closeBtn);
 
+        panel.Add(closeRow);
+        saveDataListPanel.Add(panel);
         root.Add(saveDataListPanel);
     }
 
-    void CreateSlotEntry(int slot)
+    void CreateSlotEntry(UIE.VisualElement container, int slot)
     {
         bool exists = DataCarrier.SlotExists(slot);
 
@@ -309,7 +307,7 @@ public class TitleManager : MonoBehaviour
             row.Add(empty);
         }
 
-        saveDataListPanel.Add(row);
+        container.Add(row);
     }
 
     void LoadFirstSaveAndGoHome()
@@ -347,6 +345,7 @@ public class TitleManager : MonoBehaviour
 
     void ConfirmDeleteSlot(int slot)
     {
+        // overlay-darkで全画面覆い、flexboxで中央配置
         var overlay = new UIE.VisualElement();
         overlay.AddToClassList("overlay-dark");
 
@@ -404,57 +403,48 @@ public class TitleManager : MonoBehaviour
         }
     }
 
-    void CreateDevResetButton()
+    void CreateDevResetButton(UIE.VisualElement parent)
     {
-        var (safeTop, _, _, _) = UIHelper.GetSafeMargins();
-
         var btn = new UIE.Button();
         btn.AddToClassList("dev-reset-btn");
         UIHelper.ApplyFont(btn);
-        btn.style.top = 30 + safeTop;
         btn.text = Localization.Get("title_reset_profile");
         btn.clicked += () =>
         {
             DataCarrier.DeleteProfile();
             SceneManager.LoadScene("TitleScene");
         };
-        root.Add(btn);
+        parent.Add(btn);
     }
 
     private IEnumerator IntroSequence()
     {
-        // Dark overlay panel
+        // 全画面オーバーレイ（アニメ用なのでabsolute維持）
         var panel = new UIE.VisualElement();
         panel.AddToClassList("intro-panel");
         root.Add(panel);
 
+        // フレックスボックスでテキストを縦並びに配置
+        var textsContainer = new UIE.VisualElement();
+        textsContainer.AddToClassList("intro-texts");
+        panel.Add(textsContainer);
+
         // Fade in
-        yield return null; // wait one frame for style to apply
+        yield return null;
         panel.AddToClassList("intro-panel-visible");
 
         yield return new WaitForSeconds(0.6f);
-
-        float lineSpacing = 120f;
-        float startY = -((introLines.Length - 1) * lineSpacing) / 2f;
 
         for (int i = 0; i < introLines.Length; i++)
         {
             var textEl = new UIE.Label(introLines[i]);
             textEl.AddToClassList("intro-text");
             UIHelper.ApplyFont(textEl);
-            textEl.style.top = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
-            textEl.style.position = UIE.Position.Absolute;
-            textEl.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
-            float yPos = startY + i * lineSpacing;
-            textEl.style.translate = new UIE.StyleTranslate(
-                new UIE.Translate(-800, yPos));
-            panel.Add(textEl);
+            textsContainer.Add(textEl);
 
             // Trigger slide-in next frame
             yield return null;
             textEl.AddToClassList("intro-text-visible");
-            textEl.style.translate = new UIE.StyleTranslate(
-                new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent), yPos));
 
             if (i < introLines.Length - 1)
                 yield return new WaitForSeconds(2.5f);

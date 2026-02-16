@@ -2596,9 +2596,10 @@ public class MapManager : MonoBehaviour
         }
 
         var closeBtn = new UIE.Button();
-        closeBtn.AddToClassList("map-menu-item-btn");
-        closeBtn.text = Localization.Get("ui_close");
+        closeBtn.AddToClassList("pill-button");
+        closeBtn.style.marginTop = 64;
         UIHelper.ApplyFont(closeBtn);
+        closeBtn.text = Localization.Get("ui_close");
         closeBtn.clicked += () => CloseSavePanel();
         saveOverlayEl.Add(closeBtn);
 
@@ -2629,14 +2630,16 @@ public class MapManager : MonoBehaviour
         saveOverlayEl.Add(msg);
 
         var yesBtn = new UIE.Button();
-        yesBtn.AddToClassList("map-menu-item-btn");
+        yesBtn.AddToClassList("pill-button");
+        yesBtn.style.marginTop = 64;
         yesBtn.text = Localization.Get("map_save_overwrite");
         UIHelper.ApplyFont(yesBtn);
         yesBtn.clicked += () => DoSaveToSlot(slot);
         saveOverlayEl.Add(yesBtn);
 
         var cancelBtn = new UIE.Button();
-        cancelBtn.AddToClassList("map-menu-item-btn");
+        cancelBtn.AddToClassList("pill-button");
+        cancelBtn.style.marginTop = 64;
         cancelBtn.text = Localization.Get("map_save_cancel");
         UIHelper.ApplyFont(cancelBtn);
         cancelBtn.clicked += () => { CloseSavePanel(); OpenSavePanel(); };

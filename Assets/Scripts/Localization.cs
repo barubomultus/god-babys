@@ -90,8 +90,8 @@ public static class Localization
         Add("birth_stat_trait", "<b>特徴:</b>", "<b>Trait:</b>");
 
         // Birth - Love story
-        Add("birth_story_title", "<color=#FF69B4>♥</color> 二人の出会い <color=#FF69B4>♥</color>",
-            "<color=#FF69B4>♥</color> How They Met <color=#FF69B4>♥</color>");
+        Add("birth_story_title", "<color=#FF69B4>♥</color> 邂逅（かいこう）の記憶 <color=#FF69B4>♥</color>",
+            "<color=#FF69B4>♥</color> Memories of Encounter <color=#FF69B4>♥</color>");
         Add("birth_story_tap", "▼ タップで続ける ▼", "▼ Tap to continue ▼");
         Add("birth_story_default", "運命の出会いから\n愛が芽生えた...", "From a fateful encounter,\nlove blossomed...");
 
@@ -183,6 +183,8 @@ public static class Localization
         Add("birth_nurture_love", "愛を育む", "Nurture Love");
         Add("cutin_who_mother", "惹かれ合う、もう一つの魂", "Another soul, drawn together");
         Add("cutin_baby_born", "子宝に恵まれた！", "Blessed with a child!");
+        Add("cutin_birth_wish", "その願いは、新たな命へ――", "That wish becomes a new life――");
+        Add("cutin_fate_moment", "運命が重なる刻（とき）", "The Moment Fates Align");
         Add("birth_love_begin", "二人の物語を紡ぐ", "Weave Their Story");
 
         // ===== Father Cut-in =====

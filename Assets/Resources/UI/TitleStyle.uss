@@ -1,37 +1,88 @@
 /* ======================================== */
-/* TitleStyle.uss — TitleScene              */
+/* TitleStyle.uss — TitleScene (flexbox)    */
 /* ======================================== */
 
-/* --- Logo --- */
+/* --- 全体レイアウト (縦並び) --- */
+.title-root {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+/* --- 上部: devリセットボタン行 --- */
+.title-top-row {
+    flex-shrink: 0;
+    flex-direction: row;
+    justify-content: flex-end;
+    padding-right: 10px;
+}
+
+.dev-reset-btn {
+    width: 180px;
+    height: 40px;
+    background-color: rgba(77, 77, 77, 0.6);
+    border-radius: 4px;
+    border-width: 0;
+    font-size: 16px;
+    color: rgb(255, 102, 102);
+    -unity-text-align: middle-center;
+    padding: 0;
+    transition-property: scale;
+    transition-duration: 0.08s;
+}
+
+.dev-reset-btn:active {
+    scale: 0.95 0.95;
+}
+
+/* --- 中央: ロゴ + ボタン群 (伸縮して残りを埋める) --- */
+.title-center {
+    flex-grow: 1;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* --- ロゴ --- */
 .title-logo {
     width: 1040px;
     height: 498px;
     align-self: center;
+    flex-shrink: 0;
     -unity-background-scale-mode: scale-to-fit;
 }
 
-/* --- Language toggle row --- */
-.lang-panel {
-    position: absolute;
-    bottom: 40px;
-    left: 0;
-    right: 0;
+/* --- ボタン群 (ロゴの下) --- */
+.title-buttons {
+    flex-shrink: 0;
+    flex-direction: column;
+    margin-top: 40px;
+}
+
+.title-btn-row {
+    flex-shrink: 0;
     flex-direction: row;
     justify-content: center;
-    align-items: center;
+    margin-top: 20px;
+}
+
+/* --- 下部: 言語ボタン行 --- */
+.lang-panel {
+    flex-shrink: 0;
+    flex-direction: row;
+    justify-content: center;
+    padding-bottom: 40px;
+    padding-top: 16px;
 }
 
 .lang-btn {
     width: 90px;
     height: 36px;
     border-radius: 6px;
-    align-items: center;
-    justify-content: center;
     margin-left: 7px;
     margin-right: 7px;
     border-width: 0;
     font-size: 20px;
     -unity-font-style: bold;
+    -unity-text-align: middle-center;
     padding: 0;
     transition-property: scale;
     transition-duration: 0.08s;
@@ -51,34 +102,44 @@
     color: rgb(153, 153, 153);
 }
 
-/* --- Save data list panel --- */
+/* --- Save data list panel (モーダル) --- */
+.save-panel-overlay {
+    flex-grow: 1;
+    flex-direction: column;
+    justify-content: center;
+}
+
 .save-panel {
     width: 800px;
     height: 450px;
     background-color: #ffffff;
     border-radius: 36px;
+    flex-direction: column;
     align-self: center;
-    align-items: center;
     padding-top: 10px;
 }
 
 .save-panel-title {
+    flex-shrink: 0;
     font-size: 30px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     color: white;
     height: 50px;
-    width: 100%;
+}
+
+.save-panel-slots {
+    flex-grow: 1;
+    flex-direction: column;
+    align-self: center;
 }
 
 .slot-row {
     width: 460px;
     height: 60px;
-    margin-top: 5px;
+    margin: 16px;
     flex-direction: row;
-    align-items: center;
-    padding-left: 15px;
-    padding-right: 10px;
+    padding: 16px;
     border-radius: 4px;
 }
 
@@ -101,6 +162,7 @@
 .slot-load-btn {
     width: 70px;
     height: 40px;
+    align-self: center;
     background-color: rgb(77, 153, 102);
     border-radius: 4px;
     border-width: 0;
@@ -120,6 +182,7 @@
 .slot-del-btn {
     width: 40px;
     height: 40px;
+    align-self: center;
     background-color: rgb(179, 77, 77);
     border-radius: 4px;
     border-width: 0;
@@ -136,6 +199,14 @@
     scale: 0.95 0.95;
 }
 
+.save-panel-close-row {
+    flex-shrink: 0;
+    flex-direction: row;
+    justify-content: center;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
 .close-btn-gray {
     width: 150px;
     height: 45px;
@@ -145,7 +216,6 @@
     font-size: 22px;
     color: white;
     -unity-text-align: middle-center;
-    margin-top: 10px;
     padding: 0;
     transition-property: scale;
     transition-duration: 0.08s;
@@ -159,14 +229,16 @@
 .confirm-panel {
     width: 350px;
     height: 150px;
+    align-self: center;
     background-color: rgba(38, 26, 26, 0.98);
     border-radius: 8px;
-    align-items: center;
+    flex-direction: column;
     justify-content: center;
     padding: 10px;
 }
 
 .confirm-msg {
+    flex-shrink: 0;
     font-size: 22px;
     color: white;
     -unity-text-align: middle-center;
@@ -175,6 +247,7 @@
 }
 
 .confirm-btn-row {
+    flex-shrink: 0;
     flex-direction: row;
     justify-content: center;
 }
@@ -217,28 +290,7 @@
     scale: 0.95 0.95;
 }
 
-/* --- Dev reset button --- */
-.dev-reset-btn {
-    position: absolute;
-    right: 10px;
-    width: 180px;
-    height: 40px;
-    background-color: rgba(77, 77, 77, 0.6);
-    border-radius: 4px;
-    border-width: 0;
-    font-size: 16px;
-    color: rgb(255, 102, 102);
-    -unity-text-align: middle-center;
-    padding: 0;
-    transition-property: scale;
-    transition-duration: 0.08s;
-}
-
-.dev-reset-btn:active {
-    scale: 0.95 0.95;
-}
-
-/* --- Intro panel --- */
+/* --- Intro panel (全画面オーバーレイ) --- */
 .intro-panel {
     position: absolute;
     left: 0;
@@ -246,7 +298,7 @@
     right: 0;
     bottom: 0;
     background-color: rgba(0, 0, 0, 0);
-    align-items: center;
+    flex-direction: column;
     justify-content: center;
     transition-property: background-color;
     transition-duration: 0.5s;
@@ -256,18 +308,29 @@
     background-color: rgba(0, 0, 0, 0.9);
 }
 
+/* イントロテキストのコンテナ (flexbox縦並び中央揃え) */
+.intro-texts {
+    flex-direction: column;
+    justify-content: center;
+    padding-left: 10%;
+    padding-right: 10%;
+}
+
 .intro-text {
+    flex-shrink: 0;
     font-size: 36px;
     color: white;
     -unity-text-align: middle-center;
     white-space: normal;
     width: 800px;
-    height: 100px;
+    align-self: center;
     opacity: 0;
     translate: -800px 0;
     transition-property: translate, opacity;
     transition-duration: 1.5s;
     transition-timing-function: ease-in-out;
+    margin-top: 40px;
+    margin-bottom: 40px;
 }
 
 .intro-text-visible {

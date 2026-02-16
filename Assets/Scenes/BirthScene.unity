@@ -1635,7 +1635,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46b8b920b6bb84b48a2e8365b85083ca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BirthSystem
-  childStatusText: {fileID: 0}
   canvas: {fileID: 0}
   babyFace: {fileID: 0}
   babyFaceImage: {fileID: 0}

@@ -31,21 +31,66 @@
     margin-bottom: 4px;
 }
 
+/* --- Menu overlay (backdrop) --- */
+.birth-menu-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
 /* --- Menu dropdown --- */
 .birth-menu-card {
     position: absolute;
-    right: 24px;
-    width: 280px;
-    border-radius: 24px;
+    right: 0px;
+    width: 600px;
+    padding: 64px;
+    border-top-left-radius: 32px;
+    border-bottom-left-radius: 32px;
     background-color: white;
     align-items: center;
     padding-top: 10px;
     padding-bottom: 10px;
 }
 
+.birth-menu-user-row {
+    flex-direction: row;
+    align-items: center;
+    align-self: center;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.birth-menu-user-icon {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-top: 32px;
+    margin-bottom: 32px;
+    background-color: rgb(217, 217, 217);
+}
+
+.birth-menu-user-name {
+    font-size: 42px;
+    margin-top: 32px;
+    color: rgb(0, 0, 0);
+    margin-left: 12px;
+}
+
+.birth-menu-separator {
+    width: 100%;
+    height: 1px;
+    background-color: rgb(209, 209, 217);
+    align-self: center;
+    margin-bottom: 4px;
+}
+
 .birth-menu-item-btn {
-    width: 260px;
-    height: 60px;
+    width: 100%;
+    height: 96px;
     border-radius: 16px;
     background-color: white;
     align-items: center;
@@ -53,7 +98,7 @@
     border-width: 0;
     padding: 0;
     font-size: 30px;
-    color: rgb(26, 26, 33);
+    color: #000;
     transition-property: scale, background-color;
     transition-duration: 0.08s;
 }
@@ -61,6 +106,154 @@
 .birth-menu-item-btn:active {
     scale: 0.95 0.95;
     background-color: rgb(240, 240, 243);
+}
+
+/* --- Parent card --- */
+.birth-parent-panel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.birth-parent-card {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1016px;
+    height: 1300px;
+    border-radius: 24px;
+    align-items: center;
+}
+
+.birth-parent-card-father {
+    background-color: rgba(78, 110, 155, 0.9);
+}
+
+.birth-parent-card-mother {
+    background-color: rgba(198, 103, 144, 0.9);
+}
+
+.birth-parent-inner {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: 6px;
+    bottom: 6px;
+    border-radius: 20px;
+}
+
+.birth-parent-inner-father {
+    background-color: rgba(78, 110, 155, 0.9);
+}
+
+.birth-parent-inner-mother {
+    background-color: rgba(198, 103, 144, 0.9);
+}
+
+.birth-parent-name {
+    position: absolute;
+    top: 10px;
+    left: 15px;
+    right: 15px;
+    height: 70px;
+    font-size: 42px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: white;
+}
+
+.birth-parent-separator {
+    position: absolute;
+    top: 85px;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+}
+
+.birth-parent-separator-father {
+    background-color: rgba(102, 128, 191, 0.6);
+}
+
+.birth-parent-separator-mother {
+    background-color: rgba(191, 102, 140, 0.6);
+}
+
+.birth-parent-face {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -45%;
+    width: 850px;
+    height: 850px;
+}
+
+.birth-parent-intro {
+    position: absolute;
+    bottom: 40px;
+    left: 15px;
+    right: 15px;
+    height: 130px;
+    font-size: 40px;
+    -unity-text-align: middle-center;
+    color: rgb(255, 230, 128);
+    white-space: normal;
+}
+
+.birth-parent-info-btn {
+    position: absolute;
+    right: 30px;
+    top: 30px;
+    width: 64px;
+    height: 64px;
+    border-radius: 32px;
+    background-color: rgba(255, 255, 255, 0.9);
+    align-items: center;
+    justify-content: center;
+    border-width: 0;
+    padding: 0;
+    font-size: 38px;
+    -unity-font-style: bold-and-italic;
+    -unity-text-align: middle-center;
+    color: rgb(51, 77, 140);
+    transition-property: scale;
+    transition-duration: 0.08s;
+}
+
+.birth-parent-info-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(217, 217, 230);
+}
+
+.birth-next-btn-wrapper {
+    position: absolute;
+    left: 50%;
+    bottom: 160px;
+    translate: -50% 0;
+}
+
+.birth-next-btn {
+    width: 700px;
+    height: 120px;
+    border-radius: 60px;
+    background-color: white;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(115, 115, 128);
+    border-width: 1px;
+    border-color: rgb(200, 200, 210);
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+    padding: 0;
+}
+
+.birth-next-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(235, 235, 235);
 }
 
 /* --- Name input dialog --- */
@@ -215,4 +408,268 @@
 
 .birth-bio-close:active {
     background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* --- Love story panel --- */
+/* --- 邂逅の記憶: 全画面パネル (flexbox縦並び) --- */
+.birth-story-panel {
+    flex-grow: 1;
+    flex-direction: column;
+    background-color: rgba(243, 247, 248, 1);
+}
+
+/* 背景画像（装飾用オーバーレイ、上下反転） */
+.birth-story-bg-wrapper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    scale: 1 -1;
+}
+
+/* --- タイトル行 --- */
+.birth-story-title {
+    flex-shrink: 0;
+    padding-top: 64px;
+    padding-bottom: 16px;
+    padding-left: 20px;
+    padding-right: 20px;
+    font-size: 56px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(0, 0, 0);
+}
+
+/* --- 親カード行 --- */
+.birth-story-cards-row {
+    flex-shrink: 0;
+    flex-direction: row;
+    justify-content: center;
+    padding-left: 3%;
+    padding-right: 3%;
+    padding-top: 16px;
+    padding-bottom: 16px;
+}
+
+.birth-story-card {
+    width: 45%;
+    margin-left: 1%;
+    margin-right: 1%;
+    flex-direction: column;
+    border-radius: 32px;
+    background-color: antiquewhite;
+    padding: 16px;
+}
+
+.birth-story-card-name {
+    flex-shrink: 0;
+    font-size: 40px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(0, 0, 0);
+    height: 60px;
+    margin-bottom: 16px;
+}
+
+.birth-story-card-face {
+    flex-shrink: 0;
+    width: 350px;
+    height: 350px;
+    border-radius: 24px;
+    overflow: hidden;
+    background-color: rgb(128, 128, 128);
+    align-self: center;
+}
+
+.birth-story-card-intro {
+    flex-shrink: 0;
+    margin-top: 24px;
+    font-size: 32px;
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    color: rgb(33, 32, 32);
+    white-space: normal;
+    height: 80px;
+}
+
+/* --- ストーリーテキスト (伸縮する中央領域) --- */
+.birth-story-text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    padding-left: 5%;
+    padding-right: 5%;
+    padding-top: 24px;
+    padding-bottom: 24px;
+    font-size: 36px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(33, 32, 32);
+    white-space: normal;
+}
+
+/* --- 「愛を育む」ボタン行 (下部固定) --- */
+.birth-story-love-btn-row {
+    flex-shrink: 0;
+    flex-direction: row;
+    justify-content: center;
+    padding-bottom: 120px;
+    padding-top: 16px;
+}
+
+.birth-story-love-btn {
+    width: 700px;
+    height: 120px;
+    border-radius: 60px;
+    background-color: white;
+    -unity-text-align: middle-center;
+    font-size: 36px;
+    -unity-font-style: bold;
+    color: rgb(0, 0, 0);
+    border-width: 1px;
+    border-color: rgb(200, 200, 210);
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+    padding: 0;
+}
+
+.birth-story-love-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(235, 235, 235);
+}
+
+/* --- Birth result card --- */
+.birth-result-card {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1016px;
+    height: 1300px;
+    translate: -508px -800px;
+    border-radius: 24px;
+    background-color: rgb(209, 209, 217);
+}
+
+.birth-result-inner {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: 6px;
+    bottom: 6px;
+    border-radius: 20px;
+    background-color: rgb(243, 247, 248);
+    overflow: hidden;
+}
+
+.birth-result-gender {
+    position: absolute;
+    top: 10px;
+    left: 15px;
+    right: 15px;
+    height: 70px;
+    font-size: 42px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(64, 64, 77);
+}
+
+.birth-result-separator {
+    position: absolute;
+    top: 85px;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background-color: rgba(199, 199, 209, 0.6);
+}
+
+.birth-result-status-card {
+    position: absolute;
+    left: 3%;
+    right: 3%;
+    bottom: 1%;
+    height: 29%;
+    border-radius: 24px;
+    background-color: rgb(209, 209, 217);
+}
+
+.birth-result-status-inner {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: 6px;
+    bottom: 6px;
+    border-radius: 20px;
+    background-color: rgb(243, 247, 248);
+    padding: 12px 28px;
+}
+
+.birth-result-status-text {
+    font-size: 28px;
+    color: rgb(26, 26, 26);
+    white-space: normal;
+}
+
+.birth-result-upload-btn {
+    position: absolute;
+    left: 50%;
+    bottom: 31%;
+    translate: -32px 0;
+    width: 64px;
+    height: 64px;
+    border-radius: 32px;
+    background-color: rgba(89, 89, 102, 0.8);
+    align-items: center;
+    justify-content: center;
+    border-width: 0;
+    padding: 0;
+    font-size: 28px;
+    -unity-text-align: middle-center;
+    color: white;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.birth-result-upload-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgba(64, 64, 77, 1);
+}
+
+.birth-result-custom-image {
+    position: absolute;
+    left: 3%;
+    right: 3%;
+    top: 7%;
+    bottom: 30%;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* --- Skip button wrapper (flexboxで右下寄せ) --- */
+.cutin-skip-wrapper {
+    flex-grow: 1;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-end;
+    padding-right: 30px;
+    padding-bottom: 60px;
+}
+
+/* --- Skip button --- */
+.cutin-skip-btn {
+    width: 160px;
+    height: 64px;
+    border-radius: 32px;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.3);
+    padding: 0;
+    font-size: 26px;
+    -unity-font-style: bold;
+    color: rgba(255, 255, 255, 0.7);
+    -unity-text-align: middle-center;
+    transition-property: background-color;
+    transition-duration: 0.08s;
+}
+
+.cutin-skip-btn:active {
+    background-color: rgba(255, 255, 255, 0.35);
 }

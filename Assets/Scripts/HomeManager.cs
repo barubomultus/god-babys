@@ -55,45 +55,47 @@ public class HomeManager : MonoBehaviour
     {
         var dc = DataCarrier.Instance;
 
-        // Background
+        // 全画面背景（装飾用）
         var bg = new UIE.VisualElement();
         bg.AddToClassList("bg-screen");
         root.Add(bg);
 
-        // Content column
-        var content = new UIE.VisualElement();
-        content.style.position = UIE.Position.Absolute;
-        content.style.left = 0;
-        content.style.right = 0;
-        content.style.top = 0;
-        content.style.bottom = 0;
-        content.style.alignItems = UIE.Align.Center;
-        root.Add(content);
+        // フレックスボックスのルートコンテナ
+        var homeRoot = new UIE.VisualElement();
+        homeRoot.AddToClassList("home-root");
+        root.Add(homeRoot);
 
-        // Safe area top spacer
-        var (safeTop, _, _, _) = UIHelper.GetSafeMargins();
-        var topSpacer = new UIE.VisualElement();
-        topSpacer.style.height = 140 + safeTop;
-        content.Add(topSpacer);
+        // --- 上部: セーフエリア + プロフィール ---
+        var (safeTop, _, _, safeBottom) = UIHelper.GetSafeMargins();
 
-        // Player icon (circle with border)
-        CreatePlayerIcon(content);
+        var profile = new UIE.VisualElement();
+        profile.AddToClassList("home-profile");
+        profile.style.paddingTop = 140 + safeTop;
+        homeRoot.Add(profile);
+
+        // Player icon
+        CreatePlayerIcon(profile);
 
         // Player name
         string pName = dc != null ? dc.playerName : DataCarrier.GetProfileName();
         var nameLabel = UIHelper.CreateLabel(
             string.IsNullOrEmpty(pName) ? "???" : pName, "home-player-name");
-        content.Add(nameLabel);
+        profile.Add(nameLabel);
 
         // Separator
         var sep = new UIE.VisualElement();
         sep.AddToClassList("separator");
         sep.style.marginTop = 20;
-        content.Add(sep);
+        profile.Add(sep);
+
+        // --- 中央: ガチャ説明 + こいみこし ---
+        var center = new UIE.VisualElement();
+        center.AddToClassList("home-center");
+        homeRoot.Add(center);
 
         // Gacha description
         var descLabel = UIHelper.CreateLabel(Localization.Get("home_gacha_desc"), "gacha-desc");
-        content.Add(descLabel);
+        center.Add(descLabel);
 
         // Koimikoshi image
         var koimikoshiSprite = Resources.Load<Sprite>("UI/koimikoshi");
@@ -107,35 +109,29 @@ public class HomeManager : MonoBehaviour
             koimiImg.style.backgroundImage = new UIE.StyleBackground(koimikoshiSprite);
             koimikoshiContainer.Add(koimiImg);
 
-            content.Add(koimikoshiContainer);
+            center.Add(koimikoshiContainer);
         }
 
-        // Spacer
-        var spacer = new UIE.VisualElement();
-        spacer.style.flexGrow = 1;
-        content.Add(spacer);
-
-        // === Buttons ===
+        // --- 下部: ボタン群 ---
+        var buttons = new UIE.VisualElement();
+        buttons.AddToClassList("home-buttons");
+        buttons.style.paddingBottom = 260 + safeBottom;
+        homeRoot.Add(buttons);
 
         // Meet button (pink border)
-        CreateMeetButton(content);
+        CreateMeetButton(buttons);
 
         // Babys button (gold border)
-        CreateBorderedButton(content, Localization.Get("home_babys"),
+        CreateBorderedButton(buttons, Localization.Get("home_babys"),
             new Color(0.85f, 0.65f, 0.13f),
             new Color(0.45f, 0.45f, 0.5f),
             () => SceneManager.LoadScene("BabysScene"));
 
         // Enishi button (purple border)
-        CreateBorderedButton(content, Localization.Get("home_enishi"),
+        CreateBorderedButton(buttons, Localization.Get("home_enishi"),
             new Color(0.55f, 0.35f, 0.65f),
             new Color(0.45f, 0.45f, 0.5f),
             () => SceneManager.LoadScene("EnishiScene"));
-
-        // Bottom spacer
-        var bottomSpacer = new UIE.VisualElement();
-        bottomSpacer.style.height = 260;
-        content.Add(bottomSpacer);
     }
 
     void CreatePlayerIcon(UIE.VisualElement parent)
@@ -174,9 +170,8 @@ public class HomeManager : MonoBehaviour
 
     void CreateMeetButton(UIE.VisualElement parent)
     {
-        var wrapper = new UIE.VisualElement();
-        wrapper.style.alignItems = UIE.Align.Center;
-        wrapper.style.marginTop = 20;
+        var row = new UIE.VisualElement();
+        row.AddToClassList("home-btn-row");
 
         // Pink border behind
         var borderEl = new UIE.VisualElement();
@@ -202,16 +197,15 @@ public class HomeManager : MonoBehaviour
         };
         borderEl.Add(btn);
 
-        wrapper.Add(borderEl);
-        parent.Add(wrapper);
+        row.Add(borderEl);
+        parent.Add(row);
     }
 
     void CreateBorderedButton(UIE.VisualElement parent, string label, Color borderColor,
         Color textColor, System.Action onClick)
     {
-        var wrapper = new UIE.VisualElement();
-        wrapper.style.alignItems = UIE.Align.Center;
-        wrapper.style.marginTop = 20;
+        var row = new UIE.VisualElement();
+        row.AddToClassList("home-btn-row");
 
         var btn = new UIE.Button();
         btn.AddToClassList("bordered-pill");
@@ -224,7 +218,7 @@ public class HomeManager : MonoBehaviour
         btn.text = label;
         btn.clicked += () => onClick();
 
-        wrapper.Add(btn);
-        parent.Add(wrapper);
+        row.Add(btn);
+        parent.Add(row);
     }
 }

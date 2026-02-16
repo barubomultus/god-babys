@@ -1,8 +1,500 @@
 /* ======================================== */
-/* BattleStyle.uss — BattleScene            */
+/* BattleStyle.uss — BattleScene (flexbox)  */
 /* ======================================== */
 
-/* --- Menu button (top-right circle) --- */
+/* === Main layout === */
+.battle-root {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.battle-bg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgb(20, 20, 38);
+}
+
+.battle-flash {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0;
+}
+
+/* === Enemy area (top) === */
+.battle-enemy-area {
+    flex-shrink: 0;
+    flex-direction: row;
+    justify-content: flex-end;
+    padding-right: 80px;
+}
+
+/* === Player area (bottom) === */
+.battle-player-area {
+    flex-shrink: 0;
+    flex-direction: row;
+    justify-content: flex-start;
+    padding-left: 80px;
+}
+
+/* === Center (VS + log) === */
+.battle-center {
+    flex-grow: 1;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* === Character panel (shared) === */
+.battle-char-panel {
+    width: 450px;
+    height: 650px;
+    border-radius: 16px;
+    background-color: rgba(51, 51, 77, 0.8);
+    flex-direction: column;
+    align-items: center;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+/* === Name label === */
+.battle-char-name {
+    flex-shrink: 0;
+    height: 80px;
+    width: 100%;
+    font-size: 46px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.battle-name-player {
+    color: rgb(128, 204, 255);
+}
+
+.battle-name-enemy {
+    color: rgb(255, 128, 128);
+}
+
+/* === Face mask === */
+.battle-face-mask {
+    flex-grow: 1;
+    width: 420px;
+    border-radius: 32px;
+    overflow: hidden;
+    margin-left: 15px;
+    margin-right: 15px;
+    margin-top: 0;
+    margin-bottom: 0;
+    background-color: white;
+}
+
+/* === Age label (over face) === */
+.battle-age-label {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    font-size: 22px;
+    color: rgba(255, 255, 255, 0.85);
+    -unity-text-align: lower-right;
+}
+
+/* === HP bar === */
+.battle-hp-bg {
+    flex-shrink: 0;
+    height: 20px;
+    width: 420px;
+    border-radius: 6px;
+    background-color: rgb(77, 77, 77);
+    margin-top: 4px;
+    flex-direction: row;
+}
+
+.battle-hp-fill {
+    height: 100%;
+    border-radius: 4px;
+}
+
+.battle-hp-fill-player {
+    background-color: rgb(51, 204, 77);
+}
+
+.battle-hp-fill-enemy {
+    background-color: rgb(204, 51, 51);
+}
+
+/* === HP text === */
+.battle-hp-text {
+    flex-shrink: 0;
+    height: 24px;
+    width: 420px;
+    font-size: 22px;
+    -unity-text-align: middle-center;
+    color: white;
+    margin-top: 2px;
+}
+
+/* === VS text === */
+.battle-vs {
+    font-size: 80px;
+    -unity-font-style: bold;
+    color: rgb(255, 204, 51);
+    -unity-text-align: middle-center;
+}
+
+/* === Battle log === */
+.battle-log {
+    width: 1000px;
+    height: 200px;
+    border-radius: 12px;
+    background-color: rgba(26, 26, 38, 0.9);
+    align-items: center;
+    justify-content: center;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.battle-log-text {
+    font-size: 40px;
+    color: white;
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+/* === Action area === */
+.battle-action-area {
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: center;
+}
+
+.battle-action-row {
+    flex-shrink: 0;
+    flex-direction: row;
+    justify-content: center;
+}
+
+/* === Action button === */
+.battle-action-btn {
+    width: 460px;
+    height: 120px;
+    border-radius: 16px;
+    background-color: white;
+    border-width: 2px;
+    border-color: rgb(192, 192, 204);
+    margin-left: 10px;
+    margin-right: 10px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.battle-action-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(235, 235, 235);
+}
+
+.battle-action-btn-text {
+    font-size: 36px;
+    -unity-font-style: bold;
+    color: rgb(115, 115, 128);
+    -unity-text-align: middle-center;
+}
+
+.battle-action-label {
+    position: absolute;
+    top: -24px;
+    font-size: 20px;
+    color: rgb(204, 204, 217);
+    -unity-text-align: middle-center;
+    align-self: center;
+}
+
+.battle-action-info {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    background-color: rgb(217, 217, 230);
+    border-width: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 28px;
+    -unity-font-style: bold-and-italic;
+    color: rgb(128, 128, 140);
+    transition-property: scale;
+    transition-duration: 0.08s;
+}
+
+.battle-action-info:active {
+    scale: 0.90 0.90;
+}
+
+/* === Skill popup === */
+.battle-skill-popup {
+    width: 500px;
+    height: 280px;
+    border-radius: 16px;
+    background-color: rgba(30, 30, 56, 0.95);
+    flex-direction: column;
+    align-items: center;
+    padding-top: 10px;
+}
+
+.battle-skill-icon-area {
+    width: 90px;
+    height: 90px;
+    border-radius: 45px;
+    background-color: rgba(20, 20, 38, 0.8);
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.battle-skill-title {
+    font-size: 44px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-top: 8px;
+}
+
+.battle-skill-desc {
+    font-size: 36px;
+    color: white;
+    -unity-text-align: middle-center;
+    white-space: normal;
+    padding-left: 20px;
+    padding-right: 20px;
+    margin-top: 8px;
+    flex-grow: 1;
+}
+
+/* === Growth overlay === */
+.battle-growth-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgb(243, 247, 248);
+    flex-direction: column;
+    align-items: center;
+}
+
+.battle-growth-title {
+    font-size: 52px;
+    -unity-font-style: bold;
+    color: rgb(38, 38, 46);
+    -unity-text-align: middle-center;
+}
+
+.battle-growth-subtitle {
+    font-size: 30px;
+    color: rgb(128, 128, 140);
+    -unity-text-align: middle-center;
+    margin-top: 4px;
+}
+
+.battle-growth-row {
+    width: 860px;
+    height: 80px;
+    border-radius: 30px;
+    background-color: white;
+    flex-direction: row;
+    align-items: center;
+    margin-top: 14px;
+    opacity: 0;
+    scale: 0.9 0.9;
+    transition-property: opacity, scale;
+    transition-duration: 0.25s;
+    transition-timing-function: ease-out;
+}
+
+.battle-growth-row-visible {
+    opacity: 1;
+    scale: 1 1;
+}
+
+.battle-growth-bar {
+    width: 6px;
+    height: 70%;
+    border-radius: 3px;
+    margin-left: 28px;
+}
+
+.battle-growth-label {
+    font-size: 30px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+    margin-left: 16px;
+    width: 120px;
+}
+
+.battle-growth-old {
+    font-size: 34px;
+    color: rgb(140, 140, 153);
+    -unity-text-align: middle-right;
+    width: 120px;
+}
+
+.battle-growth-arrow {
+    font-size: 30px;
+    color: rgb(179, 179, 184);
+    -unity-text-align: middle-center;
+    width: 60px;
+}
+
+.battle-growth-new {
+    font-size: 38px;
+    -unity-font-style: bold;
+    color: rgb(38, 38, 46);
+    -unity-text-align: middle-left;
+    width: 120px;
+}
+
+.battle-growth-diff {
+    height: 38px;
+    border-radius: 19px;
+    padding-left: 12px;
+    padding-right: 12px;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+}
+
+.battle-growth-diff-text {
+    font-size: 22px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+/* === EXP bar === */
+.battle-exp-bar-bg {
+    width: 80%;
+    height: 20px;
+    border-radius: 6px;
+    background-color: rgb(77, 77, 77);
+    margin-top: 10px;
+    align-self: center;
+}
+
+.battle-exp-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    background-color: rgb(255, 217, 0);
+}
+
+/* === Boss defeat panel === */
+.battle-boss-panel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0);
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition-property: background-color;
+    transition-duration: 0.8s;
+}
+
+.battle-boss-panel-dark {
+    background-color: rgba(0, 0, 0, 0.95);
+}
+
+.battle-boss-line {
+    font-size: 32px;
+    color: white;
+    -unity-text-align: middle-center;
+    white-space: normal;
+    width: 800px;
+    opacity: 0;
+    translate: -800px 0;
+    transition-property: translate, opacity;
+    transition-duration: 1.5s;
+    transition-timing-function: ease-in-out;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.battle-boss-line-visible {
+    translate: 0 0;
+    opacity: 1;
+}
+
+.battle-boss-line-title {
+    font-size: 40px;
+    -unity-font-style: bold;
+    color: rgb(255, 77, 77);
+}
+
+/* === Victory panel === */
+.battle-victory-panel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.battle-victory-text {
+    font-size: 64px;
+    -unity-font-style: bold;
+    color: white;
+    -unity-text-align: middle-center;
+    white-space: normal;
+    width: 800px;
+}
+
+/* === Cut-in === */
+.battle-cutin {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    scale: 0.5 0.5;
+}
+
+/* === Start / Victory image wrapper === */
+.battle-image-wrapper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.battle-image-center {
+    width: 800px;
+    height: 400px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* === Menu button (top-right circle) === */
 .battle-menu-btn {
     position: absolute;
     right: 24px;

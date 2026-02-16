@@ -1,6 +1,19 @@
 /* ======================================== */
-/* HomeStyle.uss — HomeScene                */
+/* HomeStyle.uss — HomeScene (flexbox)      */
 /* ======================================== */
+
+/* --- 全体レイアウト --- */
+.home-root {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+/* --- 上部プロフィールエリア --- */
+.home-profile {
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: center;
+}
 
 /* --- Player icon area --- */
 .home-icon-border {
@@ -8,9 +21,9 @@
     height: 168px;
     border-radius: 50%;
     background-color: rgb(209, 209, 209);
-    align-items: center;
+    flex-direction: column;
     justify-content: center;
-    align-self: center;
+    align-items: center;
 }
 
 .home-icon-mask {
@@ -18,8 +31,6 @@
     height: 160px;
     border-radius: 50%;
     overflow: hidden;
-    align-items: center;
-    justify-content: center;
     background-color: white;
     border-width: 0;
     padding: 0;
@@ -38,22 +49,38 @@
 }
 
 .home-player-name {
+    flex-shrink: 0;
     font-size: 40px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     color: rgb(13, 13, 20);
     margin-top: 15px;
-    align-self: center;
+}
+
+/* --- 中央エリア (こいみこし + ガチャ説明) --- */
+.home-center {
+    flex-grow: 1;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.gacha-desc {
+    flex-shrink: 0;
+    font-size: 30px;
+    -unity-text-align: middle-center;
+    color: rgb(26, 26, 33);
+    margin-top: 10px;
 }
 
 /* --- Koimikoshi image --- */
 .koimikoshi-container {
+    flex-shrink: 0;
     width: 1040px;
     height: 498px;
-    align-self: center;
     overflow: hidden;
     border-radius: 32px;
-    margin-top: 120px;
+    margin-top: 30px;
 }
 
 .koimikoshi-image {
@@ -62,12 +89,20 @@
     -unity-background-scale-mode: scale-to-fit;
 }
 
-.gacha-desc {
-    font-size: 30px;
-    -unity-text-align: middle-center;
-    color: rgb(26, 26, 33);
-    margin-top: 10px;
-    align-self: center;
+/* --- 下部ボタンエリア --- */
+.home-buttons {
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 20px;
+}
+
+/* --- ボタン行 (各ボタンを中央配置) --- */
+.home-btn-row {
+    flex-shrink: 0;
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 20px;
 }
 
 /* --- Meet button (pink bordered) --- */
@@ -75,9 +110,9 @@
     width: 708px;
     height: 128px;
     border-radius: 64px;
-    align-self: center;
-    align-items: center;
+    flex-direction: row;
     justify-content: center;
+    align-items: center;
 }
 
 .meet-btn {
@@ -85,12 +120,9 @@
     height: 120px;
     border-radius: 60px;
     background-color: white;
-    align-self: center;
-    align-items: center;
-    justify-content: center;
+    -unity-text-align: middle-center;
     font-size: 36px;
     -unity-font-style: bold;
-    -unity-text-align: middle-center;
     color: rgb(242, 78, 128);
     border-width: 0;
     transition-property: scale, background-color;
