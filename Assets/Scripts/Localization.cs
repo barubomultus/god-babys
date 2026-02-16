@@ -176,6 +176,18 @@ public static class Localization
         Add("parent_ミサト", "ミサト", "Misato");
         Add("parent_カエデ", "カエデ", "Kaede");
         Add("parent_ルナ", "ルナ", "Luna");
+        Add("parent_ゼニガタ", "ゼニガタ", "Zenigata");
+        Add("parent_ツクモ", "ツクモ", "Tsukumo");
+        Add("parent_サトウ", "サトウ", "Satou");
+        Add("parent_イワオ", "イワオ", "Iwao");
+        Add("parent_アキトシ", "アキトシ", "Akitoshi");
+        Add("parent_ネオ", "ネオ", "Neo");
+        Add("parent_イザナミ", "イザナミ", "Izanami");
+        Add("parent_ミク", "ミク", "Miku");
+        Add("parent_カヨコ", "カヨコ", "Kayoko");
+        Add("parent_フクトク", "フクトク", "Fukutoku");
+        Add("parent_ヨネ", "ヨネ", "Yone");
+        Add("parent_ドクコ", "ドクコ", "Dokuko");
 
         // ===== Phase Cut-in =====
         Add("cutin_who_father", "呼び声に応えるのは――", "Answering the call――");
@@ -194,6 +206,12 @@ public static class Localization
         Add("cutin_シンジ", "ノーベル賞受賞者のシンジだ！！", "It's Shinji, the Nobel laureate!!");
         Add("cutin_リョウマ", "世界一の実業家のリョウマだ！！", "It's Ryouma, the world's top tycoon!!");
         Add("cutin_テツヤ", "伝説のロックスターのテツヤだ！！", "It's Tetsuya, the legendary rockstar!!");
+        Add("cutin_ゼニガタ", "石油王のゼニガタだ！！", "It's Zenigata, the oil king!!");
+        Add("cutin_ツクモ", "自称・予言者のツクモだ！！", "It's Tsukumo, the self-proclaimed prophet!!");
+        Add("cutin_サトウ", "中堅企業の係長のサトウだ！！", "It's Satou, the section chief!!");
+        Add("cutin_イワオ", "元・土木作業員のイワオだ！！", "It's Iwao, the ex-construction worker!!");
+        Add("cutin_アキトシ", "プロギャンブラーのアキトシだ！！", "It's Akitoshi, the pro gambler!!");
+        Add("cutin_ネオ", "永遠のニートのネオだ！！", "It's Neo, the eternal NEET!!");
 
         // ===== Mother Cut-in =====
         Add("cutin_サクラ", "暗殺拳の継承者のサクラだ！！", "It's Sakura, heir of assassination arts!!");
@@ -202,6 +220,12 @@ public static class Localization
         Add("cutin_ミサト", "量子物理学者のミサトだ！！", "It's Misato, the quantum physicist!!");
         Add("cutin_カエデ", "天才外科医のカエデだ！！", "It's Kaede, the genius surgeon!!");
         Add("cutin_ルナ", "世界的スーパーモデルのルナだ！！", "It's Luna, the global supermodel!!");
+        Add("cutin_イザナミ", "伝説の女帝のイザナミだ！！", "It's Izanami, the legendary empress!!");
+        Add("cutin_ミク", "自称・モデルのミクだ！！", "It's Miku, the self-proclaimed model!!");
+        Add("cutin_カヨコ", "商店街の看板娘のカヨコだ！！", "It's Kayoko, the shopping street darling!!");
+        Add("cutin_フクトク", "宝くじ1等当選者のフクトクだ！！", "It's Fukutoku, the lottery jackpot winner!!");
+        Add("cutin_ヨネ", "内職の鬼のヨネだ！！", "It's Yone, the piecework master!!");
+        Add("cutin_ドクコ", "闇金の取り立て屋のドクコだ！！", "It's Dokuko, the loan shark enforcer!!");
 
         // ===== Parent Intros =====
         Add("intro_タケシ", "元・格闘技世界王者 / 握力: 180kg", "Ex-World Martial Arts Champion / Grip: 180kg");
@@ -216,6 +240,18 @@ public static class Localization
         Add("intro_ミサト", "量子物理学者 / IQ: 270", "Quantum Physicist / IQ: 270");
         Add("intro_カエデ", "天才外科医 / 手術成功率: 100%", "Genius Surgeon / Success Rate: 100%");
         Add("intro_ルナ", "世界的スーパーモデル / 身長: 180cm", "Global Supermodel / Height: 180cm");
+        Add("intro_ゼニガタ", "石油王 / 口癖は『金で買えないものはない』", "Oil King / Motto: 'Money buys everything'");
+        Add("intro_ツクモ", "自称・予言者 / IQ300、常に宇宙と交信中", "Self-Proclaimed Prophet / IQ 300, always in cosmic contact");
+        Add("intro_サトウ", "中堅企業の係長 / 趣味は洗車", "Section Chief / Hobby: car washing");
+        Add("intro_イワオ", "元・土木作業員 / 素手で岩を砕く", "Ex-Construction Worker / Crushes rocks bare-handed");
+        Add("intro_アキトシ", "プロギャンブラー / 通帳残高は常に0", "Pro Gambler / Bank balance: always 0");
+        Add("intro_ネオ", "永遠のニート / 30年間実家から出ていない", "Eternal NEET / Hasn't left home in 30 years");
+        Add("intro_イザナミ", "伝説の女帝 / 一言で国家予算が動く", "Legendary Empress / One word moves national budgets");
+        Add("intro_ミク", "自称・モデル / フォロワー多数、内情は火の車", "Self-Proclaimed Model / Many followers, finances in flames");
+        Add("intro_カヨコ", "商店街の看板娘 / 街の人気者", "Shopping Street Darling / Everyone's favorite");
+        Add("intro_フクトク", "宝くじ1等当選者 / 才能は皆無だが強運", "Lottery Winner / No talent but incredible luck");
+        Add("intro_ヨネ", "内職の鬼 / ティッシュ配りの速さは音速", "Piecework Master / Tissue-folding at the speed of sound");
+        Add("intro_ドクコ", "闇金の取り立て屋 / 恐怖の回収率100%", "Loan Shark Enforcer / 100% terror collection rate");
 
         // ===== Father Bios =====
         Add("bio_タケシ",
@@ -377,6 +413,126 @@ public static class Localization
         Add("love_テツヤ_ルナ",
             "ワールドツアー、50都市。\n同じ夢を追う二人は、\n世界中を一緒に回った。\n\n「疲れないか？」\n「あなたがいるから平気」\n\nステージの上と、ランウェイの上。\n輝く場所は違っても、\n見つめ合う瞳は同じだった。\n\n最後の公演、アンコール。\nテツヤはステージ上で跪いた。\n「結婚してくれ」\n8億人のファンが証人となった。",
             "World tour, 50 cities.\nTwo chasing the same dream\ntraveled the world together.\n\n\"Aren't you tired?\"\n\"With you here, I'm fine.\"\n\nOn stage and on the runway.\nDifferent places to shine,\nbut the same eyes gazing at each other.\n\nThe final show, encore.\nTetsuya knelt on stage.\n\"Marry me.\"\n800 million fans were witnesses.");
+
+        // ゼニガタ（石油王）× 新母親
+        Add("love_ゼニガタ_イザナミ",
+            "世界経済フォーラムの最前列。\n石油王と女帝が隣り合った。\n\n「この会場、買い取ろうか？」\n「もう買ってあるわ」\n\n互いの資産自慢が\nいつの間にか笑い合いに変わり、\n晩餐会では二人だけの席を用意した。\n\n「金で買えないものはない」\n「でも、あなたの心は私がもらうわ」\n世界最強の権力カップル誕生。",
+            "Front row at the World Economic Forum.\nThe oil king and the empress sat side by side.\n\n\"Shall I buy this venue?\"\n\"I already own it.\"\n\nTheir battle of wealth\nturned into shared laughter.\n\n\"Money can buy anything.\"\n\"But I'll take your heart for free.\"\nThe world's most powerful couple was born.");
+        Add("love_ゼニガタ_ミク",
+            "インフルエンサー案件の依頼。\n「石油を世界一オシャレに撮れ」\n\nゼニガタの無茶な依頼に\nミクは全力で応えた。\n油田をバックにキメポーズ。\n\n「フォロワー100万人増えたぞ」\n「でしょ？私の実力よ」\n\n見栄っ張り同士、\n嘘と本音の境界が溶けた夜、\nゼニガタは言った。\n「君だけは本物だ」",
+            "An influencer sponsorship deal.\n\"Make oil look fashionable.\"\n\nMiku gave it her all\nfor Zenigata's absurd request.\nPosing in front of oil fields.\n\n\"Gained a million followers!\"\n\"See? That's my talent.\"\n\nTwo show-offs together,\nthe line between lies and truth melted.\n\"You're the only real thing,\" he said.");
+        Add("love_ゼニガタ_カヨコ",
+            "高級車で商店街に迷い込んだ石油王。\nコロッケの匂いに導かれ、\n看板娘カヨコの店にたどり着いた。\n\n「このコロッケ、いくらだ？」\n「80円ですよ」\n「80億出す」\n「おつり出せません」\n\n毎日通うゼニガタ。\nプラチナカードより\n温かいコロッケが欲しかった。\n「金じゃなく、心で買えるものがあるんだな」",
+            "The oil king got lost in a shopping street.\nLed by the smell of croquettes,\nhe found Kayoko's shop.\n\n\"How much for this croquette?\"\n\"80 yen.\"\n\"I'll pay 8 billion.\"\n\"I can't make change for that.\"\n\nZenigata came every day.\nHe wanted warm croquettes\nmore than platinum cards.\n\"Some things money can't buy.\"");
+        Add("love_ゼニガタ_フクトク",
+            "カジノVIPルームでの出会い。\nフクトクは持ち金0から\nルーレットだけで1億を稼いだ。\n\n「その運、買いたい」\n「運は売れませんよ」\n\n金で買えない唯一のもの。\nゼニガタは初めて挫折を味わった。\n\nだが隣にいるだけで\n事業がうまくいく不思議。\n「君は僕の最高の投資だ」\n「私は無料よ」",
+            "A meeting in the casino VIP room.\nFukutoku turned nothing\ninto 100 million at roulette.\n\n\"I want to buy that luck.\"\n\"Luck isn't for sale.\"\n\nThe one thing money can't buy.\nZenigata tasted failure for the first time.\n\nBut with her nearby,\nbusiness always went well.\n\"You're my best investment.\"\n\"I'm free of charge.\"");
+        Add("love_ゼニガタ_ヨネ",
+            "節税対策で訪れた下町の税理士事務所。\n待合室で内職をしていたヨネの\nティッシュ折りの速さに目を奪われた。\n\n「君、うちの工場で働かないか？」\n「時給いくらですか？」\n「好きなだけ」\n\nだがヨネは断った。\n「手作りに意味があるんです」\n\nその言葉が石油王の心を揺さぶった。\n金で買えない職人魂に、恋をした。",
+            "Visiting a downtown tax office.\nIn the waiting room, Yone was doing piecework.\nHer tissue-folding speed was mesmerizing.\n\n\"Work at my factory?\"\n\"What's the hourly rate?\"\n\"Whatever you want.\"\n\nBut Yone refused.\n\"Handmade things have meaning.\"\n\nThose words shook the oil king's heart.\nHe fell in love with a craftsman's soul\nthat money couldn't buy.");
+        Add("love_ゼニガタ_ドクコ",
+            "借金取りが石油王の屋敷に乗り込んだ。\n「利息、払ってもらおうか」\n\n実は前妻の借金だった。\nゼニガタは札束で頬を叩こうとしたが、\nドクコは微動だにしなかった。\n\n「金で黙ると思うな」\n「...面白い女だ」\n\n恐怖を知らない女に、\n石油王は初めて震えた。\nそれは恐怖ではなく、恋だった。",
+            "A debt collector stormed the oil king's mansion.\n\"Time to pay the interest.\"\n\nIt was his ex-wife's debt.\nZenigata tried to slap her with cash,\nbut Dokuko didn't flinch.\n\n\"Don't think money shuts me up.\"\n\"...Interesting woman.\"\n\nBefore this fearless woman,\nthe oil king trembled for the first time.\nIt wasn't fear. It was love.");
+
+        // ツクモ（自称予言者）× 新母親
+        Add("love_ツクモ_イザナミ",
+            "「3日後、あなたの帝国に\n危機が訪れる」\n\nツクモの予言を鼻で笑った\nイザナミだったが、\n本当に株が大暴落した。\n\n「次は何が見える？」\n「あなたと僕が結ばれる未来」\n「...それだけはハズレね」\n\nだが1年後、二人は一緒にいた。\n「予言は当たったな」\n「偶然よ」\n女帝は赤くなった顔を隠した。",
+            "\"In 3 days, your empire\nwill face a crisis.\"\n\nIzanami laughed off Tsukumo's prophecy,\nbut the stock market really crashed.\n\n\"What do you see next?\"\n\"A future where we're together.\"\n\"...That's the one that'll be wrong.\"\n\nBut a year later, they were together.\n\"My prophecy came true.\"\n\"Coincidence.\"\nThe empress hid her blushing face.");
+        Add("love_ツクモ_ミク",
+            "「来世の運命を占います」\n怪しい路上占い師ツクモに、\nミクはネタ目的で近づいた。\n\n「あなたは...本当は\n見栄を張るのに疲れている」\n\n図星だった。\nカメラを止めた瞬間、\nミクは泣き出した。\n\n「誰にも言えなかったの」\n「宇宙は全部知ってるよ」\n\n嘘ばかりの世界で、\n本音を見抜く男に惹かれた。",
+            "\"I'll read your destiny.\"\nMiku approached the shady fortune teller\njust for content.\n\n\"You're... actually tired\nof keeping up appearances.\"\n\nBullseye.\nThe moment the camera stopped,\nMiku burst into tears.\n\n\"I couldn't tell anyone.\"\n\"The universe knows everything.\"\n\nIn a world of lies,\nshe fell for the man who saw the truth.");
+        Add("love_ツクモ_カヨコ",
+            "商店街の福引でツクモが大当たりを\n連発した。\n「明日は雨」「当たり」\n「来週、猫が来る」「来た」\n\n看板娘カヨコは半信半疑だったが、\nある日ツクモが言った。\n\n「明日、君は恋をする」\n「え、誰と？」\n「僕と」\n\n次の日、雨で店に駆け込んできた\nツクモを見て、カヨコは笑った。\n「当たりかもね」",
+            "Tsukumo hit the jackpot repeatedly\nat the shopping street lottery.\n\"Rain tomorrow.\" Correct.\n\"A cat next week.\" It came.\n\nKayoko was skeptical,\nbut one day Tsukumo said:\n\n\"Tomorrow, you'll fall in love.\"\n\"With whom?\"\n\"With me.\"\n\nThe next day, when Tsukumo\nrushed in from the rain,\nKayoko laughed. \"Maybe you're right.\"");
+        Add("love_ツクモ_フクトク",
+            "「あなたには\n常軌を逸した運がある」\nツクモはフクトクを見て断言した。\n\n「知ってるわ、宝くじ当たったし」\n「そうじゃない。\n僕と出会ったことが最大の幸運だ」\n\nドン引きするフクトクだったが、\nツクモの隣にいると\nなぜか良いことが重なった。\n\n「予言者とラッキーガール。\n確率論の破壊者ね、私たち」",
+            "\"You have\nextraordinary luck.\"\nTsukumo declared upon seeing Fukutoku.\n\n\"I know, I won the lottery.\"\n\"That's not it.\nMeeting me is your greatest fortune.\"\n\nFukutoku was put off,\nbut good things kept happening\nnear Tsukumo.\n\n\"A prophet and a lucky girl.\nWe're probability's worst nightmare.\"");
+        Add("love_ツクモ_ヨネ",
+            "「宇宙が...ティッシュを\n折れと言っている」\n\n内職場にふらりと現れた\n自称・予言者に、\nヨネは冷たく言った。\n「手を動かして」\n\nだがツクモの内職スピードは\n驚異的だった。IQ300の手先。\n\n「あなた、予言より\nこっちの方が向いてるわよ」\n「君の隣なら何でもいい」\n宇宙より近い距離で恋が芽生えた。",
+            "\"The universe says...\nfold tissues.\"\n\nThe self-proclaimed prophet drifted\ninto Yone's workshop.\n\"Use your hands,\" she said coldly.\n\nBut Tsukumo's speed was incredible.\nIQ 300 fingers.\n\n\"You're better at this\nthan prophecy.\"\n\"Anything's fine if I'm beside you.\"\nLove bloomed closer than the cosmos.");
+        Add("love_ツクモ_ドクコ",
+            "「3日以内に返済しないと...」\nドクコの取り立てに、\nツクモは静かに言った。\n\n「明後日、宝くじの\n当選番号を教えよう」\n「ふざけるな」\n\nだが本当に当たった。\n\n「なぜわかる？」\n「宇宙と交信してるから」\n「...次も当ててみろ」\n\n取り立てがデートに変わった。\n闇金業者が予言者に墜ちた。",
+            "\"Pay up in 3 days or else...\"\nTo Dokuko's threat,\nTsukumo calmly said:\n\n\"I'll tell you tomorrow's\nwinning lottery numbers.\"\n\"Don't mess with me.\"\n\nBut it really hit.\n\n\"How did you know?\"\n\"I communicate with the universe.\"\n\"...Do it again.\"\n\nDebt collection became dates.\nThe loan shark fell for the prophet.");
+
+        // サトウ（普通の係長）× 新母親
+        Add("love_サトウ_イザナミ",
+            "区役所の窓口で順番待ちをする\n女帝イザナミ。\n「なぜ私が並ばなければ...」\n\n隣のサトウが静かに言った。\n「みんな平等ですよ、ここでは」\n\nその「普通」に、\nイザナミは衝撃を受けた。\n\n「あなた、面白いわね」\n「よく言われます」\n\n世界を支配する女が、\n世界一普通の男に恋をした。\n平凡こそが最大の魅力だった。",
+            "The empress Izanami waiting in line\nat the ward office.\n\"Why must I wait...\"\n\nSatou quietly said:\n\"Everyone's equal here.\"\n\nThat 'ordinariness'\nshocked Izanami.\n\n\"You're interesting.\"\n\"I get that a lot.\"\n\nThe woman who rules the world\nfell for the world's most ordinary man.\nNormality was the greatest charm.");
+        Add("love_サトウ_ミク",
+            "「映えるランチ」を探すミクが\n偶然入った定食屋で、\nサトウが生姜焼きを食べていた。\n\n「それ、全然映えないですよ」\n「うまいよ？食べてみな」\n\n一口食べたミクの目が輝いた。\n「...おいしい」\n\n「映え」より「旨い」を\n教えてくれた男。\nSNSに載せない幸せを、\nミクは初めて知った。",
+            "Miku was hunting for photogenic food\nwhen she stumbled into a diner.\nSatou was eating ginger pork.\n\n\"That's not Instagram-worthy at all.\"\n\"It's good though. Try it.\"\n\nOne bite and Miku's eyes lit up.\n\"...Delicious.\"\n\nThe man who taught her\n'tasty' beats 'pretty.'\nMiku discovered happiness\nthat doesn't need posting.");
+        Add("love_サトウ_カヨコ",
+            "毎朝コロッケを買いに来る\nサラリーマン。\n「いつもの一個ください」\n「はい、いつもの」\n\n雨の日も風の日も、\n10年間変わらないやり取り。\n\nある日カヨコが風邪で休むと、\nサトウはコロッケの代わりに\n薬を持ってきた。\n\n「いつもの恩返しです」\n\n日常に溶け込んだ愛。\nそれが一番温かかった。",
+            "A salaryman who buys croquettes every morning.\n\"The usual, please.\"\n\"Here's your usual.\"\n\nRain or shine,\nthe same exchange for 10 years.\n\nOne day when Kayoko was sick,\nSatou brought medicine\ninstead of buying croquettes.\n\n\"Returning the favor.\"\n\nLove woven into daily life.\nThat was the warmest kind.");
+        Add("love_サトウ_フクトク",
+            "フクトクが宝くじを買った売り場で\n偶然後ろに並んでいたサトウ。\n\n「一枚だけ買うんですか？」\n「一枚で十分。当たるから」\n\n本当に当たった。\n驚くサトウに、フクトクは言った。\n「あなたの後ろに並んだのも運命よ」\n\n「いや、たまたまですよ」\n\nその「普通」のリアクションが、\n逆にフクトクの心を掴んだ。\n運命は普通の中にあった。",
+            "At the lottery booth where Fukutoku bought tickets,\nSatou happened to be in line behind her.\n\n\"Just one ticket?\"\n\"One's enough. It'll win.\"\n\nIt really did.\nTo the stunned Satou, Fukutoku said:\n\"Standing behind you was fate too.\"\n\n\"No, just coincidence.\"\n\nThat 'ordinary' reaction\ncaptured Fukutoku's heart.\nDestiny lives in the ordinary.");
+        Add("love_サトウ_ヨネ",
+            "会社の内職を外注することになり、\n担当になったのがヨネだった。\n\n「納期は？」「明日で」\n「...できます」\n\n信じられないスピードで\n仕事を仕上げるヨネ。\nサトウは感動した。\n\n「すごいですね」\n「当たり前のことですよ」\n\n「当たり前」を大切にする二人。\n地味だけど確かな愛が育った。",
+            "The company outsourced piecework,\nand Yone was assigned.\n\n\"Deadline?\" \"Tomorrow.\"\n\"...I can do it.\"\n\nYone finished at incredible speed.\nSatou was moved.\n\n\"That's amazing.\"\n\"It's just normal.\"\n\nTwo people who cherish 'normal.'\nA quiet but certain love grew.");
+        Add("love_サトウ_ドクコ",
+            "隣の席に引っ越してきた\n恐ろしい形相の女。\n\n「ゴミの日は火曜と金曜です」\nサトウは普通に挨拶した。\n\nドクコは面食らった。\n誰もが怯える自分に、\nこの男は普通に接する。\n\n「...あんた、度胸あるね」\n「いえ、普通ですよ」\n\n取り立て屋の心を溶かしたのは、\n暴力でも金でもなく、\n「普通の優しさ」だった。",
+            "A terrifying woman moved in next door.\n\n\"Trash days are Tuesday and Friday.\"\nSatou greeted her normally.\n\nDokuko was stunned.\nEveryone fears her,\nbut this man treats her normally.\n\n\"...You've got guts.\"\n\"No, I'm just ordinary.\"\n\nWhat melted the debt collector's heart\nwasn't violence or money,\nbut 'ordinary kindness.'");
+
+        // イワオ（土木作業員）× 新母親
+        Add("love_イワオ_イザナミ",
+            "宮殿の改修工事に駆り出されたイワオ。\n素手で壁を壊す姿を、\nイザナミは窓から眺めていた。\n\n「あの男、重機を使わないの？」\n「必要ないそうです」\n\n昼休み、おにぎり一個の\nイワオに、イザナミは\nフルコースを差し入れた。\n\n「食え。命令だ」\n「あ、ありがとうございます」\n\n女帝が初めて誰かに食事を作った日。\nそれが愛の始まりだった。",
+            "Iwao was called to renovate the palace.\nIzanami watched from the window\nas he broke walls with bare hands.\n\n\"He doesn't use machinery?\"\n\"He says he doesn't need it.\"\n\nAt lunch, seeing Iwao with just one rice ball,\nIzanami brought a full course meal.\n\n\"Eat. That's an order.\"\n\"Th-thank you.\"\n\nThe day the empress first cooked for someone.\nThat was the beginning of love.");
+        Add("love_イワオ_ミク",
+            "工事現場のドキュメンタリー撮影。\n「映える現場男子」企画で\nイワオが抜擢された。\n\n「筋肉すごい！でもプロテイン\n買えないってマジ？」\n「...マジです」\n\nミクは自腹でプロテインを差し入れた。\nバズった動画のコメント欄は\n「この二人付き合って」の嵐。\n\n「フォロワーが言ってるから」\n「それ、ミクさんの気持ちは？」\n「...同じ」",
+            "Documentary filming at a construction site.\n\"Photogenic hard hat guys\" was the theme,\nand Iwao was chosen.\n\n\"Amazing muscles! But you really\ncan't afford protein?\"\n\"...Really.\"\n\nMiku bought protein powder herself.\nThe viral video's comments were flooded:\n\"These two should date!\"\n\n\"The followers say so.\"\n\"But what do YOU feel, Miku?\"\n\"...Same.\"");
+        Add("love_イワオ_カヨコ",
+            "商店街の道路工事。\n毎日カヨコの店の前で\n汗を流すイワオ。\n\n「お水どうぞ」\n「すみません、金が...」\n「いらないですよ、サービス」\n\nコロッケも、おにぎりも、\n全部「サービス」だった。\n\nある日イワオが石で\n小さな花瓶を彫って渡した。\n「金はないけど、これなら」\n\nカヨコの目に涙が光った。\n「これが一番嬉しい」",
+            "Road construction in the shopping street.\nEvery day Iwao sweated\nin front of Kayoko's shop.\n\n\"Have some water.\"\n\"Sorry, I don't have money...\"\n\"It's on the house.\"\n\nCroquettes, rice balls,\nall 'on the house.'\n\nOne day Iwao carved\na small vase from stone.\n\"I have no money, but this...\"\n\nTears glistened in Kayoko's eyes.\n\"This is the best gift ever.\"");
+        Add("love_イワオ_フクトク",
+            "道端で財布を拾ったイワオ。\n中身は空っぽだったが、\n宝くじが一枚入っていた。\n\n届けに来た交番で\n持ち主のフクトクと出会った。\n\n「その宝くじ、1等よ」\n「え!? 届けてよかった...」\n「お礼に夕飯おごるわ」\n\n貧乏と幸運が出会った夜。\nフクトクの運がイワオにも\n伝染し始めた。\n「あなたといると不思議ね」",
+            "Iwao found a wallet on the street.\nIt was empty,\nbut held one lottery ticket.\n\nAt the police box,\nhe met the owner, Fukutoku.\n\n\"That ticket won first prize.\"\n\"Wow! Glad I turned it in...\"\n\"Dinner's on me as thanks.\"\n\nThe night poverty met fortune.\nFukutoku's luck began\nto rub off on Iwao.\n\"Strange things happen around you.\"");
+        Add("love_イワオ_ヨネ",
+            "市営住宅の隣人同士。\n壁が薄くて、内職の音が\n毎晩聞こえてくる。\n\n「うるさくてすみません」\n「いや、あの音を聞くと\n安心するんです」\n\n貧しいもの同士、\nおかずを分け合い、\n洗濯物を取り込み合い。\n\n「金持ちにはなれねえけど」\n「うちもですよ」\n\n二人でいれば、\n貧乏も悪くないと思えた。",
+            "Neighbors in public housing.\nThin walls let the sound\nof piecework through every night.\n\n\"Sorry for the noise.\"\n\"No, that sound\nmakes me feel at ease.\"\n\nTwo poor people\nsharing side dishes,\nbringing in each other's laundry.\n\n\"We'll never be rich.\"\n\"Same here.\"\n\nTogether,\nbeing poor didn't seem so bad.");
+        Add("love_イワオ_ドクコ",
+            "借金の取り立てに来たドクコ。\nだがイワオの部屋には\n布団と鉄アレイしかなかった。\n\n「取るもんがねえ...」\n「はい、すみません」\n\nなぜか謝るイワオ。\nドクコは呆れながらも、\n素手で岩を砕くその腕を見て\n思わず呟いた。\n\n「...うちで働かない？ 用心棒として」\n「飯つきなら」\n恐怖と筋肉が手を結んだ。",
+            "Dokuko came to collect a debt.\nBut Iwao's room had nothing\nbut a futon and dumbbells.\n\n\"Nothing to take...\"\n\"Yeah, sorry about that.\"\n\nIwao apologized for some reason.\nDokuko was exasperated, but\nseeing those arms crush rocks bare-handed:\n\n\"...Work for me? As a bodyguard.\"\n\"If meals are included.\"\nFear and muscle shook hands.");
+
+        // アキトシ（プロギャンブラー）× 新母親
+        Add("love_アキトシ_イザナミ",
+            "チャリティーポーカー大会。\n女帝イザナミを相手に、\nアキトシは全財産(3000円)を賭けた。\n\n「面白い目をしているわね」\n「破産慣れしてますから」\n\n結果、アキトシの勝ち。\n賞金は全額寄付した。\n\n「金に興味がないの？」\n「勝負に興味があるんです」\n\n女帝が唯一負けた男。\nそれだけで恋に落ちる理由になった。",
+            "A charity poker tournament.\nAgainst Empress Izanami,\nAkitoshi bet his entire fortune (3000 yen).\n\n\"You have interesting eyes.\"\n\"I'm used to going broke.\"\n\nAkitoshi won.\nHe donated all the winnings.\n\n\"Not interested in money?\"\n\"I'm interested in the game.\"\n\nThe only man who beat the empress.\nThat alone was reason enough to fall in love.");
+        Add("love_アキトシ_ミク",
+            "パチンコ屋で偶然会った二人。\nミクは「庶民派アピール」の撮影、\nアキトシはガチの勝負中。\n\n「あの、隣で撮っていいですか？」\n「静かにしてくれるなら」\n\nアキトシの隣に座ると、\nミクの台も当たり始めた。\n\n「あなた、引きが強い？」\n「いや、運は最悪だ」\n\n運の悪い男の隣で\nなぜか当たる自分。\n「これって相性ってこと？」",
+            "They met by chance at a pachinko parlor.\nMiku was filming 'commoner content,'\nAkitoshi was in a serious game.\n\n\"Mind if I film next to you?\"\n\"If you're quiet.\"\n\nSitting next to Akitoshi,\nMiku's machine started hitting.\n\n\"Are you lucky?\"\n\"No, my luck is terrible.\"\n\nWinning next to an unlucky man.\n\"Does this mean we're compatible?\"");
+        Add("love_アキトシ_カヨコ",
+            "所持金0円で商店街をさまようアキトシ。\n腹の虫が鳴った瞬間、\nカヨコが揚げたてコロッケを差し出した。\n\n「お代はいつでもいいですよ」\n\n3日後、競馬で大勝ちして\n100万円を持ってきたアキトシ。\n「コロッケ代です」\n「80円ですってば！」\n\n翌日また一文なし。\nでもコロッケは温かかった。\n「あんた、ほんとにしょうがないね」",
+            "Akitoshi wandered the shopping street with 0 yen.\nThe moment his stomach growled,\nKayoko offered a fresh croquette.\n\n\"Pay whenever you can.\"\n\n3 days later, after a big horse racing win,\nAkitoshi brought 1 million yen.\n\"For the croquette.\"\n\"It's 80 yen!\"\n\nThe next day, broke again.\nBut the croquette was warm.\n\"You're really hopeless, you know.\"");
+        Add("love_アキトシ_フクトク",
+            "宝くじ売り場の前での出会い。\nフクトクが買うと必ず当たり、\nアキトシが買うと必ずハズレ。\n\n「代わりに買ってくれない？」\n「いいわよ」\n\n当たった。二人で山分け。\n翌日アキトシは全額溶かした。\n\n「...また買ってくれる？」\n「もう、しょうがないわね」\n\n最強の幸運と最凶の浪費。\n終わらないループが\n二人を結びつけた。",
+            "They met at the lottery booth.\nFukutoku always wins,\nAkitoshi always loses.\n\n\"Buy one for me?\"\n\"Sure.\"\n\nIt won. They split it.\nNext day, Akitoshi blew it all.\n\n\"...Buy another?\"\n\"Oh, you're hopeless.\"\n\nThe luckiest woman and the worst spender.\nAn endless loop\nthat bound them together.");
+        Add("love_アキトシ_ヨネ",
+            "内職の報酬を受け取りに来た\nヨネの隣で、アキトシは\n競馬新聞を読んでいた。\n\n「それ、当たるんですか？」\n「当たらないから面白い」\n\nヨネには理解できなかった。\nだが不思議と気になった。\n\n「稼いだら全部使う人と、\n1円も無駄にしない私。\n真逆ね」\n\n「だから補い合えるんだろ」\nギャンブラーの言葉が\n初めて的を射た瞬間だった。",
+            "Yone came to collect piecework pay.\nBeside her, Akitoshi\nwas reading a horse racing paper.\n\n\"Does that ever pay off?\"\n\"That's what makes it fun.\"\n\nYone couldn't understand.\nBut she was strangely curious.\n\n\"Someone who spends everything,\nand me who wastes nothing.\nTotal opposites.\"\n\n\"That's why we complement each other.\"\nThe gambler's words hit the mark\nfor the first time.");
+        Add("love_アキトシ_ドクコ",
+            "闇ポーカーで負けた借金の取り立て。\nドクコが凄んでも、\nアキトシはヘラヘラしていた。\n\n「怖くないのか？」\n「負け慣れてますから」\n\n蹴り飛ばそうとした足を\n軽くかわすアキトシ。\n\n「...あんた、度胸だけはあるね」\n「それしか取り柄がないんで」\n\n取り立てが通い妻に変わるまで\n3ヶ月。利息は愛情で返済された。",
+            "Collecting a debt from a poker loss.\nEven when Dokuko threatened him,\nAkitoshi just grinned.\n\n\"Aren't you scared?\"\n\"I'm used to losing.\"\n\nHe casually dodged her kick.\n\n\"...You've got guts at least.\"\n\"That's all I've got.\"\n\nIt took 3 months for debt collection\nto become a common-law marriage.\nInterest was repaid with love.");
+
+        // ネオ（永遠のニート）× 新母親
+        Add("love_ネオ_イザナミ",
+            "引きこもりのネオの実家が、\n女帝の開発計画で立ち退き対象に。\n\n「この部屋から出るくらいなら\n死んだ方がマシです」\n\nイザナミは呆れたが、\nネオの目の奥に\n純粋な恐怖を見た。\n\n「...特別に残してやるわ」\n「え、マジすか」\n\n世界を動かす女帝が\nニート一人に譲歩した。\nそれが愛だと気づくのは\nもう少し先の話。",
+            "Neo's family home was slated\nfor the empress's development plan.\n\n\"I'd rather die than leave this room.\"\n\nIzanami was exasperated,\nbut saw pure terror\nin Neo's eyes.\n\n\"...I'll make an exception.\"\n\"Wait, really?\"\n\nThe empress who moves the world\nmade a concession for one NEET.\nRealizing it was love\nwould come a little later.");
+        Add("love_ネオ_ミク",
+            "「ニートの部屋、覗いてみた」\nミクのバズり企画に\nネオの部屋が選ばれた。\n\n「うわ、フィギュアすごい！」\n「触らないでください」\n\nだが配信中のネオの解説が\n意外にも面白く、\n視聴者が殺到した。\n\n「あんた、才能あるわよ」\n「...生まれて初めて言われた」\n\n画面越しに始まった関係が、\n少しずつ現実に近づいていった。",
+            "\"Peeking into a NEET's room.\"\nNeo's room was chosen\nfor Miku's viral content.\n\n\"Wow, amazing figures!\"\n\"Don't touch them.\"\n\nBut Neo's commentary on stream\nwas unexpectedly entertaining,\nand viewers flooded in.\n\n\"You have talent.\"\n\"...First time anyone's said that.\"\n\nA relationship that started through screens\nslowly approached reality.");
+        Add("love_ネオ_カヨコ",
+            "母親に頼まれたお使いで\n30年ぶりに外出したネオ。\n迷子になり、カヨコの店に辿り着いた。\n\n「大丈夫ですか？」\n「外、こわい...」\n\nカヨコはコロッケを渡し、\n家まで送ってくれた。\n\n翌日もネオは店に来た。\n「お使い頼まれまして」\n嘘だった。\n\nカヨコの笑顔が、\n30年間閉じていた扉を\n少しだけ開けた。",
+            "Sent on an errand by his mother,\nNeo went outside for the first time in 30 years.\nLost, he found Kayoko's shop.\n\n\"Are you okay?\"\n\"Outside is scary...\"\n\nKayoko gave him a croquette\nand walked him home.\n\nNeo came back the next day.\n\"Mom sent me again.\"\nIt was a lie.\n\nKayoko's smile\ncracked open the door\nthat had been shut for 30 years.");
+        Add("love_ネオ_フクトク",
+            "ネットで当選したゲーム機。\n届いたのは2台だった。\n「配送ミスか...」\n\n届け先を調べるとフクトクだった。\n「私もなぜか当たるんです」\n\n二人でオンラインゲームを始めた。\n会わなくても繋がれる関係。\n\n「いつかリアルでも会おうよ」\n「...外出たくないです」\n「じゃあ私が行くわ」\n\n最強の幸運が\n最弱のニートの元に\n転がり込んできた。",
+            "A game console won online.\nTwo arrived instead of one.\n\"Shipping error?\"\n\nThe other was Fukutoku's.\n\"I just win things somehow.\"\n\nThey started gaming online together.\nConnected without meeting.\n\n\"Let's meet in person someday.\"\n\"...I don't want to go outside.\"\n\"Then I'll come to you.\"\n\nThe luckiest woman\nrolled right into\nthe weakest NEET's life.");
+        Add("love_ネオ_ヨネ",
+            "在宅内職の求人に応募したネオ。\n指導員としてヨネが家に来た。\n\n「手先は器用ですね」\n「30年間ゲームしかしてないんで」\n\n意外な才能を発揮するネオ。\nヨネは毎日指導に通った。\n\n「これ、今日の分のおかず」\n「え、いいんですか」\n\n内職と差し入れ。\n小さな経済圏の中で、\n二人の距離は縮まっていった。\n「外に出なくても幸せってあるのね」",
+            "Neo applied for at-home piecework.\nYone came as his trainer.\n\n\"You're good with your hands.\"\n\"30 years of nothing but gaming.\"\n\nNeo showed unexpected talent.\nYone came to train him daily.\n\n\"Here, today's side dish.\"\n\"Really? For me?\"\n\nPiecework and home cooking.\nIn their small economy,\nthe distance between them shrank.\n\"Happiness exists without going outside.\"");
+        Add("love_ネオ_ドクコ",
+            "親の借金を背負わされたネオ。\n取り立てに来たドクコは、\n震えるニートを見て固まった。\n\n「こいつから取れるもん、\nなんもねえ...」\n\nだがネオのPCスキルに目をつけた。\n「帳簿管理やれ。借金チャラにしてやる」\n\n恐怖で始まった関係だが、\nドクコの強さにネオは安心感を覚えた。\n\n「あんたといると\n外の世界も怖くない」\n「当たり前だ。私が守るからな」",
+            "Neo inherited his parents' debt.\nDokuko came to collect\nand froze at the trembling NEET.\n\n\"There's nothing to take\nfrom this guy...\"\n\nBut she noticed Neo's PC skills.\n\"Do my bookkeeping. Debt cleared.\"\n\nA relationship born from fear,\nbut Neo found comfort in Dokuko's strength.\n\n\"With you around,\nthe outside world isn't scary.\"\n\"Of course. I'll protect you.\"");
 
         // ===== Battle Scene =====
         // Enemy names

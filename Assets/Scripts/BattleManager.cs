@@ -824,6 +824,18 @@ public class BattleManager : MonoBehaviour
             case "ミサト": return "misato";
             case "カエデ": return "kaede";
             case "ルナ": return "luna";
+            case "ゼニガタ": return "zenigata";
+            case "ツクモ": return "tukumo";
+            case "サトウ": return "satou";
+            case "イワオ": return "iwao";
+            case "アキトシ": return "akitoshi";
+            case "ネオ": return "neo";
+            case "イザナミ": return "izanami";
+            case "ミク": return "miku";
+            case "カヨコ": return "kayoko";
+            case "フクトク": return "hukutoku";
+            case "ヨネ": return "yone";
+            case "ドクコ": return "dokuko";
             default: return japaneseName.ToLower();
         }
     }

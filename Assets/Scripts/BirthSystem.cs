@@ -71,6 +71,30 @@ public class BirthSystem : MonoBehaviour
     UIE.Button uploadImageBtn;
     UIE.VisualElement customBabyImageEl;
 
+    // BabySynthesizer合成結果の表示要素
+    UIE.VisualElement synthBabyImageEl;
+
+    // BabySynthesizer (SpriteRenderer + SpriteMask layer compositing)
+    BabySynthesizer babySynthesizer;
+
+    // 顔調整オーバーレイ
+    UIE.VisualElement faceAdjustOverlayEl;
+    UIE.VisualElement facePreviewImage;
+    float faceAdjOffsetX, faceAdjOffsetY, faceAdjScale = 1f;
+    bool isDraggingFace;
+    Vector2 dragStartPos;
+    float dragStartOffsetX, dragStartOffsetY;
+    Texture2D pendingFaceTexture;
+    Texture2D hollowWearTexture;
+    SynthesizeParams lastSynthParams;
+
+    // DrawFace と同じ定数からプレビューサイズを計算
+    // uniformR = max(FACE_HOLE_RX, FACE_HOLE_RY) * 1.05 * 1080
+    // facePreviewUniform = uniformR * 2 * (700 / 1080) ≈ 191
+    const float facePreviewUniform = 0.13f * 1.05f * 2f * 700f; // = 191.1
+    // 顔穴中心の上からの比率 (1 - FACE_HOLE_CY)
+    const float FACE_HOLE_TOP_PCT = 32f; // (1 - 0.68) * 100
+
     // 背景
     Image mainBgImg;
 
@@ -114,7 +138,7 @@ public class BirthSystem : MonoBehaviour
     static readonly ParentData[] NewFathers = new[]
     {
         new ParentData("ゼニガタ", "zenigata", 30, 90, 140, 99, 85, 99, 40, new Color(1.0f, 0.85f, 0.3f), "石油王 / 口癖は『金で買えないものはない』。ゆりかごはプラチナ製。"),
-        new ParentData("ツクモ",   "tsukumo",  20, 35, 110,  5, 99, 60, 45, new Color(0.6f, 0.4f, 1.0f), "自称・予言者 / IQ300。常に宇宙と交信しており、育児中も上の空。"),
+        new ParentData("ツクモ",   "tukumo",  20, 35, 110,  5, 99, 60, 45, new Color(0.6f, 0.4f, 1.0f), "自称・予言者 / IQ300。常に宇宙と交信しており、育児中も上の空。"),
         new ParentData("サトウ",   "satou",    55, 50, 150, 50, 55, 45, 55, new Color(0.7f, 0.8f, 0.7f), "中堅企業の係長 / 趣味は洗車。突出した能力はないが、安定した愛を注ぐ。"),
         new ParentData("イワオ",   "iwao",     95, 85, 200, 20, 15, 10, 80, new Color(0.8f, 0.6f, 0.4f), "元・土木作業員 / 素手で巨大な岩を砕くが、極度の貧乏でプロテインが買えない。"),
         new ParentData("アキトシ", "akitoshi", 45, 25, 130, 99, 30,  5, 75, new Color(1.0f, 0.4f, 0.4f), "プロギャンブラー / 通帳記入が趣味(残高は常に0)。おくるみは新聞紙。"),
@@ -126,8 +150,8 @@ public class BirthSystem : MonoBehaviour
     {
         new ParentData("イザナミ", "izanami",  85, 80, 180, 90, 95, 99, 70, new Color(0.9f, 0.3f, 0.5f), "伝説の女帝 / その一言で国家予算が動く。最高級の教育を約束する。"),
         new ParentData("ミク",     "miku",     35, 40, 130, 75, 40, 25, 65, new Color(1.0f, 0.6f, 0.8f), "自称・モデル / フォロワー数は多いが、内情は火の車。見栄えだけは良い。"),
-        new ParentData("カヨコ",   "mitsuko",  40, 65, 160, 65, 55, 50, 60, new Color(1.0f, 0.85f, 0.7f), "商店街の看板娘 / 資産はないが、街の人からお裾分け（アイテム）をもらえる。"),
-        new ParentData("フクトク", "fukutoku", 20, 20, 120,150, 25, 65, 45, new Color(1.0f, 1.0f, 0.4f), "宝くじ1等当選者 / 才能は皆無だが、強運だけで修羅場を潜り抜けてきた。"),
+        new ParentData("カヨコ",   "kayoko",  40, 65, 160, 65, 55, 50, 60, new Color(1.0f, 0.85f, 0.7f), "商店街の看板娘 / 資産はないが、街の人からお裾分け（アイテム）をもらえる。"),
+        new ParentData("フクトク", "hukutoku", 20, 20, 120,150, 25, 65, 45, new Color(1.0f, 1.0f, 0.4f), "宝くじ1等当選者 / 才能は皆無だが、強運だけで修羅場を潜り抜けてきた。"),
         new ParentData("ヨネ",     "yone",     20, 15, 110, 45, 60, 10, 50, new Color(0.7f, 0.65f, 0.6f), "内職の鬼 / ティッシュ配りの速さは音速。赤ちゃんのスタイは自作。"),
         new ParentData("ドクコ",   "dokuko",   80, 70, 170, 15, 75,  5, 90, new Color(0.4f, 0.2f, 0.5f), "闇金の取り立て屋 / 赤ちゃんの最初の言葉を『トイチ』に教育しようとしている。"),
     };
@@ -308,6 +332,11 @@ public class BirthSystem : MonoBehaviour
             rect.anchoredPosition = new Vector2(0, -802);
         }
         CreateBabyFaceUI(); // babyFaceを作成
+        // BabySynthesizer初期化
+        var synthObj = new GameObject("BabySynthesizerHost");
+        synthObj.transform.SetParent(transform, false);
+        babySynthesizer = synthObj.AddComponent<BabySynthesizer>();
+
         CreateFlashOverlay();
         CreateLightningOverlay();
         CreateIntroPanel();
@@ -596,10 +625,10 @@ public class BirthSystem : MonoBehaviour
         if (introText != null) introText.gameObject.SetActive(false);
 
         // 結果を先に決定
-        int fIdx = Random.Range(0, Fathers.Length);
-        int mIdx = Random.Range(0, Mothers.Length);
-        ParentData father = Fathers[fIdx];
-        ParentData mother = Mothers[mIdx];
+        int fIdx = Random.Range(0, NewFathers.Length);
+        int mIdx = Random.Range(0, NewMothers.Length);
+        ParentData father = NewFathers[fIdx];
+        ParentData mother = NewMothers[mIdx];
 
         // ステータス計算（正規分布ランダム：極端な値は出にくい）
         // 親の個体差（±30の範囲、大半は±10程度に収まる）
@@ -646,15 +675,15 @@ public class BirthSystem : MonoBehaviour
         // 高速シャッフル（15回×0.06秒）
         for (int i = 0; i < 15; i++)
         {
-            int tmpF = Random.Range(0, Fathers.Length);
-            ShowSingleParentPreview(tmpF, Fathers[tmpF], true);
+            int tmpF = Random.Range(0, NewFathers.Length);
+            ShowSingleParentPreview(tmpF, NewFathers[tmpF], true);
             yield return new WaitForSeconds(0.06f);
         }
         // 減速シャッフル（6回）
         for (int i = 0; i < 6; i++)
         {
-            int tmpF = (i < 4) ? Random.Range(0, Fathers.Length) : fIdx;
-            ShowSingleParentPreview(tmpF, Fathers[tmpF], true);
+            int tmpF = (i < 4) ? Random.Range(0, NewFathers.Length) : fIdx;
+            ShowSingleParentPreview(tmpF, NewFathers[tmpF], true);
             float delay = Mathf.Lerp(0.12f, 0.35f, i / 5f);
             yield return new WaitForSeconds(delay);
         }
@@ -687,15 +716,15 @@ public class BirthSystem : MonoBehaviour
         // 高速シャッフル（15回×0.06秒）
         for (int i = 0; i < 15; i++)
         {
-            int tmpM = Random.Range(0, Mothers.Length);
-            ShowSingleParentPreview(tmpM, Mothers[tmpM], false);
+            int tmpM = Random.Range(0, NewMothers.Length);
+            ShowSingleParentPreview(tmpM, NewMothers[tmpM], false);
             yield return new WaitForSeconds(0.06f);
         }
         // 減速シャッフル（6回）
         for (int i = 0; i < 6; i++)
         {
-            int tmpM = (i < 4) ? Random.Range(0, Mothers.Length) : mIdx;
-            ShowSingleParentPreview(tmpM, Mothers[tmpM], false);
+            int tmpM = (i < 4) ? Random.Range(0, NewMothers.Length) : mIdx;
+            ShowSingleParentPreview(tmpM, NewMothers[tmpM], false);
             float delay = Mathf.Lerp(0.12f, 0.35f, i / 5f);
             yield return new WaitForSeconds(delay);
         }
@@ -852,27 +881,46 @@ public class BirthSystem : MonoBehaviour
         // 上位1%判定（GOD BABY判定）、上位10%判定（大物判定）
         bool isGodBaby = IsGodBaby(c_atk, c_def, c_hp, c_intelligence, c_athletic);
 
-        // 赤ちゃんの顔：専用画像があればそれを使用、なければ自動生成
+        // BabySynthesizer でレイヤー合成表示
         string genderKey = selectedGender == "男の子" ? "male" : "female";
-        string babyImagePath = $"babys/{father.imageName}_{mother.imageName}_{genderKey}";
-        Sprite babySprite = Resources.Load<Sprite>(babyImagePath);
 
-        Debug.Log($"[BirthSystem] Baby image path: {babyImagePath}, Sprite loaded: {babySprite != null}");
-        Debug.Log($"[BirthSystem] babyFace: {babyFace != null}, babyFaceImage: {babyFaceImage != null}");
+        // Canvas上のbabyFaceを非表示（SpriteRenderer合成に切り替え）
+        if (babyFace != null)
+            babyFace.gameObject.SetActive(false);
 
-        if (babySprite != null)
+        var synthParams = new SynthesizeParams
         {
-            // 専用画像がある場合はそれを表示
-            ShowBabySprite(babySprite, isGodBaby);
-        }
-        else
+            fortune = c_fortune,
+            isGodBaby = isGodBaby,
+            fatherImageName = father.imageName,
+            motherImageName = mother.imageName,
+            genderKey = genderKey,
+            father = father,
+            mother = mother,
+            babyAtk = c_atk,
+            babyDef = c_def,
+            babyHp = c_hp,
+            babyIntelligence = c_intelligence,
+            babyAthletic = c_athletic,
+            babyLuck = c_luck,
+            customImagePath = DataCarrier.Instance != null ? DataCarrier.Instance.customBabyImagePath : "",
+            fatherItemPath = GetParentItemPath(father.imageName, true),
+            motherItemPath = GetParentItemPath(mother.imageName, false),
+        };
+        lastSynthParams = synthParams;
+        Sprite synthSprite = babySynthesizer.Synthesize(synthParams);
+        if (synthSprite != null)
         {
-            // 専用画像がない場合は自動生成
-            GenerateBabyFace(c_atk, c_intelligence, c_athletic, selectedGender, isGodBaby);
+            DisplaySynthesizedBaby(synthSprite);
         }
+
+        Debug.Log($"[BirthSystem] BabySynthesizer.Synthesize() called, fortune={c_fortune}, rank={BabySynthesizer.DetermineRank(c_fortune)}");
 
         // 画像アップロードボタン（赤ちゃん画像の下に配置）
         if (birthResultCard != null) CreateUploadButton();
+
+        // スクリーンショットボタン（シェア用）
+        if (birthResultCard != null) CreateScreenshotButton();
 
         bool isPromisingBaby = !isGodBaby && IsPromisingBaby(c_atk, c_def, c_hp, c_intelligence, c_athletic);
 
@@ -1074,12 +1122,11 @@ public class BirthSystem : MonoBehaviour
     {
         UIE.VisualElement faceImg = isFather ? fatherFaceImage : motherFaceImage;
         UIE.Label nameT = isFather ? fatherNameText : motherNameText;
-        Sprite[] sprites = isFather ? fatherSprites : motherSprites;
         string prefix = isFather ? Localization.Get("birth_father_prefix") : Localization.Get("birth_mother_prefix");
 
         if (faceImg != null)
         {
-            Sprite sp = (sprites != null && sprites.Length > idx) ? sprites[idx] : null;
+            Sprite sp = Resources.Load<Sprite>($"Parents/{data.imageName}");
             if (sp != null)
             {
                 faceImg.style.backgroundImage = new UIE.StyleBackground(sp);
@@ -1979,6 +2026,10 @@ public class BirthSystem : MonoBehaviour
     // ルーレット用のレイアウトにリセット
     void ResetToRouletteLayout()
     {
+        // BabySynthesizer のレイヤー合成を破棄
+        if (babySynthesizer != null)
+            babySynthesizer.Cleanup();
+
         // 情報パネル系をクリーンアップ
         DestroyParentInfoButton();
         CloseParentBioPanel();
@@ -1989,6 +2040,7 @@ public class BirthSystem : MonoBehaviour
 
         // カスタム画像要素を削除
         if (customBabyImageEl != null) { customBabyImageEl.RemoveFromHierarchy(); customBabyImageEl = null; }
+        if (synthBabyImageEl != null) { synthBabyImageEl.RemoveFromHierarchy(); synthBabyImageEl = null; }
 
         // babyFaceをルーレット用サイズに戻す
         if (babyFace != null)
@@ -2016,6 +2068,7 @@ public class BirthSystem : MonoBehaviour
         }
 
         // birthResultCardを削除（UI Toolkit）
+        if (screenshotBtn != null) { screenshotBtn.RemoveFromHierarchy(); screenshotBtn = null; }
         if (uploadImageBtn != null) { uploadImageBtn.RemoveFromHierarchy(); uploadImageBtn = null; }
         if (birthResultCard != null)
         {
@@ -2055,6 +2108,67 @@ public class BirthSystem : MonoBehaviour
         }
     }
 
+    // ===== スクリーンショット・シェア機能 =====
+
+    UIE.Button screenshotBtn;
+
+    void CreateScreenshotButton()
+    {
+        if (screenshotBtn != null) screenshotBtn.RemoveFromHierarchy();
+        if (birthResultCard == null) return;
+
+        screenshotBtn = new UIE.Button();
+        screenshotBtn.style.position = UIE.Position.Absolute;
+        screenshotBtn.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+        screenshotBtn.style.bottom = new UIE.StyleLength(new UIE.Length(31, UIE.LengthUnit.Percent));
+        screenshotBtn.style.translate = new UIE.StyleTranslate(new UIE.Translate(new UIE.Length(32), UIE.Length.Percent(0)));
+        screenshotBtn.style.width = 64;
+        screenshotBtn.style.height = 64;
+        screenshotBtn.style.borderTopLeftRadius = 32;
+        screenshotBtn.style.borderTopRightRadius = 32;
+        screenshotBtn.style.borderBottomLeftRadius = 32;
+        screenshotBtn.style.borderBottomRightRadius = 32;
+        screenshotBtn.style.backgroundColor = new Color(0.35f, 0.35f, 0.4f, 0.8f);
+        screenshotBtn.style.borderTopWidth = 0;
+        screenshotBtn.style.borderBottomWidth = 0;
+        screenshotBtn.style.borderLeftWidth = 0;
+        screenshotBtn.style.borderRightWidth = 0;
+        screenshotBtn.style.fontSize = 28;
+        screenshotBtn.style.color = Color.white;
+        screenshotBtn.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        UIHelper.ApplyFont(screenshotBtn);
+        screenshotBtn.text = "\uD83D\uDCF7"; // camera emoji
+        screenshotBtn.clicked += TakeScreenshot;
+        birthResultCard.Add(screenshotBtn);
+    }
+
+    void TakeScreenshot()
+    {
+        if (babySynthesizer == null) return;
+
+        var tex = babySynthesizer.CaptureToTexture2D();
+        if (tex == null)
+        {
+            Debug.LogError("[BirthSystem] Screenshot capture failed");
+            return;
+        }
+
+        byte[] pngData = tex.EncodeToPNG();
+        Destroy(tex);
+
+        string fileName = $"godbaby_{System.DateTime.Now:yyyyMMdd_HHmmss}.png";
+        string savePath = Path.Combine(Application.persistentDataPath, fileName);
+        File.WriteAllBytes(savePath, pngData);
+        Debug.Log($"[BirthSystem] Screenshot saved: {savePath}");
+
+#if UNITY_IOS || UNITY_ANDROID
+        NativeGallery.SaveImageToGallery(pngData, "GodBabys", fileName, (success, path) =>
+        {
+            Debug.Log($"[BirthSystem] Gallery save: success={success}, path={path}");
+        });
+#endif
+    }
+
     // ===== 画像アップロード機能 =====
 
     void CreateUploadButton()
@@ -2075,8 +2189,8 @@ public class BirthSystem : MonoBehaviour
         Debug.Log("[BirthSystem] PickImageFromGallery called");
 
 #if UNITY_EDITOR
-        // Editorではファイルダイアログを直接使用
-        string path = UnityEditor.EditorUtility.OpenFilePanel("赤ちゃんの画像を選択", "", "");
+        // Editorではファイルダイアログを直接使用（PNG/JPGのみ対応）
+        string path = UnityEditor.EditorUtility.OpenFilePanel("赤ちゃんの画像を選択", "", "png,jpg,jpeg");
         Debug.Log($"[BirthSystem] Editor file dialog returned: '{path}'");
         if (!string.IsNullOrEmpty(path))
             LoadAndApplyImage(path);
@@ -2122,7 +2236,7 @@ public class BirthSystem : MonoBehaviour
             var tex = new Texture2D(2, 2);
             if (!tex.LoadImage(fileData))
             {
-                Debug.LogError("[BirthSystem] Failed to load image from gallery");
+                Debug.LogError($"[BirthSystem] Failed to load image from gallery. Path: {path}, Size: {fileData.Length} bytes. Only PNG/JPG are supported.");
                 Destroy(tex);
                 return;
             }
@@ -2152,9 +2266,9 @@ public class BirthSystem : MonoBehaviour
             if (DataCarrier.Instance != null)
                 DataCarrier.Instance.customBabyImagePath = fileName;
 
-            Sprite spr = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-            Debug.Log($"[BirthSystem] Sprite created, calling UpdateBabyFaceWithCustomImage");
-            UpdateBabyFaceWithCustomImage(spr);
+            Debug.Log($"[BirthSystem] Texture loaded, showing face adjustment overlay");
+            pendingFaceTexture = tex;
+            ShowFaceAdjustmentOverlay();
         }
         catch (System.Exception e)
         {
@@ -2164,35 +2278,290 @@ public class BirthSystem : MonoBehaviour
 
     void UpdateBabyFaceWithCustomImage(Sprite spr)
     {
-        Debug.Log($"[BirthSystem] UpdateBabyFaceWithCustomImage - spr: {spr != null}, babyFace: {babyFace != null}, birthResultCard: {birthResultCard != null}");
+        Debug.Log($"[BirthSystem] UpdateBabyFaceWithCustomImage - redirecting to BabySynthesizer");
 
-        // Canvas上のbabyFaceを非表示にする（UI Toolkitで表示するため）
-        if (babyFace != null)
-            babyFace.gameObject.SetActive(false);
-
-        // UI Toolkit側で画像を表示
-        if (birthResultCard == null)
+        // BabySynthesizer経由でカスタム画像を差し替え → 再レンダリング → UI表示更新
+        if (babySynthesizer != null && spr != null && spr.texture != null)
         {
-            Debug.LogError("[BirthSystem] birthResultCard is null, cannot display custom image");
-            return;
+            Sprite updatedSprite = babySynthesizer.SetCustomFaceTexture(spr.texture);
+            if (updatedSprite != null)
+                DisplaySynthesizedBaby(updatedSprite);
         }
 
-        // 既存のカスタム画像要素があれば削除
-        if (customBabyImageEl != null)
-            customBabyImageEl.RemoveFromHierarchy();
+        // Canvas上のbabyFaceを非表示（SpriteRenderer合成を使用）
+        if (babyFace != null)
+            babyFace.gameObject.SetActive(false);
+    }
 
-        // VisualElementとして画像を表示（birthResultCard内、ステータスカードの上）
-        customBabyImageEl = new UIE.VisualElement();
-        customBabyImageEl.name = "custom-baby-image";
-        customBabyImageEl.AddToClassList("birth-result-custom-image");
-        customBabyImageEl.style.backgroundImage = new UIE.StyleBackground(spr);
-        birthResultCard.Add(customBabyImageEl);
+    // ===== 顔調整オーバーレイ =====
 
-        // アップロードボタンを最前面に
-        if (uploadImageBtn != null)
-            uploadImageBtn.BringToFront();
+    void ShowFaceAdjustmentOverlay()
+    {
+        if (pendingFaceTexture == null || overlayRoot == null) return;
 
-        Debug.Log("[BirthSystem] Custom baby image displayed in UI Toolkit");
+        // 初期化
+        faceAdjOffsetX = 0f;
+        faceAdjOffsetY = 0f;
+        faceAdjScale = 1f;
+        isDraggingFace = false;
+
+        // 既存のオーバーレイがあれば削除
+        if (faceAdjustOverlayEl != null)
+            faceAdjustOverlayEl.RemoveFromHierarchy();
+
+        // オーバーレイ暗幕
+        faceAdjustOverlayEl = new UIE.VisualElement();
+        faceAdjustOverlayEl.style.position = UIE.Position.Absolute;
+        faceAdjustOverlayEl.style.left = 0;
+        faceAdjustOverlayEl.style.top = 0;
+        faceAdjustOverlayEl.style.right = 0;
+        faceAdjustOverlayEl.style.bottom = 0;
+        faceAdjustOverlayEl.style.backgroundColor = new Color(0, 0, 0, 0.7f);
+        faceAdjustOverlayEl.style.alignItems = UIE.Align.Center;
+        faceAdjustOverlayEl.style.justifyContent = UIE.Justify.Center;
+        overlayRoot.Add(faceAdjustOverlayEl);
+
+        // カード
+        var card = new UIE.VisualElement();
+        card.AddToClassList("face-adjust-card");
+        faceAdjustOverlayEl.Add(card);
+
+        // タイトル
+        var title = new UIE.Label("顔の位置を調整");
+        title.AddToClassList("face-adjust-title");
+        UIHelper.ApplyFont(title);
+        card.Add(title);
+
+        // プレビューエリア（顔画像 → BabyWear(くり抜き済み)の順で重ねる）
+        var preview = new UIE.VisualElement();
+        preview.AddToClassList("face-adjust-preview");
+        preview.style.position = UIE.Position.Relative;
+        preview.style.overflow = UIE.Overflow.Hidden;
+        card.Add(preview);
+
+        // 顔画像の基準位置（ピクセル）— translate上書き問題を回避
+        float faceCenterX = 700f / 2f;
+        float faceCenterY = 700f * FACE_HOLE_TOP_PCT / 100f;
+        float halfFace = facePreviewUniform / 2f;
+
+        // Layer 1: 顔画像（最背面）— DrawFace の uniformR*2 に対応する正方形
+        facePreviewImage = new UIE.VisualElement();
+        facePreviewImage.AddToClassList("face-adjust-face-img");
+        facePreviewImage.style.position = UIE.Position.Absolute;
+        facePreviewImage.style.left = faceCenterX - halfFace;
+        facePreviewImage.style.top = faceCenterY - halfFace;
+        facePreviewImage.style.width = facePreviewUniform;
+        facePreviewImage.style.height = facePreviewUniform;
+        facePreviewImage.style.backgroundImage = new UIE.StyleBackground(pendingFaceTexture);
+        facePreviewImage.pickingMode = UIE.PickingMode.Ignore;
+        preview.Add(facePreviewImage);
+
+        // Layer 2: BabyWear オーバーレイ（顔穴をくり抜いた状態）
+        var rank = BabySynthesizer.DetermineRank(lastSynthParams.fortune);
+        string wearPath = BabySynthesizer.GetWearPath(rank);
+        Sprite wearSprite = Resources.Load<Sprite>(wearPath);
+        if (wearSprite != null && wearSprite.texture.isReadable)
+        {
+            // BabyWearテクスチャの顔穴をくり抜いたコピーを作成
+            if (hollowWearTexture != null) Destroy(hollowWearTexture);
+            hollowWearTexture = CreateHollowWearTexture(wearSprite.texture);
+
+            var wearImg = new UIE.VisualElement();
+            wearImg.AddToClassList("face-adjust-wear");
+            wearImg.style.position = UIE.Position.Absolute;
+            wearImg.style.left = 0;
+            wearImg.style.top = 0;
+            wearImg.style.width = 700;
+            wearImg.style.height = 700;
+            wearImg.style.backgroundImage = new UIE.StyleBackground(hollowWearTexture);
+            wearImg.pickingMode = UIE.PickingMode.Ignore;
+            preview.Add(wearImg);
+        }
+
+        // ドラッグイベント登録（preview全体で受ける）
+        preview.RegisterCallback<UIE.PointerDownEvent>(OnFacePointerDown);
+        preview.RegisterCallback<UIE.PointerMoveEvent>(OnFacePointerMove);
+        preview.RegisterCallback<UIE.PointerUpEvent>(OnFacePointerUp);
+
+        // スライダー行
+        var sliderRow = new UIE.VisualElement();
+        sliderRow.AddToClassList("face-adjust-slider-row");
+        card.Add(sliderRow);
+
+        var sliderLabel = new UIE.Label("ズーム");
+        sliderLabel.AddToClassList("face-adjust-slider-label");
+        UIHelper.ApplyFont(sliderLabel);
+        sliderRow.Add(sliderLabel);
+
+        var slider = new UIE.Slider(null, 0.5f, 6.0f);
+        slider.value = 1f;
+        slider.AddToClassList("face-adjust-slider");
+        slider.RegisterCallback<UIE.ChangeEvent<float>>(evt =>
+        {
+            faceAdjScale = evt.newValue;
+            UpdateFacePreviewTransform();
+        });
+        sliderRow.Add(slider);
+
+        // ボタン行
+        var btnRow = new UIE.VisualElement();
+        btnRow.AddToClassList("face-adjust-btn-row");
+        card.Add(btnRow);
+
+        var confirmBtn = new UIE.Button(() => CloseFaceAdjustOverlay(true));
+        confirmBtn.AddToClassList("face-adjust-confirm-btn");
+        confirmBtn.text = "決定";
+        UIHelper.ApplyFont(confirmBtn);
+        btnRow.Add(confirmBtn);
+
+        var cancelBtn = new UIE.Button(() => CloseFaceAdjustOverlay(false));
+        cancelBtn.AddToClassList("face-adjust-cancel-btn");
+        cancelBtn.text = "キャンセル";
+        UIHelper.ApplyFont(cancelBtn);
+        btnRow.Add(cancelBtn);
+
+        Debug.Log("[BirthSystem] Face adjustment overlay shown");
+    }
+
+    void OnFacePointerDown(UIE.PointerDownEvent evt)
+    {
+        isDraggingFace = true;
+        dragStartPos = evt.position;
+        dragStartOffsetX = faceAdjOffsetX;
+        dragStartOffsetY = faceAdjOffsetY;
+        UIE.PointerCaptureHelper.CapturePointer((UIE.VisualElement)evt.currentTarget, evt.pointerId);
+    }
+
+    void OnFacePointerMove(UIE.PointerMoveEvent evt)
+    {
+        if (!isDraggingFace) return;
+
+        // ドラッグ差分をオフセットに変換（DrawFaceのuniformR*2に対応）
+        float uniformSize = facePreviewUniform;
+        float dx = evt.position.x - dragStartPos.x;
+        float dy = evt.position.y - dragStartPos.y;
+        faceAdjOffsetX = dragStartOffsetX + dx / (uniformSize * faceAdjScale);
+        faceAdjOffsetY = dragStartOffsetY - dy / (uniformSize * faceAdjScale);
+        UpdateFacePreviewTransform();
+    }
+
+    void OnFacePointerUp(UIE.PointerUpEvent evt)
+    {
+        isDraggingFace = false;
+        UIE.PointerCaptureHelper.ReleasePointer((UIE.VisualElement)evt.currentTarget, evt.pointerId);
+    }
+
+    void UpdateFacePreviewTransform()
+    {
+        if (facePreviewImage == null) return;
+        facePreviewImage.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(faceAdjScale, faceAdjScale)));
+        // DrawFaceのuniformR*2に対応するプレビューサイズ
+        float uniformSize = facePreviewUniform;
+        float tx = faceAdjOffsetX * uniformSize * faceAdjScale;
+        float ty = -faceAdjOffsetY * uniformSize * faceAdjScale;
+        facePreviewImage.style.translate = new UIE.StyleTranslate(new UIE.Translate(tx, ty));
+    }
+
+    void CloseFaceAdjustOverlay(bool confirmed)
+    {
+        if (confirmed && pendingFaceTexture != null && babySynthesizer != null)
+        {
+            Sprite updatedSprite = babySynthesizer.SetCustomFaceTexture(
+                pendingFaceTexture, faceAdjOffsetX, faceAdjOffsetY, faceAdjScale);
+            if (updatedSprite != null)
+                DisplaySynthesizedBaby(updatedSprite);
+
+            if (babyFace != null)
+                babyFace.gameObject.SetActive(false);
+
+            Debug.Log($"[BirthSystem] Face adjustment confirmed: offset=({faceAdjOffsetX},{faceAdjOffsetY}), scale={faceAdjScale}");
+        }
+        else
+        {
+            Debug.Log("[BirthSystem] Face adjustment cancelled");
+        }
+
+        pendingFaceTexture = null;
+
+        if (faceAdjustOverlayEl != null)
+        {
+            faceAdjustOverlayEl.RemoveFromHierarchy();
+            faceAdjustOverlayEl = null;
+        }
+        facePreviewImage = null;
+
+        if (hollowWearTexture != null)
+        {
+            Destroy(hollowWearTexture);
+            hollowWearTexture = null;
+        }
+    }
+
+    /// <summary>
+    /// BabyWearテクスチャの顔穴部分を透明にしたコピーを作成する
+    /// </summary>
+    Texture2D CreateHollowWearTexture(Texture2D srcTex)
+    {
+        int w = srcTex.width;
+        int h = srcTex.height;
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        Color[] pixels = srcTex.GetPixels();
+
+        // BabySynthesizerと同じ顔穴パラメータ
+        float holeCx = w * 0.50f;
+        float holeCy = h * 0.68f;
+        float holeRx = w * 0.13f;
+        float holeRy = h * 0.12f;
+
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                float fx = (x - holeCx) / holeRx;
+                float fy = (y - holeCy) / holeRy;
+                if (fx * fx + fy * fy < 1f)
+                    pixels[y * w + x] = new Color(0, 0, 0, 0);
+            }
+        }
+
+        tex.SetPixels(pixels);
+        tex.Apply();
+        return tex;
+    }
+
+    /// <summary>
+    /// 親のimageNameからアイテムスプライトのResourcesパスを生成する
+    /// </summary>
+    static string GetParentItemPath(string imageName, bool isFather)
+    {
+        if (string.IsNullOrEmpty(imageName)) return "";
+        string pascal = char.ToUpper(imageName[0]) + imageName.Substring(1);
+        string prefix = isFather ? "Father" : "Mother";
+        return $"ParentItems/{prefix}_{pascal}_Item";
+    }
+
+    /// <summary>
+    /// BabySynthesizerの合成結果SpriteをUI Toolkit上に表示する
+    /// </summary>
+    void DisplaySynthesizedBaby(Sprite synthSprite)
+    {
+        if (birthResultCard == null) return;
+
+        // 既存の合成画像要素があれば削除
+        if (synthBabyImageEl != null)
+            synthBabyImageEl.RemoveFromHierarchy();
+
+        synthBabyImageEl = new UIE.VisualElement();
+        synthBabyImageEl.name = "synth-baby-image";
+        synthBabyImageEl.AddToClassList("birth-result-custom-image");
+        synthBabyImageEl.style.backgroundImage = new UIE.StyleBackground(synthSprite);
+        birthResultCard.Add(synthBabyImageEl);
+
+        // アップロード・スクリーンショットボタンを最前面に
+        if (uploadImageBtn != null) uploadImageBtn.BringToFront();
+        if (screenshotBtn != null) screenshotBtn.BringToFront();
+
+        Debug.Log("[BirthSystem] Synthesized baby displayed in UI Toolkit");
     }
 
     // CreateStatusTextBackground removed — status card serves as background
@@ -2718,9 +3087,9 @@ public class BirthSystem : MonoBehaviour
         listBg.raycastTarget = false;
 
         // 父親行
-        CreateCharacterRow(listPanel.transform, Localization.Get("label_fathers"), Fathers, fatherSprites, 25);
+        CreateCharacterRow(listPanel.transform, Localization.Get("label_fathers"), NewFathers, fatherSprites, 25);
         // 母親行
-        CreateCharacterRow(listPanel.transform, Localization.Get("label_mothers"), Mothers, motherSprites, -25);
+        CreateCharacterRow(listPanel.transform, Localization.Get("label_mothers"), NewMothers, motherSprites, -25);
     }
 
     void CreateCharacterRow(Transform parent, string label, ParentData[] parents, Sprite[] sprites, float yCards)
@@ -2773,7 +3142,7 @@ public class BirthSystem : MonoBehaviour
         var faceImg = faceObj.AddComponent<Image>();
         faceImg.raycastTarget = false;
 
-        Sprite sp = (sprites != null && sprites.Length > idx) ? sprites[idx] : null;
+        Sprite sp = Resources.Load<Sprite>($"Parents/{data.imageName}");
         if (sp != null)
         {
             faceImg.sprite = sp;
@@ -3466,9 +3835,10 @@ public class BirthSystem : MonoBehaviour
             // 父親カードを設定
             if (storyFatherFace != null)
             {
-                if (fatherSprites != null && fIdx < fatherSprites.Length && fatherSprites[fIdx] != null)
+                Sprite fSp = Resources.Load<Sprite>($"Parents/{father.imageName}");
+                if (fSp != null)
                 {
-                    storyFatherFace.style.backgroundImage = new UIE.StyleBackground(fatherSprites[fIdx]);
+                    storyFatherFace.style.backgroundImage = new UIE.StyleBackground(fSp);
                     storyFatherFace.style.backgroundColor = UIE.StyleKeyword.None;
                 }
                 else
@@ -3483,9 +3853,10 @@ public class BirthSystem : MonoBehaviour
             // 母親カードを設定
             if (storyMotherFace != null)
             {
-                if (motherSprites != null && mIdx < motherSprites.Length && motherSprites[mIdx] != null)
+                Sprite mSp = Resources.Load<Sprite>($"Parents/{mother.imageName}");
+                if (mSp != null)
                 {
-                    storyMotherFace.style.backgroundImage = new UIE.StyleBackground(motherSprites[mIdx]);
+                    storyMotherFace.style.backgroundImage = new UIE.StyleBackground(mSp);
                     storyMotherFace.style.backgroundColor = UIE.StyleKeyword.None;
                 }
                 else

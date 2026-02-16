@@ -435,6 +435,18 @@ public class BabysManager : MonoBehaviour
             case "\u30DF\u30B5\u30C8": return "misato";
             case "\u30AB\u30A8\u30C7": return "kaede";
             case "\u30EB\u30CA": return "luna";
+            case "\u30BC\u30CB\u30AC\u30BF": return "zenigata";
+            case "\u30C4\u30AF\u30E2": return "tukumo";
+            case "\u30B5\u30C8\u30A6": return "satou";
+            case "\u30A4\u30EF\u30AA": return "iwao";
+            case "\u30A2\u30AD\u30C8\u30B7": return "akitoshi";
+            case "\u30CD\u30AA": return "neo";
+            case "\u30A4\u30B6\u30CA\u30DF": return "izanami";
+            case "\u30DF\u30AF": return "miku";
+            case "\u30AB\u30E8\u30B3": return "kayoko";
+            case "\u30D5\u30AF\u30C8\u30AF": return "hukutoku";
+            case "\u30E8\u30CD": return "yone";
+            case "\u30C9\u30AF\u30B3": return "dokuko";
             default: return japaneseName != null ? japaneseName.ToLower() : "";
         }
     }
