@@ -375,7 +375,7 @@ public class BattleManager : MonoBehaviour
             enemyAtk = 50;
             enemyDef = 45;
             enemySpeed = 45;
-            loadedEnemySprite = Resources.Load<Sprite>("EnemyBabys/frist-enemy");
+            loadedEnemySprite = Resources.Load<Sprite>("EnemyBabys/first-enemy");
         }
     }
 
@@ -431,7 +431,7 @@ public class BattleManager : MonoBehaviour
             enemyDefs = new object[][] {
                 new object[]{ "なきむしベイビー",     "EnemyBabys/common-nakimushi",    60, 15, 10, 20, 0, 3 },
                 new object[]{ "やんちゃベイビー",     "EnemyBabys/common-yantya",       75, 22, 12, 30, 1, 5 },
-                new object[]{ "いじわるベイビー",     "EnemyBabys/frist-enemy",         85, 28, 18, 25, 3, 6 },
+                new object[]{ "いじわるベイビー",     "EnemyBabys/first-enemy",         85, 28, 18, 25, 3, 6 },
                 new object[]{ "わがままベイビー",     "EnemyBabys/common-wagamama",    100, 32, 22, 28, 4, 7 },
                 new object[]{ "あばれんぼうベイビー", "EnemyBabys/common-abarennbou",  120, 40, 25, 35, 5, 8 },
             };

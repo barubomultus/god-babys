@@ -3,7 +3,7 @@ using System.IO;
 
 public class BabySynthesizer : MonoBehaviour
 {
-    public enum BabyRank { Z, D, C, B, A, S, SS, SSS }
+    public enum BabyRank { D, C, B, A, S }
     public enum SwaddleType { Newspaper, Cardboard, Towel, Silk, Golden }
 
     // 合成結果のキャッシュ
@@ -25,27 +25,21 @@ public class BabySynthesizer : MonoBehaviour
 
     public static BabyRank DetermineRank(int fortune)
     {
-        if (fortune >= 100) return BabyRank.SSS;
-        if (fortune >= 85)  return BabyRank.SS;
         if (fortune >= 70)  return BabyRank.S;
         if (fortune >= 55)  return BabyRank.A;
         if (fortune >= 40)  return BabyRank.B;
         if (fortune >= 25)  return BabyRank.C;
-        if (fortune >= 10)  return BabyRank.D;
-        return BabyRank.Z;
+        return BabyRank.D;
     }
 
     public static SwaddleType DetermineSwaddle(BabyRank rank)
     {
         switch (rank)
         {
-            case BabyRank.SSS:
-            case BabyRank.SS:  return SwaddleType.Golden;
-            case BabyRank.S:
+            case BabyRank.S:   return SwaddleType.Golden;
             case BabyRank.A:   return SwaddleType.Silk;
             case BabyRank.B:   return SwaddleType.Towel;
-            case BabyRank.C:
-            case BabyRank.D:   return SwaddleType.Cardboard;
+            case BabyRank.C:   return SwaddleType.Cardboard;
             default:           return SwaddleType.Newspaper;
         }
     }
@@ -209,6 +203,10 @@ public class BabySynthesizer : MonoBehaviour
         // （大きい方に合わせて正方形基準にし、楕円マスクがクリップ）
         float uniformR = Mathf.Max(rx, ry);
 
+        int faceTexW = faceTex.width;
+        int faceTexH = faceTex.height;
+        Color[] facePixels = faceTex.GetPixels();
+
         for (int dy = 0; dy < faceH; dy++)
         {
             for (int dx = 0; dx < faceW; dx++)
@@ -229,9 +227,9 @@ public class BabySynthesizer : MonoBehaviour
                 float v_adj = (v - 0.5f) / faceScale + 0.5f - p.faceOffsetY;
                 if (u_adj < 0f || u_adj > 1f || v_adj < 0f || v_adj > 1f) continue;
 
-                int srcX = Mathf.Clamp((int)(u_adj * faceTex.width), 0, faceTex.width - 1);
-                int srcY = Mathf.Clamp((int)(v_adj * faceTex.height), 0, faceTex.height - 1);
-                Color srcColor = faceTex.GetPixel(srcX, srcY);
+                int srcX = Mathf.Clamp((int)(u_adj * faceTexW), 0, faceTexW - 1);
+                int srcY = Mathf.Clamp((int)(v_adj * faceTexH), 0, faceTexH - 1);
+                Color srcColor = facePixels[srcY * faceTexW + srcX];
 
                 if (srcColor.a < 0.01f) continue;
 
@@ -556,11 +554,9 @@ public class BabySynthesizer : MonoBehaviour
     void BlitSpriteWithFaceHole(Color[] canvas, Sprite sprite, int dstX, int dstY, int dstW, int dstH)
     {
         var tex = sprite.texture;
-        // テクスチャ全体からサンプリング（textureRectはtight meshでトリムされ非正方形になるため使わない）
-        int srcX = 0;
-        int srcY = 0;
         int srcW = tex.width;
         int srcH = tex.height;
+        Color[] srcPixels = tex.GetPixels();
 
         float holeCx = TEX_SIZE * FACE_HOLE_CX;
         float holeCy = TEX_SIZE * FACE_HOLE_CY;
@@ -582,9 +578,9 @@ public class BabySynthesizer : MonoBehaviour
 
                 float u = (float)dx / dstW;
                 float v = (float)dy / dstH;
-                int sx = srcX + Mathf.Clamp((int)(u * srcW), 0, srcW - 1);
-                int sy = srcY + Mathf.Clamp((int)(v * srcH), 0, srcH - 1);
-                Color srcColor = tex.GetPixel(sx, sy);
+                int sx = Mathf.Clamp((int)(u * srcW), 0, srcW - 1);
+                int sy = Mathf.Clamp((int)(v * srcH), 0, srcH - 1);
+                Color srcColor = srcPixels[sy * srcW + sx];
 
                 if (srcColor.a < 0.01f) continue;
 
@@ -597,11 +593,9 @@ public class BabySynthesizer : MonoBehaviour
     void BlitSpriteToCanvas(Color[] canvas, Sprite sprite, int dstX, int dstY, int dstW, int dstH)
     {
         var tex = sprite.texture;
-        // テクスチャ全体からサンプリング（textureRectはtight meshでトリムされ非正方形になるため使わない）
-        int srcX = 0;
-        int srcY = 0;
         int srcW = tex.width;
         int srcH = tex.height;
+        Color[] srcPixels = tex.GetPixels();
 
         for (int dy = 0; dy < dstH; dy++)
         {
@@ -613,9 +607,9 @@ public class BabySynthesizer : MonoBehaviour
 
                 float u = (float)dx / dstW;
                 float v = (float)dy / dstH;
-                int sx = srcX + Mathf.Clamp((int)(u * srcW), 0, srcW - 1);
-                int sy = srcY + Mathf.Clamp((int)(v * srcH), 0, srcH - 1);
-                Color srcColor = tex.GetPixel(sx, sy);
+                int sx = Mathf.Clamp((int)(u * srcW), 0, srcW - 1);
+                int sy = Mathf.Clamp((int)(v * srcH), 0, srcH - 1);
+                Color srcColor = srcPixels[sy * srcW + sx];
 
                 if (srcColor.a < 0.01f) continue;
 
@@ -631,13 +625,10 @@ public class BabySynthesizer : MonoBehaviour
     {
         switch (rank)
         {
-            case BabyRank.SSS: return "BabySynth/Backgrounds/bg_divine_halo";
-            case BabyRank.SS:  return "BabySynth/Backgrounds/bg_silver_halo";
-            case BabyRank.S:
+            case BabyRank.S:   return "BabySynth/Backgrounds/S_Card";
             case BabyRank.A:   return "BabySynth/Backgrounds/bg_soft_glow";
-            case BabyRank.B:
-            case BabyRank.C:   return "BabySynth/Backgrounds/bg_plain";
-            case BabyRank.D:   return "BabySynth/Backgrounds/bg_dull";
+            case BabyRank.B:   return "BabySynth/Backgrounds/bg_plain";
+            case BabyRank.C:   return "BabySynth/Backgrounds/bg_dull";
             default:           return "BabySynth/Backgrounds/bg_dark_room";
         }
     }
@@ -646,13 +637,11 @@ public class BabySynthesizer : MonoBehaviour
     {
         switch (rank)
         {
-            case BabyRank.SSS:
-            case BabyRank.SS:
             case BabyRank.S:   return "BabySynth/Swaddles/S_Wear";
             case BabyRank.A:   return "BabySynth/Swaddles/A_Wear";
             case BabyRank.B:   return "BabySynth/Swaddles/B_Wear";
             case BabyRank.C:   return "BabySynth/Swaddles/C_Wear";
-            default:           return "BabySynth/Swaddles/D_Wear"; // D, Z
+            default:           return "BabySynth/Swaddles/D_Wear";
         }
     }
 
@@ -674,13 +663,10 @@ public class BabySynthesizer : MonoBehaviour
     {
         switch (rank)
         {
-            case BabyRank.SSS: return new Color(1.0f, 0.95f, 0.6f);
-            case BabyRank.SS:  return new Color(0.9f, 0.9f, 1.0f);
-            case BabyRank.S:
+            case BabyRank.S:   return new Color(1.0f, 0.95f, 0.6f);
             case BabyRank.A:   return new Color(1.0f, 0.98f, 0.9f);
-            case BabyRank.B:
-            case BabyRank.C:   return new Color(0.95f, 0.93f, 0.9f);
-            case BabyRank.D:   return new Color(0.75f, 0.73f, 0.7f);
+            case BabyRank.B:   return new Color(0.95f, 0.93f, 0.9f);
+            case BabyRank.C:   return new Color(0.75f, 0.73f, 0.7f);
             default:           return new Color(0.35f, 0.33f, 0.3f);
         }
     }
@@ -689,13 +675,10 @@ public class BabySynthesizer : MonoBehaviour
     {
         switch (rank)
         {
-            case BabyRank.SSS: return new Color(1.0f, 0.85f, 0.3f);
-            case BabyRank.SS:  return new Color(0.75f, 0.75f, 0.9f);
-            case BabyRank.S:
+            case BabyRank.S:   return new Color(1.0f, 0.85f, 0.3f);
             case BabyRank.A:   return new Color(0.92f, 0.9f, 0.8f);
-            case BabyRank.B:
-            case BabyRank.C:   return new Color(0.85f, 0.82f, 0.78f);
-            case BabyRank.D:   return new Color(0.6f, 0.58f, 0.55f);
+            case BabyRank.B:   return new Color(0.85f, 0.82f, 0.78f);
+            case BabyRank.C:   return new Color(0.6f, 0.58f, 0.55f);
             default:           return new Color(0.2f, 0.18f, 0.15f);
         }
     }

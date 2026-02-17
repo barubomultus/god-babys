@@ -107,6 +107,7 @@ public class BirthSystem : MonoBehaviour
     // 名前入力UI
     string enteredName;
     bool waitingForNameInput;
+    bool nameInputCancelled;
 
     // セーブ確認UI
     bool waitingForSaveConfirm;
@@ -137,23 +138,23 @@ public class BirthSystem : MonoBehaviour
     // 新父親6パターン
     static readonly ParentData[] NewFathers = new[]
     {
-        new ParentData("ゼニガタ", "zenigata", 30, 90, 140, 99, 85, 99, 40, new Color(1.0f, 0.85f, 0.3f), "石油王 / 口癖は『金で買えないものはない』。ゆりかごはプラチナ製。"),
-        new ParentData("ツクモ",   "tukumo",  20, 35, 110,  5, 99, 60, 45, new Color(0.6f, 0.4f, 1.0f), "自称・予言者 / IQ300。常に宇宙と交信しており、育児中も上の空。"),
-        new ParentData("サトウ",   "satou",    55, 50, 150, 50, 55, 45, 55, new Color(0.7f, 0.8f, 0.7f), "中堅企業の係長 / 趣味は洗車。突出した能力はないが、安定した愛を注ぐ。"),
-        new ParentData("イワオ",   "iwao",     95, 85, 200, 20, 15, 10, 80, new Color(0.8f, 0.6f, 0.4f), "元・土木作業員 / 素手で巨大な岩を砕くが、極度の貧乏でプロテインが買えない。"),
-        new ParentData("アキトシ", "akitoshi", 45, 25, 130, 99, 30,  5, 75, new Color(1.0f, 0.4f, 0.4f), "プロギャンブラー / 通帳記入が趣味(残高は常に0)。おくるみは新聞紙。"),
-        new ParentData("ネオ",     "neo",      15, 10,  90, 10, 70,  2, 20, new Color(0.5f, 0.5f, 0.6f), "永遠のニート / 30年間一度も実家から出たことがない。初期資産はほぼゼロ。"),
+        new ParentData("ゼニガタ", "zenigata", 30, 90, 140, 99, 85, 99, 100, new Color(1.0f, 0.85f, 0.3f), "石油王 / 口癖は『金で買えないものはない』。ゆりかごはプラチナ製。"),
+        new ParentData("ツクモ",   "tukumo",  20, 35, 110,  5, 99, 60, 100, new Color(0.6f, 0.4f, 1.0f), "自称・予言者 / IQ300。常に宇宙と交信しており、育児中も上の空。"),
+        new ParentData("サトウ",   "satou",    55, 50, 150, 50, 55, 45, 100, new Color(0.7f, 0.8f, 0.7f), "中堅企業の係長 / 趣味は洗車。突出した能力はないが、安定した愛を注ぐ。"),
+        new ParentData("イワオ",   "iwao",     95, 85, 200, 20, 15, 10, 100, new Color(0.8f, 0.6f, 0.4f), "元・土木作業員 / 素手で巨大な岩を砕くが、極度の貧乏でプロテインが買えない。"),
+        new ParentData("アキトシ", "akitoshi", 45, 25, 130, 99, 30,  5, 100, new Color(1.0f, 0.4f, 0.4f), "プロギャンブラー / 通帳記入が趣味(残高は常に0)。おくるみは新聞紙。"),
+        new ParentData("ネオ",     "neo",      15, 10,  90, 10, 70,  2, 100, new Color(0.5f, 0.5f, 0.6f), "永遠のニート / 30年間一度も実家から出たことがない。初期資産はほぼゼロ。"),
     };
 
     // 新母親6パターン
     static readonly ParentData[] NewMothers = new[]
     {
-        new ParentData("イザナミ", "izanami",  85, 80, 180, 90, 95, 99, 70, new Color(0.9f, 0.3f, 0.5f), "伝説の女帝 / その一言で国家予算が動く。最高級の教育を約束する。"),
-        new ParentData("ミク",     "miku",     35, 40, 130, 75, 40, 25, 65, new Color(1.0f, 0.6f, 0.8f), "自称・モデル / フォロワー数は多いが、内情は火の車。見栄えだけは良い。"),
-        new ParentData("カヨコ",   "kayoko",  40, 65, 160, 65, 55, 50, 60, new Color(1.0f, 0.85f, 0.7f), "商店街の看板娘 / 資産はないが、街の人からお裾分け（アイテム）をもらえる。"),
-        new ParentData("フクトク", "hukutoku", 20, 20, 120,150, 25, 65, 45, new Color(1.0f, 1.0f, 0.4f), "宝くじ1等当選者 / 才能は皆無だが、強運だけで修羅場を潜り抜けてきた。"),
-        new ParentData("ヨネ",     "yone",     20, 15, 110, 45, 60, 10, 50, new Color(0.7f, 0.65f, 0.6f), "内職の鬼 / ティッシュ配りの速さは音速。赤ちゃんのスタイは自作。"),
-        new ParentData("ドクコ",   "dokuko",   80, 70, 170, 15, 75,  5, 90, new Color(0.4f, 0.2f, 0.5f), "闇金の取り立て屋 / 赤ちゃんの最初の言葉を『トイチ』に教育しようとしている。"),
+        new ParentData("イザナミ", "izanami",  85, 80, 180, 90, 95, 99, 100, new Color(0.9f, 0.3f, 0.5f), "伝説の女帝 / その一言で国家予算が動く。最高級の教育を約束する。"),
+        new ParentData("ミク",     "miku",     35, 40, 130, 75, 40, 25, 25, new Color(1.0f, 0.6f, 0.8f), "自称・モデル / フォロワー数は多いが、内情は火の車。見栄えだけは良い。"),
+        new ParentData("カヨコ",   "kayoko",  40, 65, 160, 65, 55, 50, 30, new Color(1.0f, 0.85f, 0.7f), "商店街の看板娘 / 資産はないが、街の人からお裾分け（アイテム）をもらえる。"),
+        new ParentData("フクトク", "hukutoku", 20, 20, 120,150, 25, 65, 75, new Color(1.0f, 1.0f, 0.4f), "宝くじ1等当選者 / 才能は皆無だが、強運だけで修羅場を潜り抜けてきた。"),
+        new ParentData("ヨネ",     "yone",     20, 15, 110, 45, 60, 10, 15, new Color(0.7f, 0.65f, 0.6f), "内職の鬼 / ティッシュ配りの速さは音速。赤ちゃんのスタイは自作。"),
+        new ParentData("ドクコ",   "dokuko",   80, 70, 170, 15, 75,  5, 40, new Color(0.4f, 0.2f, 0.5f), "闇金の取り立て屋 / 赤ちゃんの最初の言葉を『トイチ』に教育しようとしている。"),
     };
 
     // 特徴リスト
@@ -263,6 +264,58 @@ public class BirthSystem : MonoBehaviour
         {"ネオ_フクトク", "ネットで当選したゲーム機。\n届いたのは2台だった。\n「配送ミスか...」\n\n届け先を調べるとフクトクだった。\n「私もなぜか当たるんです」\n\n二人でオンラインゲームを始めた。\n会わなくても繋がれる関係。\n\n「いつかリアルでも会おうよ」\n「...外出たくないです」\n「じゃあ私が行くわ」\n\n最強の幸運が\n最弱のニートの元に\n転がり込んできた。"},
         {"ネオ_ヨネ", "在宅内職の求人に応募したネオ。\n指導員としてヨネが家に来た。\n\n「手先は器用ですね」\n「30年間ゲームしかしてないんで」\n\n意外な才能を発揮するネオ。\nヨネは毎日指導に通った。\n\n「これ、今日の分のおかず」\n「え、いいんですか」\n\n内職と差し入れ。\n小さな経済圏の中で、\n二人の距離は縮まっていった。\n「外に出なくても幸せってあるのね」"},
         {"ネオ_ドクコ", "親の借金を背負わされたネオ。\n取り立てに来たドクコは、\n震えるニートを見て固まった。\n\n「こいつから取れるもん、\nなんもねえ...」\n\nだがネオのPCスキルに目をつけた。\n「帳簿管理やれ。借金チャラにしてやる」\n\n恐怖で始まった関係だが、\nドクコの強さにネオは安心感を覚えた。\n\n「あんたといると\n外の世界も怖くない」\n「当たり前だ。私が守るからな」"},
+    };
+
+    // 36通りの人生の要約（父親名_母親名 → 要約）
+    static readonly System.Collections.Generic.Dictionary<string, string> LifeSummaries = new System.Collections.Generic.Dictionary<string, string>
+    {
+        // ゼニガタ（石油王）× 各母親
+        {"ゼニガタ_イザナミ", "金と権力の完全なる融合。この子の初泣きで株価が動く。"},
+        {"ゼニガタ_ミク", "パパの財布でママのフォロワーが増えるシステム。子供は生まれながらのインフルエンサー。"},
+        {"ゼニガタ_カヨコ", "商店街にプラチナ製の看板を寄贈する石油王。子供のお年玉は原油先物。"},
+        {"ゼニガタ_フクトク", "宝くじ当選者と石油王の悪魔合体。運も金も使い切れない。"},
+        {"ゼニガタ_ヨネ", "年収数兆円なのに妻が内職をやめない。おくるみは手縫い。"},
+        {"ゼニガタ_ドクコ", "取り立てる側と取り立てられる側の禁断の愛。利息は愛で返済。"},
+
+        // ツクモ（自称・予言者）× 各母親
+        {"ツクモ_イザナミ", "宇宙との交信と国家運営を両立する夫婦。子供の名前は星座から選ばれた。"},
+        {"ツクモ_ミク", "予言者の息子がバズる未来は予言済み。フォロワー数も星の数ほど。"},
+        {"ツクモ_カヨコ", "商店街の未来を予言したら全部外れた。コロッケの売上だけは上がった。"},
+        {"ツクモ_フクトク", "予言は外れるが宝くじは当たる。矛盾した幸運が子供に流れ込む。"},
+        {"ツクモ_ヨネ", "宇宙からのメッセージを受信中に妻がティッシュを折る音。家庭内ノイズキャンセリング不可。"},
+        {"ツクモ_ドクコ", "来世の借金まで予言してしまい、妻に怒られる日々。子供は霊感と威圧感を継承。"},
+
+        // サトウ（中堅企業の係長）× 各母親
+        {"サトウ_イザナミ", "係長が女帝と結婚した結果、社内の力関係が宇宙規模に崩壊。子供の参観日に黒塗りの車。"},
+        {"サトウ_ミク", "普通の父と映える母。子供の運動会をインスタに上げたら地味すぎて逆にバズった。"},
+        {"サトウ_カヨコ", "普通すぎる家庭に絶望し、すでに2回目の人生を諦めている。"},
+        {"サトウ_フクトク", "平凡な夫と幸運な妻。年末ジャンボだけで生活が成り立つ奇跡の家計。"},
+        {"サトウ_ヨネ", "夫は係長、妻は内職。日本で最も平均的な家庭から、最も平均的な赤ちゃんが誕生。"},
+        {"サトウ_ドクコ", "隣の席の取り立て屋と結婚した係長。社内で最も話しかけづらい夫婦。"},
+
+        // イワオ（元・土木作業員）× 各母親
+        {"イワオ_イザナミ", "素手で宮殿を増築する夫と国を動かす妻。子供は生まれた瞬間に瓦を割った。"},
+        {"イワオ_ミク", "筋肉がバズった結果、プロテインのCMが決まった。報酬は現物支給。"},
+        {"イワオ_カヨコ", "コロッケで育った筋肉。子供の離乳食は揚げ物オンリー。"},
+        {"イワオ_フクトク", "貧乏だが幸運で食いつなぐ一家。子供は石を投げれば金塊に当たる。"},
+        {"イワオ_ヨネ", "夫は日雇い、妻は内職。月収は合わせて米一俵分だが、愛だけは重量級。"},
+        {"イワオ_ドクコ", "用心棒と取り立て屋の最恐カップル。子供が泣くと近隣住民が家賃を前払いする。"},
+
+        // アキトシ（プロギャンブラー）× 各母親
+        {"アキトシ_イザナミ", "国家予算をルーレットに賭けようとして女帝に殴られた。子供は賭け事禁止で育つ。"},
+        {"アキトシ_ミク", "パパは全財産を溶かし、ママはフォロワーを溶かす。子供は生まれながらの炎上体質。"},
+        {"アキトシ_カヨコ", "所持金ゼロでもコロッケは温かい。子供の初めての言葉は『ツケで』。"},
+        {"アキトシ_フクトク", "最強の幸運と最凶の浪費が子供の中で戦っている。お年玉は即日蒸発。"},
+        {"アキトシ_ヨネ", "妻が1円ずつ貯めた金を夫が1秒で溶かす。子供はその光景を見て育つ。"},
+        {"アキトシ_ドクコ", "借金の取り立てが求婚になった稀有なケース。子供は利息の計算が異常に速い。"},
+
+        // ネオ（永遠のニート）× 各母親
+        {"ネオ_イザナミ", "30年間実家から出ない男を女帝が養う構図。子供は玉座の間でゲームをする。"},
+        {"ネオ_ミク", "ニートの部屋から始まった配信が伝説に。子供は生まれた瞬間からライブ配信。"},
+        {"ネオ_カヨコ", "30年ぶりの外出先がコロッケ屋。子供は商店街で唯一の引きこもり二世。"},
+        {"ネオ_フクトク", "働かなくても宝くじで暮らせる最強の怠惰。子供は努力という概念を知らない。"},
+        {"ネオ_ヨネ", "家計の全てを内職が支える。父は布団の中でレベルアップを夢見る。"},
+        {"ネオ_ドクコ", "借金を背負わされたニートと取り立て屋。子供は恐怖で正しい姿勢を学ぶ。"},
     };
 
     // ストーリー表示用UI (UI Toolkit)
@@ -540,6 +593,7 @@ public class BirthSystem : MonoBehaviour
         if (anotherGalButton != null) anotherGalButton.SetActive(false);
 
         // 名前入力ダイアログ表示
+        nameInputCancelled = false;
         if (nameInputOverlayEl != null && nameTextField != null)
         {
             nameTextField.value = "";
@@ -553,6 +607,14 @@ public class BirthSystem : MonoBehaviour
 
         nameInputOverlayEl?.RemoveFromHierarchy();
 
+        // キャンセル時はボタンを復帰して終了
+        if (nameInputCancelled)
+        {
+            if (gotoBattleButton != null) gotoBattleButton.SetActive(true);
+            if (anotherGalButton != null) anotherGalButton.SetActive(true);
+            yield break;
+        }
+
         // DataCarrierに名前を保存（スロットへの自動セーブはしない）
         if (DataCarrier.Instance != null)
         {
@@ -560,8 +622,70 @@ public class BirthSystem : MonoBehaviour
             DataCarrier.Instance.currentSlot = -1; // 新規なのでスロット未割当
         }
 
-        // バトルシーンへ
+        // 章タイトル演出 → バトルシーンへ
+        yield return StartCoroutine(ShowChapterTitle());
         SceneManager.LoadScene("BattleScene");
+    }
+
+    IEnumerator ShowChapterTitle()
+    {
+        if (overlayRoot == null) yield break;
+
+        var panel = new UIE.VisualElement();
+        panel.style.position = UIE.Position.Absolute;
+        panel.style.left = 0; panel.style.right = 0;
+        panel.style.top = 0; panel.style.bottom = 0;
+        panel.style.backgroundColor = new Color(0, 0, 0, 0);
+        panel.style.alignItems = UIE.Align.Center;
+        panel.style.justifyContent = UIE.Justify.Center;
+        overlayRoot.Add(panel);
+
+        // フェードイン（暗転）
+        float elapsed = 0f;
+        while (elapsed < 0.8f)
+        {
+            elapsed += Time.deltaTime;
+            panel.style.backgroundColor = new Color(0, 0, 0, Mathf.Clamp01(elapsed / 0.8f));
+            yield return null;
+        }
+        panel.style.backgroundColor = Color.black;
+
+        yield return new WaitForSeconds(0.3f);
+
+        // 章タイトルテキスト
+        var titleLabel = UIHelper.CreateLabel("第一章：血脈の初陣");
+        titleLabel.style.fontSize = 56;
+        titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+        titleLabel.style.color = new Color(1f, 1f, 1f, 0f);
+        titleLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+        titleLabel.style.letterSpacing = 8;
+        panel.Add(titleLabel);
+
+        // テキストフェードイン
+        elapsed = 0f;
+        while (elapsed < 1.0f)
+        {
+            elapsed += Time.deltaTime;
+            float a = Mathf.Clamp01(elapsed / 1.0f);
+            titleLabel.style.color = new Color(1f, 1f, 1f, a);
+            yield return null;
+        }
+        titleLabel.style.color = Color.white;
+
+        yield return new WaitForSeconds(1.5f);
+
+        // テキスト＋画面フェードアウト
+        elapsed = 0f;
+        while (elapsed < 1.0f)
+        {
+            elapsed += Time.deltaTime;
+            float a = 1f - Mathf.Clamp01(elapsed / 1.0f);
+            titleLabel.style.color = new Color(1f, 1f, 1f, a);
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(0.3f);
+        panel.RemoveFromHierarchy();
     }
 
     void OnNameConfirmUIToolkit()
@@ -873,9 +997,15 @@ public class BirthSystem : MonoBehaviour
         Debug.Log("[BirthSystem] Phase 5: Sacred birth cutin");
         yield return StartCoroutine(ShowBirthCutin());
 
+        // カットイン除去後に1フレーム描画を挟み、画面遷移を反映させる
+        yield return null;
+
         // ── フェーズ5.5: レイアウト切り替え（親を端に、赤ちゃんを大きく中央に） ──
         Debug.Log("[BirthSystem] Phase 5.5: Layout switch and baby display");
-        SwitchToBirthResultLayout();
+        SwitchToBirthResultLayout(BabySynthesizer.DetermineRank(c_fortune));
+
+        // レイアウト反映のため1フレーム描画を挟む
+        yield return null;
 
         // ── フェーズ6: ステータス1行ずつ表示 ──
         // 上位1%判定（GOD BABY判定）、上位10%判定（大物判定）
@@ -941,18 +1071,27 @@ public class BirthSystem : MonoBehaviour
             genderLabelEl.text = $"{Localization.Get("birth_stat_gender")}  <color={genderColor}>{displayGender}</color>";
         }
 
+        // 人生の要約を取得
+        string summaryKey = $"{father.name}_{mother.name}";
+        string summary = LifeSummaries.ContainsKey(summaryKey)
+            ? LifeSummaries[summaryKey]
+            : "波乱万丈の人生が始まる。";
+        string statSummary = $"<color=#8B6508><size=36>「{summary}」</size></color>";
+
         string stat1 = $"{Localization.Get("birth_stat_hp")} {c_hp}    {Localization.Get("birth_stat_atk")} {c_atk}    {Localization.Get("birth_stat_def")} {c_def}";
         string stat2 = $"{Localization.Get("birth_stat_intelligence")} {c_intelligence}    {Localization.Get("birth_stat_athletic")} {c_athletic}";
         string stat3 = $"{Localization.Get("birth_stat_luck")} {c_luck}    {Localization.Get("birth_stat_fortune")} {c_fortune}";
         string stat4 = $"{Localization.Get("birth_stat_trait")}  <color=#FFA500>{Localization.GetTrait(trait1)}</color>";
 
-        if (childStatusText != null) childStatusText.text = stat1;
+        if (childStatusText != null) childStatusText.text = statSummary;
+        yield return new WaitForSeconds(0.3f);
+        if (childStatusText != null) childStatusText.text = statSummary + "\n\n" + stat1;
         yield return new WaitForSeconds(0.2f);
-        if (childStatusText != null) childStatusText.text = stat1 + "\n\n" + stat2;
+        if (childStatusText != null) childStatusText.text = statSummary + "\n\n" + stat1 + "\n\n" + stat2;
         yield return new WaitForSeconds(0.15f);
-        if (childStatusText != null) childStatusText.text = stat1 + "\n\n" + stat2 + "\n\n" + stat3;
+        if (childStatusText != null) childStatusText.text = statSummary + "\n\n" + stat1 + "\n\n" + stat2 + "\n\n" + stat3;
         yield return new WaitForSeconds(0.25f);
-        if (childStatusText != null) childStatusText.text = stat1 + "\n\n" + stat2 + "\n\n" + stat3 + "\n\n" + stat4;
+        if (childStatusText != null) childStatusText.text = statSummary + "\n\n" + stat1 + "\n\n" + stat2 + "\n\n" + stat3 + "\n\n" + stat4;
 
         // ── DataCarrier に保存 ──
         if (DataCarrier.Instance != null)
@@ -1956,7 +2095,7 @@ public class BirthSystem : MonoBehaviour
     }
 
     // 誕生後のレイアウトに切り替え（赤ちゃんを大きく中央上部に）
-    void SwitchToBirthResultLayout()
+    void SwitchToBirthResultLayout(BabySynthesizer.BabyRank rank = BabySynthesizer.BabyRank.D)
     {
         if (overlayRoot == null) return;
 
@@ -1970,10 +2109,13 @@ public class BirthSystem : MonoBehaviour
         birthResultCard = new UIE.VisualElement();
         birthResultCard.AddToClassList("birth-result-card");
 
-        // カード内側背景
+        // カード内側背景（ランク別）
         var inner = new UIE.VisualElement();
         inner.AddToClassList("birth-result-inner");
-        Sprite babyBgSprite = Resources.Load<Sprite>("BackGrounds/baby-background");
+        string bgPath = rank == BabySynthesizer.BabyRank.S
+            ? "BabySynth/Backgrounds/S_Card"
+            : "BackGrounds/baby-background";
+        Sprite babyBgSprite = Resources.Load<Sprite>(bgPath);
         if (babyBgSprite != null)
             inner.style.backgroundImage = new UIE.StyleBackground(babyBgSprite);
         birthResultCard.Add(inner);
@@ -2555,7 +2697,8 @@ public class BirthSystem : MonoBehaviour
         synthBabyImageEl.name = "synth-baby-image";
         synthBabyImageEl.AddToClassList("birth-result-custom-image");
         synthBabyImageEl.style.backgroundImage = new UIE.StyleBackground(synthSprite);
-        birthResultCard.Add(synthBabyImageEl);
+        // innerの直後に挿入（性別ラベル・ステータスカードの背面に配置）
+        birthResultCard.Insert(1, synthBabyImageEl);
 
         // アップロード・スクリーンショットボタンを最前面に
         if (uploadImageBtn != null) uploadImageBtn.BringToFront();
@@ -2641,6 +2784,14 @@ public class BirthSystem : MonoBehaviour
     {
         nameInputOverlayEl = UIHelper.CreateOverlay();
 
+        // 背景クリックで閉じる
+        nameInputOverlayEl.pickingMode = UIE.PickingMode.Position;
+        nameInputOverlayEl.RegisterCallback<UIE.ClickEvent>(evt =>
+        {
+            if (evt.target == nameInputOverlayEl)
+                OnNameCancel();
+        });
+
         var card = new UIE.VisualElement();
         card.AddToClassList("birth-name-card");
 
@@ -2653,12 +2804,22 @@ public class BirthSystem : MonoBehaviour
         UIHelper.ApplyFont(nameTextField);
         card.Add(nameTextField);
 
-        var confirmBtn = UIHelper.CreatePillButton(Localization.Get("ui_confirm"), "pill-button-medium");
+        var confirmBtn = UIHelper.CreatePillButton("運命を刻み戦場へ", "pill-button-danger");
         confirmBtn.clicked += OnNameConfirmUIToolkit;
         card.Add(confirmBtn);
 
+        var backBtn = UIHelper.CreatePillButton(Localization.Get("ui_back"), "pill-button-secondary");
+        backBtn.clicked += OnNameCancel;
+        card.Add(backBtn);
+
         nameInputOverlayEl.Add(card);
         // Not added to overlayRoot yet — shown on demand
+    }
+
+    void OnNameCancel()
+    {
+        nameInputCancelled = true;
+        waitingForNameInput = false;
     }
 
     void CreateSaveConfirmUI()
