@@ -2474,6 +2474,85 @@ public class BattleManager : MonoBehaviour
         }
         panel.RemoveFromHierarchy();
 
+        // 初回ボス: カットインテキスト + ワイプ遷移
+        bool isFirstBoss = !(area == 4 && enemyName == "メロディアス女王")
+                        && !(area == 2 && enemyName == "デヴィル夫人");
+        if (isFirstBoss)
+        {
+            // カットイン暗転パネル
+            var cutinPanel = new UIE.VisualElement();
+            cutinPanel.style.position = UIE.Position.Absolute;
+            cutinPanel.style.left = 0; cutinPanel.style.top = 0;
+            cutinPanel.style.right = 0; cutinPanel.style.bottom = 0;
+            cutinPanel.style.backgroundColor = new Color(0f, 0f, 0f, 0.95f);
+            cutinPanel.style.alignItems = UIE.Align.Center;
+            cutinPanel.style.justifyContent = UIE.Justify.Center;
+
+            var cutinLabel = UIHelper.CreateLabel(
+                "運命の第一歩。\nその先に待つのは、安らぎか、それとも――", "");
+            UIHelper.ApplyFont(cutinLabel);
+            cutinLabel.style.fontSize = 36;
+            cutinLabel.style.color = Color.white;
+            cutinLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            cutinLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
+            cutinLabel.style.width = 800;
+            cutinLabel.style.opacity = 0f;
+            cutinPanel.Add(cutinLabel);
+            overlayRoot.Add(cutinPanel);
+
+            // テキストフェードイン
+            float cutElapsed = 0f;
+            while (cutElapsed < 1.0f)
+            {
+                cutElapsed += Time.deltaTime;
+                cutinLabel.style.opacity = Mathf.Clamp01(cutElapsed / 1.0f);
+                yield return null;
+            }
+            cutinLabel.style.opacity = 1f;
+
+            yield return new WaitForSeconds(2.5f);
+
+            // テキストフェードアウト
+            cutElapsed = 0f;
+            while (cutElapsed < 1.0f)
+            {
+                cutElapsed += Time.deltaTime;
+                cutinLabel.style.opacity = 1f - Mathf.Clamp01(cutElapsed / 1.0f);
+                yield return null;
+            }
+
+            yield return new WaitForSeconds(0.3f);
+            cutinPanel.RemoveFromHierarchy();
+
+            // ワイプ遷移 (右からスライドして画面を覆う)
+            var wipePanel = new UIE.VisualElement();
+            wipePanel.style.position = UIE.Position.Absolute;
+            wipePanel.style.left = 0; wipePanel.style.top = 0;
+            wipePanel.style.right = 0; wipePanel.style.bottom = 0;
+            wipePanel.style.backgroundColor = Color.black;
+            wipePanel.style.translate = new UIE.StyleTranslate(
+                new UIE.Translate(new UIE.Length(100, UIE.LengthUnit.Percent), 0));
+            overlayRoot.Add(wipePanel);
+
+            cutElapsed = 0f;
+            float wipeDuration = 0.8f;
+            while (cutElapsed < wipeDuration)
+            {
+                cutElapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(cutElapsed / wipeDuration);
+                // ease-in-out
+                t = t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
+                float pct = Mathf.Lerp(100f, 0f, t);
+                wipePanel.style.translate = new UIE.StyleTranslate(
+                    new UIE.Translate(new UIE.Length(pct, UIE.LengthUnit.Percent), 0));
+                yield return null;
+            }
+            wipePanel.style.translate = new UIE.StyleTranslate(
+                new UIE.Translate(0, 0));
+
+            yield return new WaitForSeconds(0.3f);
+        }
+
         if (DataCarrier.Instance != null)
         {
             DataCarrier.Instance.cameFromMap = false;
@@ -2498,6 +2577,10 @@ public class BattleManager : MonoBehaviour
                 DataCarrier.Instance.mapPlayerX = 5;
                 DataCarrier.Instance.mapPlayerY = 9;
             }
+
+            if (isFirstBoss)
+                DataCarrier.Instance.pendingWipeIn = true;
+
             DataCarrier.Instance.SaveData();
         }
 

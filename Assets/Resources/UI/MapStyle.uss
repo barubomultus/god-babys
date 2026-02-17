@@ -269,6 +269,54 @@
     color: rgb(153, 51, 77);
 }
 
+/* --- Milk NPC dialogue --- */
+.milk-dialog-portrait {
+    width: 300px;
+    height: 400px;
+    -unity-background-scale-mode: scale-to-fit;
+    flex-shrink: 0;
+    margin-bottom: 12px;
+}
+
+.milk-dialog-box {
+    width: 920px;
+    background-color: rgba(255, 252, 248, 0.97);
+    border-radius: 24px;
+    padding-top: 20px;
+    padding-bottom: 16px;
+    padding-left: 30px;
+    padding-right: 30px;
+    margin-bottom: 80px;
+}
+
+.milk-dialog-name {
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: rgb(140, 77, 128);
+    margin-bottom: 8px;
+}
+
+.milk-dialog-text {
+    font-size: 28px;
+    color: rgb(51, 38, 26);
+    white-space: normal;
+    -unity-text-align: upper-left;
+}
+
+.elder-dialog-name {
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: rgb(77, 89, 128);
+    margin-bottom: 8px;
+}
+
+.milk-dialog-hint {
+    font-size: 20px;
+    color: rgb(153, 153, 166);
+    -unity-text-align: middle-right;
+    margin-top: 10px;
+}
+
 /* --- Touch swipe area --- */
 .map-swipe-area {
     position: absolute;

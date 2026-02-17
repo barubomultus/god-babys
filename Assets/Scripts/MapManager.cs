@@ -96,6 +96,12 @@ public class MapManager : MonoBehaviour
     int milkPointY = 10;
     bool milkCutinActive = false;
 
+    // 門番（長老）NPC
+    GameObject elderNpcObj;
+    int elderNpcX = 6;
+    int elderNpcY = 10;
+    bool elderDialogueActive = false;
+
     // 持ち物パネル
     UIE.VisualElement inventoryOverlayEl;
     UIE.VisualElement statusDetailEl;
@@ -165,6 +171,9 @@ public class MapManager : MonoBehaviour
             milkPointY = 8;
             CreateMilkPoint();
             CreateGoldenEgg();
+            elderNpcX = 5;
+            elderNpcY = 2;
+            CreateElderNPC();
         }
         else if (area == 2)
         {
@@ -176,11 +185,17 @@ public class MapManager : MonoBehaviour
             milkPointX = 9;
             milkPointY = 4;
             CreateMilkPoint();
+            elderNpcX = 6;
+            elderNpcY = 10;
+            CreateElderNPC();
         }
         else
         {
             CreateGoldenEgg();
             CreateMilkPoint();
+            elderNpcX = 4;
+            elderNpcY = 10;
+            CreateElderNPC();
         }
 
         // UI Toolkit overlay layer (above Canvas, separate GameObject to avoid UIDocument conflict)
@@ -201,6 +216,13 @@ public class MapManager : MonoBehaviour
         // プレイヤーを最前面に
         if (playerObj != null)
             playerObj.transform.SetAsLastSibling();
+
+        // ボス撃破後のワイプイン演出
+        if (DataCarrier.Instance != null && DataCarrier.Instance.pendingWipeIn)
+        {
+            DataCarrier.Instance.pendingWipeIn = false;
+            StartCoroutine(PlayWipeIn());
+        }
     }
 
     void LoadTileset()
@@ -2193,6 +2215,9 @@ public class MapManager : MonoBehaviour
             // ミルクポイント回復判定
             CheckMilkPoint();
 
+            // 長老NPC判定
+            CheckElderNPC();
+
             // 移動完了時にエンカウント判定
             CheckRandomEncounter();
         }
@@ -2230,6 +2255,33 @@ public class MapManager : MonoBehaviour
                 StartCoroutine(StartBattle());
             }
         }
+    }
+
+    IEnumerator PlayWipeIn()
+    {
+        var wipePanel = new UIE.VisualElement();
+        wipePanel.style.position = UIE.Position.Absolute;
+        wipePanel.style.left = 0; wipePanel.style.top = 0;
+        wipePanel.style.right = 0; wipePanel.style.bottom = 0;
+        wipePanel.style.backgroundColor = Color.black;
+        overlayRoot.Add(wipePanel);
+
+        yield return null; // 1フレーム待ちでマップのレンダリング完了
+
+        float elapsed = 0f;
+        float wipeDuration = 0.8f;
+        while (elapsed < wipeDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / wipeDuration);
+            // ease-in-out
+            t = t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
+            float pct = Mathf.Lerp(0f, -100f, t);
+            wipePanel.style.translate = new UIE.StyleTranslate(
+                new UIE.Translate(new UIE.Length(pct, UIE.LengthUnit.Percent), 0));
+            yield return null;
+        }
+        wipePanel.RemoveFromHierarchy();
     }
 
     IEnumerator StartBattle()
@@ -2758,8 +2810,8 @@ public class MapManager : MonoBehaviour
         btn.transition = Selectable.Transition.None;
         btn.onClick.AddListener(() => OnMilkPointTapped());
 
-        // 哺乳瓶の描画
-        DrawBabyBottle(milkPointObj.transform, 0.8f);
+        // NPC描画（ミルクの母さん）
+        DrawMilkNPC(milkPointObj.transform, 0.8f);
 
         milkPointObj.transform.SetAsLastSibling();
     }
@@ -2793,6 +2845,289 @@ public class MapManager : MonoBehaviour
         // ハートマーク（小さいピンクの四角でハート風）
         var heart = FacePart("Heart", parent, new Vector2(6 * s, 0), new Vector2(8 * s, 8 * s));
         heart.AddComponent<Image>().color = new Color(1f, 0.4f, 0.5f, 0.7f);
+    }
+
+    void DrawMilkNPC(Transform parent, float scale)
+    {
+        float s = scale;
+        Color skin = new Color(0.98f, 0.89f, 0.82f);
+        Color dress = new Color(0.55f, 0.3f, 0.5f);
+        Color apron = new Color(1f, 0.96f, 0.92f);
+        Color hair = new Color(0.35f, 0.22f, 0.12f);
+
+        // 影
+        FacePart("Shadow", parent, new Vector2(0, -34 * s), new Vector2(34 * s, 10 * s))
+            .AddComponent<Image>().color = new Color(0, 0, 0, 0.25f);
+
+        // 足
+        FacePart("FootL", parent, new Vector2(-6 * s, -30 * s), new Vector2(9 * s, 7 * s))
+            .AddComponent<Image>().color = new Color(0.45f, 0.25f, 0.2f);
+        FacePart("FootR", parent, new Vector2(6 * s, -30 * s), new Vector2(9 * s, 7 * s))
+            .AddComponent<Image>().color = new Color(0.45f, 0.25f, 0.2f);
+
+        // ロングドレス（胴体下部）
+        FacePart("Skirt", parent, new Vector2(0, -20 * s), new Vector2(28 * s, 22 * s))
+            .AddComponent<Image>().color = dress;
+
+        // 胴体上部
+        FacePart("Bodice", parent, new Vector2(0, -6 * s), new Vector2(26 * s, 18 * s))
+            .AddComponent<Image>().color = dress;
+
+        // エプロン
+        FacePart("Apron", parent, new Vector2(0, -14 * s), new Vector2(20 * s, 26 * s))
+            .AddComponent<Image>().color = apron;
+
+        // 腕
+        FacePart("ArmL", parent, new Vector2(-16 * s, -8 * s), new Vector2(7 * s, 16 * s))
+            .AddComponent<Image>().color = new Color(0.65f, 0.4f, 0.6f);
+        FacePart("ArmR", parent, new Vector2(16 * s, -8 * s), new Vector2(7 * s, 16 * s))
+            .AddComponent<Image>().color = new Color(0.65f, 0.4f, 0.6f);
+
+        // 手
+        FacePart("HandL", parent, new Vector2(-16 * s, -18 * s), new Vector2(6 * s, 6 * s))
+            .AddComponent<Image>().color = skin;
+        FacePart("HandR", parent, new Vector2(16 * s, -18 * s), new Vector2(6 * s, 6 * s))
+            .AddComponent<Image>().color = skin;
+
+        // 頭
+        FacePart("Head", parent, new Vector2(0, 14 * s), new Vector2(32 * s, 28 * s))
+            .AddComponent<Image>().color = skin;
+
+        // 髪（上）
+        FacePart("HairTop", parent, new Vector2(0, 26 * s), new Vector2(36 * s, 14 * s))
+            .AddComponent<Image>().color = hair;
+
+        // 髪（サイド）
+        FacePart("HairL", parent, new Vector2(-15 * s, 8 * s), new Vector2(8 * s, 20 * s))
+            .AddComponent<Image>().color = hair;
+        FacePart("HairR", parent, new Vector2(15 * s, 8 * s), new Vector2(8 * s, 20 * s))
+            .AddComponent<Image>().color = hair;
+
+        // 目（優しい半月型）
+        FacePart("EyeL", parent, new Vector2(-7 * s, 14 * s), new Vector2(5 * s, 3 * s))
+            .AddComponent<Image>().color = new Color(0.2f, 0.15f, 0.1f);
+        FacePart("EyeR", parent, new Vector2(7 * s, 14 * s), new Vector2(5 * s, 3 * s))
+            .AddComponent<Image>().color = new Color(0.2f, 0.15f, 0.1f);
+
+        // 口（微笑み）
+        FacePart("Smile", parent, new Vector2(0, 8 * s), new Vector2(7 * s, 3 * s))
+            .AddComponent<Image>().color = new Color(0.85f, 0.5f, 0.55f);
+
+        // ほっぺ（チーク）
+        FacePart("CheekL", parent, new Vector2(-10 * s, 10 * s), new Vector2(6 * s, 4 * s))
+            .AddComponent<Image>().color = new Color(1f, 0.7f, 0.7f, 0.5f);
+        FacePart("CheekR", parent, new Vector2(10 * s, 10 * s), new Vector2(6 * s, 4 * s))
+            .AddComponent<Image>().color = new Color(1f, 0.7f, 0.7f, 0.5f);
+    }
+
+    // ===== 門番（長老）NPC =====
+
+    void CreateElderNPC()
+    {
+        if (tilesContainer == null) return;
+
+        elderNpcObj = new GameObject("ElderNPC");
+        elderNpcObj.transform.SetParent(tilesContainer.transform, false);
+
+        var rect = elderNpcObj.AddComponent<RectTransform>();
+        float posX = (elderNpcX - MAP_WIDTH / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (elderNpcY - MAP_HEIGHT / 2f + 0.5f) * DISPLAY_TILE;
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(DISPLAY_TILE, DISPLAY_TILE);
+
+        var btnImg = elderNpcObj.AddComponent<Image>();
+        btnImg.color = new Color(0, 0, 0, 0);
+        var btn = elderNpcObj.AddComponent<Button>();
+        btn.transition = Selectable.Transition.None;
+        btn.onClick.AddListener(() => OnElderTapped());
+
+        DrawElderNPC(elderNpcObj.transform, 0.8f);
+        elderNpcObj.transform.SetAsLastSibling();
+    }
+
+    void DrawElderNPC(Transform parent, float scale)
+    {
+        float s = scale;
+        Color skin = new Color(0.92f, 0.82f, 0.72f);
+        Color robe = new Color(0.35f, 0.3f, 0.5f);
+        Color robeLight = new Color(0.45f, 0.4f, 0.6f);
+        Color hair = new Color(0.85f, 0.85f, 0.85f);
+        Color beard = new Color(0.8f, 0.8f, 0.8f);
+
+        // 影
+        FacePart("Shadow", parent, new Vector2(0, -34 * s), new Vector2(36 * s, 10 * s))
+            .AddComponent<Image>().color = new Color(0, 0, 0, 0.25f);
+
+        // 足
+        FacePart("FootL", parent, new Vector2(-6 * s, -30 * s), new Vector2(9 * s, 7 * s))
+            .AddComponent<Image>().color = new Color(0.35f, 0.25f, 0.15f);
+        FacePart("FootR", parent, new Vector2(6 * s, -30 * s), new Vector2(9 * s, 7 * s))
+            .AddComponent<Image>().color = new Color(0.35f, 0.25f, 0.15f);
+
+        // ローブ（下部）
+        FacePart("RobeLower", parent, new Vector2(0, -20 * s), new Vector2(30 * s, 22 * s))
+            .AddComponent<Image>().color = robe;
+
+        // ローブ（上部）
+        FacePart("RobeUpper", parent, new Vector2(0, -6 * s), new Vector2(28 * s, 18 * s))
+            .AddComponent<Image>().color = robe;
+
+        // 帯（腰）
+        FacePart("Belt", parent, new Vector2(0, -10 * s), new Vector2(30 * s, 5 * s))
+            .AddComponent<Image>().color = new Color(0.6f, 0.5f, 0.2f);
+
+        // 腕
+        FacePart("ArmL", parent, new Vector2(-17 * s, -8 * s), new Vector2(7 * s, 16 * s))
+            .AddComponent<Image>().color = robeLight;
+        FacePart("ArmR", parent, new Vector2(17 * s, -8 * s), new Vector2(7 * s, 16 * s))
+            .AddComponent<Image>().color = robeLight;
+
+        // 手
+        FacePart("HandL", parent, new Vector2(-17 * s, -18 * s), new Vector2(6 * s, 6 * s))
+            .AddComponent<Image>().color = skin;
+        FacePart("HandR", parent, new Vector2(17 * s, -18 * s), new Vector2(6 * s, 6 * s))
+            .AddComponent<Image>().color = skin;
+
+        // 杖
+        FacePart("Staff", parent, new Vector2(22 * s, -6 * s), new Vector2(4 * s, 46 * s))
+            .AddComponent<Image>().color = new Color(0.55f, 0.35f, 0.15f);
+        FacePart("StaffGem", parent, new Vector2(22 * s, 18 * s), new Vector2(8 * s, 8 * s))
+            .AddComponent<Image>().color = new Color(0.3f, 0.8f, 0.5f);
+
+        // 頭
+        FacePart("Head", parent, new Vector2(0, 14 * s), new Vector2(30 * s, 28 * s))
+            .AddComponent<Image>().color = skin;
+
+        // 髪（白髪、後ろ）
+        FacePart("HairBack", parent, new Vector2(0, 26 * s), new Vector2(34 * s, 16 * s))
+            .AddComponent<Image>().color = hair;
+
+        // 眉（太い）
+        FacePart("BrowL", parent, new Vector2(-8 * s, 20 * s), new Vector2(7 * s, 3 * s))
+            .AddComponent<Image>().color = new Color(0.7f, 0.7f, 0.7f);
+        FacePart("BrowR", parent, new Vector2(8 * s, 20 * s), new Vector2(7 * s, 3 * s))
+            .AddComponent<Image>().color = new Color(0.7f, 0.7f, 0.7f);
+
+        // 目（小さく温かい）
+        FacePart("EyeL", parent, new Vector2(-7 * s, 15 * s), new Vector2(4 * s, 3 * s))
+            .AddComponent<Image>().color = new Color(0.2f, 0.15f, 0.1f);
+        FacePart("EyeR", parent, new Vector2(7 * s, 15 * s), new Vector2(4 * s, 3 * s))
+            .AddComponent<Image>().color = new Color(0.2f, 0.15f, 0.1f);
+
+        // ヒゲ（白い）
+        FacePart("Beard", parent, new Vector2(0, 4 * s), new Vector2(16 * s, 14 * s))
+            .AddComponent<Image>().color = beard;
+    }
+
+    void CheckElderNPC()
+    {
+        if (elderNpcObj == null) return;
+        if (playerTileX == elderNpcX && playerTileY == elderNpcY)
+            OnElderTapped();
+    }
+
+    void OnElderTapped()
+    {
+        if (elderDialogueActive) return;
+        if (menuOpen) return;
+
+        StartCoroutine(ShowElderDialogue());
+    }
+
+    IEnumerator ShowElderDialogue()
+    {
+        elderDialogueActive = true;
+        menuOpen = true;
+
+        bool tapped = false;
+
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.flexDirection = UIE.FlexDirection.Column;
+        overlay.style.justifyContent = UIE.Justify.FlexEnd;
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+        overlayRoot.Add(overlay);
+
+        // フェードイン
+        float elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * (elapsed / 0.3f));
+            yield return null;
+        }
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+
+        // NPC画像
+        var portraitEl = new UIE.VisualElement();
+        portraitEl.AddToClassList("milk-dialog-portrait");
+        var elderSpr = Resources.Load<Sprite>("MapCharacters/Old_Men");
+        if (elderSpr != null)
+            portraitEl.style.backgroundImage = new UIE.StyleBackground(elderSpr);
+        overlay.Add(portraitEl);
+
+        // ダイアログボックス
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
+
+        var nameLabel = UIHelper.CreateLabel("門番の長老", "elder-dialog-name");
+        dialogBox.Add(nameLabel);
+
+        var textLabel = UIHelper.CreateLabel("", "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        var tapHint = UIHelper.CreateLabel("▼ タップで続く", "milk-dialog-hint");
+        dialogBox.Add(tapHint);
+
+        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+        string[] messages;
+        if (area >= 1)
+        {
+            messages = new string[]
+            {
+                "おお…お前がいじわるベイビーを倒したのか。大した赤ん坊だ。この村は長く奴に怯えていたからな…。",
+                "この先には強い敵もいる。傷ついたらあそこにいるミルクの母さんを頼るといい。温かいミルクで回復させてくれるぞ。",
+                "気をつけて行くのだぞ。お前の冒険はまだ始まったばかりだ。"
+            };
+        }
+        else
+        {
+            messages = new string[]
+            {
+                "おお、小さな戦士よ。ここは広い世界への入口じゃ。",
+                "あそこにいるミルクの母さんを頼るといい。温かいミルクで傷を癒してくれるぞ。",
+                "気をつけて行くのだぞ。お前の冒険はまだ始まったばかりだ。"
+            };
+        }
+
+        for (int i = 0; i < messages.Length; i++)
+        {
+            textLabel.text = messages[i];
+            tapHint.text = (i < messages.Length - 1) ? "▼ タップで続く" : "▼ タップで閉じる";
+
+            yield return new WaitForSeconds(0.3f);
+            tapped = false;
+            while (!tapped) yield return null;
+        }
+
+        // フェードアウト
+        elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            float fadeT = 1f - (elapsed / 0.3f);
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * fadeT);
+            portraitEl.style.opacity = fadeT;
+            dialogBox.style.opacity = fadeT;
+            yield return null;
+        }
+
+        overlay.RemoveFromHierarchy();
+        menuOpen = false;
+        elderDialogueActive = false;
     }
 
     void ApplyPoisonStep()
@@ -2830,37 +3165,32 @@ public class MapManager : MonoBehaviour
         if (milkCutinActive) return;
         if (menuOpen) return;
 
+        bool needsHeal = false;
         if (DataCarrier.Instance != null)
         {
             int currentHp = DataCarrier.Instance.babyCurrentHp;
             int maxHp = DataCarrier.Instance.babyHp;
             bool isPoisoned = DataCarrier.Instance.babyPoisonTurns > 0;
-            if ((currentHp == -1 || currentHp >= maxHp) && !isPoisoned)
-            {
-                // 満タン＋毒なしの場合メッセージだけ表示
-                ShowMessage(Localization.Get("map_milk_full"));
-                return;
-            }
-
-            // HP全回復 + 毒治療
-            DataCarrier.Instance.babyCurrentHp = -1;
-            DataCarrier.Instance.babyPoisonTurns = 0;
-            UpdateStatusText();
+            needsHeal = !((currentHp == -1 || currentHp >= maxHp) && !isPoisoned);
         }
 
-        StartCoroutine(ShowMilkCutin());
+        StartCoroutine(ShowMilkDialogue(needsHeal));
     }
 
-    IEnumerator ShowMilkCutin()
+    IEnumerator ShowMilkDialogue(bool needsHeal)
     {
         milkCutinActive = true;
         menuOpen = true;
 
+        bool tapped = false;
+
         var overlay = new UIE.VisualElement();
         overlay.AddToClassList("fill");
+        overlay.style.flexDirection = UIE.FlexDirection.Column;
+        overlay.style.justifyContent = UIE.Justify.FlexEnd;
         overlay.style.alignItems = UIE.Align.Center;
-        overlay.style.justifyContent = UIE.Justify.Center;
         overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
         overlayRoot.Add(overlay);
 
         // フェードイン
@@ -2868,46 +3198,89 @@ public class MapManager : MonoBehaviour
         while (elapsed < 0.3f)
         {
             elapsed += Time.deltaTime;
-            overlay.style.backgroundColor = new Color(0, 0, 0, 0.6f * (elapsed / 0.3f));
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * (elapsed / 0.3f));
             yield return null;
         }
-        overlay.style.backgroundColor = new Color(0, 0, 0, 0.6f);
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
 
-        // 背景円
-        var circle = new UIE.VisualElement();
-        circle.AddToClassList("milk-cutin-circle");
-        overlay.Add(circle);
+        // NPC画像
+        var portraitEl = new UIE.VisualElement();
+        portraitEl.AddToClassList("milk-dialog-portrait");
+        var milkMotherSpr = Resources.Load<Sprite>("MapCharacters/Milk_Mother");
+        if (milkMotherSpr != null)
+            portraitEl.style.backgroundImage = new UIE.StyleBackground(milkMotherSpr);
+        overlay.Add(portraitEl);
 
-        // 哺乳瓶（Canvas FacePart で描画）
-        var bottleHost = new GameObject("MilkBottleHost");
-        bottleHost.transform.SetParent(canvas.transform, false);
-        var hostRect = bottleHost.AddComponent<RectTransform>();
-        hostRect.anchorMin = new Vector2(0.5f, 0.5f);
-        hostRect.anchorMax = new Vector2(0.5f, 0.5f);
-        hostRect.anchoredPosition = new Vector2(0, 50);
-        hostRect.sizeDelta = new Vector2(300, 300);
-        DrawBabyBottle(bottleHost.transform, 2.5f);
+        // ダイアログボックス
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
 
-        // テキスト帯
-        var textBg = new UIE.VisualElement();
-        textBg.AddToClassList("milk-cutin-text-bg");
-        var label = UIHelper.CreateLabel(Localization.Get("map_milk_heal"), "milk-cutin-text");
-        textBg.Add(label);
-        overlay.Add(textBg);
+        // NPC名
+        var nameLabel = UIHelper.CreateLabel("ミルクの母さん", "milk-dialog-name");
+        dialogBox.Add(nameLabel);
 
-        yield return new WaitForSeconds(2.5f);
+        // セリフ
+        var textLabel = UIHelper.CreateLabel("", "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        // タップ送りヒント
+        var tapHint = UIHelper.CreateLabel("▼ タップで続く", "milk-dialog-hint");
+        dialogBox.Add(tapHint);
+
+        // メッセージ一覧
+        string[] messages;
+        if (needsHeal)
+        {
+            messages = new string[]
+            {
+                "あらあら、こんなに小さなおててで武器を握って…。お腹が空いたでしょう？さあ、ミルクをお飲み。",
+                "よしよし、いっぱい飲んで大きくなるのよ。母さんの祈りがあなたを守ってくれるわ。",
+                "危なくなったら、いつでも戻っておいで。温かいミルクを用意して待っているからね。"
+            };
+        }
+        else
+        {
+            messages = new string[]
+            {
+                "あらあら、元気いっぱいね。何かあったらいつでも来るのよ。"
+            };
+        }
+
+        for (int i = 0; i < messages.Length; i++)
+        {
+            textLabel.text = messages[i];
+            tapHint.text = (i < messages.Length - 1) ? "▼ タップで続く" : "▼ タップで閉じる";
+
+            // 回復は最初のメッセージをタップした後
+            if (needsHeal && i == 1 && DataCarrier.Instance != null)
+            {
+                DataCarrier.Instance.babyCurrentHp = -1;
+                DataCarrier.Instance.babyPoisonTurns = 0;
+                UpdateStatusText();
+            }
+
+            // 誤タップ防止の短い待機
+            yield return new WaitForSeconds(0.3f);
+            tapped = false;
+
+            // タップ待ち
+            while (!tapped) yield return null;
+        }
 
         // フェードアウト
         elapsed = 0f;
         while (elapsed < 0.3f)
         {
             elapsed += Time.deltaTime;
-            overlay.style.backgroundColor = new Color(0, 0, 0, 0.6f * (1 - elapsed / 0.3f));
+            float fadeT = 1f - (elapsed / 0.3f);
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * fadeT);
+            portraitEl.style.opacity = fadeT;
+            dialogBox.style.opacity = fadeT;
             yield return null;
         }
 
         overlay.RemoveFromHierarchy();
-        if (bottleHost != null) Destroy(bottleHost);
         menuOpen = false;
         milkCutinActive = false;
         UpdateStatusText();
@@ -2932,9 +3305,34 @@ public class MapManager : MonoBehaviour
 
         statusDetailEl = new UIE.VisualElement();
         statusDetailEl.AddToClassList("map-detail-panel");
+        statusDetailEl.style.backgroundColor = new Color(1f, 1f, 1f, 0.97f);
+        statusDetailEl.style.width = 500;
+        statusDetailEl.style.paddingTop = 30;
+        statusDetailEl.style.paddingBottom = 25;
 
         var title = UIHelper.CreateLabel(Localization.Get("map_status_title"), "map-detail-title");
+        title.style.color = new Color(0.15f, 0.15f, 0.2f, 1f);
         statusDetailEl.Add(title);
+
+        // 赤ちゃん画像
+        var babyImg = new UIE.VisualElement();
+        babyImg.style.width = 200;
+        babyImg.style.height = 200;
+        babyImg.style.marginBottom = 15;
+        babyImg.style.alignSelf = UIE.Align.Center;
+        babyImg.style.borderTopLeftRadius = 16;
+        babyImg.style.borderTopRightRadius = 16;
+        babyImg.style.borderBottomLeftRadius = 16;
+        babyImg.style.borderBottomRightRadius = 16;
+        babyImg.style.backgroundColor = new Color(0.96f, 0.96f, 1f, 1f);
+
+        Sprite babySprite = LoadBabySpriteForStatus(dc);
+        if (babySprite != null)
+        {
+            babyImg.style.backgroundImage = new UIE.StyleBackground(babySprite);
+            babyImg.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+        }
+        statusDetailEl.Add(babyImg);
 
         string genderColor = dc.babyGender == "\u7537\u306e\u5b50" ? "#00BFFF" : "#FF69B4";
         string traitColor = dc.trait1 == "\u8987\u738b\u8272" ? "#FF4500" : "#FFA500";
@@ -2956,6 +3354,8 @@ public class MapManager : MonoBehaviour
 
         var contentLabel = UIHelper.CreateLabel(content, "map-detail-content");
         contentLabel.enableRichText = true;
+        contentLabel.style.color = new Color(0.15f, 0.15f, 0.2f, 1f);
+        contentLabel.style.width = 460;
         statusDetailEl.Add(contentLabel);
 
         var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "pill-button-small");
@@ -2965,6 +3365,50 @@ public class MapManager : MonoBehaviour
 
         overlay.Add(statusDetailEl);
         overlayRoot.Add(overlay);
+    }
+
+    Sprite LoadBabySpriteForStatus(DataCarrier dc)
+    {
+        Sprite customSprite = DataCarrier.LoadCustomBabySprite();
+        if (customSprite != null) return customSprite;
+
+        string fatherName = GetParentImageNameForMap(dc.fatherName);
+        string motherName = GetParentImageNameForMap(dc.motherName);
+        string genderKey = dc.babyGender == "\u7537\u306e\u5b50" ? "male" : "female";
+        string path = $"babys/{fatherName}_{motherName}_{genderKey}";
+        return Resources.Load<Sprite>(path);
+    }
+
+    string GetParentImageNameForMap(string japaneseName)
+    {
+        switch (japaneseName)
+        {
+            case "\u30bf\u30b1\u30b7": return "takeshi";
+            case "\u30e6\u30a6\u30ad": return "yuuki";
+            case "\u30b4\u30a6": return "gou";
+            case "\u30b7\u30f3\u30b8": return "shinji";
+            case "\u30ea\u30e7\u30a6\u30de": return "ryouma";
+            case "\u30c6\u30c4\u30e4": return "tetuya";
+            case "\u30b5\u30af\u30e9": return "sakura";
+            case "\u30d2\u30ca\u30bf": return "hinata";
+            case "\u30a2\u30ad\u30e9": return "akira";
+            case "\u30df\u30b5\u30c8": return "misato";
+            case "\u30ab\u30a8\u30c7": return "kaede";
+            case "\u30eb\u30ca": return "luna";
+            case "\u30bc\u30cb\u30ac\u30bf": return "zenigata";
+            case "\u30c4\u30af\u30e2": return "tukumo";
+            case "\u30b5\u30c8\u30a6": return "satou";
+            case "\u30a4\u30ef\u30aa": return "iwao";
+            case "\u30a2\u30ad\u30c8\u30b7": return "akitoshi";
+            case "\u30cd\u30aa": return "neo";
+            case "\u30a4\u30b6\u30ca\u30df": return "izanami";
+            case "\u30df\u30af": return "miku";
+            case "\u30ab\u30e8\u30b3": return "kayoko";
+            case "\u30d5\u30af\u30c8\u30af": return "hukutoku";
+            case "\u30e8\u30cd": return "yone";
+            case "\u30c9\u30af\u30b3": return "dokuko";
+            default: return japaneseName.ToLower();
+        }
     }
 
     void CloseStatusPanel()

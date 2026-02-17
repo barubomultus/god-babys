@@ -49,6 +49,9 @@ public class DataCarrier : MonoBehaviour
     public int mapPlayerX = 10;
     public int mapPlayerY = 7;
 
+    // シーン遷移演出フラグ（セーブ不要・一時的）
+    [System.NonSerialized] public bool pendingWipeIn = false;
+
     // 現在のセーブスロット
     public int currentSlot = -1;
 
