@@ -244,14 +244,13 @@ public class BabySynthesizer : MonoBehaviour
     /// </summary>
     bool HasFaceTexture(SynthesizeParams p)
     {
+        // カスタムアップロード画像がある場合のみ顔穴をくり抜く
         if (!string.IsNullOrEmpty(p.customImagePath))
         {
             string fullPath = Path.Combine(Application.persistentDataPath, p.customImagePath);
             if (File.Exists(fullPath)) return true;
         }
-        string babyImagePath = $"babys/{p.fatherImageName}_{p.motherImageName}_{p.genderKey}";
-        var sprite = Resources.Load<Sprite>(babyImagePath);
-        return sprite != null;
+        return false;
     }
 
     void DrawSwaddle(Color[] pixels, BabyRank rank, bool punchFaceHole)
@@ -625,7 +624,7 @@ public class BabySynthesizer : MonoBehaviour
     {
         switch (rank)
         {
-            case BabyRank.S:   return "BabySynth/Backgrounds/S_Card";
+            case BabyRank.S:   return "BabySynth/Backgrounds/none"; // 背景なし（白フォールバック）
             case BabyRank.A:   return "BabySynth/Backgrounds/bg_soft_glow";
             case BabyRank.B:   return "BabySynth/Backgrounds/bg_plain";
             case BabyRank.C:   return "BabySynth/Backgrounds/bg_dull";
@@ -663,7 +662,7 @@ public class BabySynthesizer : MonoBehaviour
     {
         switch (rank)
         {
-            case BabyRank.S:   return new Color(1.0f, 0.95f, 0.6f);
+            case BabyRank.S:   return Color.white;
             case BabyRank.A:   return new Color(1.0f, 0.98f, 0.9f);
             case BabyRank.B:   return new Color(0.95f, 0.93f, 0.9f);
             case BabyRank.C:   return new Color(0.75f, 0.73f, 0.7f);
@@ -675,7 +674,7 @@ public class BabySynthesizer : MonoBehaviour
     {
         switch (rank)
         {
-            case BabyRank.S:   return new Color(1.0f, 0.85f, 0.3f);
+            case BabyRank.S:   return Color.white;
             case BabyRank.A:   return new Color(0.92f, 0.9f, 0.8f);
             case BabyRank.B:   return new Color(0.85f, 0.82f, 0.78f);
             case BabyRank.C:   return new Color(0.6f, 0.58f, 0.55f);

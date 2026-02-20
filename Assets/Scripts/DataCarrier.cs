@@ -252,6 +252,31 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.Save();
     }
 
+    // 新しい赤ちゃんのためにゲーム進行データをリセット（ステータスと名前は別途設定）
+    public void ResetForNewBaby()
+    {
+        currentSlot = -1;
+        babyAge = 0;
+        babyExp = 0;
+        defeatedEnemies = 0;
+        cameFromMap = false;
+        isBossBattle = false;
+        currentArea = 0;
+        shopEntryArea = 1;
+        fixedEncounterEnemy = "";
+        babyCurrentHp = -1;
+        babyPoisonTurns = 0;
+        inventory = "";
+        equipment = "";
+        equippedSlots = "";
+        motherGaveItem = false;
+        milk = 0;
+        defeatedEnemyList = "";
+        metNpcList = "";
+        mapPlayerX = 10;
+        mapPlayerY = 7;
+    }
+
     // ===== 装備管理 =====
 
     public const int MAX_EQUIP_SLOTS = 3;

@@ -52,6 +52,15 @@ public class BirthSystem : MonoBehaviour
     UIE.VisualElement statusCardObj;
     UIE.Label childStatusText;
     UIE.Label genderLabelEl;
+    UIE.VisualElement traitBadgeRow;
+    UIE.Label babyNameLabel;
+    UIE.Label babyBioLabel;
+    UIE.VisualElement memoTapeEl;
+    UIE.Label memoTextLabel;
+    UIE.Label parentsLineLabel;
+
+    // ボタンモード（運命を吹き込む / 名前をつける）
+    bool isUploadMode = true;
 
     // フラッシュ演出用
     Image flashOverlay;
@@ -67,6 +76,13 @@ public class BirthSystem : MonoBehaviour
     AudioClip seBabyVoice;
     AudioClip seKirakira;
     AudioClip seLevelUp;
+    AudioClip sePeta; // 名前テープ貼り付けSE
+
+    // 名前テープ演出
+    UIE.VisualElement nameTapeEl;
+    UIE.Label nameTapeLabel;
+    UIE.Button shareBtn;
+    bool isShareMode;
 
     // ?マーク
     TextMeshProUGUI introText;
@@ -387,16 +403,23 @@ public class BirthSystem : MonoBehaviour
         StylePillButton(anotherGalButton, 700, 120, Localization.Get("birth_reroll_button"), 36);
         StylePillButton(gotoBattleButton, 700, 120, Localization.Get("birth_name_button"), 36);
 
-        // ボタンを縦組に配置（名前をつけるが上、もう一度が下）
+        // 名前をつけるボタン: ポストイット風スタイリング
         if (gotoBattleButton != null)
         {
             var rect = gotoBattleButton.GetComponent<RectTransform>();
-            rect.anchoredPosition = new Vector2(0, -662);
+            rect.anchorMin = new Vector2(0.5f, 0f);
+            rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = new Vector2(0, 180);
+            rect.localRotation = Quaternion.identity;
+            var img = gotoBattleButton.GetComponent<Image>();
+            if (img != null) img.color = new Color(1f, 1f, 0.78f); // ポストイット黄色
         }
         if (anotherGalButton != null)
         {
             var rect = anotherGalButton.GetComponent<RectTransform>();
-            rect.anchoredPosition = new Vector2(0, -802);
+            rect.anchorMin = new Vector2(0.5f, 0f);
+            rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = new Vector2(0, 60);
         }
         CreateBabyFaceUI(); // babyFaceを作成
         // BabySynthesizer初期化
@@ -416,6 +439,7 @@ public class BirthSystem : MonoBehaviour
         seBabyVoice = Resources.Load<AudioClip>("SE/baby-voice");
         seKirakira = Resources.Load<AudioClip>("SE/きらきら輝く6");
         seLevelUp = Resources.Load<AudioClip>("SE/レベルアップ");
+        sePeta = Resources.Load<AudioClip>("SE/tap-effect");
         //CreateCharacterListUI();
 
         // UI Toolkit overlay (menu, name input, save confirm, parent bio, parent cards, story)
@@ -616,7 +640,29 @@ public class BirthSystem : MonoBehaviour
 
     public void GoToBattle()
     {
+        if (isUploadMode)
+        {
+            // 「運命を吹き込む」モード → 画像アップロード
+            PickImageFromGallery();
+            return;
+        }
         StartCoroutine(NameAndSaveSequence());
+    }
+
+    void SwitchToUploadMode()
+    {
+        isUploadMode = true;
+        if (gotoBattleButton == null) return;
+        var tmp = gotoBattleButton.GetComponentInChildren<TextMeshProUGUI>();
+        if (tmp != null) tmp.text = "運命を吹き込む";
+    }
+
+    void SwitchToNamingMode()
+    {
+        isUploadMode = false;
+        if (gotoBattleButton == null) return;
+        var tmp = gotoBattleButton.GetComponentInChildren<TextMeshProUGUI>();
+        if (tmp != null) tmp.text = Localization.Get("birth_name_button");
     }
 
     IEnumerator NameAndSaveSequence()
@@ -644,18 +690,202 @@ public class BirthSystem : MonoBehaviour
         if (nameInputCancelled)
         {
             if (gotoBattleButton != null) gotoBattleButton.SetActive(true);
-            if (anotherGalButton != null) anotherGalButton.SetActive(true);
             yield break;
         }
 
-        // DataCarrierに名前を保存（スロットへの自動セーブはしない）
+        // DataCarrierの進行データをリセットし、名前を保存
         if (DataCarrier.Instance != null)
         {
+            DataCarrier.Instance.ResetForNewBaby();
             DataCarrier.Instance.babyName = enteredName;
-            DataCarrier.Instance.currentSlot = -1; // 新規なのでスロット未割当
         }
 
-        // 章タイトル演出 → バトルシーンへ
+        // ── 名前テープ貼り付け演出 ──
+        yield return StartCoroutine(NameTapeAnimation(enteredName));
+
+        // ── 保存・シェアモードに切り替え ──
+        yield return StartCoroutine(SwitchToShareMode());
+    }
+
+    IEnumerator NameTapeAnimation(string babyName)
+    {
+        if (overlayRoot == null || birthResultCard == null) yield break;
+
+        // 名前テープ要素を作成 → カードのフレーム内に配置
+        nameTapeEl = new UIE.VisualElement();
+        nameTapeEl.AddToClassList("birth-name-tape");
+        nameTapeEl.style.alignSelf = UIE.Align.Center;
+        nameTapeEl.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(1.3f, 1.3f)));
+        nameTapeEl.style.opacity = 0f;
+
+        nameTapeLabel = UIHelper.CreateLabel(babyName);
+        nameTapeLabel.AddToClassList("birth-name-tape-text");
+        UIHelper.ApplyFont(nameTapeLabel);
+        nameTapeEl.Add(nameTapeLabel);
+
+        // フレームの特徴バッジ行の前に挿入（カード内のフロー配置）
+        var frame = UIE.UQueryExtensions.Q(birthResultCard, className: "birth-polaroid-frame");
+        if (frame != null)
+            frame.Insert(0, nameTapeEl);
+        else
+            birthResultCard.Add(nameTapeEl);
+
+        // フェードイン
+        float fadeIn = 0.2f;
+        float elapsed = 0f;
+        while (elapsed < fadeIn)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / fadeIn);
+            nameTapeEl.style.opacity = t;
+            yield return null;
+        }
+        nameTapeEl.style.opacity = 1f;
+
+        yield return new WaitForSeconds(0.1f);
+
+        // スケールダウン + 回転アニメーション（大きい状態 → 貼り付き）
+        float targetScale = 1.0f;
+        float targetRotate = -2.5f;
+        float startScale = 1.3f;
+
+        float slideDuration = 0.3f;
+        elapsed = 0f;
+        while (elapsed < slideDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / slideDuration);
+            float ease = 1f - (1f - t) * (1f - t) * (1f - t);
+
+            float curScale = Mathf.Lerp(startScale, targetScale, ease);
+            float curRotate = Mathf.Lerp(0f, targetRotate, ease);
+
+            nameTapeEl.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(curScale, curScale)));
+            nameTapeEl.style.rotate = new UIE.StyleRotate(new UIE.Rotate(new UIE.Angle(curRotate, UIE.AngleUnit.Degree)));
+            yield return null;
+        }
+
+        nameTapeEl.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(targetScale, targetScale)));
+        nameTapeEl.style.rotate = new UIE.StyleRotate(new UIE.Rotate(new UIE.Angle(targetRotate, UIE.AngleUnit.Degree)));
+
+        // 「ペタッ」バウンス効果
+        float bounceDuration = 0.12f;
+        elapsed = 0f;
+        while (elapsed < bounceDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / bounceDuration);
+            float bounceScale = targetScale + 0.08f * Mathf.Sin(t * Mathf.PI);
+            nameTapeEl.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(bounceScale, bounceScale)));
+            yield return null;
+        }
+        nameTapeEl.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(targetScale, targetScale)));
+
+        // 「ペタッ」SE
+        if (seSource != null && sePeta != null)
+            seSource.PlayOneShot(sePeta, 1.0f);
+
+        // 光パーティクル演出
+        StartCoroutine(SpawnTapeSparkles());
+    }
+
+    IEnumerator SpawnTapeSparkles()
+    {
+        if (nameTapeEl == null) yield break;
+
+        // テープの周囲にキラキラを配置（テープ要素内に absolute で）
+        for (int i = 0; i < 8; i++)
+        {
+            var sparkle = UIHelper.CreateLabel("*");
+            sparkle.AddToClassList("birth-tape-sparkle");
+            UIHelper.ApplyFont(sparkle);
+            sparkle.style.position = UIE.Position.Absolute;
+            sparkle.style.left = new UIE.StyleLength(new UIE.Length(Random.Range(10f, 90f), UIE.LengthUnit.Percent));
+            sparkle.style.top = new UIE.StyleLength(new UIE.Length(Random.Range(-50f, 100f), UIE.LengthUnit.Percent));
+            sparkle.style.fontSize = Random.Range(18, 32);
+            sparkle.style.opacity = 1f;
+
+            nameTapeEl.Add(sparkle);
+
+            StartCoroutine(FadeOutSparkle(sparkle));
+            yield return new WaitForSeconds(0.04f);
+        }
+    }
+
+    IEnumerator FadeOutSparkle(UIE.Label sparkle)
+    {
+        float duration = 0.6f;
+        float elapsed = 0f;
+        float driftY = Random.Range(-80f, -20f);
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            sparkle.style.top = new UIE.StyleLength(
+                sparkle.resolvedStyle.top + driftY * Time.deltaTime);
+            sparkle.style.opacity = 1f - t;
+            float s = 1f + 0.3f * Mathf.Sin(t * Mathf.PI);
+            sparkle.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(s, s)));
+            yield return null;
+        }
+        sparkle.RemoveFromHierarchy();
+    }
+
+    IEnumerator SwitchToShareMode()
+    {
+        isShareMode = true;
+
+        yield return new WaitForSeconds(0.3f);
+
+        if (overlayRoot == null) yield break;
+
+        // SNSシェアボタンをフェードイン
+        var shareBtnWrapper = new UIE.VisualElement();
+        shareBtnWrapper.AddToClassList("birth-share-wrapper");
+        shareBtnWrapper.style.opacity = 0f;
+
+        // シェアボタン
+        shareBtn = new UIE.Button();
+        shareBtn.AddToClassList("birth-share-btn");
+        UIHelper.ApplyFont(shareBtn);
+        shareBtn.text = "シェアする";
+        shareBtn.clicked += OnShareButtonClicked;
+        shareBtnWrapper.Add(shareBtn);
+
+        // バトルへ進むボタン
+        var battleBtn = new UIE.Button();
+        battleBtn.AddToClassList("birth-share-battle-btn");
+        UIHelper.ApplyFont(battleBtn);
+        battleBtn.text = "戦場へ";
+        battleBtn.clicked += () => StartCoroutine(GoToBattleFromShare());
+        shareBtnWrapper.Add(battleBtn);
+
+        overlayRoot.Add(shareBtnWrapper);
+
+        // フェードイン
+        float fadeIn = 0.4f;
+        float elapsed = 0f;
+        while (elapsed < fadeIn)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / fadeIn);
+            // ease-out
+            float ease = 1f - (1f - t) * (1f - t);
+            shareBtnWrapper.style.opacity = ease;
+            yield return null;
+        }
+        shareBtnWrapper.style.opacity = 1f;
+    }
+
+    void OnShareButtonClicked()
+    {
+        // スクリーンショット撮影 → シェア
+        TakeScreenshot();
+    }
+
+    IEnumerator GoToBattleFromShare()
+    {
         yield return StartCoroutine(ShowChapterTitle());
         SceneManager.LoadScene("BattleScene");
     }
@@ -774,6 +1004,13 @@ public class BirthSystem : MonoBehaviour
         // レイアウトをルーレット用にリセット
         ResetToRouletteLayout();
 
+        // 前回のカスタム画像パスをクリア（前の赤ちゃんの顔が残らないように）
+        if (DataCarrier.Instance != null)
+            DataCarrier.Instance.customBabyImagePath = "";
+
+        // ボタンモードをリセット
+        isUploadMode = true;
+
         // ボタンを即非表示、?マークを隠す、背景も非表示
         if (generateLifeButton != null) generateLifeButton.SetActive(false);
 
@@ -819,6 +1056,7 @@ public class BirthSystem : MonoBehaviour
         // ── フェーズ1: パネル表示、一人ずつ表示 ──
         if (parentPanel != null) parentPanel.style.display = UIE.DisplayStyle.Flex;
         if (childStatusText != null) childStatusText.text = "";
+        if (babyBioLabel != null) babyBioLabel.text = "";
 
         // 紹介文を非表示にリセット
         if (fatherIntroText != null) fatherIntroText.style.display = UIE.DisplayStyle.None;
@@ -1103,38 +1341,51 @@ public class BirthSystem : MonoBehaviour
             yield return StartCoroutine(LightningEffect(isGodBaby));
         }
 
-        // ステータステキストはカード内に配置済み
+        // ── コンパクトポラロイド: ステータス表示 ──
 
+        // 1. 特徴バッジ追加
+        if (traitBadgeRow != null)
+        {
+            var badge = UIHelper.CreateLabel(Localization.GetTrait(trait1));
+            badge.AddToClassList("birth-trait-badge");
+            UIHelper.ApplyFont(badge);
+            traitBadgeRow.Add(badge);
+        }
+        yield return new WaitForSeconds(0.3f);
+
+        // 2. 性別＋名前表示
         string genderColor = selectedGender == "男の子" ? "#66ccff" : "#ff99cc";
         string displayGender = Localization.GetGender(selectedGender);
-
-        // 性別は画像の上に表示
-        if (genderLabelEl != null)
-        {
-            genderLabelEl.text = $"{Localization.Get("birth_stat_gender")}  <color={genderColor}>{displayGender}</color>";
-        }
-
-        // 人生の要約を取得
-        string summaryKey = $"{father.name}_{mother.name}";
-        string summary = LifeSummaries.ContainsKey(summaryKey)
-            ? LifeSummaries[summaryKey]
-            : "波乱万丈の人生が始まる。";
-        string statSummary = $"<color=#8B6508><size=36>「{summary}」</size></color>";
-
-        string stat1 = $"{Localization.Get("birth_stat_hp")} {c_hp}    {Localization.Get("birth_stat_atk")} {c_atk}    {Localization.Get("birth_stat_def")} {c_def}";
-        string stat2 = $"{Localization.Get("birth_stat_intelligence")} {c_intelligence}    {Localization.Get("birth_stat_athletic")} {c_athletic}";
-        string stat3 = $"{Localization.Get("birth_stat_luck")} {c_luck}    {Localization.Get("birth_stat_fortune")} {c_fortune}";
-        string stat4 = $"{Localization.Get("birth_stat_trait")}  <color=#FFA500>{Localization.GetTrait(trait1)}</color>";
-
-        if (childStatusText != null) childStatusText.text = statSummary;
-        yield return new WaitForSeconds(0.3f);
-        if (childStatusText != null) childStatusText.text = statSummary + "\n\n" + stat1;
+        if (babyNameLabel != null)
+            babyNameLabel.text = $"<color={genderColor}>{displayGender}</color>";
         yield return new WaitForSeconds(0.2f);
-        if (childStatusText != null) childStatusText.text = statSummary + "\n\n" + stat1 + "\n\n" + stat2;
-        yield return new WaitForSeconds(0.15f);
-        if (childStatusText != null) childStatusText.text = statSummary + "\n\n" + stat1 + "\n\n" + stat2 + "\n\n" + stat3;
-        yield return new WaitForSeconds(0.25f);
-        if (childStatusText != null) childStatusText.text = statSummary + "\n\n" + stat1 + "\n\n" + stat2 + "\n\n" + stat3 + "\n\n" + stat4;
+
+        // 2.5. Bio（紹介文）表示
+        if (babyBioLabel != null)
+        {
+            string summaryKey = $"{father.name}_{mother.name}";
+            string summary = LifeSummaries.ContainsKey(summaryKey)
+                ? LifeSummaries[summaryKey]
+                : "\u6CE2\u4E71\u4E07\u4E08\u306E\u4EBA\u751F\u304C\u59CB\u307E\u308B\u3002";
+            babyBioLabel.text = $"\u300C{summary}\u300D";
+        }
+        yield return new WaitForSeconds(0.3f);
+
+        // 3. ステータスメモ
+        string line1 = $"HP {c_hp}  攻 {c_atk}  防 {c_def}";
+        string line2 = $"知 {c_intelligence}  体 {c_athletic}  運 {c_luck}  財 {c_fortune}";
+        if (memoTextLabel != null) memoTextLabel.text = line1;
+        yield return new WaitForSeconds(0.2f);
+        if (memoTextLabel != null) memoTextLabel.text = line1 + "\n" + line2;
+        yield return new WaitForSeconds(0.2f);
+
+        // 4. 両親情報
+        if (parentsLineLabel != null)
+        {
+            string fIntro = father.intro.Contains("/") ? father.intro.Split('/')[0].Trim() : father.intro;
+            string mIntro = mother.intro.Contains("/") ? mother.intro.Split('/')[0].Trim() : mother.intro;
+            parentsLineLabel.text = $"{father.name}\uFF08{fIntro}\uFF09\u00D7 {mother.name}\uFF08{mIntro}\uFF09";
+        }
 
         // ── DataCarrier に保存 ──
         if (DataCarrier.Instance != null)
@@ -1153,10 +1404,14 @@ public class BirthSystem : MonoBehaviour
             DataCarrier.Instance.isGodBaby = isGodBaby;
         }
 
-        // ── ボタン表示 ──
+        // ── 「運命を吹き込む」ボタンを表示（画像アップロード誘導） ──
         yield return new WaitForSeconds(0.3f);
-        if (anotherGalButton != null) anotherGalButton.SetActive(true);
-        if (gotoBattleButton != null) gotoBattleButton.SetActive(true);
+        SwitchToUploadMode();
+        if (gotoBattleButton != null)
+        {
+            gotoBattleButton.SetActive(true);
+            StartCoroutine(NamingButtonBounceAnimation());
+        }
 
         isAnimating = false;
     }
@@ -1452,31 +1707,35 @@ public class BirthSystem : MonoBehaviour
         // カードを小さくして左右に並べる
         if (fatherCard != null)
         {
-            fatherCard.style.width = 492;
-            fatherCard.style.height = 600;
+            fatherCard.style.width = new UIE.StyleLength(new UIE.Length(46, UIE.LengthUnit.Percent));
+            fatherCard.style.maxWidth = 492;
+            fatherCard.style.height = new UIE.StyleLength(new UIE.Length(32, UIE.LengthUnit.Percent));
             fatherCard.style.translate = new UIE.StyleTranslate(
-                new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent), -480));
+                new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent), new UIE.Length(-100, UIE.LengthUnit.Percent)));
             fatherCard.style.left = new UIE.StyleLength(new UIE.Length(25, UIE.LengthUnit.Percent));
+            fatherCard.style.top = new UIE.StyleLength(new UIE.Length(25, UIE.LengthUnit.Percent));
         }
         if (motherCard != null)
         {
-            motherCard.style.width = 492;
-            motherCard.style.height = 600;
+            motherCard.style.width = new UIE.StyleLength(new UIE.Length(46, UIE.LengthUnit.Percent));
+            motherCard.style.maxWidth = 492;
+            motherCard.style.height = new UIE.StyleLength(new UIE.Length(32, UIE.LengthUnit.Percent));
             motherCard.style.translate = new UIE.StyleTranslate(
-                new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent), -480));
+                new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent), new UIE.Length(-100, UIE.LengthUnit.Percent)));
             motherCard.style.left = new UIE.StyleLength(new UIE.Length(75, UIE.LengthUnit.Percent));
+            motherCard.style.top = new UIE.StyleLength(new UIE.Length(25, UIE.LengthUnit.Percent));
         }
 
         // 顔画像を小さくリサイズ
         if (fatherFaceImage != null)
         {
-            fatherFaceImage.style.width = 380;
-            fatherFaceImage.style.height = 380;
+            fatherFaceImage.style.width = new UIE.StyleLength(new UIE.Length(80, UIE.LengthUnit.Percent));
+            fatherFaceImage.style.height = UIE.StyleKeyword.Auto;
         }
         if (motherFaceImage != null)
         {
-            motherFaceImage.style.width = 380;
-            motherFaceImage.style.height = 380;
+            motherFaceImage.style.width = new UIE.StyleLength(new UIE.Length(80, UIE.LengthUnit.Percent));
+            motherFaceImage.style.height = UIE.StyleKeyword.Auto;
         }
 
         // 確定済みの親を表示
@@ -1488,16 +1747,18 @@ public class BirthSystem : MonoBehaviour
     void ResetCardToFullSize(UIE.VisualElement card, UIE.VisualElement faceImg)
     {
         if (card == null) return;
-        card.style.width = 1016;
-        card.style.height = 1300;
+        card.style.width = new UIE.StyleLength(new UIE.Length(94, UIE.LengthUnit.Percent));
+        card.style.maxWidth = 1016;
+        card.style.height = new UIE.StyleLength(new UIE.Length(68, UIE.LengthUnit.Percent));
         card.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+        card.style.top = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
         card.style.translate = new UIE.StyleTranslate(
-            new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent), -750));
+            new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent), new UIE.Length(-50, UIE.LengthUnit.Percent)));
 
         if (faceImg != null)
         {
-            faceImg.style.width = 850;
-            faceImg.style.height = 850;
+            faceImg.style.width = new UIE.StyleLength(new UIE.Length(85, UIE.LengthUnit.Percent));
+            faceImg.style.height = UIE.StyleKeyword.Auto;
         }
     }
 
@@ -2180,9 +2441,8 @@ public class BirthSystem : MonoBehaviour
         var card = new UIE.VisualElement();
         card.AddToClassList("birth-parent-card");
         card.AddToClassList($"birth-parent-card-{role}");
-        card.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
         card.style.translate = new UIE.StyleTranslate(
-            new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent), -750));
+            new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent), new UIE.Length(-50, UIE.LengthUnit.Percent)));
         cardObj = card;
 
         // カード内側背景
@@ -2260,65 +2520,88 @@ public class BirthSystem : MonoBehaviour
 
         // 既存のカードがあれば削除
         if (birthResultCard != null) birthResultCard.RemoveFromHierarchy();
-
-        // 赤ちゃんカードを作成（UI Toolkit）
-        birthResultCard = new UIE.VisualElement();
-        birthResultCard.AddToClassList("birth-result-card");
-
-        // カード内側背景（ランク別）
-        var inner = new UIE.VisualElement();
-        inner.AddToClassList("birth-result-inner");
-        string bgPath = rank == BabySynthesizer.BabyRank.S
-            ? "BabySynth/Backgrounds/S_Card"
-            : "BackGrounds/baby-background";
-        Sprite babyBgSprite = Resources.Load<Sprite>(bgPath);
-        if (babyBgSprite != null)
-            inner.style.backgroundImage = new UIE.StyleBackground(babyBgSprite);
-        birthResultCard.Add(inner);
-
-        // 性別ラベル
-        genderLabelEl = UIHelper.CreateLabel("");
-        genderLabelEl.AddToClassList("birth-result-gender");
-        genderLabelEl.enableRichText = true;
-        birthResultCard.Add(genderLabelEl);
-
-        // 区切り線
-        var separator = new UIE.VisualElement();
-        separator.AddToClassList("birth-result-separator");
-        birthResultCard.Add(separator);
-
-        // ステータスカード（下部）
-        statusCardObj = new UIE.VisualElement();
-        statusCardObj.AddToClassList("birth-result-status-card");
-
-        var scInner = new UIE.VisualElement();
-        scInner.AddToClassList("birth-result-status-inner");
-
-        childStatusText = UIHelper.CreateLabel("");
-        childStatusText.AddToClassList("birth-result-status-text");
-        childStatusText.enableRichText = true;
-        scInner.Add(childStatusText);
-
-        statusCardObj.Add(scInner);
-        birthResultCard.Add(statusCardObj);
-
-        overlayRoot.Add(birthResultCard);
-
-        // babyFaceをCanvas上で絶対位置配置（カードの中央部分に重なるように）
-        if (babyFace != null)
+        // コンテナも削除
+        if (overlayRoot != null)
         {
-            babyFace.SetParent(canvas.transform, false);
-            babyFace.anchorMin = new Vector2(0.5f, 0.5f);
-            babyFace.anchorMax = new Vector2(0.5f, 0.5f);
-            // カード中央Y=150, ステータスカード上端からの計算
-            float cardOffsetY = 150f;
-            float statusCardTopInCard = 1300f * 0.3f - 1300f / 2f; // = 390 - 650 = -260
-            float faceSize = 1016f * 0.94f; // ≈ 955
-            float faceCenterY = statusCardTopInCard + 32f + faceSize / 2f;
-            babyFace.anchoredPosition = new Vector2(0, cardOffsetY + faceCenterY);
-            babyFace.sizeDelta = new Vector2(faceSize, faceSize);
-            babyFace.SetAsLastSibling();
+            var oldContainer = UIE.UQueryExtensions.Q(overlayRoot, className: "birth-result-container");
+            if (oldContainer != null) oldContainer.RemoveFromHierarchy();
         }
+
+        // ── センタリング用コンテナ（画面上部〜ボタン手前の領域でflexbox中央揃え） ──
+        var resultContainer = new UIE.VisualElement();
+        resultContainer.AddToClassList("birth-result-container");
+        resultContainer.pickingMode = UIE.PickingMode.Ignore;
+
+        // ── ポラロイドカード ──
+        birthResultCard = new UIE.VisualElement();
+        birthResultCard.AddToClassList("birth-polaroid-wrapper");
+
+        // ドロップシャドウ（フレーム背後に配置）
+        var shadow = new UIE.VisualElement();
+        shadow.AddToClassList("birth-polaroid-shadow");
+        birthResultCard.Add(shadow);
+
+        // ポラロイドフレーム（白枠）
+        var frame = new UIE.VisualElement();
+        frame.AddToClassList("birth-polaroid-frame");
+
+        // 写真エリア（ボタン化：タップで画像アップロード）
+        var photoBtn = new UIE.Button();
+        photoBtn.AddToClassList("birth-polaroid-photo");
+        photoBtn.clicked += PickImageFromGallery;
+        uploadImageBtn = photoBtn;
+
+        // プレースホルダー（画像エリア全体に大きく表示）
+        var placeholderLabel = UIHelper.CreateLabel("魂を吹き込む\n（画像をタップ）");
+        placeholderLabel.AddToClassList("birth-polaroid-placeholder");
+        UIHelper.ApplyFont(placeholderLabel);
+        photoBtn.Add(placeholderLabel);
+
+        frame.Add(photoBtn);
+
+        // 性別＋名前ラベル
+        babyNameLabel = UIHelper.CreateLabel("");
+        babyNameLabel.AddToClassList("birth-baby-name");
+        babyNameLabel.enableRichText = true;
+        frame.Add(babyNameLabel);
+
+        // 特徴バッジ行（名前の下に配置、後でバッジ追加）
+        traitBadgeRow = new UIE.VisualElement();
+        traitBadgeRow.AddToClassList("birth-trait-row");
+        frame.Add(traitBadgeRow);
+
+        // 子供のBio（紹介文・複数行）
+        babyBioLabel = UIHelper.CreateLabel("");
+        babyBioLabel.AddToClassList("birth-baby-bio");
+        babyBioLabel.enableRichText = true;
+        frame.Add(babyBioLabel);
+
+        // マスキングテープ風ステータスメモ
+        memoTapeEl = new UIE.VisualElement();
+        memoTapeEl.AddToClassList("birth-memo-tape");
+        memoTextLabel = UIHelper.CreateLabel("");
+        memoTextLabel.AddToClassList("birth-memo-text");
+        memoTextLabel.enableRichText = true;
+        memoTapeEl.Add(memoTextLabel);
+        frame.Add(memoTapeEl);
+
+        // 両親情報
+        parentsLineLabel = UIHelper.CreateLabel("");
+        parentsLineLabel.AddToClassList("birth-parents-line");
+        parentsLineLabel.enableRichText = true;
+        frame.Add(parentsLineLabel);
+
+        // 後方互換（他で参照される場合）
+        genderLabelEl = babyNameLabel;
+        childStatusText = memoTextLabel;
+
+        birthResultCard.Add(frame);
+        resultContainer.Add(birthResultCard);
+        overlayRoot.Add(resultContainer);
+
+        // Canvas上のbabyFaceは非表示（UI Toolkit合成表示に切替）
+        if (babyFace != null)
+            babyFace.gameObject.SetActive(false);
     }
 
     // ルーレット用のレイアウトにリセット
@@ -2365,9 +2648,25 @@ public class BirthSystem : MonoBehaviour
             }
         }
 
-        // birthResultCardを削除（UI Toolkit）
+        // 名前テープとシェアボタンを削除
+        if (nameTapeEl != null) { nameTapeEl.RemoveFromHierarchy(); nameTapeEl = null; nameTapeLabel = null; }
+        if (shareBtn != null) { shareBtn = null; }
+        // シェアラッパーを削除
+        if (overlayRoot != null)
+        {
+            var sw = UIE.UQueryExtensions.Q(overlayRoot, className: "birth-share-wrapper");
+            if (sw != null) sw.RemoveFromHierarchy();
+        }
+        isShareMode = false;
+
+        // birthResultCard & コンテナを削除（UI Toolkit）
         if (screenshotBtn != null) { screenshotBtn.RemoveFromHierarchy(); screenshotBtn = null; }
         if (uploadImageBtn != null) { uploadImageBtn.RemoveFromHierarchy(); uploadImageBtn = null; }
+        if (overlayRoot != null)
+        {
+            var container = UIE.UQueryExtensions.Q(overlayRoot, className: "birth-result-container");
+            if (container != null) container.RemoveFromHierarchy();
+        }
         if (birthResultCard != null)
         {
             birthResultCard.RemoveFromHierarchy();
@@ -2375,6 +2674,12 @@ public class BirthSystem : MonoBehaviour
             genderLabelEl = null;
             statusCardObj = null;
             childStatusText = null;
+            traitBadgeRow = null;
+            babyNameLabel = null;
+            babyBioLabel = null;
+            memoTapeEl = null;
+            memoTextLabel = null;
+            parentsLineLabel = null;
         }
 
         // babyFaceImageを非表示、introTextを表示
@@ -2419,28 +2724,17 @@ public class BirthSystem : MonoBehaviour
         if (birthResultCard == null) return;
 
         screenshotBtn = new UIE.Button();
-        screenshotBtn.style.position = UIE.Position.Absolute;
-        screenshotBtn.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
-        screenshotBtn.style.bottom = new UIE.StyleLength(new UIE.Length(31, UIE.LengthUnit.Percent));
-        screenshotBtn.style.translate = new UIE.StyleTranslate(new UIE.Translate(new UIE.Length(32), UIE.Length.Percent(0)));
-        screenshotBtn.style.width = 64;
-        screenshotBtn.style.height = 64;
-        screenshotBtn.style.borderTopLeftRadius = 32;
-        screenshotBtn.style.borderTopRightRadius = 32;
-        screenshotBtn.style.borderBottomLeftRadius = 32;
-        screenshotBtn.style.borderBottomRightRadius = 32;
-        screenshotBtn.style.backgroundColor = new Color(0.35f, 0.35f, 0.4f, 0.8f);
-        screenshotBtn.style.borderTopWidth = 0;
-        screenshotBtn.style.borderBottomWidth = 0;
-        screenshotBtn.style.borderLeftWidth = 0;
-        screenshotBtn.style.borderRightWidth = 0;
-        screenshotBtn.style.fontSize = 28;
-        screenshotBtn.style.color = Color.white;
-        screenshotBtn.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        screenshotBtn.AddToClassList("birth-polaroid-screenshot-btn");
         UIHelper.ApplyFont(screenshotBtn);
-        screenshotBtn.text = "\uD83D\uDCF7"; // camera emoji
+        screenshotBtn.text = "撮";
         screenshotBtn.clicked += TakeScreenshot;
-        birthResultCard.Add(screenshotBtn);
+
+        // ポラロイドフレーム内に配置
+        var frame = UIE.UQueryExtensions.Q(birthResultCard, className: "birth-polaroid-frame");
+        if (frame != null)
+            frame.Add(screenshotBtn);
+        else
+            birthResultCard.Add(screenshotBtn);
     }
 
     void TakeScreenshot()
@@ -2474,15 +2768,8 @@ public class BirthSystem : MonoBehaviour
 
     void CreateUploadButton()
     {
-        if (uploadImageBtn != null) uploadImageBtn.RemoveFromHierarchy();
-        if (birthResultCard == null) return;
-
-        uploadImageBtn = new UIE.Button();
-        uploadImageBtn.AddToClassList("birth-result-upload-btn");
-        UIHelper.ApplyFont(uploadImageBtn);
-        uploadImageBtn.text = "\u270E";
-        uploadImageBtn.clicked += PickImageFromGallery;
-        birthResultCard.Add(uploadImageBtn);
+        // 写真エリア自体がアップロードボタンとして機能
+        // SwitchToBirthResultLayout で photoBtn に PickImageFromGallery を登録済み
     }
 
     void PickImageFromGallery()
@@ -2527,42 +2814,22 @@ public class BirthSystem : MonoBehaviour
         Debug.Log($"[BirthSystem] LoadAndApplyImage: {path}");
         try
         {
-            byte[] fileData = File.ReadAllBytes(path);
-            Debug.Log($"[BirthSystem] File read: {fileData.Length} bytes");
+            int maxSize = 1024;
 
-            string fileName = "baby_custom.png";
-            string savePath = Path.Combine(Application.persistentDataPath, fileName);
-            File.WriteAllBytes(savePath, fileData);
-
-            var tex = new Texture2D(2, 2);
-            if (!tex.LoadImage(fileData))
+            // NativeGallery.LoadImageAtPath はHEIC/PNG/JPG全対応（iOS変換含む）
+            Texture2D tex = NativeGallery.LoadImageAtPath(path, maxSize, false);
+            if (tex == null)
             {
-                Debug.LogError($"[BirthSystem] Failed to load image from gallery. Path: {path}, Size: {fileData.Length} bytes. Only PNG/JPG are supported.");
-                Destroy(tex);
+                Debug.LogError($"[BirthSystem] Failed to load image. Path: {path}");
                 return;
             }
             Debug.Log($"[BirthSystem] Texture loaded: {tex.width}x{tex.height}");
 
-            // 大きすぎる画像はリサイズ（メモリ節約）
-            int maxSize = 1024;
-            if (tex.width > maxSize || tex.height > maxSize)
-            {
-                float scale = Mathf.Min((float)maxSize / tex.width, (float)maxSize / tex.height);
-                int newW = Mathf.RoundToInt(tex.width * scale);
-                int newH = Mathf.RoundToInt(tex.height * scale);
-                var rt = RenderTexture.GetTemporary(newW, newH);
-                Graphics.Blit(tex, rt);
-                var prev = RenderTexture.active;
-                RenderTexture.active = rt;
-                var resized = new Texture2D(newW, newH, TextureFormat.RGBA32, false);
-                resized.ReadPixels(new Rect(0, 0, newW, newH), 0, 0);
-                resized.Apply();
-                RenderTexture.active = prev;
-                RenderTexture.ReleaseTemporary(rt);
-                Destroy(tex);
-                tex = resized;
-                Debug.Log($"[BirthSystem] Resized to: {newW}x{newH}");
-            }
+            // PNG に変換して保存（以降の読み込みで形式問題が起きないように）
+            string fileName = "baby_custom.png";
+            string savePath = Path.Combine(Application.persistentDataPath, fileName);
+            byte[] pngData = tex.EncodeToPNG();
+            File.WriteAllBytes(savePath, pngData);
 
             if (DataCarrier.Instance != null)
                 DataCarrier.Instance.customBabyImagePath = fileName;
@@ -2589,6 +2856,10 @@ public class BirthSystem : MonoBehaviour
             {
                 DisplaySynthesizedBaby(updatedSprite);
                 SaveSynthBabyImage();
+
+                // キラキラ演出（アップロード完了）
+                if (seKirakira != null)
+                    seSource.PlayOneShot(seKirakira, 0.8f);
             }
         }
 
@@ -2796,6 +3067,21 @@ public class BirthSystem : MonoBehaviour
             if (babyFace != null)
                 babyFace.gameObject.SetActive(false);
 
+            // 合成画像を保存（バトルシーン等で使用）
+            SaveSynthBabyImage();
+
+            // キラキラSE（画像がはまった演出）
+            if (seKirakira != null)
+                seSource.PlayOneShot(seKirakira, 1f);
+
+            // 「名前をつける」モードに切り替え（バウンスアニメーション付き）
+            SwitchToNamingMode();
+            if (gotoBattleButton != null)
+            {
+                gotoBattleButton.SetActive(true);
+                StartCoroutine(NamingButtonBounceAnimation());
+            }
+
             Debug.Log($"[BirthSystem] Face adjustment confirmed: offset=({faceAdjOffsetX},{faceAdjOffsetY}), scale={faceAdjScale}");
         }
         else
@@ -2869,22 +3155,88 @@ public class BirthSystem : MonoBehaviour
     {
         if (birthResultCard == null) return;
 
-        // 既存の合成画像要素があれば削除
+        // ポラロイドの写真ボタンを取得
+        var photoBtn = UIE.UQueryExtensions.Q<UIE.Button>(birthResultCard, className: "birth-polaroid-photo");
+        if (photoBtn == null) return;
+
+        // シルエット等をクリアして赤ちゃん画像を表示
+        photoBtn.Clear();
+
         if (synthBabyImageEl != null)
             synthBabyImageEl.RemoveFromHierarchy();
 
         synthBabyImageEl = new UIE.VisualElement();
         synthBabyImageEl.name = "synth-baby-image";
-        synthBabyImageEl.AddToClassList("birth-result-custom-image");
+        synthBabyImageEl.AddToClassList("birth-polaroid-image");
         synthBabyImageEl.style.backgroundImage = new UIE.StyleBackground(synthSprite);
-        // innerの直後に挿入（性別ラベル・ステータスカードの背面に配置）
-        birthResultCard.Insert(1, synthBabyImageEl);
+        photoBtn.Add(synthBabyImageEl);
 
-        // アップロード・スクリーンショットボタンを最前面に
-        if (uploadImageBtn != null) uploadImageBtn.BringToFront();
-        if (screenshotBtn != null) screenshotBtn.BringToFront();
+        // バウンド・アニメーション（SE同期）
+        birthResultCard.style.scale = new UIE.StyleScale(
+            new UIE.Scale(new Vector3(0.8f, 0.8f, 1f)));
+        StartCoroutine(PolaroidBounceAnimation());
 
-        Debug.Log("[BirthSystem] Synthesized baby displayed in UI Toolkit");
+        Debug.Log("[BirthSystem] Synthesized baby displayed in polaroid");
+    }
+
+    IEnumerator PolaroidBounceAnimation()
+    {
+        if (birthResultCard == null) yield break;
+
+        float duration = 0.4f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            float scale;
+            if (t < 0.5f)
+            {
+                // 0.8 → 1.1 (弾む)
+                float t2 = t * 2f;
+                scale = Mathf.Lerp(0.8f, 1.1f, 1f - (1f - t2) * (1f - t2));
+            }
+            else
+            {
+                // 1.1 → 1.0 (落ち着く)
+                float t2 = (t - 0.5f) * 2f;
+                scale = Mathf.Lerp(1.1f, 1.0f, t2 * t2);
+            }
+            birthResultCard.style.scale = new UIE.StyleScale(
+                new UIE.Scale(new Vector3(scale, scale, 1f)));
+            yield return null;
+        }
+        birthResultCard.style.scale = new UIE.StyleScale(
+            new UIE.Scale(Vector3.one));
+    }
+
+    IEnumerator NamingButtonBounceAnimation()
+    {
+        if (gotoBattleButton == null) yield break;
+        var rect = gotoBattleButton.GetComponent<RectTransform>();
+        if (rect == null) yield break;
+
+        float duration = 0.4f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            float scale;
+            if (t < 0.5f)
+            {
+                float t2 = t * 2f;
+                scale = Mathf.Lerp(0f, 1.15f, 1f - (1f - t2) * (1f - t2));
+            }
+            else
+            {
+                float t2 = (t - 0.5f) * 2f;
+                scale = Mathf.Lerp(1.15f, 1.0f, t2 * t2);
+            }
+            rect.localScale = new Vector3(scale, scale, 1f);
+            yield return null;
+        }
+        rect.localScale = Vector3.one;
     }
 
     // CreateStatusTextBackground removed — status card serves as background
@@ -2984,13 +3336,18 @@ public class BirthSystem : MonoBehaviour
         UIHelper.ApplyFont(nameTextField);
         card.Add(nameTextField);
 
-        var confirmBtn = UIHelper.CreatePillButton("運命を刻み戦場へ", "pill-button-danger");
-        confirmBtn.clicked += OnNameConfirmUIToolkit;
-        card.Add(confirmBtn);
+        var btnRow = new UIE.VisualElement();
+        btnRow.AddToClassList("birth-name-btn-row");
 
-        var backBtn = UIHelper.CreatePillButton(Localization.Get("ui_back"), "pill-button-secondary");
+        var confirmBtn = UIHelper.CreatePillButton("決定", "birth-name-confirm-btn");
+        confirmBtn.clicked += OnNameConfirmUIToolkit;
+        btnRow.Add(confirmBtn);
+
+        var backBtn = UIHelper.CreatePillButton(Localization.Get("ui_back"), "birth-name-back-btn");
         backBtn.clicked += OnNameCancel;
-        card.Add(backBtn);
+        btnRow.Add(backBtn);
+
+        card.Add(btnRow);
 
         nameInputOverlayEl.Add(card);
         // Not added to overlayRoot yet — shown on demand
@@ -3616,13 +3973,11 @@ public class BirthSystem : MonoBehaviour
 
         card.Add(polaroidFrame);
 
-        // コーナーシール（4隅）
-        // card=460px, frame=304px → frame left edge=(460-304)/2=78
-        // photo area: (78+12, 12) to (78+12+280, 12+280) = (90, 12)-(370, 292)
-        AddStoryCornerSeal(card, 74, 0);    // top-left
-        AddStoryCornerSeal(card, 354, 0);   // top-right
-        AddStoryCornerSeal(card, 74, 276);  // bottom-left
-        AddStoryCornerSeal(card, 354, 276); // bottom-right
+        // コーナーシール（4隅、パーセント指定で配置）
+        AddStoryCornerSeal(card, 16f, 0f);   // top-left
+        AddStoryCornerSeal(card, 77f, 0f);   // top-right
+        AddStoryCornerSeal(card, 16f, 85f);  // bottom-left
+        AddStoryCornerSeal(card, 77f, 85f);  // bottom-right
 
         // 紹介文テキスト（ポラロイドの下）
         introLabel = UIHelper.CreateLabel("");
@@ -3632,12 +3987,12 @@ public class BirthSystem : MonoBehaviour
         parent.Add(card);
     }
 
-    void AddStoryCornerSeal(UIE.VisualElement parent, float x, float y)
+    void AddStoryCornerSeal(UIE.VisualElement parent, float xPercent, float yPercent)
     {
         var seal = new UIE.VisualElement();
         seal.AddToClassList("birth-story-corner-seal");
-        seal.style.left = x;
-        seal.style.top = y;
+        seal.style.left = new UIE.StyleLength(new UIE.Length(xPercent, UIE.LengthUnit.Percent));
+        seal.style.top = new UIE.StyleLength(new UIE.Length(yPercent, UIE.LengthUnit.Percent));
         seal.style.rotate = new UIE.StyleRotate(
             new UIE.Rotate(new UIE.Angle(45f, UIE.AngleUnit.Degree)));
         parent.Add(seal);
@@ -4289,6 +4644,7 @@ public class BirthSystem : MonoBehaviour
     {
         if (parentPanel != null) parentPanel.style.display = UIE.DisplayStyle.None;
         if (childStatusText != null) childStatusText.text = "";
+        if (babyBioLabel != null) babyBioLabel.text = "";
 
         Canvas cv = FindObjectOfType<Canvas>();
 
@@ -4382,6 +4738,7 @@ public class BirthSystem : MonoBehaviour
 
         ResetBackgroundToBirth();
         if (childStatusText != null) childStatusText.text = "";
+        if (babyBioLabel != null) babyBioLabel.text = "";
         if (generateLifeButton != null) generateLifeButton.SetActive(true);
         if (anotherGalButton != null) anotherGalButton.SetActive(false);
         if (gotoBattleButton != null) gotoBattleButton.SetActive(false);

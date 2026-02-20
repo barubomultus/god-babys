@@ -378,11 +378,11 @@ public class BattleManager : MonoBehaviour
         {
             enemyName = "いじわるベイビー";
             enemyAge = -1;
-            enemyMaxHp = 155;
+            enemyMaxHp = 108;
             enemyHp = enemyMaxHp;
-            enemyAtk = 50;
-            enemyDef = 45;
-            enemySpeed = 45;
+            enemyAtk = 35;
+            enemyDef = 31;
+            enemySpeed = 31;
             loadedEnemySprite = Resources.Load<Sprite>("EnemyBabys/first-enemy");
         }
     }
@@ -784,17 +784,19 @@ public class BattleManager : MonoBehaviour
     {
         if (DataCarrier.Instance == null) return false;
 
-        Sprite customSprite = DataCarrier.LoadCustomBabySprite();
-        if (customSprite != null)
+        // 最優先: 合成画像（おくるみ+顔切り抜き）
+        Sprite synthSprite = DataCarrier.LoadSynthBabySprite();
+        if (synthSprite != null)
         {
             ClearFaceParts(faceEl);
-            faceEl.style.backgroundImage = new UIE.StyleBackground(customSprite);
+            faceEl.style.backgroundImage = new UIE.StyleBackground(synthSprite);
             faceEl.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
             if (DataCarrier.Instance.isGodBaby)
                 AddGodAuraEl(faceEl);
             return true;
         }
 
+        // フォールバック: Resources/babys/ のプリセット画像
         string fatherName = GetParentImageName(DataCarrier.Instance.fatherName);
         string motherName = GetParentImageName(DataCarrier.Instance.motherName);
         string genderKey = DataCarrier.Instance.babyGender == "男の子" ? "male" : "female";

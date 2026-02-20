@@ -121,10 +121,14 @@
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 1016px;
-    height: 1300px;
+    width: 94%;
+    max-width: 1016px;
+    height: 68%;
     border-radius: 24px;
+    flex-direction: column;
     align-items: center;
+    padding-top: 10px;
+    padding-bottom: 40px;
 }
 
 .birth-parent-card-father {
@@ -153,23 +157,21 @@
 }
 
 .birth-parent-name {
-    position: absolute;
-    top: 10px;
-    left: 15px;
-    right: 15px;
+    width: 100%;
     height: 70px;
+    padding-left: 15px;
+    padding-right: 15px;
     font-size: 42px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     color: white;
+    flex-shrink: 0;
 }
 
 .birth-parent-separator {
-    position: absolute;
-    top: 85px;
-    left: 10%;
-    right: 10%;
+    width: 80%;
     height: 2px;
+    flex-shrink: 0;
 }
 
 .birth-parent-separator-father {
@@ -181,24 +183,23 @@
 }
 
 .birth-parent-face {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    translate: -50% -45%;
-    width: 850px;
-    height: 850px;
+    width: 85%;
+    flex-grow: 1;
+    align-self: center;
+    -unity-background-scale-mode: scale-to-fit;
 }
 
 .birth-parent-intro {
-    position: absolute;
-    bottom: 40px;
-    left: 15px;
-    right: 15px;
-    height: 130px;
+    width: 100%;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-bottom: 10px;
+    min-height: 100px;
     font-size: 40px;
     -unity-text-align: middle-center;
     color: rgb(255, 230, 128);
     white-space: normal;
+    flex-shrink: 0;
 }
 
 .birth-parent-info-btn {
@@ -229,7 +230,7 @@
 .birth-next-btn-wrapper {
     position: absolute;
     left: 50%;
-    bottom: 160px;
+    bottom: 8%;
     translate: -50% 0;
 }
 
@@ -258,7 +259,7 @@
 
 /* --- Name input dialog --- */
 .birth-name-card {
-    width: 900px;
+    width: 84%;
     border-radius: 24px;
     background-color: white;
     align-items: center;
@@ -275,7 +276,7 @@
 }
 
 .birth-name-field .unity-text-field__input {
-    width: 750px;
+    width: 100%;
     height: 80px;
     font-size: 32px;
     color: rgb(38, 38, 38);
@@ -287,8 +288,59 @@
 }
 
 .birth-name-field {
-    width: 750px;
+    width: 85%;
     margin-bottom: 25px;
+}
+
+.birth-name-btn-row {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: 85%;
+}
+
+.birth-name-confirm-btn {
+    height: 90px;
+    flex-grow: 1;
+    border-radius: 45px;
+    background-color: rgb(200, 40, 40);
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: white;
+    border-width: 0;
+    padding: 0;
+    margin-right: 16px;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.birth-name-confirm-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(160, 30, 30);
+}
+
+.birth-name-back-btn {
+    height: 90px;
+    flex-grow: 1;
+    border-radius: 45px;
+    background-color: rgb(200, 200, 210);
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(64, 64, 77);
+    border-width: 0;
+    padding: 0;
+    transition-property: scale;
+    transition-duration: 0.08s;
+}
+
+.birth-name-back-btn:active {
+    scale: 0.95 0.95;
 }
 
 /* --- Save confirm dialog --- */
@@ -562,119 +614,205 @@
     scale: 0.95 0.95;
 }
 
-/* --- Birth result card --- */
-.birth-result-card {
+/* --- Birth result centering container --- */
+.birth-result-container {
     position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 1016px;
-    height: 1300px;
-    translate: -508px -800px;
-    border-radius: 24px;
-    background-color: rgb(209, 209, 217);
-}
-
-.birth-result-inner {
-    position: absolute;
-    left: 6px;
-    right: 6px;
-    top: 6px;
-    bottom: 6px;
-    border-radius: 20px;
-    background-color: rgb(243, 247, 248);
-    overflow: hidden;
-}
-
-.birth-result-gender {
-    position: absolute;
-    top: 10px;
-    left: 15px;
-    right: 15px;
-    height: 70px;
-    font-size: 42px;
-    -unity-font-style: bold;
-    -unity-text-align: middle-center;
-    color: rgb(64, 64, 77);
-}
-
-.birth-result-separator {
-    position: absolute;
-    top: 85px;
-    left: 10%;
-    right: 10%;
-    height: 2px;
-    background-color: rgba(199, 199, 209, 0.6);
-}
-
-.birth-result-status-card {
-    position: absolute;
-    left: 3%;
-    right: 3%;
-    bottom: 1%;
-    height: 29%;
-    border-radius: 24px;
-    background-color: rgb(209, 209, 217);
-}
-
-.birth-result-status-inner {
-    position: absolute;
-    left: 6px;
-    right: 6px;
-    top: 6px;
-    bottom: 6px;
-    border-radius: 20px;
-    background-color: rgb(243, 247, 248);
-    padding: 12px 28px;
-}
-
-.birth-result-status-text {
-    font-size: 28px;
-    color: rgb(26, 26, 26);
-    white-space: normal;
-}
-
-.birth-result-upload-btn {
-    position: absolute;
-    left: 50%;
-    bottom: 31%;
-    translate: -32px 0;
-    width: 64px;
-    height: 64px;
-    border-radius: 32px;
-    background-color: rgba(89, 89, 102, 0.8);
-    align-items: center;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 16%;
     justify-content: center;
+    align-items: center;
+}
+
+/* --- Polaroid birth result --- */
+.birth-polaroid-wrapper {
+    position: relative;
+    width: 85%;
+    max-width: 920px;
+    max-height: 95%;
+    flex-shrink: 1;
+}
+
+.birth-polaroid-shadow {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    right: -12px;
+    bottom: -12px;
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+}
+
+.birth-polaroid-frame {
+    width: 100%;
+    position: relative;
+    background-color: white;
+    border-radius: 4px;
+    padding-top: 20px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-bottom: 20px;
+    align-items: center;
+    flex-shrink: 1;
+}
+
+.birth-polaroid-photo {
+    width: 100%;
+    aspect-ratio: 1;
+    flex-shrink: 1;
+    overflow: hidden;
+    background-color: rgb(35, 30, 45);
     border-width: 0;
     padding: 0;
-    font-size: 28px;
-    -unity-text-align: middle-center;
-    color: white;
-    transition-property: scale, background-color;
+    align-items: center;
+    justify-content: center;
+    transition-property: scale;
     transition-duration: 0.08s;
 }
 
-.birth-result-upload-btn:active {
-    scale: 0.95 0.95;
-    background-color: rgba(64, 64, 77, 1);
+.birth-polaroid-photo:active {
+    scale: 0.98 0.98;
 }
 
-.birth-result-custom-image {
-    position: absolute;
-    width: 950px;
-    height: 950px;
-    left: 50%;
-    top: 60px;
-    translate: -475px 0;
+.birth-polaroid-image {
+    width: 100%;
+    height: 100%;
     -unity-background-scale-mode: scale-to-fit;
+}
+
+.birth-polaroid-placeholder {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    font-size: 52px;
+    -unity-font-style: bold;
+    color: rgba(255, 255, 255, 0.45);
+    -unity-text-align: middle-center;
+    white-space: normal;
+    letter-spacing: 2px;
+}
+
+.birth-trait-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+
+.birth-trait-badge {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 18px;
+    padding-right: 18px;
+    border-radius: 16px;
+    background-color: rgb(198, 160, 80);
+    color: white;
+    font-size: 28px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-left: 4px;
+    margin-right: 4px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.15);
+}
+
+.birth-baby-name {
+    font-size: 40px;
+    -unity-font-style: bold;
+    color: rgb(60, 40, 25);
+    -unity-text-align: middle-center;
+    margin-top: 12px;
+    letter-spacing: 1px;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.1);
+}
+
+.birth-baby-bio {
+    width: 96%;
+    margin-top: 8px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 16px;
+    padding-right: 16px;
+    background-color: rgba(255, 248, 230, 0.75);
+    border-radius: 6px;
+    font-size: 30px;
+    -unity-font-style: bold;
+    color: rgb(70, 50, 30);
+    -unity-text-align: middle-center;
+    white-space: normal;
+    letter-spacing: 1px;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.08);
+}
+
+.birth-memo-tape {
+    width: 96%;
+    margin-top: 10px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 16px;
+    padding-right: 16px;
+    background-color: rgba(255, 235, 200, 0.7);
+    border-radius: 4px;
+    rotate: -1deg;
+}
+
+.birth-memo-text {
+    font-size: 30px;
+    -unity-font-style: bold;
+    color: rgb(80, 60, 40);
+    -unity-text-align: middle-center;
+    letter-spacing: 1px;
+    white-space: normal;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.08);
+}
+
+.birth-parents-line {
+    font-size: 26px;
+    -unity-font-style: bold;
+    color: rgba(80, 60, 40, 0.6);
+    -unity-text-align: middle-center;
+    margin-top: 8px;
+    white-space: normal;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.06);
+}
+
+.birth-polaroid-screenshot-btn {
+    position: absolute;
+    right: 6px;
+    top: 6px;
+    width: 56px;
+    height: 56px;
+    border-radius: 28px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-width: 0;
+    padding: 0;
+    font-size: 26px;
+    -unity-text-align: middle-center;
+    color: white;
+    transition-property: scale;
+    transition-duration: 0.08s;
+}
+
+.birth-polaroid-screenshot-btn:active {
+    scale: 0.9 0.9;
 }
 
 /* --- Face adjustment overlay --- */
 .face-adjust-card {
     width: 940px;
-    background-color: rgba(26, 36, 71, 0.98);
+    background-color: white;
     border-radius: 24px;
-    border-color: rgba(64, 89, 153, 0.95);
-    border-width: 6px;
+    border-width: 0;
     flex-direction: column;
     align-items: center;
     padding-top: 30px;
@@ -684,7 +822,7 @@
 .face-adjust-title {
     font-size: 36px;
     -unity-font-style: bold;
-    color: rgb(255, 230, 128);
+    color: rgb(51, 38, 26);
     -unity-text-align: middle-center;
     margin-bottom: 20px;
 }
@@ -717,7 +855,7 @@
 
 .face-adjust-slider-label {
     font-size: 30px;
-    color: white;
+    color: rgb(51, 38, 26);
     margin-right: 16px;
 }
 
@@ -729,14 +867,14 @@
     width: 40px;
     height: 40px;
     border-radius: 20px;
-    background-color: rgb(255, 230, 128);
+    background-color: rgb(77, 179, 102);
     margin-top: -18px;
 }
 
 .face-adjust-slider .unity-base-slider__tracker {
     height: 6px;
     border-radius: 3px;
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba(0, 0, 0, 0.15);
     margin-top: -1px;
 }
 
@@ -759,6 +897,7 @@
     font-size: 30px;
     -unity-font-style: bold;
     color: white;
+    -unity-text-align: middle-center;
     margin-right: 24px;
     transition-property: scale;
     transition-duration: 0.08s;
@@ -780,6 +919,7 @@
     font-size: 30px;
     -unity-font-style: bold;
     color: white;
+    -unity-text-align: middle-center;
     transition-property: scale;
     transition-duration: 0.08s;
 }
@@ -817,4 +957,84 @@
 
 .cutin-skip-btn:active {
     background-color: rgba(255, 255, 255, 0.35);
+}
+
+/* --- Name tape (confirmation animation) --- */
+.birth-name-tape {
+    align-self: center;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 28px;
+    padding-right: 28px;
+    margin-bottom: 8px;
+    background-color: rgba(255, 240, 200, 0.88);
+    border-radius: 4px;
+    border-left-width: 4px;
+    border-left-color: rgba(200, 160, 80, 0.6);
+    border-right-width: 4px;
+    border-right-color: rgba(200, 160, 80, 0.6);
+    position: relative;
+    overflow: visible;
+}
+
+.birth-name-tape-text {
+    font-size: 38px;
+    -unity-font-style: bold;
+    color: rgb(60, 40, 25);
+    -unity-text-align: middle-center;
+    letter-spacing: 3px;
+}
+
+/* --- Tape sparkle particle --- */
+.birth-tape-sparkle {
+    -unity-text-align: middle-center;
+}
+
+/* --- Share mode buttons --- */
+.birth-share-wrapper {
+    align-self: center;
+    align-items: center;
+    margin-top: auto;
+    padding-bottom: 5%;
+}
+
+.birth-share-btn {
+    width: 600px;
+    height: 100px;
+    border-radius: 50px;
+    background-color: rgb(77, 166, 255);
+    border-width: 0;
+    padding: 0;
+    font-size: 34px;
+    -unity-font-style: bold;
+    color: white;
+    -unity-text-align: middle-center;
+    margin-bottom: 20px;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.birth-share-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(60, 140, 220);
+}
+
+.birth-share-battle-btn {
+    width: 600px;
+    height: 100px;
+    border-radius: 50px;
+    background-color: rgb(230, 80, 70);
+    border-width: 0;
+    padding: 0;
+    font-size: 34px;
+    -unity-font-style: bold;
+    color: white;
+    -unity-text-align: middle-center;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.birth-share-battle-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(200, 60, 50);
 }

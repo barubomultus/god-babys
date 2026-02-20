@@ -286,11 +286,22 @@ public class MapManager : MonoBehaviour
         if (playerObj != null)
             playerObj.transform.SetAsLastSibling();
 
-        // ボス撃破後のワイプイン演出
+        // ボス撃破後のワイプイン演出 + 初回村到着時の長老案内
+        bool firstVillitVisit = area == 0
+            && DataCarrier.Instance != null
+            && !DataCarrier.Instance.HasMetNpc("長老");
+
         if (DataCarrier.Instance != null && DataCarrier.Instance.pendingWipeIn)
         {
             DataCarrier.Instance.pendingWipeIn = false;
-            StartCoroutine(PlayWipeIn());
+            if (firstVillitVisit)
+                StartCoroutine(PlayWipeInThenElderGuide());
+            else
+                StartCoroutine(PlayWipeIn());
+        }
+        else if (firstVillitVisit)
+        {
+            StartCoroutine(AutoElderGuide());
         }
 
         // BGM再生
@@ -3120,6 +3131,19 @@ public class MapManager : MonoBehaviour
             yield return null;
         }
         wipePanel.RemoveFromHierarchy();
+    }
+
+    IEnumerator PlayWipeInThenElderGuide()
+    {
+        yield return StartCoroutine(PlayWipeIn());
+        yield return new WaitForSeconds(0.5f);
+        yield return StartCoroutine(ShowElderDialogue());
+    }
+
+    IEnumerator AutoElderGuide()
+    {
+        yield return new WaitForSeconds(0.8f);
+        yield return StartCoroutine(ShowElderDialogue());
     }
 
     IEnumerator StartBattle()
