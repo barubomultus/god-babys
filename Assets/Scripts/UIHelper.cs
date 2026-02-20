@@ -6,6 +6,31 @@ public static class UIHelper
     private static Font _font;
     private static bool _fontSearched;
 
+    // タップSE
+    private static AudioClip _tapSE;
+    private static bool _tapSESearched;
+    private static GameObject _sePlayer;
+
+    public static void PlayTapSE()
+    {
+        if (!_tapSESearched)
+        {
+            _tapSESearched = true;
+            _tapSE = Resources.Load<AudioClip>("SE/tap-effect");
+        }
+        if (_tapSE == null) return;
+
+        if (_sePlayer == null)
+        {
+            _sePlayer = new GameObject("UIHelper_SE");
+            Object.DontDestroyOnLoad(_sePlayer);
+            _sePlayer.AddComponent<AudioSource>();
+        }
+        var src = _sePlayer.GetComponent<AudioSource>();
+        src.pitch = Random.Range(0.96f, 1.08f);
+        src.PlayOneShot(_tapSE, 0.7f);
+    }
+
     public static UIE.PanelSettings CreatePanelSettings(float sortingOrder = 0f)
     {
         var ps = ScriptableObject.CreateInstance<UIE.PanelSettings>();
@@ -94,6 +119,28 @@ public static class UIHelper
         btn.text = text;
         ApplyFont(btn);
         return btn;
+    }
+
+    /// <summary>
+    /// ルート要素にタップSEリスナーを登録。
+    /// 配下の全Button/ClickEventでSEが鳴る。
+    /// </summary>
+    public static void RegisterTapSE(UIE.VisualElement root)
+    {
+        root.RegisterCallback<UIE.ClickEvent>(evt =>
+        {
+            // クリックされた要素またはその親がButtonならSE再生
+            var target = evt.target as UIE.VisualElement;
+            while (target != null)
+            {
+                if (target is UIE.Button)
+                {
+                    PlayTapSE();
+                    break;
+                }
+                target = target.parent;
+            }
+        }, UIE.TrickleDown.TrickleDown);
     }
 
     public static UIE.Label CreateLabel(string text, string className = null)

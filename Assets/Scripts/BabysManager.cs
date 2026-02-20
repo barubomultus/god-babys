@@ -13,6 +13,7 @@ public class BabysManager : MonoBehaviour
         panelSettings = UIHelper.CreatePanelSettings(0f);
         root = UIHelper.SetupUIDocument(gameObject,
             new[] { "UI/CommonStyle", "UI/BabysStyle" }, panelSettings);
+        UIHelper.RegisterTapSE(root);
 
         BuildUI();
     }

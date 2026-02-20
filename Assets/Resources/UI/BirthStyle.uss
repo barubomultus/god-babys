@@ -410,15 +410,13 @@
     background-color: rgba(255, 255, 255, 0.3);
 }
 
-/* --- Love story panel --- */
-/* --- 邂逅の記憶: 全画面パネル (flexbox縦並び) --- */
+/* --- 邂逅の記憶: アルバム風全画面パネル --- */
 .birth-story-panel {
     flex-grow: 1;
     flex-direction: column;
-    background-color: rgba(243, 247, 248, 1);
+    background-color: rgb(245, 235, 218);
 }
 
-/* 背景画像（装飾用オーバーレイ、上下反転） */
 .birth-story-bg-wrapper {
     position: absolute;
     left: 0;
@@ -426,116 +424,142 @@
     right: 0;
     bottom: 0;
     scale: 1 -1;
+    opacity: 0.15;
 }
 
-/* --- タイトル行 --- */
 .birth-story-title {
     flex-shrink: 0;
     padding-top: 64px;
     padding-bottom: 16px;
-    padding-left: 20px;
-    padding-right: 20px;
-    font-size: 56px;
-    -unity-font-style: bold;
+    font-size: 52px;
+    -unity-font-style: bold-and-italic;
     -unity-text-align: middle-center;
-    color: rgb(0, 0, 0);
+    color: rgb(80, 60, 40);
+    letter-spacing: 2px;
 }
 
-/* --- 親カード行 --- */
-.birth-story-cards-row {
+/* --- ポラロイド2枚並び --- */
+.birth-story-album-content {
     flex-shrink: 0;
     flex-direction: row;
     justify-content: center;
-    padding-left: 3%;
-    padding-right: 3%;
     padding-top: 16px;
-    padding-bottom: 16px;
+    padding-bottom: 8px;
 }
 
-.birth-story-card {
-    width: 45%;
-    margin-left: 1%;
-    margin-right: 1%;
-    flex-direction: column;
-    border-radius: 32px;
-    background-color: antiquewhite;
-    padding: 16px;
-}
-
-.birth-story-card-name {
+.birth-story-album-card {
+    width: 460px;
     flex-shrink: 0;
-    font-size: 40px;
-    -unity-font-style: bold;
-    -unity-text-align: middle-center;
-    color: rgb(0, 0, 0);
-    height: 60px;
-    margin-bottom: 16px;
+    position: relative;
+    align-items: center;
+    margin-left: 10px;
+    margin-right: 10px;
 }
 
-.birth-story-card-face {
-    flex-shrink: 0;
-    width: 350px;
-    height: 350px;
-    border-radius: 24px;
-    overflow: hidden;
-    background-color: rgb(128, 128, 128);
+.birth-story-polaroid-frame {
+    background-color: rgb(255, 255, 255);
+    padding-top: 12px;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: 44px;
+    align-items: center;
     align-self: center;
+}
+
+.birth-story-polaroid-inner {
+    width: 280px;
+    height: 280px;
+    overflow: hidden;
+}
+
+.birth-story-polaroid-image {
+    width: 100%;
+    height: 100%;
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.birth-story-polaroid-caption {
+    font-size: 28px;
+    -unity-font-style: bold-and-italic;
+    -unity-text-align: middle-center;
+    color: rgb(60, 40, 25);
+    margin-top: 6px;
+    letter-spacing: 1px;
+}
+
+.birth-story-corner-seal {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    background-color: rgba(180, 150, 90, 0.45);
+    border-radius: 2px;
 }
 
 .birth-story-card-intro {
     flex-shrink: 0;
-    margin-top: 24px;
+    margin-top: 16px;
     font-size: 32px;
     -unity-text-align: middle-center;
-    -unity-font-style: bold;
-    color: rgb(33, 32, 32);
+    -unity-font-style: bold-and-italic;
+    color: rgb(60, 40, 25);
     white-space: normal;
-    height: 80px;
+    letter-spacing: 1px;
 }
 
-/* --- ストーリーテキスト (伸縮する中央領域) --- */
+/* --- 装飾線 --- */
+.birth-story-album-divider {
+    flex-shrink: 0;
+    width: 800px;
+    height: 2px;
+    background-color: rgba(160, 130, 90, 0.5);
+    align-self: center;
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+
+/* --- ストーリーテキスト --- */
 .birth-story-text {
     flex-grow: 1;
     flex-shrink: 1;
     padding-left: 5%;
     padding-right: 5%;
-    padding-top: 24px;
-    padding-bottom: 24px;
+    padding-top: 16px;
+    padding-bottom: 16px;
     font-size: 36px;
-    -unity-font-style: bold;
+    -unity-font-style: bold-and-italic;
     -unity-text-align: middle-center;
-    color: rgb(33, 32, 32);
+    color: rgb(60, 40, 25);
     white-space: normal;
+    letter-spacing: 1px;
+    -unity-paragraph-spacing: 12px;
 }
 
-/* --- 「愛を育む」ボタン行 (下部固定) --- */
+/* --- 「愛を育む」ボタン行 --- */
 .birth-story-love-btn-row {
     flex-shrink: 0;
     flex-direction: row;
     justify-content: center;
-    padding-bottom: 120px;
+    padding-bottom: 100px;
     padding-top: 16px;
 }
 
 .birth-story-love-btn {
-    width: 700px;
-    height: 120px;
-    border-radius: 60px;
-    background-color: white;
+    width: 600px;
+    height: 100px;
+    border-radius: 12px;
+    background-color: rgb(198, 160, 80);
     -unity-text-align: middle-center;
     font-size: 36px;
     -unity-font-style: bold;
-    color: rgb(0, 0, 0);
-    border-width: 1px;
-    border-color: rgb(200, 200, 210);
-    transition-property: scale, background-color;
+    color: white;
+    border-width: 0;
+    transition-property: scale;
     transition-duration: 0.08s;
     padding: 0;
 }
 
 .birth-story-love-btn:active {
     scale: 0.95 0.95;
-    background-color: rgb(235, 235, 235);
 }
 
 /* --- Birth result card --- */

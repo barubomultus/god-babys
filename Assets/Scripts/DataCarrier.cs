@@ -14,6 +14,8 @@ public class DataCarrier : MonoBehaviour
     public int babyAthletic;
     public int babyLuck;
     public int babyFortune;
+    public int babyHeight;
+    public int babyWeight;
 
     [Header("Age & Experience")]
     public int babyAge = 0;
@@ -30,10 +32,12 @@ public class DataCarrier : MonoBehaviour
     public bool cameFromMap = false;
     public bool isBossBattle = false;
     public int currentArea = 0;     // 0=村, 1=悪魔村, 2=デヴィル夫人のやかた, 3=小悪魔の街, 4=109
+    public int shopEntryArea = 1;    // 武器屋に入った元エリア（戻り先）
     public string fixedEncounterEnemy = "";  // 固定エンカウント敵名（空=ランダム）
     public int babyCurrentHp = -1;  // 戦闘間HP持越し（-1=maxHP）
     public int babyPoisonTurns = 0;  // 毒残りターン
     public string customBabyImagePath = ""; // persistentDataPath内のカスタム画像ファイル名
+    public string synthBabyImagePath = ""; // BabySynthesizer合成結果の画像ファイル名
 
     [Header("Player Profile")]
     public string playerName = "";
@@ -42,8 +46,19 @@ public class DataCarrier : MonoBehaviour
     [Header("Inventory")]
     public string inventory = "";
 
+    [Header("Equipment")]
+    public string equipment = "";       // 所持装備（購入済み全て）
+    public string equippedSlots = "";   // 装備中（最大3つ）
+    public bool motherGaveItem = false;
+
+    [Header("Currency")]
+    public int milk = 0;
+
     [Header("Defeated Enemies (縁の書)")]
     public string defeatedEnemyList = "";
+
+    [Header("Met NPCs (縁の書)")]
+    public string metNpcList = "";
 
     // マップ上のプレイヤー位置（復帰用）
     public int mapPlayerX = 10;
@@ -83,6 +98,8 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.SetInt(p + "babyAthletic", babyAthletic);
         PlayerPrefs.SetInt(p + "babyLuck", babyLuck);
         PlayerPrefs.SetInt(p + "babyFortune", babyFortune);
+        PlayerPrefs.SetInt(p + "babyHeight", babyHeight);
+        PlayerPrefs.SetInt(p + "babyWeight", babyWeight);
         PlayerPrefs.SetInt(p + "babyAge", babyAge);
         PlayerPrefs.SetInt(p + "babyExp", babyExp);
         PlayerPrefs.SetInt(p + "defeatedEnemies", defeatedEnemies);
@@ -97,12 +114,19 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.SetInt(p + "mapPlayerX", mapPlayerX);
         PlayerPrefs.SetInt(p + "mapPlayerY", mapPlayerY);
         PlayerPrefs.SetInt(p + "currentArea", currentArea);
+        PlayerPrefs.SetInt(p + "shopEntryArea", shopEntryArea);
         PlayerPrefs.SetInt(p + "babyCurrentHp", babyCurrentHp);
         PlayerPrefs.SetInt(p + "babyPoisonTurns", babyPoisonTurns);
         PlayerPrefs.SetString(p + "inventory", inventory);
+        PlayerPrefs.SetString(p + "equipment", equipment);
+        PlayerPrefs.SetString(p + "equippedSlots", equippedSlots);
+        PlayerPrefs.SetInt(p + "motherGaveItem", motherGaveItem ? 1 : 0);
         PlayerPrefs.SetString(p + "defeatedEnemyList", defeatedEnemyList);
+        PlayerPrefs.SetString(p + "metNpcList", metNpcList);
         PlayerPrefs.SetString(p + "fixedEncounterEnemy", fixedEncounterEnemy);
         PlayerPrefs.SetString(p + "customBabyImagePath", customBabyImagePath);
+        PlayerPrefs.SetString(p + "synthBabyImagePath", synthBabyImagePath);
+        PlayerPrefs.SetInt(p + "milk", milk);
         PlayerPrefs.SetInt(p + "exists", 1);
         PlayerPrefs.Save();
     }
@@ -118,6 +142,8 @@ public class DataCarrier : MonoBehaviour
         babyAthletic = PlayerPrefs.GetInt(p + "babyAthletic", 0);
         babyLuck = PlayerPrefs.GetInt(p + "babyLuck", 0);
         babyFortune = PlayerPrefs.GetInt(p + "babyFortune", 0);
+        babyHeight = PlayerPrefs.GetInt(p + "babyHeight", 0);
+        babyWeight = PlayerPrefs.GetInt(p + "babyWeight", 0);
         babyAge = PlayerPrefs.GetInt(p + "babyAge", 0);
         babyExp = PlayerPrefs.GetInt(p + "babyExp", 0);
         defeatedEnemies = PlayerPrefs.GetInt(p + "defeatedEnemies", 0);
@@ -132,12 +158,26 @@ public class DataCarrier : MonoBehaviour
         mapPlayerX = PlayerPrefs.GetInt(p + "mapPlayerX", 10);
         mapPlayerY = PlayerPrefs.GetInt(p + "mapPlayerY", 7);
         currentArea = PlayerPrefs.GetInt(p + "currentArea", 0);
+        shopEntryArea = PlayerPrefs.GetInt(p + "shopEntryArea", 1);
         babyCurrentHp = PlayerPrefs.GetInt(p + "babyCurrentHp", -1);
         babyPoisonTurns = PlayerPrefs.GetInt(p + "babyPoisonTurns", 0);
         inventory = PlayerPrefs.GetString(p + "inventory", "");
+        equipment = PlayerPrefs.GetString(p + "equipment", "");
+        equippedSlots = PlayerPrefs.GetString(p + "equippedSlots", "");
+        // マイグレーション: 旧セーブで equippedSlots が未設定の場合、所持装備を最大3つ自動装備
+        if (string.IsNullOrEmpty(equippedSlots) && !string.IsNullOrEmpty(equipment))
+        {
+            var items = equipment.Split(',');
+            int count = Mathf.Min(items.Length, MAX_EQUIP_SLOTS);
+            equippedSlots = string.Join(",", items, 0, count);
+        }
+        motherGaveItem = PlayerPrefs.GetInt(p + "motherGaveItem", 0) == 1;
         defeatedEnemyList = PlayerPrefs.GetString(p + "defeatedEnemyList", "");
+        metNpcList = PlayerPrefs.GetString(p + "metNpcList", "");
         fixedEncounterEnemy = PlayerPrefs.GetString(p + "fixedEncounterEnemy", "");
         customBabyImagePath = PlayerPrefs.GetString(p + "customBabyImagePath", "");
+        synthBabyImagePath = PlayerPrefs.GetString(p + "synthBabyImagePath", "");
+        milk = PlayerPrefs.GetInt(p + "milk", 0);
         // playerName/playerIcon はグローバルプロフィールから読む
         LoadProfile();
     }
@@ -180,6 +220,8 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.DeleteKey(p + "babyAthletic");
         PlayerPrefs.DeleteKey(p + "babyLuck");
         PlayerPrefs.DeleteKey(p + "babyFortune");
+        PlayerPrefs.DeleteKey(p + "babyHeight");
+        PlayerPrefs.DeleteKey(p + "babyWeight");
         PlayerPrefs.DeleteKey(p + "babyAge");
         PlayerPrefs.DeleteKey(p + "babyExp");
         PlayerPrefs.DeleteKey(p + "defeatedEnemies");
@@ -197,11 +239,94 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.DeleteKey(p + "babyCurrentHp");
         PlayerPrefs.DeleteKey(p + "babyPoisonTurns");
         PlayerPrefs.DeleteKey(p + "inventory");
+        PlayerPrefs.DeleteKey(p + "equipment");
+        PlayerPrefs.DeleteKey(p + "equippedSlots");
+        PlayerPrefs.DeleteKey(p + "motherGaveItem");
         PlayerPrefs.DeleteKey(p + "defeatedEnemyList");
+        PlayerPrefs.DeleteKey(p + "metNpcList");
         PlayerPrefs.DeleteKey(p + "fixedEncounterEnemy");
         PlayerPrefs.DeleteKey(p + "customBabyImagePath");
+        PlayerPrefs.DeleteKey(p + "synthBabyImagePath");
+        PlayerPrefs.DeleteKey(p + "milk");
         PlayerPrefs.DeleteKey(p + "exists");
         PlayerPrefs.Save();
+    }
+
+    // ===== 装備管理 =====
+
+    public const int MAX_EQUIP_SLOTS = 3;
+
+    public void AddEquipment(string item)
+    {
+        if (string.IsNullOrEmpty(equipment))
+            equipment = item;
+        else
+            equipment += "," + item;
+    }
+
+    // 所持しているか（購入済み全て）
+    public bool HasEquipment(string item)
+    {
+        if (string.IsNullOrEmpty(equipment)) return false;
+        foreach (var i in equipment.Split(','))
+        {
+            if (i == item) return true;
+        }
+        return false;
+    }
+
+    // 所持装備一覧
+    public string[] GetEquipmentList()
+    {
+        if (string.IsNullOrEmpty(equipment)) return new string[0];
+        return equipment.Split(',');
+    }
+
+    // 装備中か（スロットに入っているか）
+    public bool IsEquipped(string item)
+    {
+        if (string.IsNullOrEmpty(equippedSlots)) return false;
+        foreach (var i in equippedSlots.Split(','))
+        {
+            if (i == item) return true;
+        }
+        return false;
+    }
+
+    // 装備中一覧
+    public string[] GetEquippedList()
+    {
+        if (string.IsNullOrEmpty(equippedSlots)) return new string[0];
+        return equippedSlots.Split(',');
+    }
+
+    // 装備中の数
+    public int GetEquippedCount()
+    {
+        if (string.IsNullOrEmpty(equippedSlots)) return 0;
+        return equippedSlots.Split(',').Length;
+    }
+
+    // スロットに装備する
+    public bool EquipItem(string item)
+    {
+        if (!HasEquipment(item)) return false;
+        if (IsEquipped(item)) return false;
+        if (GetEquippedCount() >= MAX_EQUIP_SLOTS) return false;
+        if (string.IsNullOrEmpty(equippedSlots))
+            equippedSlots = item;
+        else
+            equippedSlots += "," + item;
+        return true;
+    }
+
+    // スロットから外す
+    public void UnequipItem(string item)
+    {
+        if (string.IsNullOrEmpty(equippedSlots)) return;
+        var list = new System.Collections.Generic.List<string>(equippedSlots.Split(','));
+        list.Remove(item);
+        equippedSlots = string.Join(",", list);
     }
 
     // ===== 持ち物管理 =====
@@ -261,11 +386,54 @@ public class DataCarrier : MonoBehaviour
         return defeatedEnemyList.Split(',');
     }
 
+    // ===== NPC遭遇管理 =====
+
+    public bool HasMetNpc(string npcName)
+    {
+        if (string.IsNullOrEmpty(metNpcList)) return false;
+        foreach (var n in metNpcList.Split(','))
+        {
+            if (n == npcName) return true;
+        }
+        return false;
+    }
+
+    public void AddMetNpc(string npcName)
+    {
+        if (HasMetNpc(npcName)) return;
+        if (string.IsNullOrEmpty(metNpcList))
+            metNpcList = npcName;
+        else
+            metNpcList += "," + npcName;
+    }
+
+    public string[] GetMetNpcList()
+    {
+        if (string.IsNullOrEmpty(metNpcList)) return new string[0];
+        return metNpcList.Split(',');
+    }
+
     // カスタム赤ちゃん画像の読み込み
     public static Sprite LoadCustomBabySprite()
     {
         if (Instance == null) return null;
         string path = Instance.customBabyImagePath;
+        if (string.IsNullOrEmpty(path)) return null;
+
+        string fullPath = Path.Combine(Application.persistentDataPath, path);
+        if (!File.Exists(fullPath)) return null;
+
+        byte[] data = File.ReadAllBytes(fullPath);
+        var tex = new Texture2D(2, 2);
+        tex.LoadImage(data);
+        return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+    }
+
+    // 合成赤ちゃん画像の読み込み（おくるみ付き）
+    public static Sprite LoadSynthBabySprite()
+    {
+        if (Instance == null) return null;
+        string path = Instance.synthBabyImagePath;
         if (string.IsNullOrEmpty(path)) return null;
 
         string fullPath = Path.Combine(Application.persistentDataPath, path);

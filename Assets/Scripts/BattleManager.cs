@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
+using System.Collections.Generic;
 using UIE = UnityEngine.UIElements;
 
 public class BattleManager : MonoBehaviour
@@ -200,7 +201,7 @@ public class BattleManager : MonoBehaviour
             new[] { "UI/CommonStyle", "UI/BattleStyle" }, overlayPanelSettings);
         overlayRoot.pickingMode = UIE.PickingMode.Ignore;
 
-        CreateMenuBar();
+        // CreateMenuBar(); // メニュー無効化
 
         StartCoroutine(BattleStart());
     }
@@ -251,6 +252,13 @@ public class BattleManager : MonoBehaviour
             }
 
             playerPoisonTurns = DataCarrier.Instance.babyPoisonTurns;
+
+            // ショップ装備ボーナス（装備スロットに入っているもののみ）
+            if (DataCarrier.Instance.IsEquipped("ガラガラソード")) playerAtk += 4;
+            if (DataCarrier.Instance.IsEquipped("よだれかけシールド")) playerDef += 4;
+            if (DataCarrier.Instance.IsEquipped("魔法のおむつ")) playerDef += 3;
+            if (DataCarrier.Instance.IsEquipped("黄金のほ乳瓶")) { playerAtk += 3; playerDef += 3; }
+            if (DataCarrier.Instance.IsEquipped("悪魔のティアラ")) { playerAtk += 6; playerDef -= 2; }
 
             playerFatherName = DataCarrier.Instance.fatherName ?? "";
             playerMotherName = DataCarrier.Instance.motherName ?? "";
@@ -341,11 +349,11 @@ public class BattleManager : MonoBehaviour
         {
             enemyName = "デヴィル夫人";
             enemyAge = -1;
-            enemyMaxHp = 650;
+            enemyMaxHp = 580;
             enemyHp = enemyMaxHp;
-            enemyAtk = 95;
-            enemyDef = 40;
-            enemySpeed = 75;
+            enemyAtk = 85;
+            enemyDef = 36;
+            enemySpeed = 68;
             isDevilEnemy = true;
             enemyBgColor = new Color(0.3f, 0.0f, 0.2f);
             loadedEnemySprite = Resources.Load<Sprite>("EnemyBabys/boss/devil-wife");
@@ -386,7 +394,7 @@ public class BattleManager : MonoBehaviour
         if (area == 0)
         {
             int minAge = Mathf.Max(0, playerAge - 2);
-            int maxAge = Mathf.Min(8, playerAge + 2);
+            int maxAge = Mathf.Min(15, playerAge + 4);
             enemyAge = Random.Range(minAge, maxAge + 1);
         }
         else if (area == 3)
@@ -418,22 +426,22 @@ public class BattleManager : MonoBehaviour
         else if (area == 1)
         {
             enemyDefs = new object[][] {
-                new object[]{ "どくベイビー",     Resources.Load<Sprite>("EnemyBabys/poison/doku-baby"),  90, 25, 15, 25,  6,  9, new Color(0.4f, 0.1f, 0.5f) },
-                new object[]{ "のろいベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/noroi-baby"), 100, 30, 20, 22,  7, 10, new Color(0.3f, 0.0f, 0.3f) },
-                new object[]{ "やみベイビー",     Resources.Load<Sprite>("EnemyBabys/poison/yami-baby"), 110, 35, 22, 30,  8, 11, new Color(0.15f, 0.05f, 0.2f) },
-                new object[]{ "あくまベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/akuma-baby"), 130, 42, 28, 35,  9, 13, new Color(0.5f, 0.0f, 0.1f) },
-                new object[]{ "じゃあくベイビー", Resources.Load<Sprite>("EnemyBabys/poison/jyaaku-baby"), 150, 48, 32, 38, 11, 14, new Color(0.2f, 0.0f, 0.0f) },
-                new object[]{ "まおうベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/maou-baby"), 180, 55, 38, 42, 13, 15, new Color(0.1f, 0.0f, 0.15f) },
+                new object[]{ "どくベイビー",     Resources.Load<Sprite>("EnemyBabys/poison/doku-baby"),  80, 22, 13, 22,  6,  9, new Color(0.4f, 0.1f, 0.5f) },
+                new object[]{ "のろいベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/noroi-baby"), 90, 27, 18, 20,  7, 10, new Color(0.3f, 0.0f, 0.3f) },
+                new object[]{ "やみベイビー",     Resources.Load<Sprite>("EnemyBabys/poison/yami-baby"), 100, 32, 20, 27,  8, 11, new Color(0.15f, 0.05f, 0.2f) },
+                new object[]{ "あくまベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/akuma-baby"), 115, 38, 25, 32,  9, 13, new Color(0.5f, 0.0f, 0.1f) },
+                new object[]{ "じゃあくベイビー", Resources.Load<Sprite>("EnemyBabys/poison/jyaaku-baby"), 135, 43, 29, 34, 11, 14, new Color(0.2f, 0.0f, 0.0f) },
+                new object[]{ "まおうベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/maou-baby"), 160, 50, 34, 38, 13, 15, new Color(0.1f, 0.0f, 0.15f) },
             };
         }
         else
         {
             enemyDefs = new object[][] {
-                new object[]{ "なきむしベイビー",     "EnemyBabys/common-nakimushi",    60, 15, 10, 20, 0, 3 },
-                new object[]{ "やんちゃベイビー",     "EnemyBabys/common-yantya",       75, 22, 12, 30, 1, 5 },
-                new object[]{ "いじわるベイビー",     "EnemyBabys/first-enemy",         85, 28, 18, 25, 3, 6 },
-                new object[]{ "わがままベイビー",     "EnemyBabys/common-wagamama",    100, 32, 22, 28, 4, 7 },
-                new object[]{ "あばれんぼうベイビー", "EnemyBabys/common-abarennbou",  120, 40, 25, 35, 5, 8 },
+                new object[]{ "なきむしベイビー",     "EnemyBabys/common-nakimushi",    60, 15, 10, 20, 0, 99 },
+                new object[]{ "やんちゃベイビー",     "EnemyBabys/common-yantya",       75, 22, 12, 30, 0, 99 },
+                new object[]{ "いじわるベイビー",     "EnemyBabys/first-enemy",         85, 28, 18, 25, 0, 99 },
+                new object[]{ "わがままベイビー",     "EnemyBabys/common-wagamama",    100, 32, 22, 28, 0, 99 },
+                new object[]{ "あばれんぼうベイビー", "EnemyBabys/common-abarennbou",  120, 40, 25, 35, 0, 99 },
             };
         }
 
@@ -495,11 +503,11 @@ public class BattleManager : MonoBehaviour
         loadedEnemySprite = Resources.Load<Sprite>(
             fixedName == "デヴィル傭兵A" ? "EnemyBabys/poison/katchu-a" : "EnemyBabys/poison/katchu-b");
 
-        enemyMaxHp = 280;
+        enemyMaxHp = 250;
         enemyHp = enemyMaxHp;
-        enemyAtk = 60;
-        enemyDef = 35;
-        enemySpeed = 55;
+        enemyAtk = 54;
+        enemyDef = 32;
+        enemySpeed = 50;
         enemyBgColor = new Color(0.35f, 0.05f, 0.05f);
     }
 
@@ -592,36 +600,26 @@ public class BattleManager : MonoBehaviour
         panel.AddToClassList("battle-char-panel");
         area.Add(panel);
 
-        // 名前
+        // 情報カラム（名前+年齢, HPバー, HPテキスト）
+        var infoCol = new UIE.VisualElement();
+        infoCol.AddToClassList("battle-info-col");
+
+        var nameAgeRow = new UIE.VisualElement();
+        nameAgeRow.AddToClassList("battle-name-age-row");
+        infoCol.Add(nameAgeRow);
+
         var nameLabel = UIHelper.CreateLabel("", "battle-char-name");
         nameLabel.AddToClassList(isPlayer ? "battle-name-player" : "battle-name-enemy");
-        panel.Add(nameLabel);
+        nameAgeRow.Add(nameLabel);
         if (isPlayer) playerNameLabel = nameLabel; else enemyNameLabel = nameLabel;
 
-        // 顔マスク
-        var faceMask = new UIE.VisualElement();
-        faceMask.AddToClassList("battle-face-mask");
-        panel.Add(faceMask);
-        if (isPlayer) playerFaceMask = faceMask; else enemyFaceMask = faceMask;
-
-        // 顔要素（スプライト or 自動生成パーツの親）
-        var faceEl = new UIE.VisualElement();
-        faceEl.name = "Face";
-        faceEl.style.position = UIE.Position.Absolute;
-        faceEl.style.left = 0; faceEl.style.top = 0;
-        faceEl.style.right = 0; faceEl.style.bottom = 0;
-        faceMask.Add(faceEl);
-        if (isPlayer) playerFaceEl = faceEl; else enemyFaceEl = faceEl;
-
-        // 年齢ラベル
         var ageLabel = UIHelper.CreateLabel("", "battle-age-label");
-        faceMask.Add(ageLabel);
+        nameAgeRow.Add(ageLabel);
         if (isPlayer) playerAgeEl = ageLabel; else enemyAgeEl = ageLabel;
 
-        // HPバー
         var hpBg = new UIE.VisualElement();
         hpBg.AddToClassList("battle-hp-bg");
-        panel.Add(hpBg);
+        infoCol.Add(hpBg);
 
         var hpFill = new UIE.VisualElement();
         hpFill.AddToClassList("battle-hp-fill");
@@ -630,10 +628,34 @@ public class BattleManager : MonoBehaviour
         hpBg.Add(hpFill);
         if (isPlayer) playerHpFill = hpFill; else enemyHpFill = hpFill;
 
-        // HPテキスト
         var hpLabel = UIHelper.CreateLabel("", "battle-hp-text");
-        panel.Add(hpLabel);
+        infoCol.Add(hpLabel);
         if (isPlayer) playerHpLabel = hpLabel; else enemyHpLabel = hpLabel;
+
+        // 顔マスク
+        var faceMask = new UIE.VisualElement();
+        faceMask.AddToClassList("battle-face-mask");
+        if (isPlayer) playerFaceMask = faceMask; else enemyFaceMask = faceMask;
+
+        var faceEl = new UIE.VisualElement();
+        faceEl.name = "Face";
+        faceEl.style.position = UIE.Position.Absolute;
+        faceEl.style.left = 0; faceEl.style.top = 0;
+        faceEl.style.right = 0; faceEl.style.bottom = 0;
+        faceMask.Add(faceEl);
+        if (isPlayer) playerFaceEl = faceEl; else enemyFaceEl = faceEl;
+
+        // 敵: [info][画像]  プレイヤー: [画像][info]
+        if (isPlayer)
+        {
+            panel.Add(faceMask);
+            panel.Add(infoCol);
+        }
+        else
+        {
+            panel.Add(infoCol);
+            panel.Add(faceMask);
+        }
 
         return panel;
     }
@@ -845,7 +867,7 @@ public class BattleManager : MonoBehaviour
         enemyNameLabel.text = Localization.GetEnemy(enemyName);
         if (enemyAgeEl != null)
             enemyAgeEl.text = enemyAge >= 0 ? Localization.GetAge(enemyAge) : "";
-        enemyHpLabel.text = $"HP:{enemyHp}/{enemyMaxHp}  ATK:{enemyAtk}";
+        enemyHpLabel.text = $"HP:{enemyHp}/{enemyMaxHp}";
 
         float hpRatio = (float)enemyHp / enemyMaxHp;
         enemyHpFill.style.width = new UIE.Length(hpRatio * 100f, UIE.LengthUnit.Percent);
@@ -1454,6 +1476,143 @@ public class BattleManager : MonoBehaviour
         }
     }
 
+    // ===== カード粉砕演出 =====
+
+    IEnumerator ShatterCardEffect(UIE.VisualElement panel)
+    {
+        if (panel == null) yield break;
+
+        // --- Phase 1: ひび割れ (0.6s) ---
+        var crackOverlay = new UIE.VisualElement();
+        crackOverlay.style.position = UIE.Position.Absolute;
+        crackOverlay.style.left = 0; crackOverlay.style.top = 0;
+        crackOverlay.style.right = 0; crackOverlay.style.bottom = 0;
+        crackOverlay.style.overflow = UIE.Overflow.Hidden;
+        crackOverlay.pickingMode = UIE.PickingMode.Ignore;
+        panel.Add(crackOverlay);
+
+        // ひび割れ線を生成
+        var crackLines = new (float cx, float cy, float angle, float len)[] {
+            (0.5f, 0.3f, -30f,  0.7f),
+            (0.4f, 0.5f,  45f,  0.6f),
+            (0.6f, 0.4f, -60f,  0.5f),
+            (0.3f, 0.6f,  20f,  0.8f),
+            (0.7f, 0.7f, -45f,  0.5f),
+            (0.5f, 0.5f,  70f,  0.6f),
+            (0.2f, 0.3f,  10f,  0.4f),
+            (0.8f, 0.5f, -20f,  0.4f),
+        };
+
+        float crackDuration = 0.6f;
+        float perCrack = crackDuration / crackLines.Length;
+
+        for (int i = 0; i < crackLines.Length; i++)
+        {
+            var (cx, cy, angle, len) = crackLines[i];
+            var line = new UIE.VisualElement();
+            line.pickingMode = UIE.PickingMode.Ignore;
+            line.style.position = UIE.Position.Absolute;
+            line.style.width = new UIE.Length(len * 100f, UIE.LengthUnit.Percent);
+            line.style.height = 3;
+            line.style.left = new UIE.Length(cx * 100f, UIE.LengthUnit.Percent);
+            line.style.top = new UIE.Length(cy * 100f, UIE.LengthUnit.Percent);
+            line.style.backgroundColor = new Color(0.1f, 0.1f, 0.1f, 0.8f);
+            line.style.rotate = new UIE.StyleRotate(new UIE.Rotate(new UIE.Angle(angle, UIE.AngleUnit.Degree)));
+            line.style.transformOrigin = new UIE.StyleTransformOrigin(
+                new UIE.TransformOrigin(new UIE.Length(0), new UIE.Length(50, UIE.LengthUnit.Percent)));
+            crackOverlay.Add(line);
+
+            // 小さな揺れ
+            StartCoroutine(ShakeEffect(panel, perCrack * 0.7f, 3f + i));
+            yield return new WaitForSeconds(perCrack);
+        }
+
+        // 最後の大きな揺れ
+        yield return StartCoroutine(ShakeEffect(panel, 0.15f, 15f));
+
+        // --- Phase 2: 粉砕 (0.7s) ---
+        crackOverlay.RemoveFromHierarchy();
+
+        // カードの親要素を取得
+        var parent = panel.parent;
+        if (parent == null) yield break;
+
+        // 破片を生成 (4x5 グリッド)
+        int cols = 4, rows2 = 5;
+        float panelW = 450f, panelH = 650f;
+        float fragW = panelW / cols;
+        float fragH = panelH / rows2;
+
+        // カードの位置を取得
+        var panelLayout = panel.layout;
+        float baseX = panelLayout.x;
+        float baseY = panelLayout.y;
+
+        // 元のカードを非表示
+        panel.style.visibility = UIE.Visibility.Hidden;
+
+        var fragments = new List<UIE.VisualElement>();
+        var velocities = new List<Vector2>();
+        var rotations = new List<float>();
+
+        for (int r = 0; r < rows2; r++)
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                var frag = new UIE.VisualElement();
+                frag.pickingMode = UIE.PickingMode.Ignore;
+                frag.style.position = UIE.Position.Absolute;
+                frag.style.width = fragW;
+                frag.style.height = fragH;
+                frag.style.left = baseX + c * fragW;
+                frag.style.top = baseY + r * fragH;
+                frag.style.backgroundColor = new Color(
+                    Random.Range(0.15f, 0.35f),
+                    Random.Range(0.15f, 0.30f),
+                    Random.Range(0.25f, 0.45f),
+                    0.9f);
+                frag.style.borderTopLeftRadius = 2;
+                frag.style.borderTopRightRadius = 2;
+                frag.style.borderBottomLeftRadius = 2;
+                frag.style.borderBottomRightRadius = 2;
+                parent.Add(frag);
+                fragments.Add(frag);
+
+                // 中心からの方向 + ランダム
+                float dirX = (c - cols / 2f + 0.5f) * 200f + Random.Range(-80f, 80f);
+                float dirY = (r - rows2 / 2f + 0.5f) * 200f + Random.Range(-60f, -200f);
+                velocities.Add(new Vector2(dirX, dirY));
+                rotations.Add(Random.Range(-360f, 360f));
+            }
+        }
+
+        // アニメーション
+        float shatterDur = 0.7f;
+        float elapsed = 0f;
+        while (elapsed < shatterDur)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / shatterDur;
+            float ease = t * t; // ease-in
+
+            for (int i = 0; i < fragments.Count; i++)
+            {
+                var f = fragments[i];
+                float dx = velocities[i].x * ease;
+                float dy = velocities[i].y * ease + 400f * ease * ease; // 重力
+                f.style.translate = new UIE.StyleTranslate(new UIE.Translate(dx, dy));
+                f.style.rotate = new UIE.StyleRotate(new UIE.Rotate(new UIE.Angle(rotations[i] * ease, UIE.AngleUnit.Degree)));
+                f.style.opacity = 1f - t;
+                f.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(1f - ease * 0.5f, 1f - ease * 0.5f)));
+            }
+            yield return null;
+        }
+
+        // 破片を削除
+        foreach (var f in fragments)
+            f.RemoveFromHierarchy();
+    }
+
     // ===== バトルフロー =====
 
     IEnumerator BattleStart()
@@ -1468,24 +1627,20 @@ public class BattleManager : MonoBehaviour
             battleLogLabel.text = Localization.Get("battle_girl_power", playerEvasion);
         yield return new WaitForSeconds(3.0f);
 
-        // バトルスタート画像を表示
+        // バトルスタート画像をログエリア内に表示
         battleLogLabel.text = "";
         var startSpr = Resources.Load<Sprite>("UI/battle-start");
-        UIE.VisualElement startWrapper = null;
+        UIE.VisualElement startImg = null;
         if (startSpr != null)
         {
-            startWrapper = new UIE.VisualElement();
-            startWrapper.AddToClassList("battle-image-wrapper");
-            startWrapper.pickingMode = UIE.PickingMode.Ignore;
-            var startImg = new UIE.VisualElement();
-            startImg.AddToClassList("battle-image-center");
+            startImg = new UIE.VisualElement();
+            startImg.AddToClassList("battle-log-image");
             startImg.style.backgroundImage = new UIE.StyleBackground(startSpr);
-            startWrapper.Add(startImg);
-            root.Add(startWrapper);
+            battleLogEl.Add(startImg);
         }
         if (vsTextEl != null) vsTextEl.style.display = UIE.DisplayStyle.None;
         yield return new WaitForSeconds(2.0f);
-        if (startWrapper != null) startWrapper.RemoveFromHierarchy();
+        if (startImg != null) startImg.RemoveFromHierarchy();
 
         int playerSpeed = DataCarrier.Instance != null ? DataCarrier.Instance.babyAthletic : 50;
         if (playerSpeed >= enemySpeed)
@@ -1508,6 +1663,16 @@ public class BattleManager : MonoBehaviour
 
         isPlayerTurn = true;
         playerDefending = false;
+
+        // おしゃぶりチャーム: 毎ターンHP+3回復
+        if (DataCarrier.Instance != null && DataCarrier.Instance.IsEquipped("おしゃぶりチャーム") && playerHp < playerMaxHp)
+        {
+            int healAmt = 3;
+            playerHp = Mathf.Min(playerMaxHp, playerHp + healAmt);
+            UpdatePlayerDisplay();
+            battleLogLabel.text = Localization.Get("battle_oshaburi_heal", healAmt);
+            yield return new WaitForSeconds(0.6f);
+        }
 
         if (playerPoisonTurns > 0)
         {
@@ -1611,6 +1776,11 @@ public class BattleManager : MonoBehaviour
             yield return StartCoroutine(EnemyDoNormalAttack());
     }
 
+    bool HasGoldenSmartphone()
+    {
+        return DataCarrier.Instance != null && DataCarrier.Instance.IsEquipped("金色のスマホ");
+    }
+
     IEnumerator EnemyDoNormalAttack()
     {
         battleLogLabel.text = Localization.Get("battle_enemy_attack", Localization.GetEnemy(enemyName));
@@ -1627,8 +1797,22 @@ public class BattleManager : MonoBehaviour
             yield break;
         }
 
-        int effectiveEnemyAtk = enemyAtkDebuffTurns > 0 ? (int)(enemyAtk * 0.6f) : enemyAtk;
-        int damage = CalculateDamage(effectiveEnemyAtk, playerDef, playerDefending);
+        // 金色のスマホ: 10%で攻撃を跳ね返す
+        if (HasGoldenSmartphone() && Random.Range(0, 10) == 0)
+        {
+            int effectiveEnemyAtk = enemyAtkDebuffTurns > 0 ? (int)(enemyAtk * 0.6f) : enemyAtk;
+            int reflectDamage = CalculateDamage(effectiveEnemyAtk, enemyDef, enemyDefending);
+            enemyHp = Mathf.Max(0, enemyHp - reflectDamage);
+            UpdateEnemyDisplay();
+            StartCoroutine(DamageFlash(enemyFaceMask));
+            battleLogLabel.text = Localization.Get("battle_reflect", reflectDamage);
+            yield return new WaitForSeconds(1.5f);
+            yield return StartCoroutine(CheckEnemyDefeatAndContinue());
+            yield break;
+        }
+
+        int effectiveEnemyAtk2 = enemyAtkDebuffTurns > 0 ? (int)(enemyAtk * 0.6f) : enemyAtk;
+        int damage = CalculateDamage(effectiveEnemyAtk2, playerDef, playerDefending);
         playerHp = Mathf.Max(0, playerHp - damage);
         UpdatePlayerDisplay();
         StartCoroutine(DamageFlash(playerFaceMask));
@@ -1670,6 +1854,9 @@ public class BattleManager : MonoBehaviour
         if (isDevilEnemy && playerHp > 0)
         {
             int poisonDuration = (enemyName == "デヴィル夫人") ? 4 : 3;
+            // 魔法のおむつ: 毒ターン-1
+            if (DataCarrier.Instance != null && DataCarrier.Instance.IsEquipped("魔法のおむつ"))
+                poisonDuration = Mathf.Max(1, poisonDuration - 1);
             if (playerPoisonTurns <= 0)
             {
                 playerPoisonTurns = poisonDuration;
@@ -1758,7 +1945,10 @@ public class BattleManager : MonoBehaviour
 
         if (playerHp > 0)
         {
-            playerPoisonTurns = 5;
+            int devilPoison = 5;
+            if (DataCarrier.Instance != null && DataCarrier.Instance.IsEquipped("魔法のおむつ"))
+                devilPoison = Mathf.Max(1, devilPoison - 1);
+            playerPoisonTurns = devilPoison;
             battleLogLabel.text = Localization.Get("battle_devil_lady_poisoned");
             yield return new WaitForSeconds(1.0f);
         }
@@ -1801,6 +1991,17 @@ public class BattleManager : MonoBehaviour
         }
 
         yield return StartCoroutine(CheckPlayerDefeatAndContinue());
+    }
+
+    IEnumerator CheckEnemyDefeatAndContinue()
+    {
+        if (enemyHp <= 0)
+        {
+            StartCoroutine(BattleWin());
+            yield break;
+        }
+
+        StartCoroutine(EnemyTurn());
     }
 
     IEnumerator CheckPlayerDefeatAndContinue()
@@ -2084,6 +2285,11 @@ public class BattleManager : MonoBehaviour
     IEnumerator BattleWin()
     {
         isBattleActive = false;
+
+        // 敵カード粉砕演出
+        yield return StartCoroutine(ShatterCardEffect(enemyPanel));
+        yield return new WaitForSeconds(0.3f);
+
         battleLogLabel.text = Localization.Get("battle_enemy_defeated", Localization.GetEnemy(enemyName));
         yield return new WaitForSeconds(1.5f);
 
@@ -2096,24 +2302,6 @@ public class BattleManager : MonoBehaviour
                 yield return new WaitForSeconds(2f);
             }
         }
-
-        // 勝利画像を表示
-        battleLogLabel.text = "";
-        var victorySpr = Resources.Load<Sprite>("UI/victory");
-        UIE.VisualElement victoryWrapper = null;
-        if (victorySpr != null)
-        {
-            victoryWrapper = new UIE.VisualElement();
-            victoryWrapper.AddToClassList("battle-image-wrapper");
-            victoryWrapper.pickingMode = UIE.PickingMode.Ignore;
-            var victoryImg = new UIE.VisualElement();
-            victoryImg.AddToClassList("battle-image-center");
-            victoryImg.style.backgroundImage = new UIE.StyleBackground(victorySpr);
-            victoryWrapper.Add(victoryImg);
-            root.Add(victoryWrapper);
-        }
-        yield return new WaitForSeconds(1.5f);
-        if (victoryWrapper != null) victoryWrapper.RemoveFromHierarchy();
 
         yield return StartCoroutine(GainExpSequence());
 
@@ -2156,6 +2344,12 @@ public class BattleManager : MonoBehaviour
 
         battleLogLabel.text = Localization.Get("battle_exp_gained", expGained);
         yield return new WaitForSeconds(1.2f);
+
+        // ミルク報酬（EXPの約50%）
+        int milkGained = Mathf.Max(1, expGained / 2);
+        DataCarrier.Instance.milk += milkGained;
+        battleLogLabel.text = Localization.Get("battle_milk_gained", milkGained);
+        yield return new WaitForSeconds(1.0f);
 
         if (currentExp >= needed)
         {
@@ -2237,13 +2431,9 @@ public class BattleManager : MonoBehaviour
         int newAge = DataCarrier.Instance != null ? DataCarrier.Instance.babyAge : 0;
         string babyName = DataCarrier.Instance != null ? DataCarrier.Instance.babyName : "";
 
-        // 全画面オーバーレイ (on root)
+        // 全画面オーバーレイ (on root) — justify-content: center で中央配置
         var overlay = new UIE.VisualElement();
         overlay.AddToClassList("battle-growth-overlay");
-
-        var (safeTop, safeBottom, _, _) = UIHelper.GetSafeMargins();
-        overlay.style.paddingTop = 80 + safeTop;
-        overlay.style.paddingBottom = 40 + safeBottom;
 
         // タイトル
         var title = UIHelper.CreateLabel(Localization.Get("battle_growth_title"), "battle-growth-title");
@@ -2322,8 +2512,8 @@ public class BattleManager : MonoBehaviour
 
         // OKボタン
         bool dismissed = false;
-        var okBtn = UIHelper.CreatePillButton("OK", "pill-button-medium");
-        okBtn.style.marginTop = 30;
+        var okBtn = UIHelper.CreatePillButton("OK", "pill-button");
+        okBtn.style.marginTop = 40;
         okBtn.clicked += () => dismissed = true;
         overlay.Add(okBtn);
 
@@ -2350,8 +2540,15 @@ public class BattleManager : MonoBehaviour
     IEnumerator BattleLose()
     {
         isBattleActive = false;
-        battleLogLabel.text = Localization.Get("battle_defeat");
-        yield return new WaitForSeconds(2.0f);
+
+        // プレイヤーカード粉砕演出
+        yield return StartCoroutine(ShatterCardEffect(playerPanel));
+        yield return new WaitForSeconds(0.3f);
+
+        string babyName = DataCarrier.Instance != null && !string.IsNullOrEmpty(DataCarrier.Instance.babyName)
+            ? DataCarrier.Instance.babyName : "Baby";
+        battleLogLabel.text = string.Format(Localization.Get("battle_defeat"), babyName);
+        yield return new WaitForSeconds(1.5f);
 
         ShowGameOverPanel();
     }
@@ -2372,7 +2569,7 @@ public class BattleManager : MonoBehaviour
             "battle-gameover-msg");
         card.Add(msg);
 
-        var retryBtn = UIHelper.CreatePillButton(Localization.Get("ui_back_to_title_long"), "pill-button-medium");
+        var retryBtn = UIHelper.CreatePillButton(Localization.Get("ui_back_to_title_long"), "pill-button");
         retryBtn.clicked += () => SceneManager.LoadScene("TitleScene");
         card.Add(retryBtn);
 
@@ -2562,13 +2759,13 @@ public class BattleManager : MonoBehaviour
             if (area == 4 && enemyName == "メロディアス女王")
             {
                 DataCarrier.Instance.currentArea = 3;
-                DataCarrier.Instance.mapPlayerX = 5;
-                DataCarrier.Instance.mapPlayerY = 17;
+                DataCarrier.Instance.mapPlayerX = 14;
+                DataCarrier.Instance.mapPlayerY = 37;
             }
             else if (area == 2 && enemyName == "デヴィル夫人")
             {
                 DataCarrier.Instance.currentArea = 3;
-                DataCarrier.Instance.mapPlayerX = 5;
+                DataCarrier.Instance.mapPlayerX = 11;
                 DataCarrier.Instance.mapPlayerY = 2;
             }
             else
@@ -2594,6 +2791,19 @@ public class BattleManager : MonoBehaviour
         // 勝利パネル (overlayRoot に追加)
         var panel = new UIE.VisualElement();
         panel.AddToClassList("battle-victory-panel");
+
+        // 勝利画像を中央に表示
+        var victorySpr = Resources.Load<Sprite>("UI/victory");
+        if (victorySpr != null)
+        {
+            var victoryImg = new UIE.VisualElement();
+            victoryImg.style.width = 400;
+            victoryImg.style.height = 200;
+            victoryImg.style.marginBottom = 30;
+            victoryImg.style.backgroundImage = new UIE.StyleBackground(victorySpr);
+            victoryImg.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+            panel.Add(victoryImg);
+        }
 
         string babyName = DataCarrier.Instance != null ? DataCarrier.Instance.babyName : "ベイビー";
         int currentAge = DataCarrier.Instance != null ? DataCarrier.Instance.babyAge : 0;

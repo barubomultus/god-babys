@@ -27,6 +27,7 @@ public class TitleManager : MonoBehaviour
         panelSettings = UIHelper.CreatePanelSettings(0f);
         root = UIHelper.SetupUIDocument(gameObject,
             new[] { "UI/CommonStyle", "UI/TitleStyle" }, panelSettings);
+        UIHelper.RegisterTapSE(root);
 
         InitTitle();
     }

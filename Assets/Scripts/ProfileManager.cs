@@ -38,6 +38,7 @@ public class ProfileManager : MonoBehaviour
         panelSettings = UIHelper.CreatePanelSettings(0f);
         root = UIHelper.SetupUIDocument(gameObject,
             new[] { "UI/CommonStyle", "UI/ProfileStyle" }, panelSettings);
+        UIHelper.RegisterTapSE(root);
 
         isEditing = DataCarrier.HasProfile();
         BuildUI();

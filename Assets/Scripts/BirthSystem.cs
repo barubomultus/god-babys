@@ -59,6 +59,15 @@ public class BirthSystem : MonoBehaviour
     // 稲妻演出用
     GameObject lightningContainer;
 
+    // SE
+    AudioSource seSource;
+    AudioSource seBabySource; // ピッチ変化用の専用AudioSource
+    AudioClip seKettei;
+    AudioClip seThunder;
+    AudioClip seBabyVoice;
+    AudioClip seKirakira;
+    AudioClip seLevelUp;
+
     // ?マーク
     TextMeshProUGUI introText;
     GameObject introPanel;
@@ -366,6 +375,11 @@ public class BirthSystem : MonoBehaviour
             mainBgImg.color = new Color(0.953f, 0.969f, 0.973f);
         }
         mainBgImg.raycastTarget = false;
+        // object-fit: cover — アスペクト比を維持しつつ画面全体を覆う
+        var fitter = bgObj.AddComponent<AspectRatioFitter>();
+        fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+        if (birthBgSprite != null)
+            fitter.aspectRatio = (float)birthBgSprite.texture.width / birthBgSprite.texture.height;
 
         // いでよGodBabyボタンをパチンコ風赤ボタンにスタイリング
         StylePachinkoButton(generateLifeButton);
@@ -393,6 +407,15 @@ public class BirthSystem : MonoBehaviour
         CreateFlashOverlay();
         CreateLightningOverlay();
         CreateIntroPanel();
+
+        // SE読み込み
+        seSource = gameObject.AddComponent<AudioSource>();
+        seBabySource = gameObject.AddComponent<AudioSource>();
+        seKettei = Resources.Load<AudioClip>("SE/kettei-button");
+        seThunder = Resources.Load<AudioClip>("SE/thunder-magic");
+        seBabyVoice = Resources.Load<AudioClip>("SE/baby-voice");
+        seKirakira = Resources.Load<AudioClip>("SE/きらきら輝く6");
+        seLevelUp = Resources.Load<AudioClip>("SE/レベルアップ");
         //CreateCharacterListUI();
 
         // UI Toolkit overlay (menu, name input, save confirm, parent bio, parent cards, story)
@@ -402,6 +425,7 @@ public class BirthSystem : MonoBehaviour
         overlayRoot = UIHelper.SetupUIDocument(overlayObj,
             new[] { "UI/CommonStyle", "UI/BirthStyle" }, overlayPanelSettings);
         overlayRoot.pickingMode = UIE.PickingMode.Ignore;
+        UIHelper.RegisterTapSE(overlayRoot);
         CreateParentUI();
         if (parentPanel != null) parentPanel.style.display = UIE.DisplayStyle.None;
         CreateStoryUI();
@@ -422,6 +446,10 @@ public class BirthSystem : MonoBehaviour
     {
         Debug.Log("[BirthSystem] SpinRoulette button clicked");
         if (isAnimating) return;
+
+        // 決定ボタンSE
+        if (seSource != null && seKettei != null)
+            seSource.PlayOneShot(seKettei, 0.8f);
 
         // イントロパネルを非表示
         if (introPanel != null)
@@ -476,6 +504,8 @@ public class BirthSystem : MonoBehaviour
             btnRect.anchoredPosition = new Vector2(originalPos.x, originalPos.y);
 
         // ── フェーズ2: 雷演出 + フラッシュ ──
+        if (seSource != null && seThunder != null)
+            seSource.PlayOneShot(seThunder, 1f);
         if (lightningContainer != null) lightningContainer.SetActive(true);
 
         for (int i = 0; i < 4; i++)
@@ -555,6 +585,9 @@ public class BirthSystem : MonoBehaviour
                 mainBgImg.type = Image.Type.Simple;
                 mainBgImg.preserveAspect = false;
                 mainBgImg.color = Color.white;
+                var fitter = mainBgImg.GetComponent<AspectRatioFitter>();
+                if (fitter != null)
+                    fitter.aspectRatio = (float)aozoraSprite.texture.width / aozoraSprite.texture.height;
             }
         }
 
@@ -801,6 +834,7 @@ public class BirthSystem : MonoBehaviour
         {
             int tmpF = Random.Range(0, NewFathers.Length);
             ShowSingleParentPreview(tmpF, NewFathers[tmpF], true);
+            PlayBabyVoiceSE(true);
             yield return new WaitForSeconds(0.06f);
         }
         // 減速シャッフル（6回）
@@ -808,11 +842,13 @@ public class BirthSystem : MonoBehaviour
         {
             int tmpF = (i < 4) ? Random.Range(0, NewFathers.Length) : fIdx;
             ShowSingleParentPreview(tmpF, NewFathers[tmpF], true);
+            PlayBabyVoiceSE(true);
             float delay = Mathf.Lerp(0.12f, 0.35f, i / 5f);
             yield return new WaitForSeconds(delay);
         }
         // 父親確定
         ShowSingleParentPreview(fIdx, father, true);
+        PlayBabyVoiceSE(true);
         // カットイン演出
         yield return StartCoroutine(ShowParentCutin(father.name));
         // 紹介文表示
@@ -842,6 +878,7 @@ public class BirthSystem : MonoBehaviour
         {
             int tmpM = Random.Range(0, NewMothers.Length);
             ShowSingleParentPreview(tmpM, NewMothers[tmpM], false);
+            PlayBabyVoiceSE(false);
             yield return new WaitForSeconds(0.06f);
         }
         // 減速シャッフル（6回）
@@ -849,11 +886,13 @@ public class BirthSystem : MonoBehaviour
         {
             int tmpM = (i < 4) ? Random.Range(0, NewMothers.Length) : mIdx;
             ShowSingleParentPreview(tmpM, NewMothers[tmpM], false);
+            PlayBabyVoiceSE(false);
             float delay = Mathf.Lerp(0.12f, 0.35f, i / 5f);
             yield return new WaitForSeconds(delay);
         }
         // 母親確定
         ShowSingleParentPreview(mIdx, mother, false);
+        PlayBabyVoiceSE(false);
         // カットイン演出
         yield return StartCoroutine(ShowParentCutin(mother.name));
         // 紹介文表示
@@ -1042,7 +1081,11 @@ public class BirthSystem : MonoBehaviour
         if (synthSprite != null)
         {
             DisplaySynthesizedBaby(synthSprite);
+            SaveSynthBabyImage();
         }
+
+        // ── 誕生インパクト演出（SE + シェイク + 紙吹雪） ──
+        PlayBirthRevealEffect();
 
         Debug.Log($"[BirthSystem] BabySynthesizer.Synthesize() called, fortune={c_fortune}, rank={BabySynthesizer.DetermineRank(c_fortune)}");
 
@@ -1116,6 +1159,109 @@ public class BirthSystem : MonoBehaviour
         if (gotoBattleButton != null) gotoBattleButton.SetActive(true);
 
         isAnimating = false;
+    }
+
+    // ===== 誕生インパクト演出 =====
+
+    void PlayBirthRevealEffect()
+    {
+        if (seLevelUp != null)
+            seSource.PlayOneShot(seLevelUp, 1f);
+        StartCoroutine(ScreenShakeCoroutine(0.5f, 8f));
+        SpawnConfetti();
+    }
+
+    IEnumerator ScreenShakeCoroutine(float duration, float intensity)
+    {
+        var cam = Camera.main;
+        if (cam == null) yield break;
+        Vector3 originalPos = cam.transform.localPosition;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float decay = 1f - (elapsed / duration);
+            float x = Random.Range(-1f, 1f) * intensity * decay;
+            float y = Random.Range(-1f, 1f) * intensity * decay;
+            cam.transform.localPosition = originalPos + new Vector3(x, y, 0);
+            yield return null;
+        }
+        cam.transform.localPosition = originalPos;
+    }
+
+    void SpawnConfetti()
+    {
+        var cam = Camera.main;
+        if (cam == null) return;
+
+        var go = new GameObject("BirthConfetti");
+        float camH = cam.orthographicSize;
+        float camW = camH * cam.aspect;
+        go.transform.position = new Vector3(
+            cam.transform.position.x,
+            cam.transform.position.y + camH * 0.5f,
+            0f);
+
+        var ps = go.AddComponent<ParticleSystem>();
+        ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+        var main = ps.main;
+        main.duration = 0.3f;
+        main.loop = false;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(2f, 3.5f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(2f, 6f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.08f, 0.25f);
+        main.gravityModifier = 0.8f;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.startRotation = new ParticleSystem.MinMaxCurve(0, Mathf.PI * 2);
+
+        // 紙吹雪カラー（ピンク〜ゴールドのランダム）
+        var colorGrad = new Gradient();
+        colorGrad.mode = GradientMode.Fixed;
+        colorGrad.SetKeys(
+            new[] {
+                new GradientColorKey(new Color(1f, 0.3f, 0.5f), 0f),
+                new GradientColorKey(new Color(1f, 0.85f, 0.2f), 0.25f),
+                new GradientColorKey(new Color(0.3f, 0.8f, 1f), 0.5f),
+                new GradientColorKey(new Color(0.5f, 1f, 0.5f), 0.75f),
+                new GradientColorKey(new Color(1f, 0.6f, 0.2f), 1f),
+            },
+            new[] { new GradientAlphaKey(1, 0), new GradientAlphaKey(1, 1) }
+        );
+        main.startColor = new ParticleSystem.MinMaxGradient(colorGrad);
+
+        // バースト発生（一瞬で80個）
+        var emission = ps.emission;
+        emission.rateOverTime = 0;
+        emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 80) });
+
+        // 画面幅いっぱいに散布
+        var shape = ps.shape;
+        shape.shapeType = ParticleSystemShapeType.Box;
+        shape.scale = new Vector3(camW * 2f, 0.5f, 0.5f);
+
+        // フェードアウト
+        var colorOverLife = ps.colorOverLifetime;
+        colorOverLife.enabled = true;
+        var fadeGrad = new Gradient();
+        fadeGrad.SetKeys(
+            new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+            new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 0.7f), new GradientAlphaKey(0f, 1f) }
+        );
+        colorOverLife.color = fadeGrad;
+
+        // 回転（ひらひら感）
+        var rotOverLife = ps.rotationOverLifetime;
+        rotOverLife.enabled = true;
+        rotOverLife.z = new ParticleSystem.MinMaxCurve(-3f, 3f);
+
+        // マテリアル
+        var rend = go.GetComponent<ParticleSystemRenderer>();
+        rend.material = new Material(Shader.Find("Sprites/Default"));
+        rend.sortingOrder = 100;
+
+        ps.Play();
+        Destroy(go, 5f);
     }
 
     // ===== フラッシュ演出 =====
@@ -1253,6 +1399,16 @@ public class BirthSystem : MonoBehaviour
         }
 
         return bolt;
+    }
+
+    // ===== ルーレット「バブ」SE（ピッチ変化付き） =====
+    void PlayBabyVoiceSE(bool isFather)
+    {
+        if (seBabySource == null || seBabyVoice == null) return;
+        // 父親: 基本1.1倍、母親: 基本1.3倍 + ランダム揺らぎ
+        float basePitch = isFather ? 1.1f : 1.3f;
+        seBabySource.pitch = basePitch + Random.Range(-0.1f, 0.1f);
+        seBabySource.PlayOneShot(seBabyVoice, 0.7f);
     }
 
     // ===== ルーレット中のプレビュー表示（父 or 母 個別） =====
@@ -2243,6 +2399,9 @@ public class BirthSystem : MonoBehaviour
             mainBgImg.type = Image.Type.Simple;
             mainBgImg.preserveAspect = false;
             mainBgImg.color = Color.white;
+            var fitter = mainBgImg.GetComponent<AspectRatioFitter>();
+            if (fitter != null)
+                fitter.aspectRatio = (float)birthBgSprite.texture.width / birthBgSprite.texture.height;
         }
         else
         {
@@ -2427,12 +2586,33 @@ public class BirthSystem : MonoBehaviour
         {
             Sprite updatedSprite = babySynthesizer.SetCustomFaceTexture(spr.texture);
             if (updatedSprite != null)
+            {
                 DisplaySynthesizedBaby(updatedSprite);
+                SaveSynthBabyImage();
+            }
         }
 
         // Canvas上のbabyFaceを非表示（SpriteRenderer合成を使用）
         if (babyFace != null)
             babyFace.gameObject.SetActive(false);
+    }
+
+    void SaveSynthBabyImage()
+    {
+        if (babySynthesizer == null) return;
+        var tex = babySynthesizer.CaptureToTexture2D();
+        if (tex == null) return;
+
+        string fileName = "synth_baby.png";
+        string savePath = Path.Combine(Application.persistentDataPath, fileName);
+        byte[] pngData = tex.EncodeToPNG();
+        Destroy(tex);
+        File.WriteAllBytes(savePath, pngData);
+
+        if (DataCarrier.Instance != null)
+            DataCarrier.Instance.synthBabyImagePath = fileName;
+
+        Debug.Log($"[BirthSystem] Synth baby image saved: {savePath}");
     }
 
     // ===== 顔調整オーバーレイ =====
@@ -3345,7 +3525,7 @@ public class BirthSystem : MonoBehaviour
         storyPanel = new UIE.VisualElement();
         storyPanel.AddToClassList("birth-story-panel");
 
-        // 背景画像（上下反転）— パネル背景色はUSS維持
+        // 背景画像（上下反転・薄く重ねる）
         var loveBgSprite = Resources.Load<Sprite>("BackGrounds/love-background");
         if (loveBgSprite != null)
         {
@@ -3360,19 +3540,24 @@ public class BirthSystem : MonoBehaviour
         titleLabel.AddToClassList("birth-story-title");
         storyPanel.Add(titleLabel);
 
-        // 親カード行
-        var cardsRow = new UIE.VisualElement();
-        cardsRow.AddToClassList("birth-story-cards-row");
+        // アルバムコンテンツ（2カラム: 父ポラロイド | 母ポラロイド）
+        var albumContent = new UIE.VisualElement();
+        albumContent.AddToClassList("birth-story-album-content");
 
-        // 左: 父親カード
-        CreateStoryParentCard(cardsRow, true,
+        // 左: 父親ポラロイド
+        CreateStoryParentCard(albumContent, true,
             out storyFatherFace, out storyFatherName, out storyFatherIntro);
 
-        // 右: 母親カード
-        CreateStoryParentCard(cardsRow, false,
+        // 右: 母親ポラロイド
+        CreateStoryParentCard(albumContent, false,
             out storyMotherFace, out storyMotherName, out storyMotherIntro);
 
-        storyPanel.Add(cardsRow);
+        storyPanel.Add(albumContent);
+
+        // 装飾線
+        var divider = new UIE.VisualElement();
+        divider.AddToClassList("birth-story-album-divider");
+        storyPanel.Add(divider);
 
         // ストーリーテキスト
         storyText = UIHelper.CreateLabel("");
@@ -3382,14 +3567,6 @@ public class BirthSystem : MonoBehaviour
         // 「愛を育む」ボタン行
         var loveBtnRow = new UIE.VisualElement();
         loveBtnRow.AddToClassList("birth-story-love-btn-row");
-
-        var shadow = new UIE.VisualElement();
-        shadow.AddToClassList("shadow-layer");
-        shadow.style.borderTopLeftRadius = 60;
-        shadow.style.borderTopRightRadius = 60;
-        shadow.style.borderBottomLeftRadius = 60;
-        shadow.style.borderBottomRightRadius = 60;
-        loveBtnRow.Add(shadow);
 
         var loveBtn = new UIE.Button();
         loveBtn.AddToClassList("birth-story-love-btn");
@@ -3413,24 +3590,57 @@ public class BirthSystem : MonoBehaviour
         out UIE.VisualElement faceEl, out UIE.Label nameLabel, out UIE.Label introLabel)
     {
         var card = new UIE.VisualElement();
-        card.AddToClassList("birth-story-card");
+        card.AddToClassList("birth-story-album-card");
 
-        // 名前テキスト (上部)
-        nameLabel = UIHelper.CreateLabel("");
-        nameLabel.AddToClassList("birth-story-card-name");
-        card.Add(nameLabel);
+        // ポラロイドフレーム（父は左傾き、母は右傾き）
+        var polaroidFrame = new UIE.VisualElement();
+        polaroidFrame.AddToClassList("birth-story-polaroid-frame");
+        float rotation = isFather ? -3f : 3f;
+        polaroidFrame.style.rotate = new UIE.StyleRotate(
+            new UIE.Rotate(new UIE.Angle(rotation, UIE.AngleUnit.Degree)));
 
-        // 顔画像（角丸クリッピング）
+        // 写真エリア
+        var polaroidInner = new UIE.VisualElement();
+        polaroidInner.AddToClassList("birth-story-polaroid-inner");
+
         faceEl = new UIE.VisualElement();
-        faceEl.AddToClassList("birth-story-card-face");
-        card.Add(faceEl);
+        faceEl.AddToClassList("birth-story-polaroid-image");
+        polaroidInner.Add(faceEl);
 
-        // 紹介文テキスト (画像の下)
+        polaroidFrame.Add(polaroidInner);
+
+        // キャプション（名前）
+        nameLabel = UIHelper.CreateLabel("");
+        nameLabel.AddToClassList("birth-story-polaroid-caption");
+        polaroidFrame.Add(nameLabel);
+
+        card.Add(polaroidFrame);
+
+        // コーナーシール（4隅）
+        // card=460px, frame=304px → frame left edge=(460-304)/2=78
+        // photo area: (78+12, 12) to (78+12+280, 12+280) = (90, 12)-(370, 292)
+        AddStoryCornerSeal(card, 74, 0);    // top-left
+        AddStoryCornerSeal(card, 354, 0);   // top-right
+        AddStoryCornerSeal(card, 74, 276);  // bottom-left
+        AddStoryCornerSeal(card, 354, 276); // bottom-right
+
+        // 紹介文テキスト（ポラロイドの下）
         introLabel = UIHelper.CreateLabel("");
         introLabel.AddToClassList("birth-story-card-intro");
         card.Add(introLabel);
 
         parent.Add(card);
+    }
+
+    void AddStoryCornerSeal(UIE.VisualElement parent, float x, float y)
+    {
+        var seal = new UIE.VisualElement();
+        seal.AddToClassList("birth-story-corner-seal");
+        seal.style.left = x;
+        seal.style.top = y;
+        seal.style.rotate = new UIE.StyleRotate(
+            new UIE.Rotate(new UIE.Angle(45f, UIE.AngleUnit.Degree)));
+        parent.Add(seal);
     }
 
     IEnumerator ShowParentCutin(string parentName)
@@ -3796,6 +4006,10 @@ public class BirthSystem : MonoBehaviour
     IEnumerator ShowBirthCutin()
     {
         if (overlayRoot == null) yield break;
+
+        // キラキラSE（5秒のアニメ全体にかぶせて流しっぱなし）
+        if (seKirakira != null)
+            seSource.PlayOneShot(seKirakira, 1f);
 
         // Canvas背景を隠す
         if (mainBgImg != null) mainBgImg.gameObject.SetActive(false);

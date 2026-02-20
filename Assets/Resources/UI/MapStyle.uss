@@ -173,17 +173,68 @@
 
 /* --- Inventory panel (dark) --- */
 .map-inv-panel {
-    width: 350px;
-    background-color: rgba(20, 20, 46, 0.95);
-    border-radius: 12px;
-    padding: 25px 20px 20px 20px;
+    width: 680px;
+    max-height: 1400px;
+    background-color: rgba(255, 255, 255, 0.97);
+    border-radius: 16px;
+    padding: 30px 28px 24px 28px;
+    align-items: stretch;
+}
+
+.map-equip-panel {
+    width: 620px;
+    max-height: 900px;
+    background-color: rgba(255, 255, 255, 0.97);
+    border-radius: 16px;
+    padding: 30px 24px 24px 24px;
     align-items: center;
 }
 
-.map-inv-item {
-    font-size: 22px;
-    color: white;
+.map-equip-title {
+    font-size: 32px;
+    color: rgb(60, 60, 60);
     -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    margin-bottom: 16px;
+}
+
+.map-equip-item-name {
+    font-size: 26px;
+    color: rgb(40, 40, 40);
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+}
+
+.map-equip-item-effect {
+    font-size: 18px;
+    color: rgb(100, 140, 200);
+    -unity-text-align: middle-left;
+    margin-top: 2px;
+}
+
+.map-equip-bio-panel {
+    width: 580px;
+    background-color: rgba(245, 245, 250, 1);
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: rgba(180, 180, 200, 0.6);
+    padding: 20px;
+    margin-top: 12px;
+    align-items: center;
+}
+
+.map-equip-bio-text {
+    font-size: 20px;
+    color: rgb(50, 50, 60);
+    -unity-text-align: middle-left;
+    white-space: normal;
+}
+
+.map-inv-item {
+    font-size: 26px;
+    -unity-font-style: bold;
+    color: rgb(40, 40, 46);
+    -unity-text-align: middle-left;
     margin-bottom: 8px;
 }
 
@@ -315,6 +366,70 @@
     color: rgb(153, 153, 166);
     -unity-text-align: middle-right;
     margin-top: 10px;
+}
+
+/* --- Weapon Shop panel --- */
+.map-shop-panel {
+    width: 700px;
+    max-height: 1100px;
+    background-color: rgba(255, 255, 255, 0.97);
+    border-radius: 16px;
+    padding: 30px 24px 24px 24px;
+    align-items: center;
+}
+
+.map-shop-title {
+    font-size: 36px;
+    color: rgb(60, 60, 60);
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+}
+
+.map-shop-milk {
+    font-size: 26px;
+    color: rgb(200, 120, 140);
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    margin-bottom: 20px;
+}
+
+.map-shop-row {
+    width: 650px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    background-color: rgba(245, 240, 250, 1);
+    border-radius: 10px;
+}
+
+.map-shop-item-name {
+    font-size: 24px;
+    color: rgb(40, 40, 40);
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+}
+
+.map-shop-item-effect {
+    font-size: 17px;
+    color: rgb(100, 140, 200);
+    -unity-text-align: middle-left;
+    margin-top: 2px;
+}
+
+.map-shop-purchased {
+    font-size: 20px;
+    color: rgb(120, 180, 120);
+    -unity-font-style: bold;
+    flex-shrink: 0;
+    margin-left: 10px;
+}
+
+.map-shop-buy-btn {
+    flex-shrink: 0;
+    margin-left: 10px;
 }
 
 /* --- Touch swipe area --- */

@@ -21,8 +21,8 @@ public static class Localization
         Add("ui_no", "いいえ", "No");
         Add("ui_back_to_title", "トップへ", "Title");
         Add("ui_back_to_title_long", "タイトルへ戻る", "Back to Title");
-        Add("ui_saved", "<color=#00FF00>セーブしました！</color>", "<color=#00FF00>Saved!</color>");
-        Add("ui_try_again", "{0}はちからつきた", "{0} lost all strength");
+        Add("ui_saved", "セーブしました！", "Saved!");
+        Add("ui_try_again", "{0}は強制帰宅。", "{0} was sent home.");
 
         // ===== Title Scene =====
         Add("title_save_data", "つづきから", "Continue");
@@ -292,6 +292,46 @@ public static class Localization
         Add("bio_ルナ",
             "東欧の小さな村で生まれ、幼い頃から周囲を圧倒する美貌の持ち主だった。14歳でスカウトされてパリに渡り、デビューショーで世界中のファッション誌の表紙を独占。身長180cm、完璧なプロポーションと神秘的なオーラで「歩く芸術品」と称される。しかし華やかな世界の裏で過酷な減量やパワハラに苦しみ、一度はモデルを辞める決意をした。だが「自分の美で誰かを勇気づけたい」という想いで復帰し、ボディポジティブ運動の先駆者となる。現在は自身のブランドを持ち、売上の30%を母国の教育支援に寄付している。",
             "Born in a small Eastern European village, Luna possessed overwhelming beauty from childhood. Scouted at 14 and brought to Paris, her debut show landed her on every fashion magazine cover worldwide. At 180cm with perfect proportions and a mystical aura, she's called \"a walking work of art.\" But behind the glamour, she suffered through extreme dieting and harassment, and once resolved to quit. Yet she returned, driven by the desire to inspire others through her beauty, becoming a pioneer of the body positivity movement. She now owns her own brand, donating 30% of sales to education in her homeland.");
+
+        // ===== New Father Bios =====
+        Add("bio_ゼニガタ",
+            "代々続く石油採掘一族の跡取りとして生まれ、5歳で初めて油田を視察。12歳で原油先物取引を始め、15歳で初の10億ドルを稼ぎ出す。20歳で一族の全事業を継承し、中東・アフリカ・北極圏に油田を拡大。総資産は国家予算を超え、「金で買えないものはない」が口癖。プラチナ製のゆりかごを我が子に贈り、おむつ交換ですら執事に任せる。しかし子供の寝顔を見る時だけは、世界一の富豪もただの親バカに戻る。密かに全資産の70%を教育基金に遺贈する遺言を書いている。",
+            "Born as heir to a dynasty of oil barons, Zenigata inspected his first oil field at 5. He started crude oil futures at 12 and made his first billion by 15. At 20, he inherited all family operations, expanding to the Middle East, Africa, and the Arctic. His fortune exceeds national budgets — \"Money buys everything\" is his motto. He gifted his child a platinum cradle and leaves even diaper changes to the butler. Yet when watching his baby sleep, the world's richest man becomes just another doting dad. He's secretly written a will donating 70% of his wealth to education.");
+        Add("bio_ツクモ",
+            "幼少期から「見えないものが見える」と周囲を困惑させた不思議な少年。7歳で近所の火事を予言し、10歳で地震の発生を言い当て、地元では「神童」と呼ばれた。15歳で量子物理学に目覚め、「宇宙の波動と人間の意識は同期している」という独自理論を構築。IQ300の頭脳で大学を3つ卒業するも、学会からは異端視され続ける。現在は自宅の屋根裏部屋で宇宙と交信しながら、時折驚くほど正確な予言を的中させる。育児中も上の空で、おむつの替え時だけは宇宙に聞いている。",
+            "A mysterious boy who unsettled everyone by \"seeing the invisible\" from early childhood. He predicted a neighbor's fire at 7 and an earthquake at 10, earning him the label of prodigy. At 15, he discovered quantum physics and built his own theory that \"cosmic waves sync with human consciousness.\" With an IQ of 300, he graduated from three universities but remains shunned by academia. Now he communicates with the universe from his attic, occasionally making startlingly accurate predictions. Even while parenting, his mind wanders — he consults the cosmos only for diaper-change timing.");
+        Add("bio_サトウ",
+            "埼玉県出身。県立高校を卒業後、地元の中堅メーカーに就職。以来30年間、無遅刻無欠勤で係長まで昇進した。特技は洗車。休日の楽しみはホームセンター巡り。年収は平均的、容姿も平均的、運動能力も平均的。あらゆるステータスが日本人男性の中央値をぴったり示す奇跡の存在。しかしその「普通さ」こそが最大の武器であり、どんな修羅場でも動じない鋼のメンタルを持つ。「普通が一番」が座右の銘。妻の手料理と子供の笑顔があれば他に何もいらないと本気で思っている。",
+            "From Saitama. After graduating from a prefectural high school, he joined a mid-tier manufacturer and has been promoted to section chief over 30 years with perfect attendance. His specialty is car washing. Weekend fun: home center visits. Average income, average looks, average athleticism — a miraculous existence whose every stat hits the Japanese male median. Yet this \"ordinariness\" is his greatest weapon, giving him nerves of steel in any crisis. His motto: \"Normal is best.\" He genuinely believes his wife's cooking and his child's smile are all he needs.");
+        Add("bio_イワオ",
+            "山奥の寒村で生まれ、小学校に通う代わりに父親と共に石を割って育った。12歳で大人の作業員を腕相撲で全員倒し、15歳で単身上京。土木作業員として橋やダムの建設に携わり、「素手で岩を砕く男」として現場では伝説的な存在。握力は両手合わせて350kg。しかし極度の貧乏で、日雇いの給料はほぼ全額を故郷の母に仕送りしている。プロテインを買う金がないため、河原の石を持ち上げてトレーニングする日々。言葉は少ないが、その背中で全てを語る不器用な男。",
+            "Born in a remote mountain village, he grew up splitting rocks with his father instead of attending school. At 12, he beat every adult worker at arm wrestling; at 15, he moved to Tokyo alone. As a construction worker building bridges and dams, he became legendary as \"the man who crushes rocks bare-handed.\" Combined grip strength: 350kg. Yet he's extremely poor, sending nearly all his day-labor wages to his mother back home. Unable to afford protein powder, he trains by lifting river stones. A man of few words who says everything with his back.");
+        Add("bio_アキトシ",
+            "中学時代に競馬にハマり、高校を中退してパチンコ店に入り浸る。18歳で「確率と心理の天才」と呼ばれるようになり、ポーカーの世界大会で準優勝。しかし賞金は翌日のカジノで全額蒸発させる筋金入りの浪費家。通帳残高は常にゼロだが、勝負の嗅覚だけは超一流。「人生はギャンブルだ。全部賭けてこそ面白い」が信条。新聞紙でおくるみを作り、子供のおもちゃはサイコロとトランプ。負け続けても笑っていられる精神力だけは誰にも負けない。最近、子供の笑顔が最高の当たりだと気づき始めている。",
+            "Hooked on horse racing in middle school, he dropped out of high school and haunted pachinko parlors. By 18, he was called \"a genius of probability and psychology\" and placed second at the World Poker Championship. But he blew the entire prize at a casino the next day — a true spendthrift. His bank balance is perpetually zero, yet his instinct for a gamble is world-class. \"Life is a gamble — it's only fun when you go all in.\" He wraps his baby in newspaper; the toys are dice and cards. His unbreakable spirit that laughs through every loss is unmatched. Lately, he's starting to realize his child's smile is the greatest jackpot.");
+        Add("bio_ネオ",
+            "生まれてから30年間、一度も実家の敷地から出たことがない伝説の引きこもり。しかしネット上では別人格を持ち、複数のMMOで世界ランカー、匿名掲示板では「神」と崇められている。プログラミング・イラスト・作曲を独学でマスターし、実はフリーランスとして月収100万円を稼いでいるが、全額ガチャに溶かしている。布団から出るのは冷蔵庫に行く時だけ。日光を浴びると体調を崩す特異体質。子供が生まれてから唯一変わったのは、おむつを買いにコンビニまで歩くようになったこと。それが彼にとっては冒険そのものだった。",
+            "A legendary shut-in who hasn't left his family home's grounds in 30 years. Online, however, he's a different person — a world-ranked MMO player worshipped as a \"god\" on anonymous forums. Self-taught in programming, illustration, and music composition, he actually earns a million yen monthly as a freelancer but blows it all on gacha. He only leaves his futon to visit the fridge. Sunlight literally makes him sick. The one thing that changed after his child was born: he now walks to the convenience store for diapers. For him, that's a genuine adventure.");
+
+        // ===== New Mother Bios =====
+        Add("bio_イザナミ",
+            "神話の時代から続く皇統の末裔を自称する謎の女帝。その一言で国家予算が動き、指一本で政権が変わると噂される。幼少期から帝王学を叩き込まれ、10歳で国際会議に出席、15歳で初の外交条約を締結。美貌と知性と冷酷さを兼ね備え、「氷の女帝」と恐れられている。しかし我が子の前でだけは別人のように穏やかになり、手ずから離乳食を作る姿は側近すら見たことがない秘密。最高級の教育環境を用意し、子供には「世界を統べる者」になることを期待している。縁側で静かに茶を啜る姿は、ただの優しい母親にしか見えない。",
+            "A mysterious empress claiming descent from a mythological imperial line. One word from her moves national budgets; one finger reportedly topples governments. Trained in statecraft from birth, she attended international conferences at 10 and signed her first treaty at 15. Beautiful, brilliant, and ruthless — feared as the \"Ice Empress.\" Yet before her child, she transforms completely, secretly preparing baby food by hand — a sight even her aides have never witnessed. She provides the finest education, expecting her child to \"rule the world.\" Sipping tea quietly on the veranda, she looks like nothing more than a gentle mother.");
+        Add("bio_ミク",
+            "地方のギャルから成り上がった自称モデル兼インフルエンサー。フォロワー数は500万人を超えるが、その半分は購入したもの。美意識だけは本物で、毎朝2時間のメイクと毎晩3時間のスキンケアを欠かさない。収入の9割を美容と自己プロデュースに注ぎ込み、生活は常に火の車。しかし「見栄を張ることが生きること」という信念は揺るがない。子供にはブランド服を着せ、哺乳瓶すらデコる徹底ぶり。内心では「ありのままの自分」を誰かに認めてほしいと願っている。カメラが回っていない時の素顔は、意外なほど素朴で優しい。",
+            "A self-proclaimed model and influencer who rose from small-town gyaru culture. Over 5 million followers — half of them purchased. Her beauty standards are genuine: 2 hours of morning makeup and 3 hours of nightly skincare, never missed. She pours 90% of her income into beauty and self-branding, keeping her finances perpetually ablaze. Yet her belief that \"keeping up appearances is living\" never wavers. She dresses her baby in designer clothes and even decorates the baby bottle. Deep down, she wishes someone would accept her true self. Off-camera, her real face is surprisingly simple and kind.");
+        Add("bio_カヨコ",
+            "商店街の惣菜屋「かよこ食堂」の三代目看板娘。祖母から受け継いだコロッケのレシピは門外不出。朝5時に起きて仕込みを始め、閉店後は翌日の仕入れと帳簿付け。365日休みなしで働くが、「お客さんの『おいしい』が聞ければ十分」と笑顔を絶やさない。商店街の全住民から愛され、困っている人がいれば必ず声をかける。実は料理の腕は全国レベルで、テレビ出演のオファーを何度も断っている。「この街にいるのが一番幸せ」という言葉に嘘はない。子供にも「人を笑顔にする料理」を教えたいと思っている。",
+            "Third-generation poster girl of the shopping street deli \"Kayoko Shokudou.\" Her grandmother's croquette recipe is a closely guarded secret. She rises at 5 AM to prep and handles purchasing and bookkeeping after closing — 365 days a year with no days off. Yet \"hearing customers say 'delicious' is enough\" keeps her smiling. Beloved by every resident on the shopping street, she always reaches out to anyone in trouble. Her cooking is actually nationally competitive, but she's turned down TV appearances repeatedly. \"Being in this town makes me happiest\" — and she means it. She wants to teach her child \"cooking that makes people smile.\"");
+        Add("bio_フクトク",
+            "生まれつき異常な強運の持ち主。初めて買った宝くじで3億円当選、二度目で7億円当選。ガチャは必ず最高レアが出る。じゃんけんは生涯無敗。しかし本人には何の才能もなく、勉強もスポーツも平均以下。「運だけで生きてきた」という自覚はあるが、それを恥じるどころか「運も実力のうち」と開き直っている。宝くじ売り場のパートで働きながら、当選金は堅実に投資して資産を増やしている。子供にも運が遺伝することを密かに期待しているが、「運がなくても愛があれば大丈夫」と言い聞かせている。",
+            "Born with extraordinary luck. Her first lottery ticket won 300 million yen; her second, 700 million. Gacha always gives her the rarest pull. She's never lost at rock-paper-scissors in her life. Yet she has zero talent — below average in both academics and sports. She's aware she's \"lived on luck alone\" but isn't ashamed — \"Luck is a skill too,\" she insists. Working part-time at a lottery booth, she steadily invests her winnings. She secretly hopes her child will inherit her luck but reassures them: \"Even without luck, love is enough.\"");
+        Add("bio_ヨネ",
+            "内職歴40年の大ベテラン。ティッシュ折り、シール貼り、封入作業、あらゆる内職をこなし、その速度は「音速の手」と称される。一日に折るティッシュは5000枚、ミシンの縫い目は0.1mmの狂いもない。収入は微々たるものだが、1円たりとも無駄にしない生活哲学を持つ。手作りにこだわり、子供のおくるみも哺乳瓶カバーも全て手縫い。「買えるものより作れるものの方が温かい」が信条。質素だが丁寧な暮らしの中に、確かな幸せを見出している。夜中にミシンを踏む音が、子供にとっての子守唄になっている。",
+            "A 40-year veteran of piecework. Tissue folding, sticker affixing, envelope stuffing — she does it all, her speed earning her the title \"hands at the speed of sound.\" She folds 5,000 tissues a day with sewing accuracy within 0.1mm. Her income is meager, but she lives by a philosophy of wasting not a single yen. Committed to handmade goods, she sews every baby blanket and bottle cover herself. \"What you make with your hands is warmer than what you buy.\" She finds genuine happiness in her modest but meticulous life. The sound of her sewing machine at night has become her child's lullaby.");
+        Add("bio_ドクコ",
+            "闇金融「毒蛇ファイナンス」のNo.1取り立て屋。回収率100%という恐怖の記録を持ち、その名を聞くだけで債務者が震え上がる。元は薬学部の優等生だったが、製薬会社の不正を告発して業界から追放された過去を持つ。「毒と薬は紙一重」が座右の銘で、怪しい瓶が並ぶ自宅の棚には実は高度な漢方薬が詰まっている。恐ろしい形相の裏に隠された母性は深く、子供が熱を出せば夜通し看病し、手作りの薬草茶を飲ませる。「トイチ」を子供の最初の言葉にしようとしているが、今のところ「ママ」が優勢。",
+            "The No.1 enforcer of \"Viper Finance,\" an underground lending operation. Her 100% collection rate is legendary — debtors tremble at her name alone. Originally a top pharmacy student, she was expelled from the industry after exposing corporate fraud. \"Poison and medicine are two sides of the same coin\" is her motto; the suspicious bottles lining her shelves actually contain sophisticated herbal remedies. Behind her terrifying exterior lies deep maternal instinct — she nurses her sick child through the night with homemade herbal tea. She's trying to make \"compound interest\" her baby's first words, but \"Mama\" is currently winning.");
 
         // ===== Love Stories =====
         // タケシ × mothers
@@ -627,6 +667,30 @@ public static class Localization
             "109の最上階に君臨する音楽の女王。かつては世界中を魅了した伝説の歌姫だったが、その歌声に宿る魔力に目覚め、音楽で人々を支配するようになった。彼女の「魅惑のメロディ」を聴いた者は、身体の力が抜け、抵抗する気力すら失ってしまう。しかしその旋律の奥底には、ただ「誰かに自分の歌を聴いてほしい」という純粋な願いが隠されている。ステージの上で孤独に歌い続ける姿は、美しくも悲しい。",
             "The queen of music who reigns atop 109. Once a legendary diva who captivated the entire world, she awakened to the magic in her voice and began ruling people through music. Those who hear her 'Enchanting Melody' lose all strength and will to resist. Yet deep within her song hides a pure wish—to simply have someone listen. Her figure, singing alone on stage, is as beautiful as it is sorrowful.");
 
+        // NPC bios
+        Add("npc_bio_ミルク母さん",
+            "村のはずれで温かいミルクを振る舞う謎の女性。誰の母親なのかは不明だが、傷ついた赤ちゃんを見過ごすことができない慈愛の人。「危なくなったら、いつでも戻っておいで」が口癖。その微笑みの奥に、かつて自分の子を失った悲しみが宿っているとも噂されるが、本人は何も語らない。",
+            "A mysterious woman who serves warm milk at the edge of the village. No one knows whose mother she is, but she cannot ignore an injured baby. Her catchphrase is 'Come back whenever you're in danger.' Behind her gentle smile, some say she carries the sorrow of losing her own child, but she never speaks of it.");
+        Add("npc_bio_長老",
+            "村の入口に立つ白髪の老人。かつては名のある戦士だったらしいが、今は杖をつき、訪れる者たちに道を示す門番として余生を過ごしている。「お前の冒険はまだ始まったばかりだ」と語るその目には、自らも歩んだ険しい道の記憶が宿っている。",
+            "A white-haired old man who stands at the village entrance. Once said to have been a renowned warrior, he now spends his days as a gatekeeper, guiding those who visit. When he says 'Your adventure has only just begun,' his eyes hold memories of the harsh path he himself once walked.");
+
+        // 母親NPC bio（実家）
+        Add("npc_bio_イザナミ", "神話の時代から生き続ける太母。実家の縁側で静かに茶を啜りながら、我が子の帰りを待っている。", "The great mother who has lived since the age of myths. She quietly sips tea on the porch, waiting for her child to return.");
+        Add("npc_bio_ミク", "電脳世界のアイドルにして母。実家はフォロワー100万人のライブ配信スタジオ兼リビング。", "An idol and mother from the digital world. Her home doubles as a live-streaming studio with a million followers.");
+        Add("npc_bio_カヨコ", "商店街で一番の働き者。実家にはいつも手作りの惣菜の匂いが漂っている。", "The hardest worker on the shopping street. Her home always smells of homemade side dishes.");
+        Add("npc_bio_フクトク", "宝くじ売り場のおばちゃん。当選のご利益があるらしく、実家は縁起物だらけ。", "The lady at the lottery booth. Said to bring luck, her home is filled with good-luck charms.");
+        Add("npc_bio_ヨネ", "内職の達人。実家にはミシンの音が絶えず、おくるみも全て手縫い。", "A master of piecework. Her home never stops humming with the sewing machine, and every blanket is hand-sewn.");
+        Add("npc_bio_ドクコ", "毒と薬は紙一重を地で行く女。実家の棚には怪しい瓶が並ぶが、子への愛は本物。", "A woman who walks the line between poison and medicine. Her shelves are lined with suspicious bottles, but her love for her child is real.");
+
+        // 父親NPC bio
+        Add("npc_bio_ゼニガタ", "世界有数の石油王。実家の庭には油田があるが、子供の前ではただの親バカ。", "One of the world's wealthiest oil tycoons. There's an oil field in the backyard, but in front of his kid, he's just a doting dad.");
+        Add("npc_bio_ツクモ", "九十九年の修行を積んだ武闘家。拳で語る男だが、我が子には優しい手のひらを見せる。", "A martial artist who trained for ninety-nine years. He speaks with his fists, but shows only a gentle palm to his child.");
+        Add("npc_bio_サトウ", "どこにでもいそうな普通のサラリーマン。だがその平凡さこそが最大の武器。", "An ordinary office worker you could find anywhere. But that very ordinariness is his greatest weapon.");
+        Add("npc_bio_イワオ", "岩のように頑固で不器用な男。言葉は少ないが、背中で家族を守る。", "A man as stubborn and awkward as a rock. He says little, but protects his family with his back.");
+        Add("npc_bio_アキトシ", "自称・天才プログラマー。実家のリビングは全てモニターに囲まれている。", "A self-proclaimed genius programmer. His living room is surrounded entirely by monitors.");
+        Add("npc_bio_ネオ", "引きこもりの王。布団から出ずに世界を救おうとする男。子供だけが外出のモチベーション。", "King of the shut-ins. A man who tries to save the world without leaving his futon. His child is the only motivation to go outside.");
+
         // Battle UI labels
         Add("battle_normal_attack", "通常攻撃", "Attack");
         Add("battle_special_attack", "特殊攻撃", "Sp. Attack");
@@ -676,6 +740,8 @@ public static class Localization
             "<color=#4488FF>Held on with defense!</color>\n{0} damage!");
         Add("battle_evaded", "<color=#00FFFF>ひらりとかわした！</color>",
             "<color=#00FFFF>Dodged it!</color>");
+        Add("battle_reflect", "<color=#FFD700>金色のスマホが光った！\n攻撃を跳ね返した！ {0} ダメージ！</color>",
+            "<color=#FFD700>The Golden Smartphone glowed!\nReflected the attack! {0} damage!</color>");
         Add("battle_defended", "ぼうぎょした！ {0} ダメージ！", "Guarded! {0} damage!");
         Add("battle_took_damage", "{0} ダメージをうけた！", "Took {0} damage!");
         Add("battle_punch", "パンチ！ <color=#FFA500>{0}</color>！", "Punch! <color=#FFA500>{0}</color>!");
@@ -717,10 +783,10 @@ public static class Localization
             "<color=#FFFF00>{0} defeated!</color>");
         Add("battle_victory", "<color=#00FF00><size=130%>しょうり！</size></color>",
             "<color=#00FF00><size=130%>Victory!</size></color>");
-        Add("battle_defeat", "<color=#FF0000>たおれてしまった...</color>",
-            "<color=#FF0000>You were defeated...</color>");
-        Add("battle_game_over", "<color=#FF0000>GAME OVER</color>",
-            "<color=#FF0000>GAME OVER</color>");
+        Add("battle_defeat", "<color=#FF0000>{0}はおねむの時間になった...</color>",
+            "<color=#FF0000>{0} fell asleep...</color>");
+        Add("battle_game_over", "<color=#FF69B4><size=80%>ミルクの時間</size></color>",
+            "<color=#FF69B4><size=80%>Milk Time</size></color>");
         Add("battle_exp_gained", "<color=#00FFFF>けいけんち {0} をかくとく！</color>",
             "<color=#00FFFF>Gained {0} EXP!</color>");
         Add("battle_age_up", "<color=#FFD700><size=150%>\U0001f382 {0}ヶ月になった！ \U0001f382</size></color>",
@@ -810,6 +876,93 @@ public static class Localization
         Add("map_109_boss_enter", "<color=#FF69B4><size=130%>メロディアス女王 が 立ちはだかる！</size></color>",
             "<color=#FF69B4><size=130%>Queen Melodias stands in your way!</size></color>");
 
+        // エリア名
+        Add("area_name_0", "村", "Village");
+        Add("area_name_1", "悪魔村", "Devil Village");
+        Add("area_name_3", "小悪魔の街", "Imp Town");
+
+        // 前のステージに戻る
+        Add("map_return_confirm", "<size=120%>{0} に\n戻りますか？</size>",
+            "<size=120%>Return to\n{0}?</size>");
+        Add("map_return_yes", "戻る", "Return");
+        Add("map_return_no", "やめる", "Cancel");
+        Add("map_return_transition", "<size=130%>{0} に 戻った…</size>",
+            "<size=130%>Returned to {0}...</size>");
+
+        // 実家（母親NPC）
+        Add("map_mother_msg1", "おかえり、{0}。ちゃんとごはん食べてる？\nあなたが元気でいてくれるだけで、母さんは幸せよ。",
+            "Welcome home, {0}. Are you eating properly?\nJust knowing you're doing well makes me happy.");
+        Add("map_mother_msg2", "外は怖い敵がたくさんいるでしょう？\n無理しないで、疲れたらいつでも帰ってきなさいね。",
+            "There are scary enemies out there, right?\nDon't push yourself. Come home whenever you're tired.");
+        Add("map_mother_msg3", "さあ、行っておいで。あなたなら大丈夫。\n母さんはここで待ってるからね。",
+            "Now go on. You'll be just fine.\nMom will be right here waiting for you.");
+
+        // 母親アイテム付与
+        Add("map_mother_give_item", "これ、持っていきなさい。\nきっと役に立つわ。",
+            "Take this with you.\nI'm sure it will come in handy.");
+        Add("map_mother_got_item", "{0}を手に入れた！", "Got {0}!");
+        Add("map_mother_goodbye", "じゃあ、母さんはお家に帰るわね。\n気をつけるのよ。",
+            "Well, Mom's going home now.\nBe careful out there.");
+
+        // 母親装備アイテム名
+        Add("equip_イザナミ", "王冠", "Crown");
+        Add("equip_ミク", "金色のスマホ", "Golden Smartphone");
+        Add("equip_カヨコ", "お菓子", "Sweets");
+        Add("equip_フクトク", "当たりくじ", "Winning Lottery Ticket");
+        Add("equip_ヨネ", "ティッシュ", "Tissue Pack");
+        Add("equip_ドクコ", "借用書", "Loan Agreement");
+
+        // 母親装備アイテム効果
+        Add("equip_effect_イザナミ", "ATK+3 DEF+3", "ATK+3 DEF+3");
+        Add("equip_effect_ミク", "10%で敵の攻撃を反射", "10% chance to reflect attacks");
+        Add("equip_effect_カヨコ", "毎ターンHP+2回復", "Recover HP+2 each turn");
+        Add("equip_effect_フクトク", "LUCK+5", "LUCK+5");
+        Add("equip_effect_ヨネ", "DEF+5", "DEF+5");
+        Add("equip_effect_ドクコ", "ATK+5 DEF-2", "ATK+5 DEF-2");
+
+        // 母親装備アイテムBio
+        Add("equip_bio_イザナミ",
+            "神代より伝わる黄金の王冠。\nイザナミが我が子の旅立ちに託した、母の愛の結晶。\n被ると不思議と背筋が伸び、\n小さな体に王者の風格が宿る。",
+            "A golden crown passed down from the age of gods.\nA crystal of maternal love entrusted by Izanami for her child's journey.\nWearing it straightens the spine and grants a regal aura.");
+        Add("equip_bio_ミク",
+            "最新型を超えた超最新型スマホ。\n全面ゴールド仕上げで、通話もゲームもサクサク。\n敵の攻撃を画面で跳ね返す\n謎のバリア機能を搭載。",
+            "An ultra-latest smartphone beyond the cutting edge.\nFull gold finish, smooth for calls and games.\nEquipped with a mysterious barrier that reflects enemy attacks off its screen.");
+        Add("equip_bio_カヨコ",
+            "カヨコ特製の手作りお菓子セット。\nクッキー、マドレーヌ、ラムネが入っている。\n食べるとほっこり元気が出る。\n戦闘中もこっそりつまみ食いして回復。",
+            "Kayoko's handmade sweets set.\nContains cookies, madeleines, and ramune candy.\nEating them brings warmth and energy.\nSneak a bite during battle to recover HP.");
+        Add("equip_bio_フクトク",
+            "フクトクが当てた伝説の当たりくじ。\n「この運を赤ちゃんに」と手渡された。\n持っているだけで不思議とラッキーな\n出来事が起こりやすくなる。",
+            "A legendary winning lottery ticket drawn by Fukutoku.\nHanded over with the words 'May this luck protect the baby.'\nJust holding it mysteriously makes lucky events more likely.");
+        Add("equip_bio_ヨネ",
+            "ヨネがいつもポケットに忍ばせている\n高級ティッシュ。驚くほど柔らかく、\n涙も鼻水もやさしく包み込む。\n薄いのに防御力が上がる不思議な逸品。",
+            "Premium tissues that Yone always keeps in her pocket.\nSurprisingly soft, gently wrapping up tears and sniffles.\nA mysterious item that boosts defense despite being thin.");
+        Add("equip_bio_ドクコ",
+            "ドクコが書いた正式な借用書。\n「借りたものは必ず返す」という\n強い意志が宿っており、\n攻撃力が上がるが防御が少し甘くなる。",
+            "An official loan agreement written by Dokuko.\nImbued with the strong will that 'borrowed things must be returned.'\nBoosts attack power but slightly lowers defense.");
+
+        // 装備欄
+        Add("map_equipment_title", "装備", "Equipment");
+        Add("map_equipment_slot_title", "装備スロット ({0}/{1})", "Equip Slots ({0}/{1})");
+        Add("map_equipment_empty", "装備なし", "No equipment");
+        Add("equip_remove", "はずす", "Remove");
+        Add("equip_set", "装備", "Equip");
+        Add("equip_owned", "所持装備", "Owned");
+        Add("equip_equipped_badge", "装備中", "Equipped");
+        Add("equip_unequipped_section", "未装備", "Unequipped");
+
+        // 父親の家トランジション
+        Add("map_father_house_enter",
+            "<size=130%>実家に入った…</size>",
+            "<size=130%>Entered the family home...</size>");
+
+        // 実家（父親NPC）
+        Add("map_father_msg1", "おう、{0}。帰ってきたか。\n…別に心配なんかしてねぇからな。",
+            "Oh, {0}. You're back.\n...It's not like I was worried or anything.");
+        Add("map_father_msg2", "強くなったな。…まあ、俺の子だからな。\n当然だ。",
+            "You've gotten stronger. ...Well, you are my kid after all.\nOf course you have.");
+        Add("map_father_msg3", "いいか、負けても帰ってこい。\n…ここはお前の家だ。いつでもな。",
+            "Listen, even if you lose, come back home.\n...This is your house. Always.");
+
         // Melodias Queen battle
         Add("battle_melodias_charge", "<color=#FF69B4><size=130%>メロディアス女王が 魅惑の力を 溜めている…！</size></color>\n<color=#FFAA00>つぎのターン ひっさつわざが くる！</color>",
             "<color=#FF69B4><size=130%>Queen Melodias is gathering enchanting power...!</size></color>\n<color=#FFAA00>An ultimate attack is coming next turn!</color>");
@@ -866,6 +1019,7 @@ public static class Localization
 
         // Map menu
         Add("map_menu_status", "ステータス", "Status");
+        Add("map_menu_equipment", "そうび", "Equipment");
         Add("map_menu_inventory", "もちもの", "Inventory");
         Add("map_menu_home", "ホーム", "Home");
         Add("map_menu_save", "セーブ", "Save");
@@ -884,6 +1038,7 @@ public static class Localization
         Add("enishi_added", "{0}が縁（えにし）の書に追加された。", "{0} was added to the Book of Bonds.");
         Add("enishi_empty", "まだ誰とも縁を結んでいない。", "No bonds have been formed yet.");
         Add("enishi_section_enemies", "倒した敵", "Defeated Enemies");
+        Add("enishi_section_npcs", "出会った人々", "People Met");
         Add("enishi_section_fathers", "父親", "Fathers");
         Add("enishi_section_mothers", "母親", "Mothers");
         Add("ui_back", "戻る", "Back");
@@ -905,6 +1060,7 @@ public static class Localization
         Add("map_status_mother", "<b>母:</b>", "<b>Mother:</b>");
 
         // Map inventory panel
+        Add("inv_milk", "<color=#FFB6C1>🍼 ミルク: {0}ml</color>", "<color=#FFB6C1>🍼 Milk: {0}ml</color>");
         Add("map_inventory_title", "もちもの", "Inventory");
         Add("map_inventory_empty", "なにも もっていない", "No items");
         Add("map_item_golden_egg", "金のたまご", "Golden Egg");
@@ -950,6 +1106,33 @@ public static class Localization
         Add("profile_save", "保存する", "Save");
         Add("profile_icon_select", "アイコンを選択", "Select Icon");
         Add("profile_icon_saved", "アイコンを保存しました", "Icon saved");
+
+        // ===== Weapon Shop =====
+        Add("shop_title", "ぶきや", "Weapon Shop");
+        Add("shop_milk_label", "ミルク: {0}ml", "Milk: {0}ml");
+        Add("shop_buy", "買う ({0})", "Buy ({0})");
+        Add("shop_purchased", "購入済み", "Purchased");
+        Add("shop_not_enough", "ミルクが足りない…", "Not enough milk...");
+        Add("shop_bought", "{0} を手に入れた！", "Got {0}!");
+        Add("shop_item_garagara", "ガラガラソード", "Rattle Sword");
+        Add("shop_item_yodare", "よだれかけシールド", "Bib Shield");
+        Add("shop_item_oshaburi", "おしゃぶりチャーム", "Pacifier Charm");
+        Add("shop_item_omutsu", "魔法のおむつ", "Magic Diaper");
+        Add("shop_item_honyubin", "黄金のほ乳瓶", "Golden Bottle");
+        Add("shop_item_tiara", "悪魔のティアラ", "Devil Tiara");
+        Add("shop_effect_garagara", "ATK+4", "ATK+4");
+        Add("shop_effect_yodare", "DEF+4", "DEF+4");
+        Add("shop_effect_oshaburi", "毎ターンHP+3回復", "HP+3 per turn");
+        Add("shop_effect_omutsu", "DEF+3 毒耐性", "DEF+3 Poison resist");
+        Add("shop_effect_honyubin", "ATK+3 DEF+3", "ATK+3 DEF+3");
+        Add("shop_effect_tiara", "ATK+6 DEF-2", "ATK+6 DEF-2");
+        Add("shop_interact", "ぶきやだ。入ってみよう。", "A weapon shop. Let's go in.");
+        Add("shop_enter", "ぶきやに 足を踏み入れた…", "Entered the weapon shop...");
+        Add("shop_merchant_greet", "いらっしゃい！何がほしいんだ？", "Welcome! What can I get ya?");
+        Add("battle_milk_gained", "<color=#FFB6C1>ミルク {0}ml をかくとく！</color>",
+            "<color=#FFB6C1>Gained {0}ml milk!</color>");
+        Add("battle_oshaburi_heal", "<color=#00FF00>おしゃぶりチャームで HP+{0}！</color>",
+            "<color=#00FF00>Pacifier Charm heals HP+{0}!</color>");
 
         // ===== Cutscene (after profile creation) =====
         Add("cutscene_line1",
@@ -1066,6 +1249,11 @@ public static class Localization
     public static string GetEnemyBio(string jaName)
     {
         return Get("enemy_bio_" + jaName);
+    }
+
+    public static string GetNpcBio(string jaName)
+    {
+        return Get("npc_bio_" + jaName);
     }
 
     /// <summary>

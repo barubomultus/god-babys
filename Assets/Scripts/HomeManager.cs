@@ -21,6 +21,7 @@ public class HomeManager : MonoBehaviour
         panelSettings = UIHelper.CreatePanelSettings(0f);
         root = UIHelper.SetupUIDocument(gameObject,
             new[] { "UI/CommonStyle", "UI/HomeStyle" }, panelSettings);
+        UIHelper.RegisterTapSE(root);
 
         var dc = DataCarrier.Instance;
         selectedIcon = dc != null ? dc.playerIcon : DataCarrier.GetProfileIcon();
