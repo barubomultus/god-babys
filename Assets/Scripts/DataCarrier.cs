@@ -454,20 +454,31 @@ public class DataCarrier : MonoBehaviour
         return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
     }
 
-    // 合成赤ちゃん画像の読み込み（おくるみ付き）
+    // 合成赤ちゃん画像の読み込み（バトル/マップ用：透過版優先）
     public static Sprite LoadSynthBabySprite()
     {
         if (Instance == null) return null;
         string path = Instance.synthBabyImagePath;
         if (string.IsNullOrEmpty(path)) return null;
 
+        // 透過版があればそちらを使用
+        string transPath = Path.Combine(Application.persistentDataPath, "synth_baby_transparent.png");
+        if (File.Exists(transPath))
+        {
+            byte[] data = File.ReadAllBytes(transPath);
+            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            tex.LoadImage(data);
+            return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+        }
+
+        // フォールバック：背景あり版
         string fullPath = Path.Combine(Application.persistentDataPath, path);
         if (!File.Exists(fullPath)) return null;
 
-        byte[] data = File.ReadAllBytes(fullPath);
-        var tex = new Texture2D(2, 2);
-        tex.LoadImage(data);
-        return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+        byte[] fallbackData = File.ReadAllBytes(fullPath);
+        var fallbackTex = new Texture2D(2, 2);
+        fallbackTex.LoadImage(fallbackData);
+        return Sprite.Create(fallbackTex, new Rect(0, 0, fallbackTex.width, fallbackTex.height), new Vector2(0.5f, 0.5f));
     }
 
     // 次の月齢に必要な経験値

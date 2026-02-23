@@ -14,7 +14,9 @@
     left: 0;
     right: 0;
     height: 80px;
-    background-color: rgba(13, 13, 38, 0.85);
+    background-color: var(--color-main);
+    border-bottom-width: 2px;
+    border-bottom-color: var(--color-sub);
     padding-left: 15px;
     padding-right: 100px;
     padding-top: 5px;
@@ -24,44 +26,48 @@
 
 .map-status-text {
     font-size: 28px;
-    color: white;
+    color: var(--color-black);
     white-space: normal;
 }
 
-/* --- Menu button (top-right circle) --- */
+/* --- Menu button (bottom-right, menu.png) --- */
 .map-menu-btn {
     position: absolute;
     right: 24px;
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background-color: white;
+    bottom: 24px;
+    width: 160px;
+    height: 160px;
+    border-radius: 20px;
+    background-color: transparent;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     border-width: 0;
     padding: 0;
-    transition-property: scale, background-color;
+    padding-bottom: 20px;
+    transition-property: scale;
     transition-duration: 0.08s;
+    -unity-background-scale-mode: scale-to-fit;
 }
 
 .map-menu-btn:active {
-    scale: 0.95 0.95;
-    background-color: rgb(235, 235, 235);
+    scale: 0.93 0.93;
 }
 
-.map-menu-line {
-    width: 30px;
-    height: 3.5px;
-    background-color: rgb(115, 115, 128);
-    margin-top: 4px;
-    margin-bottom: 4px;
+.map-menu-label {
+    font-size: 40px;
+    -unity-font-style: bold;
+    color: white;
+    -unity-text-align: middle-center;
+    -unity-text-outline-width: 6px;
+    -unity-text-outline-color: rgb(0, 0, 0);
+    letter-spacing: 8px;
 }
 
 /* --- Menu card --- */
 .map-menu-card {
     width: 700px;
     border-radius: 32px;
-    background-color: white;
+    background-color: var(--color-main);
     align-items: center;
     padding-top: 40px;
     padding-bottom: 30px;
@@ -70,7 +76,7 @@
 .map-menu-title {
     font-size: 40px;
     -unity-font-style: bold;
-    color: rgb(13, 13, 20);
+    color: var(--color-black);
     -unity-text-align: middle-center;
     margin-bottom: 20px;
 }
@@ -79,22 +85,24 @@
     width: 580px;
     height: 70px;
     border-radius: 35px;
-    background-color: white;
+    background-color: var(--color-white);
     align-items: center;
     justify-content: center;
     margin-bottom: 16px;
-    border-width: 0;
+    border-width: 2px;
+    border-color: var(--color-sub);
     padding: 0;
     font-size: 32px;
     -unity-font-style: bold;
-    color: rgb(38, 38, 46);
+    color: var(--color-black);
     transition-property: scale, background-color;
     transition-duration: 0.08s;
 }
 
 .map-menu-item-btn:active {
     scale: 0.95 0.95;
-    background-color: rgb(235, 235, 235);
+    background-color: var(--color-sub);
+    color: var(--color-white);
 }
 
 /* --- Save panel --- */
@@ -104,18 +112,18 @@
     top: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(255, 255, 255, 0.97);
+    background-color: var(--color-main);
     flex-direction: column;
     align-items: center;
     justify-content: center;
 }
 
 .map-save-title {
-    font-size: 42px;
+    font-size: 44px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: rgb(38, 38, 46);
-    margin-bottom: 40px;
+    color: var(--color-black);
+    margin-bottom: 48px;
 }
 
 .map-save-slot {
@@ -124,59 +132,140 @@
     border-radius: 24px;
     align-items: center;
     justify-content: center;
-    margin: 16px;
-    border-width: 0;
+    margin: 12px;
+    border-width: 2px;
+    border-color: var(--color-sub);
     padding: 16px;
     font-size: 34px;
     -unity-font-style: bold;
-    color: rgb(38, 38, 46);
-    transition-property: scale, background-color;
+    color: var(--color-black);
+    transition-property: scale, background-color, color;
     transition-duration: 0.08s;
 }
 
 .map-save-slot:active {
     scale: 0.95 0.95;
+    background-color: var(--color-sub);
+    color: var(--color-white);
 }
 
 .map-save-slot-exists {
-    background-color: rgb(243, 243, 255);
+    background-color: var(--color-white);
 }
 
 .map-save-slot-empty {
-    background-color: rgb(235, 235, 235);
+    background-color: rgba(255, 255, 255, 0.5);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: rgba(0, 0, 0, 0.4);
 }
 
-/* --- Status detail panel (dark) --- */
+.map-save-close-btn {
+    width: 400px;
+    height: 80px;
+    border-radius: 40px;
+    background-color: var(--color-white);
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0.12);
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    margin-top: 48px;
+    padding: 0;
+    font-size: 32px;
+    -unity-font-style: bold;
+    color: var(--color-black);
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.map-save-close-btn:active {
+    scale: 0.95 0.95;
+    background-color: var(--color-sub);
+    color: var(--color-white);
+}
+
+.map-save-confirm-btn {
+    width: 500px;
+    height: 90px;
+    border-radius: 45px;
+    background-color: var(--color-sub);
+    border-width: 0;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    margin-top: 40px;
+    padding: 0;
+    font-size: 34px;
+    -unity-font-style: bold;
+    color: var(--color-white);
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.map-save-confirm-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgba(255, 183, 197, 0.8);
+}
+
+.map-save-cancel-btn {
+    width: 400px;
+    height: 80px;
+    border-radius: 40px;
+    background-color: var(--color-white);
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0.12);
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+    padding: 0;
+    font-size: 30px;
+    -unity-font-style: bold;
+    color: var(--color-black);
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.map-save-cancel-btn:active {
+    scale: 0.95 0.95;
+    background-color: var(--color-main);
+}
+
+/* --- Status detail panel --- */
 .map-detail-panel {
     width: 400px;
-    background-color: rgba(20, 20, 46, 0.95);
-    border-radius: 12px;
-    padding: 25px 20px 20px 20px;
+    background-color: var(--color-main);
+    border-radius: 24px;
+    border-width: 2px;
+    border-color: var(--color-sub);
+    padding: 30px 24px 24px 24px;
     align-items: center;
 }
 
 .map-detail-title {
-    font-size: 28px;
+    font-size: 32px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: rgb(230, 230, 128);
-    margin-bottom: 15px;
+    color: var(--color-black);
+    margin-bottom: 16px;
 }
 
 .map-detail-content {
     font-size: 22px;
-    color: white;
+    color: var(--color-black);
     white-space: normal;
     -unity-text-align: upper-left;
     width: 360px;
 }
 
-/* --- Inventory panel (dark) --- */
+/* --- Inventory panel --- */
 .map-inv-panel {
     width: 680px;
     max-height: 1400px;
-    background-color: rgba(255, 255, 255, 0.97);
-    border-radius: 16px;
+    background-color: var(--color-main);
+    border-radius: 24px;
+    border-width: 2px;
+    border-color: var(--color-sub);
     padding: 30px 28px 24px 28px;
     align-items: stretch;
 }
@@ -184,15 +273,17 @@
 .map-equip-panel {
     width: 620px;
     max-height: 900px;
-    background-color: rgba(255, 255, 255, 0.97);
-    border-radius: 16px;
+    background-color: var(--color-main);
+    border-radius: 24px;
+    border-width: 2px;
+    border-color: var(--color-sub);
     padding: 30px 24px 24px 24px;
     align-items: center;
 }
 
 .map-equip-title {
     font-size: 32px;
-    color: rgb(60, 60, 60);
+    color: var(--color-black);
     -unity-text-align: middle-center;
     -unity-font-style: bold;
     margin-bottom: 16px;
@@ -200,24 +291,24 @@
 
 .map-equip-item-name {
     font-size: 26px;
-    color: rgb(40, 40, 40);
+    color: var(--color-black);
     -unity-font-style: bold;
     -unity-text-align: middle-left;
 }
 
 .map-equip-item-effect {
     font-size: 18px;
-    color: rgb(100, 140, 200);
+    color: var(--color-sub);
     -unity-text-align: middle-left;
     margin-top: 2px;
 }
 
 .map-equip-bio-panel {
     width: 580px;
-    background-color: rgba(245, 245, 250, 1);
-    border-radius: 12px;
-    border-width: 1px;
-    border-color: rgba(180, 180, 200, 0.6);
+    background-color: var(--color-white);
+    border-radius: 16px;
+    border-width: 2px;
+    border-color: var(--color-sub);
     padding: 20px;
     margin-top: 12px;
     align-items: center;
@@ -225,7 +316,7 @@
 
 .map-equip-bio-text {
     font-size: 20px;
-    color: rgb(50, 50, 60);
+    color: var(--color-black);
     -unity-text-align: middle-left;
     white-space: normal;
 }
@@ -233,14 +324,14 @@
 .map-inv-item {
     font-size: 26px;
     -unity-font-style: bold;
-    color: rgb(40, 40, 46);
+    color: var(--color-black);
     -unity-text-align: middle-left;
     margin-bottom: 8px;
 }
 
 .map-inv-empty {
     font-size: 22px;
-    color: rgb(153, 153, 153);
+    color: rgba(0, 0, 0, 0.4);
     -unity-text-align: middle-center;
 }
 
@@ -287,7 +378,7 @@
     font-size: 32px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: rgb(38, 38, 46);
+    color: var(--color-black);
     white-space: normal;
     padding-left: 30px;
     padding-right: 30px;

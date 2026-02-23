@@ -802,6 +802,8 @@ public static class Localization
         Add("battle_exp_remaining", "つぎのせいちょうまで あと <color=#FFFF00>{0}</color> けいけんち\n({1}/{2})",
             "Next growth in <color=#FFFF00>{0}</color> EXP\n({1}/{2})");
         Add("battle_months", "ヶ月", " months");
+        Add("battle_result_exp", "けいけんち", "EXP");
+        Add("battle_result_milk", "ミルク", "Milk");
 
         // Player poison (devil village enemies)
         Add("battle_player_poisoned", "<color=#AA00FF>どくに おかされた！ からだが しびれる...</color>",

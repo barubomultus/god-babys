@@ -163,7 +163,10 @@ public class BattleManager : MonoBehaviour
     UIE.Label battleLogLabel;
     UIE.VisualElement vsTextEl;
     UIE.VisualElement actionPanelEl;
-    UIE.Button attackBtn, defendBtn, specialBtn, motherBtn;
+    UIE.VisualElement commandRow, submenuEl, bottomBar;
+    UIE.Button autoBattleBtn;
+    bool isAutoBattle;
+    UIE.VisualElement interactionBlocker;
     UIE.VisualElement flashOverlay;
     UIE.VisualElement battleLogEl;
 
@@ -560,34 +563,65 @@ public class BattleManager : MonoBehaviour
         battleRoot.Add(playerArea);
         playerPanel = BuildCharPanel(playerArea, true);
 
-        // アクションエリア
+        // 上部バー（にげる左端 / オートバトル右端）— アクションエリアの上
+        bottomBar = new UIE.VisualElement();
+        bottomBar.AddToClassList("battle-top-bar");
+        battleRoot.Add(bottomBar);
+
+        var runBtn = new UIE.Button();
+        runBtn.AddToClassList("battle-run-pill");
+        UIHelper.ApplyFont(runBtn);
+        runBtn.text = "にげる";
+        runBtn.clicked += OnRun;
+        bottomBar.Add(runBtn);
+
+        autoBattleBtn = new UIE.Button();
+        autoBattleBtn.AddToClassList("battle-auto-pill");
+        autoBattleBtn.AddToClassList("battle-auto-off");
+        UIHelper.ApplyFont(autoBattleBtn);
+        autoBattleBtn.text = "AUTO \u25B6\u25B6";
+        autoBattleBtn.clicked += ToggleAutoBattle;
+        bottomBar.Add(autoBattleBtn);
+
+        // アクションエリア（画面下端に固定）
         actionPanelEl = new UIE.VisualElement();
         actionPanelEl.AddToClassList("battle-action-area");
-        actionPanelEl.style.paddingBottom = safeBottom + 40;
+        actionPanelEl.style.paddingBottom = safeBottom + 16;
         battleRoot.Add(actionPanelEl);
 
-        // 上段ボタン行（攻撃, 母スキル）
-        var topRow = new UIE.VisualElement();
-        topRow.AddToClassList("battle-action-row");
-        topRow.style.marginBottom = 32;
-        actionPanelEl.Add(topRow);
+        // コマンド行（4ボタン横並び）
+        commandRow = new UIE.VisualElement();
+        commandRow.AddToClassList("battle-cmd-row");
+        actionPanelEl.Add(commandRow);
 
-        attackBtn = BuildActionButton(topRow, Localization.Get("battle_normal_attack"),
-            normalAttackName, normalAttackDesc, OnAttack);
-        motherBtn = BuildActionButton(topRow, Localization.Get("battle_special_attack"),
-            motherAttackName, motherAttackDesc, OnMotherAttack);
+        BuildCmdButton(commandRow, "こうげき", OnAttack);
+        BuildCmdButton(commandRow, "スキル", ShowSkillSubmenu);
+        BuildCmdButton(commandRow, "どうぐ", ShowItemSubmenu);
+        BuildCmdButton(commandRow, "ぼうぎょ", OnDefend);
 
-        // 下段ボタン行（防御, 必殺技）
-        var bottomRow = new UIE.VisualElement();
-        bottomRow.AddToClassList("battle-action-row");
-        actionPanelEl.Add(bottomRow);
+        // サブメニュー（初期非表示）
+        submenuEl = new UIE.VisualElement();
+        submenuEl.AddToClassList("battle-submenu");
+        submenuEl.style.display = UIE.DisplayStyle.None;
+        actionPanelEl.Add(submenuEl);
 
-        defendBtn = BuildActionButton(bottomRow, Localization.Get("battle_defend"),
-            Localization.Get("battle_defend_name"), defendDesc, OnDefend);
-        specialBtn = BuildActionButton(bottomRow, Localization.Get("battle_special_skill"),
-            specialAttackName, specialAttackDesc, OnSpecial);
+        // top-bar の bottom を actionPanelEl の高さに合わせる
+        actionPanelEl.RegisterCallback<UIE.GeometryChangedEvent>(evt =>
+        {
+            bottomBar.style.bottom = evt.newRect.height;
+        });
+
+        // インタラクションブロッカー
+        interactionBlocker = new UIE.VisualElement();
+        interactionBlocker.style.position = UIE.Position.Absolute;
+        interactionBlocker.style.left = 0;
+        interactionBlocker.style.top = 0;
+        interactionBlocker.style.right = 0;
+        interactionBlocker.style.bottom = 0;
+        interactionBlocker.pickingMode = UIE.PickingMode.Position;
 
         actionPanelEl.style.display = UIE.DisplayStyle.None;
+        bottomBar.style.display = UIE.DisplayStyle.None;
 
         // 初期表示
         UpdatePlayerDisplay();
@@ -598,11 +632,13 @@ public class BattleManager : MonoBehaviour
     {
         var panel = new UIE.VisualElement();
         panel.AddToClassList("battle-char-panel");
+        if (isPlayer) panel.AddToClassList("battle-char-card");
         area.Add(panel);
 
         // 情報カラム（名前+年齢, HPバー, HPテキスト）
         var infoCol = new UIE.VisualElement();
         infoCol.AddToClassList("battle-info-col");
+        if (!isPlayer) infoCol.AddToClassList("battle-info-col-enemy");
 
         var nameAgeRow = new UIE.VisualElement();
         nameAgeRow.AddToClassList("battle-name-age-row");
@@ -635,6 +671,7 @@ public class BattleManager : MonoBehaviour
         // 顔マスク
         var faceMask = new UIE.VisualElement();
         faceMask.AddToClassList("battle-face-mask");
+        if (!isPlayer) faceMask.AddToClassList("battle-face-mask-enemy");
         if (isPlayer) playerFaceMask = faceMask; else enemyFaceMask = faceMask;
 
         var faceEl = new UIE.VisualElement();
@@ -645,17 +682,9 @@ public class BattleManager : MonoBehaviour
         faceMask.Add(faceEl);
         if (isPlayer) playerFaceEl = faceEl; else enemyFaceEl = faceEl;
 
-        // 敵: [info][画像]  プレイヤー: [画像][info]
-        if (isPlayer)
-        {
-            panel.Add(faceMask);
-            panel.Add(infoCol);
-        }
-        else
-        {
-            panel.Add(infoCol);
-            panel.Add(faceMask);
-        }
+        // 画像(上) → 情報(下)
+        panel.Add(faceMask);
+        panel.Add(infoCol);
 
         return panel;
     }
@@ -694,6 +723,113 @@ public class BattleManager : MonoBehaviour
         btn.Add(infoBtn);
 
         return btn;
+    }
+
+    void BuildCmdButton(UIE.VisualElement parent, string label, System.Action onClick)
+    {
+        var btn = new UIE.Button();
+        btn.AddToClassList("battle-cmd-btn");
+        UIHelper.ApplyFont(btn);
+        btn.text = label;
+        btn.clicked += () => onClick();
+        parent.Add(btn);
+    }
+
+    void ShowSkillSubmenu()
+    {
+        if (!waitingForAction) return;
+        commandRow.style.display = UIE.DisplayStyle.None;
+        submenuEl.Clear();
+        submenuEl.style.display = UIE.DisplayStyle.Flex;
+
+        // 通常攻撃
+        BuildSubmenuItem(submenuEl, normalAttackName, normalAttackDesc, OnAttack);
+        // 母スキル
+        BuildSubmenuItem(submenuEl, motherAttackName, motherAttackDesc, OnMotherAttack);
+        // 必殺技
+        BuildSubmenuItem(submenuEl, specialAttackName, specialAttackDesc, OnSpecial);
+        // もどる
+        var backBtn = new UIE.Button();
+        backBtn.AddToClassList("battle-submenu-item");
+        backBtn.AddToClassList("battle-submenu-back");
+        UIHelper.ApplyFont(backBtn);
+        backBtn.text = "もどる";
+        backBtn.clicked += CloseSubmenu;
+        submenuEl.Add(backBtn);
+    }
+
+    void ShowItemSubmenu()
+    {
+        if (!waitingForAction) return;
+        commandRow.style.display = UIE.DisplayStyle.None;
+        submenuEl.Clear();
+        submenuEl.style.display = UIE.DisplayStyle.Flex;
+
+        var emptyLabel = UIHelper.CreateLabel("アイテムがない", "battle-submenu-empty");
+        submenuEl.Add(emptyLabel);
+
+        var backBtn = new UIE.Button();
+        backBtn.AddToClassList("battle-submenu-item");
+        backBtn.AddToClassList("battle-submenu-back");
+        UIHelper.ApplyFont(backBtn);
+        backBtn.text = "もどる";
+        backBtn.clicked += CloseSubmenu;
+        submenuEl.Add(backBtn);
+    }
+
+    void BuildSubmenuItem(UIE.VisualElement parent, string skillName, string desc, System.Action onClick)
+    {
+        var btn = new UIE.Button();
+        btn.AddToClassList("battle-submenu-item");
+        UIHelper.ApplyFont(btn);
+        parent.Add(btn);
+
+        var nameLabel = UIHelper.CreateLabel(skillName, "battle-submenu-item-name");
+        btn.Add(nameLabel);
+
+        var descLabel = UIHelper.CreateLabel(desc, "battle-submenu-item-desc");
+        btn.Add(descLabel);
+
+        btn.clicked += () => { CloseSubmenu(); onClick(); };
+    }
+
+    void CloseSubmenu()
+    {
+        submenuEl.style.display = UIE.DisplayStyle.None;
+        submenuEl.Clear();
+        commandRow.style.display = UIE.DisplayStyle.Flex;
+    }
+
+    void ToggleAutoBattle()
+    {
+        isAutoBattle = !isAutoBattle;
+        if (isAutoBattle)
+        {
+            autoBattleBtn.RemoveFromClassList("battle-auto-off");
+            autoBattleBtn.AddToClassList("battle-auto-on");
+            autoBattleBtn.text = "AUTO：ON";
+            // 現在ターン中なら即座に攻撃
+            if (waitingForAction) OnAttack();
+        }
+        else
+        {
+            autoBattleBtn.RemoveFromClassList("battle-auto-on");
+            autoBattleBtn.AddToClassList("battle-auto-off");
+            autoBattleBtn.text = "AUTO \u25B6\u25B6";
+        }
+    }
+
+    void SetInteractionEnabled(bool enabled)
+    {
+        if (enabled)
+        {
+            interactionBlocker.RemoveFromHierarchy();
+        }
+        else
+        {
+            if (interactionBlocker.parent == null)
+                overlayRoot.Add(interactionBlocker);
+        }
     }
 
     void ShowSkillInfo(string category, string skillName, string description)
@@ -1620,43 +1756,54 @@ public class BattleManager : MonoBehaviour
     IEnumerator BattleStart()
     {
         isBattleActive = true;
-        battleLogLabel.text = Localization.Get("battle_enemy_appeared", Localization.GetEnemy(enemyName));
-        yield return new WaitForSeconds(3.0f);
-
-        if (isMale)
-            battleLogLabel.text = Localization.Get("battle_boy_power", playerAtk);
-        else
-            battleLogLabel.text = Localization.Get("battle_girl_power", playerEvasion);
-        yield return new WaitForSeconds(3.0f);
-
-        // バトルスタート画像をログエリア内に表示
-        battleLogLabel.text = "";
-        var startSpr = Resources.Load<Sprite>("UI/battle-start");
-        UIE.VisualElement startImg = null;
-        if (startSpr != null)
-        {
-            startImg = new UIE.VisualElement();
-            startImg.AddToClassList("battle-log-image");
-            startImg.style.backgroundImage = new UIE.StyleBackground(startSpr);
-            battleLogEl.Add(startImg);
-        }
         if (vsTextEl != null) vsTextEl.style.display = UIE.DisplayStyle.None;
-        yield return new WaitForSeconds(2.0f);
-        if (startImg != null) startImg.RemoveFromHierarchy();
 
+        // --- エンカウント演出 ---
+        var encounterOverlay = new UIE.VisualElement();
+        encounterOverlay.AddToClassList("battle-encounter-overlay");
+
+        // 敵画像
+        var encounterImg = new UIE.VisualElement();
+        encounterImg.AddToClassList("battle-encounter-img");
+        Sprite enemySprite = loadedEnemySprite ?? firstEnemySprite;
+        if (enemySprite != null)
+        {
+            encounterImg.style.backgroundImage = new UIE.StyleBackground(enemySprite);
+            encounterImg.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+        }
+        else if (enemyBgColor != Color.clear)
+        {
+            encounterImg.style.backgroundColor = enemyBgColor;
+        }
+        encounterOverlay.Add(encounterImg);
+
+        // テキスト
+        var encounterText = new UIE.Label();
+        encounterText.AddToClassList("battle-encounter-text");
+        encounterText.text = Localization.GetEnemy(enemyName) + " があらわれた！";
+        encounterOverlay.Add(encounterText);
+
+        overlayRoot.Add(encounterOverlay);
+
+        // 1フレーム待ってからアニメーション開始
+        yield return null;
+        encounterImg.AddToClassList("battle-encounter-img-visible");
+        encounterText.AddToClassList("battle-encounter-text-visible");
+
+        yield return new WaitForSeconds(2.2f);
+
+        // フェードアウト
+        encounterOverlay.AddToClassList("battle-encounter-overlay-hide");
+        yield return new WaitForSeconds(0.5f);
+        encounterOverlay.RemoveFromHierarchy();
+
+        // バトル開始
+        battleLogLabel.text = "";
         int playerSpeed = DataCarrier.Instance != null ? DataCarrier.Instance.babyAthletic : 50;
         if (playerSpeed >= enemySpeed)
-        {
-            battleLogLabel.text = Localization.Get("battle_player_first");
-            yield return new WaitForSeconds(1.5f);
             StartCoroutine(PlayerTurn());
-        }
         else
-        {
-            battleLogLabel.text = Localization.Get("battle_enemy_first", Localization.GetEnemy(enemyName));
-            yield return new WaitForSeconds(1.5f);
             StartCoroutine(EnemyTurn());
-        }
     }
 
     IEnumerator PlayerTurn()
@@ -1709,13 +1856,27 @@ public class BattleManager : MonoBehaviour
         }
 
         battleLogLabel.text = Localization.Get("battle_your_turn");
+        SetInteractionEnabled(true);
         actionPanelEl.style.display = UIE.DisplayStyle.Flex;
+        bottomBar.style.display = UIE.DisplayStyle.Flex;
+        // サブメニューが開いていたら閉じてコマンド行を復帰
+        if (submenuEl.style.display == UIE.DisplayStyle.Flex)
+            CloseSubmenu();
         waitingForAction = true;
+
+        // オートバトル: 自動で攻撃
+        if (isAutoBattle)
+        {
+            yield return new WaitForSeconds(0.3f);
+            OnAttack();
+        }
 
         while (waitingForAction)
             yield return null;
 
         actionPanelEl.style.display = UIE.DisplayStyle.None;
+        bottomBar.style.display = UIE.DisplayStyle.None;
+        SetInteractionEnabled(false);
     }
 
     IEnumerator EnemyTurn()
@@ -2093,16 +2254,20 @@ public class BattleManager : MonoBehaviour
         if (isBoss || cannotRun)
         {
             actionPanelEl.style.display = UIE.DisplayStyle.None;
+            bottomBar.style.display = UIE.DisplayStyle.None;
             battleLogLabel.text = cannotRun && !isBoss
                 ? Localization.Get("battle_run_fixed")
                 : Localization.Get("battle_run_boss");
             yield return new WaitForSeconds(1.5f);
+            SetInteractionEnabled(true);
             actionPanelEl.style.display = UIE.DisplayStyle.Flex;
+            bottomBar.style.display = UIE.DisplayStyle.Flex;
             waitingForAction = true;
             yield break;
         }
 
         actionPanelEl.style.display = UIE.DisplayStyle.None;
+        bottomBar.style.display = UIE.DisplayStyle.None;
 
         if (Random.Range(0f, 1f) < 0.5f)
         {
@@ -2292,18 +2457,8 @@ public class BattleManager : MonoBehaviour
         yield return StartCoroutine(ShatterCardEffect(enemyPanel));
         yield return new WaitForSeconds(0.3f);
 
-        battleLogLabel.text = Localization.Get("battle_enemy_defeated", Localization.GetEnemy(enemyName));
-        yield return new WaitForSeconds(1.5f);
-
         if (DataCarrier.Instance != null)
-        {
-            bool isFirstDefeat = DataCarrier.Instance.AddDefeatedEnemy(enemyName);
-            if (isFirstDefeat)
-            {
-                battleLogLabel.text = Localization.Get("enishi_added", Localization.GetEnemy(enemyName));
-                yield return new WaitForSeconds(2f);
-            }
-        }
+            DataCarrier.Instance.AddDefeatedEnemy(enemyName);
 
         yield return StartCoroutine(GainExpSequence());
 
@@ -2340,20 +2495,110 @@ public class BattleManager : MonoBehaviour
         DataCarrier.Instance.babyExp += expGained;
         DataCarrier.Instance.defeatedEnemies++;
 
+        int milkGained = Mathf.Max(1, expGained / 2);
+        DataCarrier.Instance.milk += milkGained;
+
         int currentAge = DataCarrier.Instance.babyAge;
         int needed = DataCarrier.ExpForNextAge(currentAge);
         int currentExp = DataCarrier.Instance.babyExp;
+        bool willLevelUp = currentExp >= needed;
 
-        battleLogLabel.text = Localization.Get("battle_exp_gained", expGained);
-        yield return new WaitForSeconds(1.2f);
+        // === リザルト画面（1枚にまとめる） ===
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("battle-result-overlay");
 
-        // ミルク報酬（EXPの約50%）
-        int milkGained = Mathf.Max(1, expGained / 2);
-        DataCarrier.Instance.milk += milkGained;
-        battleLogLabel.text = Localization.Get("battle_milk_gained", milkGained);
-        yield return new WaitForSeconds(1.0f);
+        var title = UIHelper.CreateLabel(Localization.Get("battle_enemy_defeated", Localization.GetEnemy(enemyName)), "battle-result-title");
+        overlay.Add(title);
 
-        if (currentExp >= needed)
+        // 報酬カード
+        var card = new UIE.VisualElement();
+        card.AddToClassList("battle-result-card");
+        overlay.Add(card);
+
+        // EXP行
+        var expRow = new UIE.VisualElement();
+        expRow.AddToClassList("battle-result-row");
+        var expLabel = UIHelper.CreateLabel(Localization.Get("battle_result_exp"), "battle-result-row-label");
+        var expValue = UIHelper.CreateLabel($"+{expGained}", "battle-result-row-value");
+        expValue.AddToClassList("battle-result-value-accent");
+        expRow.Add(expLabel);
+        expRow.Add(expValue);
+        card.Add(expRow);
+
+        // ミルク行
+        var milkRow = new UIE.VisualElement();
+        milkRow.AddToClassList("battle-result-row");
+        var milkLabel = UIHelper.CreateLabel(Localization.Get("battle_result_milk"), "battle-result-row-label");
+        var milkValue = UIHelper.CreateLabel($"+{milkGained}", "battle-result-row-value");
+        milkValue.AddToClassList("battle-result-value-sub");
+        milkRow.Add(milkLabel);
+        milkRow.Add(milkValue);
+        card.Add(milkRow);
+
+        // EXPバー
+        if (!willLevelUp)
+        {
+            var barLabel = UIHelper.CreateLabel($"EXP  {currentExp} / {needed}", "battle-result-bar-label");
+            card.Add(barLabel);
+
+            var barBg = new UIE.VisualElement();
+            barBg.AddToClassList("battle-result-bar-bg");
+            var barFill = new UIE.VisualElement();
+            barFill.AddToClassList("battle-result-bar-fill");
+            barFill.style.width = new UIE.Length(0, UIE.LengthUnit.Percent);
+            barBg.Add(barFill);
+            card.Add(barBg);
+
+            overlayRoot.Add(overlay);
+
+            // バーアニメーション
+            yield return null;
+            float targetRatio = Mathf.Clamp01((float)currentExp / needed);
+            float animDuration = 0.8f;
+            float animElapsed = 0f;
+            while (animElapsed < animDuration)
+            {
+                animElapsed += Time.deltaTime;
+                float t = Mathf.SmoothStep(0f, 1f, animElapsed / animDuration);
+                barFill.style.width = new UIE.Length(t * targetRatio * 100, UIE.LengthUnit.Percent);
+                yield return null;
+            }
+            barFill.style.width = new UIE.Length(targetRatio * 100, UIE.LengthUnit.Percent);
+        }
+        else
+        {
+            var lvUpLabel = UIHelper.CreateLabel(Localization.Get("battle_age_up", currentAge + 1), "battle-result-levelup");
+            card.Add(lvUpLabel);
+            overlayRoot.Add(overlay);
+        }
+
+        // OKボタン
+        bool dismissed = false;
+        var okBtn = UIHelper.CreatePillButton("OK", "battle-growth-ok-btn");
+        okBtn.style.marginTop = 40;
+        okBtn.style.opacity = 0f;
+        okBtn.clicked += () => dismissed = true;
+        overlay.Add(okBtn);
+
+        yield return new WaitForSeconds(0.5f);
+        float okElapsed = 0f;
+        while (okElapsed < 0.2f)
+        {
+            okElapsed += Time.deltaTime;
+            okBtn.style.opacity = Mathf.Clamp01(okElapsed / 0.2f);
+            yield return null;
+        }
+        okBtn.style.opacity = 1f;
+
+        if (isAutoBattle)
+            yield return new WaitForSeconds(1.0f);
+        else
+            while (!dismissed) yield return null;
+
+        overlay.RemoveFromHierarchy();
+
+        // === レベルアップ → せいちょう画面 ===
+        if (willLevelUp)
         {
             int oldAtk = DataCarrier.Instance.babyAtk;
             int oldDef = DataCarrier.Instance.babyDef;
@@ -2363,10 +2608,6 @@ public class BattleManager : MonoBehaviour
 
             DataCarrier.Instance.babyExp -= needed;
             DataCarrier.Instance.AgeUp();
-            int newAge = DataCarrier.Instance.babyAge;
-
-            battleLogLabel.text = Localization.Get("battle_age_up", newAge);
-            yield return new WaitForSeconds(1.5f);
 
             yield return StartCoroutine(ShowStatGrowth(
                 oldAtk, oldDef, oldHp, oldIntelligence, oldAthletic,
@@ -2396,35 +2637,6 @@ public class BattleManager : MonoBehaviour
 
             UpdatePlayerDisplay();
         }
-        else
-        {
-            int remaining = needed - currentExp;
-            battleLogLabel.text = Localization.Get("battle_exp_remaining", remaining, currentExp, needed);
-
-            // EXPバーをbattleLogの下に追加
-            var barBg = new UIE.VisualElement();
-            barBg.AddToClassList("battle-exp-bar-bg");
-            var barFill = new UIE.VisualElement();
-            barFill.AddToClassList("battle-exp-bar-fill");
-            barFill.style.width = new UIE.Length(0, UIE.LengthUnit.Percent);
-            barBg.Add(barFill);
-            battleLogEl.Add(barBg);
-
-            float targetRatio = Mathf.Clamp01((float)currentExp / needed);
-            float animDuration = 0.8f;
-            float animElapsed = 0f;
-            while (animElapsed < animDuration)
-            {
-                animElapsed += Time.deltaTime;
-                float t = Mathf.SmoothStep(0f, 1f, animElapsed / animDuration);
-                barFill.style.width = new UIE.Length(t * targetRatio * 100, UIE.LengthUnit.Percent);
-                yield return null;
-            }
-            barFill.style.width = new UIE.Length(targetRatio * 100, UIE.LengthUnit.Percent);
-
-            yield return new WaitForSeconds(1.2f);
-            barBg.RemoveFromHierarchy();
-        }
     }
 
     IEnumerator ShowStatGrowth(int oldAtk, int oldDef, int oldHp, int oldIntelligence, int oldAthletic,
@@ -2445,12 +2657,14 @@ public class BattleManager : MonoBehaviour
         var subtitle = UIHelper.CreateLabel($"{babyName}    {Localization.GetAge(newAge)}", "battle-growth-subtitle");
         overlay.Add(subtitle);
 
-        // ステータス行定義
+        // ステータス行定義 (テーマカラー: sub=#FFB7C5, accent=#AAF0D1)
+        var colorSub = new Color(1f, 0.718f, 0.773f);    // #FFB7C5
+        var colorAccent = new Color(0.667f, 0.941f, 0.82f); // #AAF0D1
         var statDefs = new[] {
-            new { label = Localization.Get("battle_stat_hp_label"), oldV = oldHp, newV = newHp, color = new Color(0.88f, 0.27f, 0.27f) },
-            new { label = Localization.Get("battle_stat_atk"), oldV = oldAtk, newV = newAtk, color = new Color(0.87f, 0.47f, 0.14f) },
-            new { label = Localization.Get("battle_stat_def"), oldV = oldDef, newV = newDef, color = new Color(0.20f, 0.40f, 0.80f) },
-            new { label = Localization.Get("battle_stat_athletic"), oldV = oldAthletic, newV = newAthletic, color = new Color(0.13f, 0.67f, 0.33f) },
+            new { label = Localization.Get("battle_stat_hp_label"), oldV = oldHp, newV = newHp, color = colorSub },
+            new { label = Localization.Get("battle_stat_atk"), oldV = oldAtk, newV = newAtk, color = colorSub },
+            new { label = Localization.Get("battle_stat_def"), oldV = oldDef, newV = newDef, color = colorAccent },
+            new { label = Localization.Get("battle_stat_athletic"), oldV = oldAthletic, newV = newAthletic, color = colorAccent },
         };
 
         var rows = new UIE.VisualElement[statDefs.Length];
@@ -2503,7 +2717,7 @@ public class BattleManager : MonoBehaviour
             overlay.Add(row);
         }
 
-        root.Add(overlay);
+        overlayRoot.Add(overlay);
 
         // Animate rows in
         for (int i = 0; i < rows.Length; i++)
@@ -2514,7 +2728,7 @@ public class BattleManager : MonoBehaviour
 
         // OKボタン
         bool dismissed = false;
-        var okBtn = UIHelper.CreatePillButton("OK", "pill-button");
+        var okBtn = UIHelper.CreatePillButton("OK", "battle-growth-ok-btn");
         okBtn.style.marginTop = 40;
         okBtn.clicked += () => dismissed = true;
         overlay.Add(okBtn);
@@ -2530,8 +2744,10 @@ public class BattleManager : MonoBehaviour
         }
         okBtn.style.opacity = 1f;
 
-        while (!dismissed)
-            yield return null;
+        if (isAutoBattle)
+            yield return new WaitForSeconds(1.0f);
+        else
+            while (!dismissed) yield return null;
 
         overlay.RemoveFromHierarchy();
 
@@ -2790,35 +3006,6 @@ public class BattleManager : MonoBehaviour
 
     IEnumerator VictoryToMap()
     {
-        // 勝利パネル (overlayRoot に追加)
-        var panel = new UIE.VisualElement();
-        panel.AddToClassList("battle-victory-panel");
-
-        // 勝利画像を中央に表示
-        var victorySpr = Resources.Load<Sprite>("UI/victory");
-        if (victorySpr != null)
-        {
-            var victoryImg = new UIE.VisualElement();
-            victoryImg.style.width = 400;
-            victoryImg.style.height = 200;
-            victoryImg.style.marginBottom = 30;
-            victoryImg.style.backgroundImage = new UIE.StyleBackground(victorySpr);
-            victoryImg.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
-            panel.Add(victoryImg);
-        }
-
-        string babyName = DataCarrier.Instance != null ? DataCarrier.Instance.babyName : "ベイビー";
-        int currentAge = DataCarrier.Instance != null ? DataCarrier.Instance.babyAge : 0;
-
-        var text = UIHelper.CreateLabel(Localization.Get("battle_victory_return", babyName, currentAge), "battle-victory-text");
-        panel.Add(text);
-        overlayRoot.Add(panel);
-
-        yield return new WaitForSeconds(1.5f);
-
-        text.text = Localization.Get("battle_returning");
-        yield return new WaitForSeconds(1.0f);
-
         if (DataCarrier.Instance != null)
         {
             DataCarrier.Instance.cameFromMap = false;
@@ -2826,6 +3013,7 @@ public class BattleManager : MonoBehaviour
         }
 
         SceneManager.LoadScene("MapScene");
+        yield break;
     }
 
     // ===== メニューバー =====

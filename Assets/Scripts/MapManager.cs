@@ -2708,21 +2708,23 @@ public class MapManager : MonoBehaviour
     void CreateMenuButton()
     {
         if (overlayRoot == null) return;
-        var (safeTop, _, _, _) = UIHelper.GetSafeMargins();
 
         var btn = new UIE.Button();
         btn.AddToClassList("map-menu-btn");
         btn.focusable = false;
-        btn.style.top = 24 + safeTop;
+
+        // menu.png を背景に表示
+        var menuSpr = Resources.Load<Sprite>("UI/menu");
+        if (menuSpr != null)
+            btn.style.backgroundImage = new UIE.StyleBackground(menuSpr);
+        btn.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+
+        // 「メニュー」ラベル
+        var menuLabel = UIHelper.CreateLabel("メニュー", "map-menu-label");
+        UIHelper.ApplyFontBold(menuLabel);
+        btn.Add(menuLabel);
+
         btn.clicked += ToggleMenu;
-
-        for (int i = 0; i < 3; i++)
-        {
-            var line = new UIE.VisualElement();
-            line.AddToClassList("map-menu-line");
-            btn.Add(line);
-        }
-
         overlayRoot.Add(btn);
     }
 
@@ -3696,8 +3698,7 @@ public class MapManager : MonoBehaviour
         }
 
         var closeBtn = new UIE.Button();
-        closeBtn.AddToClassList("pill-button");
-        closeBtn.style.marginTop = 64;
+        closeBtn.AddToClassList("map-save-close-btn");
         UIHelper.ApplyFont(closeBtn);
         closeBtn.text = Localization.Get("ui_close");
         closeBtn.clicked += () => CloseSavePanel();
@@ -3730,16 +3731,14 @@ public class MapManager : MonoBehaviour
         saveOverlayEl.Add(msg);
 
         var yesBtn = new UIE.Button();
-        yesBtn.AddToClassList("pill-button");
-        yesBtn.style.marginTop = 64;
+        yesBtn.AddToClassList("map-save-confirm-btn");
         yesBtn.text = Localization.Get("map_save_overwrite");
         UIHelper.ApplyFont(yesBtn);
         yesBtn.clicked += () => DoSaveToSlot(slot);
         saveOverlayEl.Add(yesBtn);
 
         var cancelBtn = new UIE.Button();
-        cancelBtn.AddToClassList("pill-button");
-        cancelBtn.style.marginTop = 64;
+        cancelBtn.AddToClassList("map-save-cancel-btn");
         cancelBtn.text = Localization.Get("map_save_cancel");
         UIHelper.ApplyFont(cancelBtn);
         cancelBtn.clicked += () => { CloseSavePanel(); OpenSavePanel(); };
@@ -4927,16 +4926,13 @@ public class MapManager : MonoBehaviour
 
         statusDetailEl = new UIE.VisualElement();
         statusDetailEl.AddToClassList("map-detail-panel");
-        statusDetailEl.style.backgroundColor = new Color(1f, 1f, 1f, 0.97f);
         statusDetailEl.style.width = 750;
         statusDetailEl.style.paddingTop = 36;
         statusDetailEl.style.paddingBottom = 30;
         statusDetailEl.style.alignItems = UIE.Align.Center;
 
         var title = UIHelper.CreateLabel(Localization.Get("map_status_title"), "map-detail-title");
-        title.style.color = new Color(0.15f, 0.15f, 0.2f, 1f);
         title.style.fontSize = 38;
-        title.style.unityFontStyleAndWeight = FontStyle.Bold;
         statusDetailEl.Add(title);
 
         // 赤ちゃん画像
@@ -4948,7 +4944,7 @@ public class MapManager : MonoBehaviour
         babyImg.style.borderTopRightRadius = 16;
         babyImg.style.borderBottomLeftRadius = 16;
         babyImg.style.borderBottomRightRadius = 16;
-        babyImg.style.backgroundColor = new Color(0.96f, 0.96f, 1f, 1f);
+        babyImg.style.backgroundColor = new Color(1f, 1f, 1f, 1f);
 
         Sprite babySprite = LoadBabySpriteForStatus(dc);
         if (babySprite != null)
@@ -4976,7 +4972,7 @@ public class MapManager : MonoBehaviour
 
         var contentLabel = UIHelper.CreateLabel(content, "map-detail-content");
         contentLabel.enableRichText = true;
-        contentLabel.style.color = new Color(0.15f, 0.15f, 0.2f, 1f);
+        contentLabel.style.color = new Color(0f, 0f, 0f, 1f);
         contentLabel.style.fontSize = 28;
         contentLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
         contentLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
@@ -5004,7 +5000,7 @@ public class MapManager : MonoBehaviour
         fatherImg.style.borderTopRightRadius = 12;
         fatherImg.style.borderBottomLeftRadius = 12;
         fatherImg.style.borderBottomRightRadius = 12;
-        fatherImg.style.backgroundColor = new Color(0.93f, 0.95f, 1f, 1f);
+        fatherImg.style.backgroundColor = new Color(1f, 1f, 1f, 1f);
         if (fatherSprite != null)
         {
             fatherImg.style.backgroundImage = new UIE.StyleBackground(fatherSprite);
@@ -5016,7 +5012,7 @@ public class MapManager : MonoBehaviour
         var fatherLabel = UIHelper.CreateLabel($"{Localization.Get("map_status_father")} {dc.fatherName}", "");
         fatherLabel.style.fontSize = 22;
         fatherLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-        fatherLabel.style.color = new Color(0.2f, 0.3f, 0.6f, 1f);
+        fatherLabel.style.color = new Color(0f, 0f, 0f, 1f);
         fatherLabel.style.marginTop = 8;
         fatherCol.Add(fatherLabel);
         parentsRow.Add(fatherCol);
@@ -5035,7 +5031,7 @@ public class MapManager : MonoBehaviour
         motherImg.style.borderTopRightRadius = 12;
         motherImg.style.borderBottomLeftRadius = 12;
         motherImg.style.borderBottomRightRadius = 12;
-        motherImg.style.backgroundColor = new Color(1f, 0.93f, 0.95f, 1f);
+        motherImg.style.backgroundColor = new Color(1f, 1f, 1f, 1f);
         if (motherSprite != null)
         {
             motherImg.style.backgroundImage = new UIE.StyleBackground(motherSprite);
@@ -5047,15 +5043,14 @@ public class MapManager : MonoBehaviour
         var motherLabel = UIHelper.CreateLabel($"{Localization.Get("map_status_mother")} {dc.motherName}", "");
         motherLabel.style.fontSize = 22;
         motherLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-        motherLabel.style.color = new Color(0.8f, 0.2f, 0.4f, 1f);
+        motherLabel.style.color = new Color(0f, 0f, 0f, 1f);
         motherLabel.style.marginTop = 8;
         motherCol.Add(motherLabel);
         parentsRow.Add(motherCol);
 
         statusDetailEl.Add(parentsRow);
 
-        var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "pill-button");
-        closeBtn.style.marginTop = 40;
+        var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "map-save-close-btn");
         closeBtn.clicked += () => CloseStatusPanel();
         statusDetailEl.Add(closeBtn);
 
@@ -5267,7 +5262,6 @@ public class MapManager : MonoBehaviour
         inventoryOverlayEl.AddToClassList("map-inv-panel");
 
         var title = UIHelper.CreateLabel(Localization.Get("map_inventory_title"), "map-detail-title");
-        title.style.color = new UIE.StyleColor(new Color(0.15f, 0.15f, 0.18f));
         inventoryOverlayEl.Add(title);
 
         // 所持装備一覧（タップで詳細、装備の入れ替えはそうびらんで）
@@ -5296,8 +5290,8 @@ public class MapManager : MonoBehaviour
                 row.style.borderBottomLeftRadius = 10;
                 row.style.borderBottomRightRadius = 10;
                 row.style.backgroundColor = isEquipped
-                    ? new UIE.StyleColor(new Color(0.93f, 0.93f, 1f))
-                    : new UIE.StyleColor(new Color(0.96f, 0.96f, 0.96f));
+                    ? new UIE.StyleColor(new Color(1f, 1f, 1f, 1f))
+                    : new UIE.StyleColor(new Color(1f, 1f, 1f, 0.5f));
 
                 // 左端：画像
                 if (eqSprite != null)
@@ -5321,7 +5315,7 @@ public class MapManager : MonoBehaviour
                     placeholder.style.borderTopRightRadius = 32;
                     placeholder.style.borderBottomLeftRadius = 32;
                     placeholder.style.borderBottomRightRadius = 32;
-                    placeholder.style.backgroundColor = new UIE.StyleColor(new Color(0.7f, 0.75f, 0.9f));
+                    placeholder.style.backgroundColor = new UIE.StyleColor(new Color(1f, 0.718f, 0.773f, 1f)); // sub color
                     placeholder.style.alignItems = UIE.Align.Center;
                     placeholder.style.justifyContent = UIE.Justify.Center;
                     placeholder.style.marginRight = 12;
@@ -5379,7 +5373,6 @@ public class MapManager : MonoBehaviour
         // 持ち物欄
         var itemTitle = UIHelper.CreateLabel(Localization.Get("map_inventory_title"), "map-detail-title");
         itemTitle.style.marginTop = 16;
-        itemTitle.style.color = new UIE.StyleColor(new Color(0.15f, 0.15f, 0.18f));
         inventoryOverlayEl.Add(itemTitle);
 
         string[] items = DataCarrier.Instance != null ? DataCarrier.Instance.GetItemList() : new string[0];
@@ -5402,8 +5395,7 @@ public class MapManager : MonoBehaviour
             }
         }
 
-        var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "pill-button-small");
-        closeBtn.style.marginTop = 20;
+        var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "map-save-close-btn");
         closeBtn.clicked += () => CloseInventoryPanel();
         inventoryOverlayEl.Add(closeBtn);
 
@@ -5499,7 +5491,6 @@ public class MapManager : MonoBehaviour
         if (allOwned.Length == 0)
         {
             var emptyLabel = UIHelper.CreateLabel(Localization.Get("map_equipment_empty"), "map-inv-empty");
-            emptyLabel.style.color = new UIE.StyleColor(new Color(0.5f, 0.5f, 0.5f));
             equipmentOverlayEl.Add(emptyLabel);
         }
         else

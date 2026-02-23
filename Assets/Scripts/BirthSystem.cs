@@ -2871,14 +2871,24 @@ public class BirthSystem : MonoBehaviour
     void SaveSynthBabyImage()
     {
         if (babySynthesizer == null) return;
+
+        // 背景あり版（ポラロイド/スクリーンショット用）
         var tex = babySynthesizer.CaptureToTexture2D();
         if (tex == null) return;
-
         string fileName = "synth_baby.png";
         string savePath = Path.Combine(Application.persistentDataPath, fileName);
-        byte[] pngData = tex.EncodeToPNG();
+        File.WriteAllBytes(savePath, tex.EncodeToPNG());
         Destroy(tex);
-        File.WriteAllBytes(savePath, pngData);
+
+        // 透過版（バトル/マップ用）
+        var transTex = babySynthesizer.CaptureTransparentTexture2D();
+        if (transTex != null)
+        {
+            string transFileName = "synth_baby_transparent.png";
+            string transSavePath = Path.Combine(Application.persistentDataPath, transFileName);
+            File.WriteAllBytes(transSavePath, transTex.EncodeToPNG());
+            Destroy(transTex);
+        }
 
         if (DataCarrier.Instance != null)
             DataCarrier.Instance.synthBabyImagePath = fileName;

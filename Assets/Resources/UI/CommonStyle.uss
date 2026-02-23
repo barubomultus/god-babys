@@ -3,16 +3,20 @@
 /* Shared styles for God Babys UI Toolkit   */
 /* ======================================== */
 
-/* --- Design Tokens --- */
+/* --- Theme Colors --- */
 :root {
+    /* === Primary palette (これと白黒のみ使用) === */
+    --color-main: rgb(247, 231, 206);       /* #F7E7CE */
+    --color-sub: rgb(255, 183, 197);        /* #FFB7C5 */
+    --color-accent: rgb(170, 240, 209);     /* #AAF0D1 */
+    --color-white: rgb(255, 255, 255);      /* #FFFFFF */
+    --color-black: rgb(0, 0, 0);            /* #000000 */
+
+    /* === Derived / utility === */
     --bg-light: rgb(243, 247, 248);         /* #f3f7f8 */
     --text-dark: rgb(13, 13, 20);           /* #0d0d14 */
     --text-body: rgb(115, 115, 128);        /* #737380 */
     --text-label: rgb(102, 102, 115);       /* #666673 */
-    --pink: rgb(242, 78, 128);              /* #F24E80 */
-    --gold: rgb(217, 166, 33);              /* #D9A621 */
-    --purple: rgb(140, 89, 166);            /* #8C59A6 */
-    --blue-accent: rgb(77, 128, 230);       /* #4D80E6 */
     --btn-pressed: rgb(235, 235, 235);      /* #EBEBEB */
     --shadow-color: rgba(0, 0, 0, 0.06);
     --border-gray: rgb(209, 209, 217);      /* #D1D1D9 */

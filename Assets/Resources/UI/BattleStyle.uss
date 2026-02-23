@@ -14,7 +14,7 @@
     top: 0;
     right: 0;
     bottom: 0;
-    background-color: transparent;
+    background-color: rgb(255, 255, 255);
 }
 
 .battle-flash {
@@ -29,8 +29,8 @@
 /* === Enemy area (top) === */
 .battle-enemy-area {
     flex-shrink: 0;
-    flex-direction: row;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
     margin-top: 10%;
 }
 
@@ -38,7 +38,10 @@
 .battle-player-area {
     flex-shrink: 0;
     flex-direction: row;
-    justify-content: center;
+    justify-content: flex-start;
+    margin-top: auto;
+    margin-bottom: 240px;
+    padding-left: 86px;
 }
 
 /* === Center (VS + log) === */
@@ -52,23 +55,44 @@
     padding-bottom: 8px;
 }
 
-/* === Character panel (shared) === */
+/* === Character panel (shared base) === */
 .battle-char-panel {
-    width: 100%;
-    height: 360px;
-    background-color: transparent;
-    flex-direction: row;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* === Player card === */
+.battle-char-card {
+    width: 280px;
+    background-color: var(--color-main);
+    align-items: stretch;
+    border-radius: 20px;
+    overflow: hidden;
+    border-top-width: 2px;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 5px;
+    border-top-color: var(--color-sub);
+    border-left-color: var(--color-sub);
+    border-right-color: var(--color-sub);
+    border-bottom-color: rgba(0, 0, 0, 0.25);
 }
 
 /* === Info column (name, HP bar, HP text) === */
 .battle-info-col {
-    width: 50%;
     flex-shrink: 0;
     flex-direction: column;
-    padding-top: 12px;
-    padding-left: 24px;
-    padding-right: 24px;
+    padding-top: 10px;
+    padding-bottom: 14px;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+/* === Enemy info (below image, wider) === */
+.battle-info-col-enemy {
+    width: 400px;
+    align-items: center;
+    padding-top: 14px;
 }
 
 /* === Name + Age row === */
@@ -83,73 +107,81 @@
 .battle-char-name {
     flex-shrink: 1;
     flex-grow: 1;
-    font-size: 32px;
+    font-size: 28px;
     -unity-font-style: bold;
     -unity-text-align: middle-left;
-    color: rgb(0, 0, 0);
+    color: var(--color-black);
     white-space: normal;
 }
 
 .battle-name-player {
-    color: rgb(0, 0, 0);
+    color: var(--color-black);
 }
 
 .battle-name-enemy {
-    color: rgb(0, 0, 0);
+    color: var(--color-black);
 }
 
-/* === Face mask === */
+/* === Face mask (player card) === */
 .battle-face-mask {
-    width: 50%;
-    height: 100%;
+    width: 100%;
+    height: 260px;
     flex-shrink: 0;
-    border-radius: 32px;
+    border-radius: 0;
     overflow: hidden;
+    background-color: var(--color-white);
+}
+
+/* === Face mask (enemy, large centered) === */
+.battle-face-mask-enemy {
+    width: 360px;
+    height: 360px;
+    border-radius: 50%;
     background-color: transparent;
 }
 
 /* === Age label === */
 .battle-age-label {
     flex-shrink: 0;
-    font-size: 32px;
+    font-size: 26px;
     -unity-font-style: bold;
-    color: rgb(0, 0, 0);
+    color: var(--color-black);
     -unity-text-align: middle-right;
 }
 
 /* === HP bar === */
 .battle-hp-bg {
     flex-shrink: 0;
-    height: 20px;
+    height: 16px;
     width: 100%;
-    border-radius: 6px;
-    background-color: rgb(77, 77, 77);
-    margin-top: 12px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.12);
+    margin-top: 10px;
     flex-direction: row;
 }
 
 .battle-hp-fill {
     height: 100%;
-    border-radius: 4px;
+    border-radius: 8px;
 }
 
 .battle-hp-fill-player {
-    background-color: rgb(51, 204, 77);
+    background-color: var(--color-accent);
 }
 
 .battle-hp-fill-enemy {
-    background-color: rgb(204, 51, 51);
+    background-color: var(--color-sub);
 }
 
 /* === HP text === */
 .battle-hp-text {
     flex-shrink: 0;
-    height: 40px;
+    height: 36px;
     width: 100%;
-    font-size: 32px;
+    font-size: 26px;
     -unity-font-style: bold;
     -unity-text-align: middle-right;
-    color: rgb(0, 0, 0);
+    color: var(--color-black);
     margin-top: 4px;
 }
 
@@ -157,7 +189,7 @@
 .battle-vs {
     font-size: 56px;
     -unity-font-style: bold;
-    color: rgb(255, 204, 51);
+    color: var(--color-sub);
     -unity-text-align: middle-center;
 }
 
@@ -165,8 +197,10 @@
 .battle-log {
     width: 1000px;
     height: 160px;
-    border-radius: 12px;
-    background-color: rgba(26, 26, 38, 0.9);
+    border-radius: 16px;
+    background-color: var(--color-main);
+    border-width: 2px;
+    border-color: var(--color-sub);
     align-items: center;
     justify-content: center;
     padding-left: 15px;
@@ -187,18 +221,208 @@
 
 .battle-log-text {
     font-size: 40px;
-    color: white;
+    color: var(--color-black);
     -unity-text-align: middle-center;
     white-space: normal;
 }
 
-/* === Action area === */
+/* === Action area (pinned to bottom) === */
 .battle-action-area {
-    flex-grow: 1;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    padding-top: 16px;
+    justify-content: flex-end;
+    padding-top: 14px;
+    background-color: var(--color-main);
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    border-top-width: 3px;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-bottom-width: 0;
+    border-top-color: var(--color-sub);
+}
+
+/* === Command row (4 buttons) === */
+.battle-cmd-row {
+    flex-shrink: 0;
+    flex-direction: row;
+    justify-content: center;
+    width: 100%;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.battle-cmd-btn {
+    width: 20%;
+    height: 100px;
+    border-radius: 16px;
+    margin-left: 10px;
+    margin-right: 10px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 28px;
+    -unity-font-style: bold;
+    color: var(--color-black);
+    background-color: var(--color-white);
+    border-top-width: 2px;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 6px;
+    border-top-color: var(--color-sub);
+    border-left-color: var(--color-sub);
+    border-right-color: var(--color-sub);
+    border-bottom-color: rgba(0, 0, 0, 0.18);
+    transition-property: scale, background-color, border-bottom-width;
+    transition-duration: 0.08s;
+}
+
+.battle-cmd-btn:hover {
+    background-color: var(--color-sub);
+    color: var(--color-white);
+}
+
+.battle-cmd-btn:active {
+    scale: 0.95 0.95;
+    background-color: var(--color-sub);
+    color: var(--color-white);
+    border-bottom-width: 2px;
+}
+
+/* === Submenu === */
+.battle-submenu {
+    width: 94%;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.battle-submenu-item {
+    width: 100%;
+    height: 88px;
+    border-radius: 12px;
+    background-color: var(--color-white);
+    border-width: 2px;
+    border-color: var(--color-sub);
+    margin-top: 6px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 32px;
+    -unity-font-style: bold;
+    color: var(--color-black);
+    transition-property: scale, background-color, color;
+    transition-duration: 0.08s;
+}
+
+.battle-submenu-item:active {
+    scale: 0.97 0.97;
+    background-color: var(--color-sub);
+    color: var(--color-white);
+}
+
+.battle-submenu-back {
+    background-color: var(--color-main);
+    border-color: rgba(0, 0, 0, 0.12);
+    color: var(--color-black);
+}
+
+.battle-submenu-item-name {
+    font-size: 32px;
+    -unity-font-style: bold;
+    color: var(--color-black);
+    -unity-text-align: middle-center;
+}
+
+.battle-submenu-item-desc {
+    font-size: 20px;
+    color: rgba(0, 0, 0, 0.5);
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+.battle-submenu-empty {
+    font-size: 30px;
+    color: rgba(0, 0, 0, 0.4);
+    -unity-text-align: middle-center;
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+
+/* === Top bar (にげる左 / AUTO右, アクションエリアの上) === */
+.battle-top-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-bottom: 10px;
+}
+
+.battle-run-pill {
+    height: 56px;
+    border-radius: 28px;
+    background-color: var(--color-white);
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0.15);
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 0;
+    padding-bottom: 0;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: var(--color-black);
+    -unity-text-align: middle-center;
+    transition-property: background-color, color;
+    transition-duration: 0.08s;
+}
+
+.battle-run-pill:active {
+    background-color: var(--color-sub);
+    color: var(--color-white);
+}
+
+.battle-auto-pill {
+    height: 56px;
+    border-radius: 28px;
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 0;
+    padding-bottom: 0;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    border-width: 2px;
+    transition-property: background-color, border-color, color;
+    transition-duration: 0.08s;
+}
+
+.battle-auto-pill:active {
+    scale: 0.96 0.96;
+}
+
+.battle-auto-off {
+    background-color: var(--color-white);
+    border-color: rgba(0, 0, 0, 0.15);
+    color: var(--color-black);
+}
+
+.battle-auto-on {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+    color: var(--color-black);
 }
 
 .battle-action-row {
@@ -307,6 +531,63 @@
     flex-grow: 1;
 }
 
+/* === Encounter intro === */
+.battle-encounter-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.88);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition-property: opacity;
+    transition-duration: 0.5s;
+}
+
+.battle-encounter-overlay-hide {
+    opacity: 0;
+}
+
+.battle-encounter-img {
+    width: 420px;
+    height: 420px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.08);
+    opacity: 0;
+    scale: 0.3 0.3;
+    transition-property: opacity, scale;
+    transition-duration: 0.7s;
+    transition-timing-function: ease-out;
+}
+
+.battle-encounter-img-visible {
+    opacity: 1;
+    scale: 1 1;
+}
+
+.battle-encounter-text {
+    font-size: 44px;
+    -unity-font-style: bold;
+    color: white;
+    -unity-text-align: middle-center;
+    white-space: normal;
+    width: 800px;
+    margin-top: 40px;
+    opacity: 0;
+    translate: 0 30px;
+    transition-property: opacity, translate;
+    transition-duration: 0.5s;
+    transition-delay: 0.4s;
+    transition-timing-function: ease-out;
+}
+
+.battle-encounter-text-visible {
+    opacity: 1;
+    translate: 0 0;
+}
+
 /* === Growth overlay === */
 .battle-growth-overlay {
     position: absolute;
@@ -314,7 +595,7 @@
     top: 0;
     right: 0;
     bottom: 0;
-    background-color: rgb(243, 247, 248);
+    background-color: var(--color-main);
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -323,13 +604,13 @@
 .battle-growth-title {
     font-size: 52px;
     -unity-font-style: bold;
-    color: rgb(38, 38, 46);
+    color: var(--color-black);
     -unity-text-align: middle-center;
 }
 
 .battle-growth-subtitle {
     font-size: 30px;
-    color: rgb(128, 128, 140);
+    color: rgba(0, 0, 0, 0.5);
     -unity-text-align: middle-center;
     margin-top: 4px;
     margin-bottom: 20px;
@@ -339,7 +620,9 @@
     width: 920px;
     height: 120px;
     border-radius: 30px;
-    background-color: white;
+    background-color: var(--color-white);
+    border-width: 2px;
+    border-color: var(--color-sub);
     flex-direction: row;
     align-items: center;
     margin-top: 16px;
@@ -373,14 +656,14 @@
 
 .battle-growth-old {
     font-size: 38px;
-    color: rgb(140, 140, 153);
+    color: rgba(0, 0, 0, 0.35);
     -unity-text-align: middle-right;
     width: 130px;
 }
 
 .battle-growth-arrow {
     font-size: 36px;
-    color: rgb(179, 179, 184);
+    color: var(--color-sub);
     -unity-text-align: middle-center;
     width: 70px;
 }
@@ -388,7 +671,7 @@
 .battle-growth-new {
     font-size: 44px;
     -unity-font-style: bold;
-    color: rgb(38, 38, 46);
+    color: var(--color-black);
     -unity-text-align: middle-left;
     width: 130px;
 }
@@ -409,20 +692,137 @@
     -unity-text-align: middle-center;
 }
 
+.battle-growth-ok-btn {
+    width: 500px;
+    height: 90px;
+    border-radius: 45px;
+    background-color: var(--color-sub);
+    border-width: 0;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 36px;
+    -unity-font-style: bold;
+    color: var(--color-white);
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.battle-growth-ok-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgba(255, 183, 197, 0.8);
+}
+
 /* === EXP bar === */
 .battle-exp-bar-bg {
     width: 80%;
     height: 20px;
-    border-radius: 6px;
-    background-color: rgb(77, 77, 77);
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.12);
     margin-top: 10px;
     align-self: center;
 }
 
 .battle-exp-bar-fill {
     height: 100%;
-    border-radius: 4px;
-    background-color: rgb(255, 217, 0);
+    border-radius: 10px;
+    background-color: var(--color-accent);
+}
+
+/* === Battle result overlay === */
+.battle-result-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-main);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.battle-result-title {
+    font-size: 42px;
+    -unity-font-style: bold;
+    color: var(--color-black);
+    -unity-text-align: middle-center;
+    margin-bottom: 40px;
+    white-space: normal;
+    width: 800px;
+}
+
+.battle-result-card {
+    width: 820px;
+    border-radius: 28px;
+    background-color: var(--color-white);
+    border-width: 2px;
+    border-color: var(--color-sub);
+    padding-top: 30px;
+    padding-bottom: 30px;
+    padding-left: 40px;
+    padding-right: 40px;
+    flex-direction: column;
+}
+
+.battle-result-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    height: 80px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.battle-result-row-label {
+    font-size: 34px;
+    -unity-font-style: bold;
+    color: var(--color-black);
+    -unity-text-align: middle-left;
+}
+
+.battle-result-row-value {
+    font-size: 40px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-right;
+}
+
+.battle-result-value-accent {
+    color: var(--color-accent);
+}
+
+.battle-result-value-sub {
+    color: var(--color-sub);
+}
+
+.battle-result-bar-label {
+    font-size: 26px;
+    color: rgba(0, 0, 0, 0.5);
+    -unity-text-align: middle-center;
+    margin-top: 20px;
+    margin-bottom: 8px;
+}
+
+.battle-result-bar-bg {
+    width: 100%;
+    height: 20px;
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.battle-result-bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    background-color: var(--color-accent);
+}
+
+.battle-result-levelup {
+    font-size: 38px;
+    -unity-font-style: bold;
+    color: var(--color-sub);
+    -unity-text-align: middle-center;
+    margin-top: 24px;
 }
 
 /* === Boss defeat panel === */

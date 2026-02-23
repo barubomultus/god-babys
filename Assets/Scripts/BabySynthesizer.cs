@@ -109,7 +109,7 @@ public class BabySynthesizer : MonoBehaviour
     }
 
     /// <summary>
-    /// スクリーンショット用テクスチャを返す
+    /// スクリーンショット用テクスチャを返す（背景あり）
     /// </summary>
     public Texture2D CaptureToTexture2D()
     {
@@ -120,6 +120,31 @@ public class BabySynthesizer : MonoBehaviour
         copy.SetPixels(compositeTexture.GetPixels());
         copy.Apply();
         return copy;
+    }
+
+    /// <summary>
+    /// バトル/マップ用の透過テクスチャを返す（背景レイヤーをスキップ）
+    /// </summary>
+    public Texture2D CaptureTransparentTexture2D()
+    {
+        var p = lastParams;
+        BabyRank rank = DetermineRank(p.fortune);
+
+        var tex = new Texture2D(TEX_SIZE, TEX_SIZE, TextureFormat.RGBA32, false);
+        var pixels = new Color[TEX_SIZE * TEX_SIZE];
+        // 背景なし（透明のまま）
+
+        bool hasCustomFace = HasFaceTexture(p);
+        if (hasCustomFace)
+            DrawFace(pixels, p);
+        DrawSwaddle(pixels, rank, hasCustomFace);
+        DrawAttachment(pixels, p);
+        DrawParentItemBadges(pixels, p);
+        DrawCertificate(pixels);
+
+        tex.SetPixels(pixels);
+        tex.Apply();
+        return tex;
     }
 
     /// <summary>

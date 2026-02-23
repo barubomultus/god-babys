@@ -5,6 +5,8 @@ public static class UIHelper
 {
     private static Font _font;
     private static bool _fontSearched;
+    private static Font _fontBold;
+    private static bool _fontBoldSearched;
 
     // タップSE
     private static AudioClip _tapSE;
@@ -31,6 +33,9 @@ public static class UIHelper
         src.PlayOneShot(_tapSE, 0.7f);
     }
 
+    private static UIE.ThemeStyleSheet _defaultTheme;
+    private static bool _themeSearched;
+
     public static UIE.PanelSettings CreatePanelSettings(float sortingOrder = 0f)
     {
         var ps = ScriptableObject.CreateInstance<UIE.PanelSettings>();
@@ -39,6 +44,18 @@ public static class UIHelper
         ps.screenMatchMode = UIE.PanelScreenMatchMode.MatchWidthOrHeight;
         ps.match = 0f;
         ps.sortingOrder = sortingOrder;
+
+        // テーマを設定（未設定だとUIが正しくレンダリングされない）
+        if (!_themeSearched)
+        {
+            _themeSearched = true;
+            _defaultTheme = Resources.Load<UIE.ThemeStyleSheet>("UI/DefaultRuntimeTheme");
+            if (_defaultTheme == null)
+                Debug.LogWarning("[UIHelper] DefaultRuntimeTheme.tss not found in Resources/UI/");
+        }
+        if (_defaultTheme != null)
+            ps.themeStyleSheet = _defaultTheme;
+
         return ps;
     }
 
@@ -108,6 +125,25 @@ public static class UIHelper
                 Debug.LogWarning("[UIHelper] No Japanese font found at Resources/Fonts/NotoSansJP-Medium");
         }
         return _font;
+    }
+
+    public static void ApplyFontBold(UIE.VisualElement element)
+    {
+        var font = GetFontBold();
+        if (font != null)
+            element.style.unityFontDefinition = new UIE.StyleFontDefinition(font);
+    }
+
+    public static Font GetFontBold()
+    {
+        if (!_fontBoldSearched)
+        {
+            _fontBoldSearched = true;
+            _fontBold = Resources.Load<Font>("Fonts/NotoSansJP-Bold");
+            if (_fontBold == null)
+                Debug.LogWarning("[UIHelper] No bold font found at Resources/Fonts/NotoSansJP-Bold");
+        }
+        return _fontBold;
     }
 
     // --- Common element builders ---
