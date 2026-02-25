@@ -218,7 +218,7 @@ public class BabysManager : MonoBehaviour
             var godBadge = new UIE.VisualElement();
             godBadge.AddToClassList("god-badge");
             if (isCurrent) godBadge.style.right = 108;
-            var godText = UIHelper.CreateLabel("\u2605 GOD", "badge-text");
+            var godText = UIHelper.CreateLabel("\u2605 STAR", "badge-text");
             godBadge.Add(godText);
             card.Add(godBadge);
         }

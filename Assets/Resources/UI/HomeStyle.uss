@@ -8,6 +8,16 @@
     flex-direction: column;
 }
 
+/* --- 背景（柔らかいピーチピンク） --- */
+.home-bg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgb(255, 237, 230);
+}
+
 /* --- 上部プロフィールエリア --- */
 .home-profile {
     flex-shrink: 0;
@@ -17,10 +27,10 @@
 
 /* --- Player icon area --- */
 .home-icon-border {
-    width: 168px;
-    height: 168px;
+    width: 176px;
+    height: 176px;
     border-radius: 50%;
-    background-color: rgb(209, 209, 209);
+    background-color: rgb(255, 183, 197);
     flex-direction: column;
     justify-content: center;
     align-items: center;
@@ -53,8 +63,16 @@
     font-size: 40px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: rgb(13, 13, 20);
+    color: rgb(60, 40, 50);
     margin-top: 15px;
+}
+
+/* --- セパレーター --- */
+.home-separator {
+    height: 2px;
+    width: 700px;
+    background-color: rgba(255, 183, 197, 0.5);
+    margin-top: 20px;
 }
 
 /* --- 中央エリア (こいみこし + ガチャ説明) --- */
@@ -69,7 +87,7 @@
     flex-shrink: 0;
     font-size: 30px;
     -unity-text-align: middle-center;
-    color: rgb(26, 26, 33);
+    color: rgb(100, 75, 85);
     margin-top: 10px;
 }
 
@@ -79,7 +97,7 @@
     width: 1040px;
     height: 498px;
     overflow: hidden;
-    border-radius: 32px;
+    border-radius: 48px;
     margin-top: 30px;
 }
 
@@ -97,7 +115,7 @@
     padding-top: 20px;
 }
 
-/* --- ボタン行 (各ボタンを中央配置) --- */
+/* --- ボタン行 --- */
 .home-btn-row {
     flex-shrink: 0;
     flex-direction: row;
@@ -105,7 +123,7 @@
     margin-top: 20px;
 }
 
-/* --- Meet button (pink bordered) --- */
+/* --- Meet button (ピンク塗りつぶし) --- */
 .meet-btn-border {
     width: 708px;
     height: 128px;
@@ -119,11 +137,11 @@
     width: 700px;
     height: 120px;
     border-radius: 60px;
-    background-color: white;
+    background-color: rgb(242, 78, 128);
     -unity-text-align: middle-center;
     font-size: 36px;
     -unity-font-style: bold;
-    color: rgb(242, 78, 128);
+    color: rgb(255, 255, 255);
     border-width: 0;
     transition-property: scale, background-color;
     transition-duration: 0.08s;
@@ -132,5 +150,6 @@
 
 .meet-btn:active {
     scale: 0.95 0.95;
-    background-color: rgb(255, 235, 243);
+    background-color: rgb(220, 60, 110);
 }
+

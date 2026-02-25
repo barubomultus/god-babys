@@ -48,6 +48,11 @@ public class MapManager : MonoBehaviour
     const int TILE_FATHER_WALL = 23;
     const int TILE_FATHER_EXIT = 24;
     const int TILE_WEAPON_SHOP = 25;
+    const int TILE_JUKU = 26;
+    const int TILE_SHOP_FLOOR = 27;
+    const int TILE_SHOP_WALL = 28;
+    const int TILE_JUKU_FLOOR = 29;
+    const int TILE_JUKU_WALL = 30;
 
     // マップデータ
     int[,] mapData;
@@ -76,7 +81,7 @@ public class MapManager : MonoBehaviour
     Texture2D tilesetTexture;
     Dictionary<int, Sprite> tileSprites = new Dictionary<int, Sprite>();
 
-    // Pixel Crawler テクスチャ（area==0 村マップ用）
+    // Pixel Crawler テクスチャ（area==0 よちよちの里マップ用）
     Texture2D pcTreesTex, pcVegetationTex, pcRocksTex, pcRoofsTex, pcWallsTex;
     // タイル背景テクスチャ
     Texture2D lawnTex, dirtRoadTex, dirtBgTex, lakeBgTex, poisonLakeTex, poisonFenceTex, poisonRoadTex;
@@ -95,9 +100,9 @@ public class MapManager : MonoBehaviour
     UIE.VisualElement menuOverlayEl;
     bool menuOpen = false;
 
-    // エンカウント
-    float encounterCooldown = 0f;
-    int stepCount = 0;
+    // シンボルエンカウント
+    List<EnemySymbol> enemySymbols = new List<EnemySymbol>();
+    bool symbolEncounterActive = false;
 
     // 金のたまご
     GameObject goldenEggObj;
@@ -136,6 +141,18 @@ public class MapManager : MonoBehaviour
     int merchantNpcY = 7;
     bool merchantDialogueActive = false;
 
+    // 塾の先生NPC
+    GameObject jukuTeacherObj;
+    int jukuTeacherX = 4;
+    int jukuTeacherY = 6;
+    bool jukuQuizActive = false;
+
+    // SE
+    AudioSource seSource;
+    AudioClip seQuizCorrect;
+    AudioClip seQuizWrong;
+    AudioClip seFootstep;
+
     // 持ち物・装備パネル
     UIE.VisualElement inventoryOverlayEl;
     UIE.VisualElement equipmentOverlayEl;
@@ -150,12 +167,20 @@ public class MapManager : MonoBehaviour
 
     // タッチ操作
     UIE.VisualElement touchSwipeEl;
-    int touchDx, touchDy;
-    bool touchInteract;
-    bool touchMenuPressed;
-    Vector2 touchStartPos;
-    bool isTouchDragging;
-    const float SWIPE_THRESHOLD = 30f;
+
+    // 移動コントローラ
+    PlayerMovementController moveCtrl;
+
+    IEnumerator CaptureMapScreenshot()
+    {
+        // UIオーバーレイを一時非表示にしてマップのみ撮影
+        if (overlayRoot != null) overlayRoot.style.display = UIE.DisplayStyle.None;
+        yield return new WaitForEndOfFrame();
+        var tex = ScreenCapture.CaptureScreenshotAsTexture();
+        if (overlayRoot != null) overlayRoot.style.display = UIE.DisplayStyle.Flex;
+        if (DataCarrier.Instance != null)
+            DataCarrier.Instance.battleBgTexture = tex;
+    }
 
     void Start()
     {
@@ -172,7 +197,7 @@ public class MapManager : MonoBehaviour
 
         int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
 
-        // 村マップ・悪魔村は2倍の広さ
+        // よちよちの里マップ・ゴージャス・ヴィレッジは2倍の広さ
         if (area == 0 || area == 1)
             mapHeight = 40;
         else if (area == 3)
@@ -180,7 +205,7 @@ public class MapManager : MonoBehaviour
             mapWidth = 24;
             mapHeight = 40;
         }
-        else if (area == 5 || area == 6)
+        else if (area == 5 || area == 6 || area == 7)
         {
             mapWidth = 8;
             mapHeight = 10;
@@ -198,7 +223,15 @@ public class MapManager : MonoBehaviour
 
         LoadTileset();
 
-        if (area == 6)
+        // SE読み込み
+        seSource = gameObject.AddComponent<AudioSource>();
+        seQuizCorrect = Resources.Load<AudioClip>("SE/クイズ正解1");
+        seQuizWrong = Resources.Load<AudioClip>("SE/クイズ不正解1");
+        seFootstep = Resources.Load<AudioClip>("SE/可愛い足音");
+
+        if (area == 7)
+            GenerateJukuMapData();
+        else if (area == 6)
             GenerateWeaponShopMapData();
         else if (area == 5)
             GenerateFatherHouseMapData();
@@ -217,7 +250,12 @@ public class MapManager : MonoBehaviour
         CreatePlayer();
         UpdateCameraFollow();
 
-        if (area == 6)
+        if (area == 7)
+        {
+            // 塾内部: ランダムエンカウントなし
+            CreateJukuTeacherNPC();
+        }
+        else if (area == 6)
         {
             // 武器屋内部: ランダムエンカウントなし
             CreateMerchantNPC();
@@ -231,7 +269,7 @@ public class MapManager : MonoBehaviour
         }
         else if (area == 4)
         {
-            // 109館内: ランダムエンカウントなし、ミルクポイントなし、傭兵なし
+            // 109館内: ランダムエンカウントなし、ミルクポイントなし、おともだちなし
         }
         else if (area == 3)
         {
@@ -276,26 +314,45 @@ public class MapManager : MonoBehaviour
         overlayRoot.pickingMode = UIE.PickingMode.Ignore;
         overlayRoot.focusable = false;
 
+        if (SafeAreaHelper.IsTouchDevice())
+            CreateTouchControls();
+
         CreateStatusUI();
         CreateMenuButton();
 
-        if (SafeAreaHelper.IsTouchDevice())
-            CreateTouchControls();
+        // 移動コントローラ初期化
+        moveCtrl = new PlayerMovementController();
+        moveCtrl.Initialize(
+            tryMove: (dx, dy) => { TryMove(dx, dy); return isMoving; },
+            isWalkable: (x, y) => x >= 0 && x < mapWidth && y >= 0 && y < mapHeight && walkable[x, y],
+            getPlayerTile: () => new Vector2Int(playerTileX, playerTileY),
+            getIsMoving: () => isMoving,
+            mapWidth, mapHeight, DISPLAY_TILE,
+            tilesContainerRect, tilesContainer.transform
+        );
+
+        // シンボルエンカウント生成
+        SpawnEnemySymbols(area);
 
         // プレイヤーを最前面に
         if (playerObj != null)
             playerObj.transform.SetAsLastSibling();
 
-        // ボス撃破後のワイプイン演出 + 初回村到着時の長老案内
+        // ボス撃破後のワイプイン演出 + 初回到着時の案内
         bool firstVillitVisit = area == 0
             && DataCarrier.Instance != null
             && !DataCarrier.Instance.HasMetNpc("長老");
+        bool firstGorgeousVisit = area == 1
+            && DataCarrier.Instance != null
+            && !DataCarrier.Instance.HasMetNpc("gorgeous_intro");
 
         if (DataCarrier.Instance != null && DataCarrier.Instance.pendingWipeIn)
         {
             DataCarrier.Instance.pendingWipeIn = false;
             if (firstVillitVisit)
                 StartCoroutine(PlayWipeInThenElderGuide());
+            else if (firstGorgeousVisit)
+                StartCoroutine(PlayWipeInThenGorgeousIntro());
             else
                 StartCoroutine(PlayWipeIn());
         }
@@ -332,11 +389,11 @@ public class MapManager : MonoBehaviour
 
         if (area == 0)
         {
-            // 村マップ: Pixel Crawlerテクスチャをロード（DQ風プロシージャル + スプライトオーバーレイ）
+            // よちよちの里マップ: Pixel Crawlerテクスチャをロード（DQ風プロシージャル + スプライトオーバーレイ）
             LoadPixelCrawlerTextures();
         }
 
-        // 悪魔村用テクスチャ（area==1）
+        // ゴージャス・ヴィレッジ用テクスチャ（area==1）
         poisonLakeTex = Resources.Load<Texture2D>("Map/Poison_Lake");
         poisonFenceTex = Resources.Load<Texture2D>("Map/Poison_Fence");
         poisonRoadTex = Resources.Load<Texture2D>("Map/Poison_Road");
@@ -470,6 +527,7 @@ public class MapManager : MonoBehaviour
             case TILE_HOUSE_GREEN:
             case TILE_HOUSE_BLUE:
             case TILE_FATHER_HOUSE:
+            case TILE_JUKU:
                 ApplyDQGrassStyle(tile);
                 break;
             case TILE_PATH:
@@ -608,7 +666,7 @@ public class MapManager : MonoBehaviour
 
         if (area == 1 && poisonFenceTex != null)
         {
-            // 悪魔村: Poison_Fence スプライトを使用
+            // ゴージャス・ヴィレッジ: Poison_Fence スプライトを使用
             fence.style.backgroundImage = new UIE.StyleBackground(poisonFenceTex);
             fence.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
         }
@@ -691,21 +749,42 @@ public class MapManager : MonoBehaviour
             }
         }
 
-        // === 外周（木の壁） ===
+        // === 外周（通行不可） ===
         for (int x = 0; x < mapWidth; x++)
         {
-            mapData[x, 0] = TILE_TREE;
             walkable[x, 0] = false;
-            mapData[x, mapHeight - 1] = TILE_TREE;
             walkable[x, mapHeight - 1] = false;
         }
         for (int y = 0; y < mapHeight; y++)
         {
-            mapData[0, y] = TILE_TREE;
             walkable[0, y] = false;
-            mapData[mapWidth - 1, y] = TILE_TREE;
             walkable[mapWidth - 1, y] = false;
         }
+
+        // === 南端の森（y=0〜1）— 木で埋めて空白を防ぐ ===
+        for (int x = 0; x < mapWidth; x++)
+        {
+            mapData[x, 0] = TILE_TREE;
+            walkable[x, 0] = false;
+            mapData[x, 1] = TILE_TREE;
+            walkable[x, 1] = false;
+        }
+
+        // === 南端フェンス（y=2）— 池以外を柵で塞ぐ ===
+        for (int x = 1; x <= 10; x++)
+        {
+            if (x < 4 || x > 6)  // 池(x=4〜6)以外
+            {
+                mapData[x, 2] = TILE_FENCE;
+                walkable[x, 2] = false;
+            }
+        }
+
+        // === 池周りの花（y=2, y=3の池の外側） ===
+        mapData[3, 2] = TILE_FLOWER; walkable[3, 2] = false;
+        mapData[7, 2] = TILE_FLOWER; walkable[7, 2] = false;
+        mapData[3, 3] = TILE_FLOWER; walkable[3, 3] = false;
+        mapData[7, 3] = TILE_FLOWER; walkable[7, 3] = false;
 
         // ============================================================
         // 南エリア（y=0〜13）— 村の中心
@@ -725,36 +804,6 @@ public class MapManager : MonoBehaviour
             mapData[5, y] = TILE_PATH;
         }
 
-        // === 赤い家（左下 x=1〜2, y=6〜7） ===
-        mapData[1, 6] = TILE_HOUSE_RED;
-        walkable[1, 6] = false;
-        mapData[2, 6] = TILE_HOUSE_RED;
-        walkable[2, 6] = false;
-        mapData[1, 7] = TILE_HOUSE_RED;
-        walkable[1, 7] = false;
-        mapData[2, 7] = TILE_HOUSE_RED;
-        walkable[2, 7] = false;
-
-        // === 青い家（右下 x=7〜8, y=7〜8） ===
-        mapData[7, 7] = TILE_HOUSE_BLUE;
-        walkable[7, 7] = false;
-        mapData[8, 7] = TILE_HOUSE_BLUE;
-        walkable[8, 7] = false;
-        mapData[7, 8] = TILE_HOUSE_BLUE;
-        walkable[7, 8] = false;
-        mapData[8, 8] = TILE_HOUSE_BLUE;
-        walkable[8, 8] = false;
-
-        // === 緑の家（x=2〜3, y=12〜13） ===
-        mapData[2, 12] = TILE_HOUSE_GREEN;
-        walkable[2, 12] = false;
-        mapData[3, 12] = TILE_HOUSE_GREEN;
-        walkable[3, 12] = false;
-        mapData[2, 13] = TILE_HOUSE_GREEN;
-        walkable[2, 13] = false;
-        mapData[3, 13] = TILE_HOUSE_GREEN;
-        walkable[3, 13] = false;
-
         // === 池（x=4〜6, y=2〜3） ===
         for (int x = 4; x <= 6; x++)
         {
@@ -765,19 +814,6 @@ public class MapManager : MonoBehaviour
             }
         }
 
-        // === 柵（赤い家の庭 x=1〜3, y=5） ===
-        mapData[1, 5] = TILE_FENCE;
-        walkable[1, 5] = false;
-        mapData[2, 5] = TILE_FENCE;
-        walkable[2, 5] = false;
-        mapData[3, 5] = TILE_FENCE;
-        walkable[3, 5] = false;
-        // 緑の家の柵 (x=2〜3, y=11)
-        mapData[2, 11] = TILE_FENCE;
-        walkable[2, 11] = false;
-        mapData[3, 11] = TILE_FENCE;
-        walkable[3, 11] = false;
-
         // === 実家（x=9〜10, y=6〜7） ===
         mapData[9, 6] = TILE_HOUSE_BLUE;
         walkable[9, 6] = false;
@@ -787,23 +823,9 @@ public class MapManager : MonoBehaviour
         walkable[9, 7] = false;
         mapData[10, 7] = TILE_HOUSE_BLUE;
         walkable[10, 7] = false;
-        // 実家の柵 (入口の両脇)
-        mapData[10, 5] = TILE_FENCE;
-        walkable[10, 5] = false;
         // 母親NPC位置は歩けるようにする
         mapData[9, 5] = TILE_PATH;
         walkable[9, 5] = true;
-
-        // === 花畑（x=8〜9, y=12〜13） ===
-        mapData[8, 12] = TILE_FLOWER;
-        mapData[9, 12] = TILE_FLOWER;
-        mapData[8, 13] = TILE_FLOWER;
-        mapData[9, 13] = TILE_FLOWER;
-
-        // 点在する花
-        mapData[2, 3] = TILE_FLOWER;
-        mapData[8, 3] = TILE_FLOWER;
-        mapData[10, 1] = TILE_FLOWER;
 
         // ============================================================
         // 中央エリア（y=14〜32）— 村の北部・拡張地域
@@ -815,15 +837,18 @@ public class MapManager : MonoBehaviour
             mapData[x, 16] = TILE_PATH;
         }
 
-        // 赤い家2（右 x=8〜9, y=18〜19）
-        mapData[8, 18] = TILE_HOUSE_RED;
-        walkable[8, 18] = false;
-        mapData[9, 18] = TILE_HOUSE_RED;
-        walkable[9, 18] = false;
-        mapData[8, 19] = TILE_HOUSE_RED;
-        walkable[8, 19] = false;
-        mapData[9, 19] = TILE_HOUSE_RED;
-        walkable[9, 19] = false;
+        // === 武器ショップ（x=2〜3, y=14〜15） ===
+        for (int sx = 2; sx <= 3; sx++)
+        {
+            for (int sy = 14; sy <= 15; sy++)
+            {
+                mapData[sx, sy] = TILE_WEAPON_SHOP;
+                walkable[sx, sy] = false;
+            }
+        }
+        // ショップへの接続パス
+        mapData[4, 14] = TILE_PATH;
+        walkable[4, 14] = true;
 
         // 小さな池2（x=2〜3, y=18）
         mapData[2, 18] = TILE_WATER;
@@ -831,77 +856,24 @@ public class MapManager : MonoBehaviour
         mapData[3, 18] = TILE_WATER;
         walkable[3, 18] = false;
 
-        // 柵（赤い家2の庭 x=8〜9, y=17）
-        mapData[8, 17] = TILE_FENCE;
-        walkable[8, 17] = false;
-        mapData[9, 17] = TILE_FENCE;
-        walkable[9, 17] = false;
-
-        // 花畑2（x=1〜3, y=20〜21）
-        mapData[1, 20] = TILE_FLOWER;
-        mapData[2, 20] = TILE_FLOWER;
-        mapData[3, 20] = TILE_FLOWER;
-        mapData[1, 21] = TILE_FLOWER;
-        mapData[2, 21] = TILE_FLOWER;
-
-        // 岩場（x=9〜10, y=22〜23）
-        mapData[9, 22] = TILE_ROCK;
-        walkable[9, 22] = false;
-        mapData[10, 22] = TILE_ROCK;
-        walkable[10, 22] = false;
-        mapData[10, 23] = TILE_ROCK;
-        walkable[10, 23] = false;
-
-        // 3本目の横道 y=24 (x=3〜8)
-        for (int x = 3; x <= 8; x++)
+        // 3本目の横道 y=24 (x=3〜10)
+        for (int x = 3; x <= 10; x++)
         {
             mapData[x, 24] = TILE_PATH;
         }
 
-        // 青い家2（左 x=1〜2, y=26〜27）
-        mapData[1, 26] = TILE_HOUSE_BLUE;
-        walkable[1, 26] = false;
-        mapData[2, 26] = TILE_HOUSE_BLUE;
-        walkable[2, 26] = false;
-        mapData[1, 27] = TILE_HOUSE_BLUE;
-        walkable[1, 27] = false;
-        mapData[2, 27] = TILE_HOUSE_BLUE;
-        walkable[2, 27] = false;
-
-        // 柵（青い家2の庭 x=1〜3, y=25）
-        mapData[1, 25] = TILE_FENCE;
-        walkable[1, 25] = false;
-        mapData[2, 25] = TILE_FENCE;
-        walkable[2, 25] = false;
-        mapData[3, 25] = TILE_FENCE;
-        walkable[3, 25] = false;
-
-        // 緑の家2（右 x=8〜9, y=27〜28）
-        mapData[8, 27] = TILE_HOUSE_GREEN;
-        walkable[8, 27] = false;
-        mapData[9, 27] = TILE_HOUSE_GREEN;
+        // === 塾（x=9〜10, y=26〜27） ===
+        mapData[9, 26] = TILE_HOUSE_BLUE;
+        walkable[9, 26] = false;
+        mapData[10, 26] = TILE_HOUSE_BLUE;
+        walkable[10, 26] = false;
+        mapData[9, 27] = TILE_HOUSE_BLUE;
         walkable[9, 27] = false;
-        mapData[8, 28] = TILE_HOUSE_GREEN;
-        walkable[8, 28] = false;
-        mapData[9, 28] = TILE_HOUSE_GREEN;
-        walkable[9, 28] = false;
-
-        // 花畑3（x=7〜9, y=30）
-        mapData[7, 30] = TILE_FLOWER;
-        mapData[8, 30] = TILE_FLOWER;
-        mapData[9, 30] = TILE_FLOWER;
-
-        // 岩（x=1, y=30）
-        mapData[1, 30] = TILE_ROCK;
-        walkable[1, 30] = false;
-
-        // 散在する木（村の北の境界を暗示）
-        mapData[1, 32] = TILE_TREE;
-        walkable[1, 32] = false;
-        mapData[10, 32] = TILE_TREE;
-        walkable[10, 32] = false;
-        mapData[9, 33] = TILE_TREE;
-        walkable[9, 33] = false;
+        mapData[10, 27] = TILE_HOUSE_BLUE;
+        walkable[10, 27] = false;
+        // 塾の入口タイル
+        mapData[9, 25] = TILE_JUKU;
+        walkable[9, 25] = false;
 
         // === 父親の家（左上 x=2〜3, y=33〜34） ===
         mapData[2, 33] = TILE_HOUSE_RED;
@@ -946,12 +918,6 @@ public class MapManager : MonoBehaviour
                 walkable[x, y] = false;
             }
         }
-
-        // 柵（館の左右 y=37）
-        mapData[6, 37] = TILE_FENCE;
-        walkable[6, 37] = false;
-        mapData[10, 37] = TILE_FENCE;
-        walkable[10, 37] = false;
 
         // ボスの門 (8, 35)
         mapData[8, 35] = TILE_BOSS_GATE;
@@ -1003,7 +969,7 @@ public class MapManager : MonoBehaviour
         walkable[5, 0] = true;
 
         // ============================================================
-        // 南エリア（y=0〜13）— 悪魔村の中心
+        // 南エリア（y=0〜13）— ゴージャス・ヴィレッジの中心
         // ============================================================
 
         // === 暗い土の道（メインストリート + 縦パス） ===
@@ -1141,11 +1107,18 @@ public class MapManager : MonoBehaviour
         walkable[3, 5] = false;
         // 棚 (6, 8)
         walkable[6, 8] = false;
+        // 暖炉 (1, 7)(1, 8)
+        walkable[1, 7] = false;
+        walkable[1, 8] = false;
     }
 
     void CreateFatherHouseFurniture()
     {
         if (tilesContainer == null) return;
+
+        // ラグ (3-4, 3-4) — 淡い赤のカーペット
+        CreateFurnitureOverlay(3.5f, 3.5f, DISPLAY_TILE * 2.2f, DISPLAY_TILE * 2.2f,
+            new Color(0.6f, 0.3f, 0.25f, 0.5f));
 
         // テーブル (2,5)(3,5)
         CreateFurnitureOverlay(2.5f, 5f, DISPLAY_TILE * 2f, DISPLAY_TILE * 0.8f,
@@ -1155,21 +1128,14 @@ public class MapManager : MonoBehaviour
         CreateFurnitureOverlay(6f, 8f, DISPLAY_TILE * 0.8f, DISPLAY_TILE * 0.9f,
             new Color(0.4f, 0.28f, 0.15f));
 
+        // 暖炉 (1, 7-8) — 赤みのある茶色
+        CreateFurnitureOverlay(1f, 7.5f, DISPLAY_TILE * 0.9f, DISPLAY_TILE * 1.8f,
+            new Color(0.45f, 0.18f, 0.1f));
+        // 暖炉の炎マーク
+        CreateFurnitureLabel(1f, 7.5f, "\U0001F525", 22, new Color(1f, 0.5f, 0.2f));
+
         // 出口マーク (3,1)(4,1) — ▽矢印
-        float exitX = (3.5f - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
-        float exitY = (1f - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
-        var exitSign = new GameObject("ExitSign");
-        exitSign.transform.SetParent(tilesContainer.transform, false);
-        var exitRect = exitSign.AddComponent<RectTransform>();
-        exitRect.anchoredPosition = new Vector2(exitX, exitY);
-        exitRect.sizeDelta = new Vector2(DISPLAY_TILE * 1.5f, DISPLAY_TILE * 0.6f);
-        var exitText = exitSign.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(exitText);
-        exitText.text = "▽ 出口";
-        exitText.fontSize = 16;
-        exitText.alignment = TextAlignmentOptions.Center;
-        exitText.color = new Color(0.8f, 0.9f, 1f);
-        exitText.raycastTarget = false;
+        CreateFurnitureLabel(3.5f, 1f, "▽ 出口", 16, new Color(0.8f, 0.9f, 1f));
     }
 
     void CreateFurnitureOverlay(float tileX, float tileY, float width, float height, Color color)
@@ -1187,27 +1153,46 @@ public class MapManager : MonoBehaviour
         img.raycastTarget = false;
     }
 
+    void CreateFurnitureLabel(float tileX, float tileY, string text, int fontSize, Color color)
+    {
+        float posX = (tileX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (tileY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+
+        var obj = new GameObject("FurnitureLabel");
+        obj.transform.SetParent(tilesContainer.transform, false);
+        var rect = obj.AddComponent<RectTransform>();
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(DISPLAY_TILE * 1.5f, DISPLAY_TILE * 0.6f);
+        var tmp = obj.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(tmp);
+        tmp.text = text;
+        tmp.fontSize = fontSize;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = color;
+        tmp.raycastTarget = false;
+    }
+
     void GenerateWeaponShopMapData()
     {
         mapData = new int[mapWidth, mapHeight];
         walkable = new bool[mapWidth, mapHeight];
 
-        // 全て壁で埋める
+        // 全て石壁で埋める
         for (int x = 0; x < mapWidth; x++)
         {
             for (int y = 0; y < mapHeight; y++)
             {
-                mapData[x, y] = TILE_FATHER_WALL;
+                mapData[x, y] = TILE_SHOP_WALL;
                 walkable[x, y] = false;
             }
         }
 
-        // 床エリア (x=1〜6, y=2〜8)
+        // 石畳の床エリア (x=1〜6, y=2〜8)
         for (int x = 1; x <= 6; x++)
         {
             for (int y = 2; y <= 8; y++)
             {
-                mapData[x, y] = TILE_FATHER_FLOOR;
+                mapData[x, y] = TILE_SHOP_FLOOR;
                 walkable[x, y] = true;
             }
         }
@@ -1224,6 +1209,89 @@ public class MapManager : MonoBehaviour
         walkable[4, 5] = false;
         // 棚 (6, 8)
         walkable[6, 8] = false;
+        // 武器ラック (1, 7)(1, 8)
+        walkable[1, 7] = false;
+        walkable[1, 8] = false;
+        // 樽 (6, 6)
+        walkable[6, 6] = false;
+    }
+
+    void GenerateJukuMapData()
+    {
+        mapData = new int[mapWidth, mapHeight];
+        walkable = new bool[mapWidth, mapHeight];
+
+        // 全て白壁で埋める
+        for (int x = 0; x < mapWidth; x++)
+        {
+            for (int y = 0; y < mapHeight; y++)
+            {
+                mapData[x, y] = TILE_JUKU_WALL;
+                walkable[x, y] = false;
+            }
+        }
+
+        // 明るいベージュの床エリア (x=1〜6, y=2〜8)
+        for (int x = 1; x <= 6; x++)
+        {
+            for (int y = 2; y <= 8; y++)
+            {
+                mapData[x, y] = TILE_JUKU_FLOOR;
+                walkable[x, y] = true;
+            }
+        }
+
+        // 出口 (3,1)(4,1)
+        mapData[3, 1] = TILE_FATHER_EXIT;
+        walkable[3, 1] = false;
+        mapData[4, 1] = TILE_FATHER_EXIT;
+        walkable[4, 1] = false;
+
+        // 机 (2,4)(3,4)(4,4)(5,4) — 生徒用
+        walkable[2, 4] = false;
+        walkable[3, 4] = false;
+        walkable[4, 4] = false;
+        walkable[5, 4] = false;
+
+        // 黒板 (3,8)(4,8)
+        walkable[3, 8] = false;
+        walkable[4, 8] = false;
+        // 本棚 (1, 7)(1, 8)
+        walkable[1, 7] = false;
+        walkable[1, 8] = false;
+        // 教卓 (3, 6) — (4, 6)は先生NPCがいるので歩行可能のまま
+        walkable[3, 6] = false;
+    }
+
+    void CreateJukuFurniture()
+    {
+        if (tilesContainer == null) return;
+
+        // 机 (2〜5, 4) — 横4マス分（生徒用）
+        CreateFurnitureOverlay(3.5f, 4f, DISPLAY_TILE * 4f, DISPLAY_TILE * 0.7f,
+            new Color(0.6f, 0.45f, 0.3f));
+
+        // 黒板 (3〜4, 8) — 横2マス分（濃い緑）
+        CreateFurnitureOverlay(3.5f, 8f, DISPLAY_TILE * 2.2f, DISPLAY_TILE * 0.9f,
+            new Color(0.1f, 0.3f, 0.12f));
+        // 黒板のチョーク文字
+        CreateFurnitureLabel(3.5f, 8f, "ABC", 14, new Color(0.9f, 0.9f, 0.85f));
+
+        // 教卓 (3, 6) — 黒板の手前（(4,6)は先生NPCの位置）
+        CreateFurnitureOverlay(3f, 6f, DISPLAY_TILE * 1f, DISPLAY_TILE * 0.7f,
+            new Color(0.45f, 0.30f, 0.18f));
+
+        // 本棚 (1, 7-8) — 壁際に茶色の棚
+        CreateFurnitureOverlay(1f, 7.5f, DISPLAY_TILE * 0.8f, DISPLAY_TILE * 1.8f,
+            new Color(0.5f, 0.32f, 0.18f));
+        // 本棚のアイコン
+        CreateFurnitureLabel(1f, 7.5f, "\U0001F4DA", 18, new Color(0.3f, 0.5f, 0.3f));
+
+        // 時計 — 壁上部
+        CreateFurnitureLabel(6f, 8f, "\U0001F552", 22, new Color(0.3f, 0.3f, 0.3f));
+
+        // 出口マーク (3.5, 1) — ▽矢印
+        CreateFurnitureLabel(3.5f, 1f, "▽ 出口", 18, new Color(0.3f, 0.6f, 0.3f));
     }
 
     void CreateWeaponShopFurniture()
@@ -1238,20 +1306,21 @@ public class MapManager : MonoBehaviour
         CreateFurnitureOverlay(6f, 8f, DISPLAY_TILE * 0.8f, DISPLAY_TILE * 0.9f,
             new Color(0.3f, 0.15f, 0.4f));
 
+        // 武器ラック (1, 7-8) — 壁際に縦長の灰色ラック
+        CreateFurnitureOverlay(1f, 7.5f, DISPLAY_TILE * 0.8f, DISPLAY_TILE * 1.8f,
+            new Color(0.4f, 0.35f, 0.45f));
+        // 武器ラックのアイコン
+        CreateFurnitureLabel(1f, 7.5f, "\u2694", 22, new Color(0.8f, 0.7f, 1f));
+
+        // 樽 (6, 6) — 茶色の丸っぽいオブジェクト
+        CreateFurnitureOverlay(6f, 6f, DISPLAY_TILE * 0.7f, DISPLAY_TILE * 0.7f,
+            new Color(0.4f, 0.25f, 0.12f));
+
+        // ランタン — 壁の上部に配置
+        CreateFurnitureLabel(6f, 8f, "\U0001F3EE", 20, new Color(1f, 0.8f, 0.3f));
+
         // 出口マーク (3.5, 1) — ▽矢印
-        float exitX = (3.5f - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
-        float exitY = (1f - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
-        var exitSign = new GameObject("ExitSign");
-        exitSign.transform.SetParent(tilesContainer.transform, false);
-        var exitRect = exitSign.AddComponent<RectTransform>();
-        exitRect.anchoredPosition = new Vector2(exitX, exitY);
-        exitRect.sizeDelta = new Vector2(DISPLAY_TILE * 1.5f, DISPLAY_TILE * 0.6f);
-        var exitText = exitSign.AddComponent<TextMeshProUGUI>();
-        FontHelper.Apply(exitText);
-        exitText.text = "▽ 出口";
-        exitText.fontSize = 18;
-        exitText.color = new Color(0.8f, 0.7f, 1f);
-        exitText.alignment = TextAlignmentOptions.Center;
+        CreateFurnitureLabel(3.5f, 1f, "▽ 出口", 18, new Color(0.8f, 0.7f, 1f));
     }
 
     void GenerateImpTownMapData()
@@ -1492,13 +1561,13 @@ public class MapManager : MonoBehaviour
             }
         }
 
-        // 傭兵 (3,10) と (8,10)
+        // おともだち (3,10) と (8,10)
         mapData[3, 10] = TILE_MERCENARY_A;
         walkable[3, 10] = false; // TryMoveで特殊処理
         mapData[8, 10] = TILE_MERCENARY_B;
         walkable[8, 10] = false;
 
-        // y=10: 傭兵の行の床
+        // y=10: おともだちの行の床
         for (int x = 2; x <= 9; x++)
         {
             if (x != 3 && x != 8)
@@ -1530,7 +1599,7 @@ public class MapManager : MonoBehaviour
         mapData[6, 0] = TILE_MANSION_EXIT;
         walkable[6, 0] = false;
 
-        // 撃破済み傭兵のタイルを床に変更
+        // あそび済みおともだちのタイルを床に変更
         if (DataCarrier.Instance != null)
         {
             if (DataCarrier.Instance.HasDefeatedEnemy("デヴィル傭兵A"))
@@ -1581,7 +1650,7 @@ public class MapManager : MonoBehaviour
         mapData[6, 13] = TILE_MANSION_FLOOR;
         walkable[6, 13] = true;
 
-        // ボス扉 (y=12, x=5〜6) — 直接開く（傭兵チェック不要）
+        // ボス扉 (y=12, x=5〜6) — 直接開く（おともだちチェック不要）
         mapData[5, 12] = TILE_BOSS_DOOR;
         walkable[5, 12] = false;
         mapData[6, 12] = TILE_BOSS_DOOR;
@@ -1617,12 +1686,12 @@ public class MapManager : MonoBehaviour
     {
         if (tilesContainer == null || DataCarrier.Instance == null) return;
 
-        // 傭兵A (3, 10)
+        // おともだちA (3, 10)
         if (!DataCarrier.Instance.HasDefeatedEnemy("デヴィル傭兵A"))
         {
             CreateMercenaryOverlay(3, 10, "A");
         }
-        // 傭兵B (8, 10)
+        // おともだちB (8, 10)
         if (!DataCarrier.Instance.HasDefeatedEnemy("デヴィル傭兵B"))
         {
             CreateMercenaryOverlay(8, 10, "B");
@@ -1692,7 +1761,9 @@ public class MapManager : MonoBehaviour
         else if (areaForColor == 2)
             bg.color = new Color(0.1f, 0.08f, 0.08f);   // 館内: 暗灰
         else if (areaForColor == 1)
-            bg.color = new Color(0.2f, 0.08f, 0.15f);   // 悪魔村: 暗い赤紫
+            bg.color = new Color(0.2f, 0.08f, 0.15f);   // ゴージャス・ヴィレッジ: 暗い赤紫
+        else if (areaForColor == 7)
+            bg.color = new Color(0.75f, 0.70f, 0.60f);  // 塾: 明るいベージュ
         else
             bg.color = new Color(0.15f, 0.35f, 0.15f);  // フォールバック
         bg.raycastTarget = false;
@@ -1721,15 +1792,19 @@ public class MapManager : MonoBehaviour
         // ボスの館オーバーレイ（タイルの上に大きな館を描画）
         CreateBossMansionOverlay();
 
-        // 装備ショップオーバーレイ（悪魔村・小悪魔の街）
-        if (areaForColor == 1 || areaForColor == 3)
+        // 装備ショップオーバーレイ（村・ゴージャス・ヴィレッジ・小悪魔の街）
+        if (areaForColor == 0 || areaForColor == 1 || areaForColor == 3)
             CreateWeaponShopOverlay();
 
         // 父親の家オーバーレイ
         if (areaForColor == 0)
             CreateFatherHouseOverlay();
 
-        // 村マップ（area==0）: スプライトオーバーレイ（uGUI、UI Toolkit の上に表示）
+        // 塾の看板
+        if (areaForColor == 0)
+            CreateJukuSign();
+
+        // よちよちの里マップ（area==0）: スプライトオーバーレイ（uGUI、UI Toolkit の上に表示）
         if (areaForColor == 0)
             CreateVillageOverlays();
 
@@ -1740,6 +1815,10 @@ public class MapManager : MonoBehaviour
         // 武器屋内部（area==6）: 家具オーバーレイ
         if (areaForColor == 6)
             CreateWeaponShopFurniture();
+
+        // 塾内部（area==7）: 家具オーバーレイ
+        if (areaForColor == 7)
+            CreateJukuFurniture();
     }
 
     void CreateBossMansionOverlay()
@@ -1783,7 +1862,7 @@ public class MapManager : MonoBehaviour
         }
         else
         {
-            // プロシージャル描画 — 悪魔村・小悪魔の街は紫系
+            // プロシージャル描画 — ゴージャス・ヴィレッジ・小悪魔の街は紫系
             bool darkTheme = (area == 1 || area == 3);
             var wall = FacePart("Wall", mansion.transform, Vector2.zero, new Vector2(DISPLAY_TILE * 2.8f, DISPLAY_TILE * 2.0f));
             wall.AddComponent<Image>().color = darkTheme
@@ -2032,6 +2111,62 @@ public class MapManager : MonoBehaviour
         signText.raycastTarget = false;
     }
 
+    void CreateJukuSign()
+    {
+        if (tilesContainer == null) return;
+
+        // 塾の2×2タイル中心（x=9-10, y=26-27）
+        float houseX = (9.5f - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float houseY = (26.5f - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+
+        var jukuObj = new GameObject("JukuOverlay");
+        jukuObj.transform.SetParent(tilesContainer.transform, false);
+        var jukuRect = jukuObj.AddComponent<RectTransform>();
+        jukuRect.anchoredPosition = new Vector2(houseX, houseY);
+        jukuRect.sizeDelta = new Vector2(DISPLAY_TILE * 2.5f, DISPLAY_TILE * 2.5f);
+
+        // zyuku.png 画像を使用
+        Sprite jukuSprite = Resources.Load<Sprite>("Map/zyuku");
+        if (jukuSprite != null)
+        {
+            var img = jukuObj.AddComponent<Image>();
+            img.sprite = jukuSprite;
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+        }
+
+        // 看板テキスト（入口タイル付近）
+        float signX = houseX;
+        float signY = (25f - mapHeight / 2f + 0.5f) * DISPLAY_TILE - DISPLAY_TILE * 0.1f;
+
+        var signObj = new GameObject("JukuSignText");
+        signObj.transform.SetParent(tilesContainer.transform, false);
+        var signRect = signObj.AddComponent<RectTransform>();
+        signRect.anchoredPosition = new Vector2(signX, signY);
+        signRect.sizeDelta = new Vector2(DISPLAY_TILE * 2.0f, DISPLAY_TILE * 0.5f);
+
+        var signBg = signObj.AddComponent<Image>();
+        signBg.color = new Color(0.1f, 0.3f, 0.15f, 0.9f);
+        signBg.raycastTarget = false;
+
+        var signTextChild = new GameObject("SignLabel");
+        signTextChild.transform.SetParent(signObj.transform, false);
+        var signTextRect = signTextChild.AddComponent<RectTransform>();
+        signTextRect.anchorMin = Vector2.zero;
+        signTextRect.anchorMax = Vector2.one;
+        signTextRect.offsetMin = Vector2.zero;
+        signTextRect.offsetMax = Vector2.zero;
+
+        var signText = signTextChild.AddComponent<TextMeshProUGUI>();
+        FontHelper.Apply(signText);
+        signText.text = "じゅく";
+        signText.fontSize = 18;
+        signText.alignment = TextAlignmentOptions.Center;
+        signText.color = new Color(1f, 1f, 0.85f);
+        signText.fontStyle = FontStyles.Bold;
+        signText.raycastTarget = false;
+    }
+
     // CreateTile: area!=0 専用（area==0 は CreateDQTileElement で UI Toolkit 描画）
     void CreateTile(int x, int y, int tileType)
     {
@@ -2080,6 +2215,22 @@ public class MapManager : MonoBehaviour
             else
                 img.color = Color.white;
         }
+        else if (tileType == TILE_SHOP_FLOOR)
+        {
+            // 武器屋: 市松模様の石畳
+            if ((x + y) % 2 == 0)
+                img.color = new Color(0.30f, 0.22f, 0.35f);
+            else
+                img.color = new Color(0.24f, 0.16f, 0.28f);
+        }
+        else if (tileType == TILE_JUKU_FLOOR)
+        {
+            // 塾: ストライプ模様の床
+            if (x % 2 == 0)
+                img.color = new Color(0.85f, 0.80f, 0.70f);
+            else
+                img.color = new Color(0.80f, 0.75f, 0.65f);
+        }
         else
         {
             img.color = GetTileColor(tileType);
@@ -2093,6 +2244,18 @@ public class MapManager : MonoBehaviour
         Random.InitState(tileX * 100 + tileY);
 
         int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+
+        // Lawn_Road テクスチャがあれば使用
+        if (lawnTex != null && area != 1 && area != 3)
+        {
+            var sprite = Sprite.Create(lawnTex, new Rect(0, 0, lawnTex.width, lawnTex.height), new Vector2(0.5f, 0.5f));
+            baseImg.sprite = sprite;
+            baseImg.color = Color.white;
+            baseImg.type = Image.Type.Simple;
+            baseImg.preserveAspect = false;
+            Random.state = oldState;
+            return;
+        }
 
         // ベースカラー: 深めの緑にタイルごとの微妙な色ムラ
         float hueShift = Random.Range(-0.02f, 0.02f);
@@ -2176,43 +2339,7 @@ public class MapManager : MonoBehaviour
     void CreateVillageOverlays()
     {
         if (tilesContainer == null || mapData == null) return;
-
-        // 木オーバーレイ
-        Sprite treeSprite = CreatePCSprite(pcTreesTex, 8, 4, 48, 56);
-
-        // 岩オーバーレイ (Rocks.png: 最初の大きめ岩 — 左上付近)
-        Sprite rockSprite = CreatePCSprite(pcRocksTex, 0, 16, 32, 32);
-
-        // 花オーバーレイ (Vegetation.png: 小さな花 — 中段左付近の黄色い花)
-        Sprite flowerSprite = CreatePCSprite(pcVegetationTex, 0, 224, 16, 16);
-
-        // 柵はプロシージャルで描画（Pixel Crawlerに適した柵なし）
-
-        for (int x = 0; x < mapWidth; x++)
-        {
-            for (int y = 0; y < mapHeight; y++)
-            {
-                int tile = mapData[x, y];
-                switch (tile)
-                {
-                    case TILE_TREE:
-                        // 木オーバーレイ無効（画像を用意したら差し替え可能）
-                        break;
-                    case TILE_ROCK:
-                        // 岩オーバーレイ無効（画像を用意したら差し替え可能）
-                        break;
-                    case TILE_FLOWER:
-                        // 花オーバーレイ無効（画像を用意したら差し替え可能）
-                        break;
-                    case TILE_FENCE:
-                        CreateDQFenceElement(x, y); // UI Toolkit
-                        break;
-                }
-            }
-        }
-
-        // 家オーバーレイ: 2×2タイルブロックを検出して描画
-        CreateHouseOverlays();
+        // 装飾オブジェクトなし — 実家・塾は専用オーバーレイで描画
     }
 
     void CreateSpriteOverlay(int tileX, int tileY, Sprite sprite, float scaleX, float scaleY, float offsetY)
@@ -2353,6 +2480,11 @@ public class MapManager : MonoBehaviour
             case TILE_FATHER_WALL: return new Color(0.35f, 0.25f, 0.15f);
             case TILE_FATHER_EXIT: return new Color(0.1f, 0.3f, 0.3f);
             case TILE_WEAPON_SHOP: return new Color(0.25f, 0.12f, 0.3f);
+            case TILE_JUKU: return new Color(0.2f, 0.45f, 0.25f);
+            case TILE_SHOP_FLOOR: return new Color(0.30f, 0.22f, 0.35f);
+            case TILE_SHOP_WALL: return new Color(0.18f, 0.08f, 0.22f);
+            case TILE_JUKU_FLOOR: return new Color(0.85f, 0.80f, 0.70f);
+            case TILE_JUKU_WALL: return new Color(0.65f, 0.60f, 0.55f);
             default: return Color.magenta;
         }
     }
@@ -2424,7 +2556,7 @@ public class MapManager : MonoBehaviour
             : new Color(0.2f, 0.35f, 0.7f);
         float xFlip = (dir == 3) ? -1f : 1f;
 
-        // GOD BABYオーラ（低重心に合わせて調整）
+        // STAR BABYオーラ（低重心に合わせて調整）
         if (godBaby)
         {
             var aura = FacePart("Aura", parent, new Vector2(0, -4 * s), new Vector2(76 * s, 56 * s));
@@ -2636,7 +2768,7 @@ public class MapManager : MonoBehaviour
             }
         }
 
-        // === GODオーラ（半透明オーバーレイ、最前面、低重心対応） ===
+        // === STARオーラ（半透明オーバーレイ、最前面、低重心対応） ===
         if (godBaby)
         {
             var glow = FacePart("GodGlow", parent, new Vector2(0, -4 * s), new Vector2(56 * s, 50 * s));
@@ -2744,7 +2876,7 @@ public class MapManager : MonoBehaviour
 
         int milkAmt = DataCarrier.Instance != null ? DataCarrier.Instance.milk : 0;
         string nameColor = isGod ? "<color=#FFD700>" : "<color=#FFFFFF>";
-        string godLabel = isGod ? " <color=#FFD700>GOD BABY</color>" : "";
+        string godLabel = isGod ? " <color=#FFD700>STAR BABY</color>" : "";
         string poisonLabel = poisonTurns > 0 ? $" <color=#AA00FF>毒({poisonTurns})</color>" : "";
 
         statusLabel.text = $"{nameColor}{babyName}</color>  {Localization.GetAge(age)}{godLabel}\n" +
@@ -2754,84 +2886,54 @@ public class MapManager : MonoBehaviour
     void Update()
     {
         var kb = Keyboard.current;
-        bool escPressed = (kb != null && kb.escapeKey.wasPressedThisFrame) || touchMenuPressed;
+        bool escPressed = kb != null && kb.escapeKey.wasPressedThisFrame;
 
         // ESCでパネルを閉じる
         if (saveOverlayEl != null)
         {
-            if (escPressed) { touchMenuPressed = false; CloseSavePanel(); }
+            if (escPressed) CloseSavePanel();
             return;
         }
         if (statusDetailEl != null)
         {
-            if (escPressed) { touchMenuPressed = false; CloseStatusPanel(); }
+            if (escPressed) CloseStatusPanel();
             return;
         }
         if (inventoryOverlayEl != null)
         {
-            if (escPressed) { touchMenuPressed = false; CloseInventoryPanel(); }
+            if (escPressed) CloseInventoryPanel();
             return;
         }
         if (shopOverlayEl != null)
         {
-            if (escPressed) { touchMenuPressed = false; CloseWeaponShop(); }
+            if (escPressed) CloseWeaponShop();
             return;
         }
 
-        if (menuOpen) return;
+        if (menuOpen)
+        {
+            if (moveCtrl != null) moveCtrl.IsLocked = true;
+            return;
+        }
 
-        HandleInput();
+        // 移動コントローラ
+        if (moveCtrl != null)
+        {
+            moveCtrl.IsLocked = false;
+            moveCtrl.Tick();
+        }
+
         UpdateMovement();
         UpdateCameraFollow();
-    }
-
-    void HandleInput()
-    {
-        if (isMoving) return;
-
-        int dx = 0, dy = 0;
-
-        // キーボード入力
-        var kb = Keyboard.current;
-        if (kb != null)
-        {
-            if (kb.upArrowKey.isPressed || kb.wKey.isPressed)
-                dy = 1;
-            else if (kb.downArrowKey.isPressed || kb.sKey.isPressed)
-                dy = -1;
-            else if (kb.leftArrowKey.isPressed || kb.aKey.isPressed)
-                dx = -1;
-            else if (kb.rightArrowKey.isPressed || kb.dKey.isPressed)
-                dx = 1;
-        }
-
-        // タッチ入力（スワイプ）
-        if (dx == 0 && dy == 0)
-        {
-            dx = touchDx;
-            dy = touchDy;
-        }
-
-        if (dx != 0 || dy != 0)
-        {
-            TryMove(dx, dy);
-        }
+        UpdateEnemySymbols();
 
         // インタラクト
-        bool kbInteract = kb != null && kb.spaceKey.wasPressedThisFrame;
-        if (kbInteract || touchInteract)
-        {
-            touchInteract = false;
+        if (kb != null && kb.spaceKey.wasPressedThisFrame)
             Interact();
-        }
 
         // メニュー
-        bool kbMenu = kb != null && kb.escapeKey.wasPressedThisFrame;
-        if (kbMenu || touchMenuPressed)
-        {
-            touchMenuPressed = false;
+        if (escPressed)
             ToggleMenu();
-        }
     }
 
     void TryMove(int dx, int dy)
@@ -2862,6 +2964,12 @@ public class MapManager : MonoBehaviour
             StartCoroutine(EnterWeaponShop());
             return;
         }
+        // 塾に歩いて入ろうとした場合
+        if (mapData[newX, newY] == TILE_JUKU)
+        {
+            StartCoroutine(EnterJuku());
+            return;
+        }
         // ボスの門に歩いて入ろうとした場合
         if (mapData[newX, newY] == TILE_BOSS_GATE)
         {
@@ -2874,7 +2982,7 @@ public class MapManager : MonoBehaviour
             StartCoroutine(EnterBossMansion());
             return;
         }
-        // 悪魔村: 館に歩いて入ろうとした場合 → 館内（area 2）へ
+        // ゴージャス・ヴィレッジ: 館に歩いて入ろうとした場合 → 館内（area 2）へ
         // 小悪魔の街: 館に歩いて入ろうとした場合 → 109（area 4）へ
         if (mapData[newX, newY] == TILE_BOSS_MANSION)
         {
@@ -2905,7 +3013,7 @@ public class MapManager : MonoBehaviour
             else
             {
                 ShowMessage(Localization.Get("map_mansion_mercenary_block"));
-                StartFixedEncounter(mercName);
+                StartCoroutine(StartFixedEncounter(mercName));
                 return;
             }
         }
@@ -2914,7 +3022,7 @@ public class MapManager : MonoBehaviour
             int areaForDoor = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
             if (areaForDoor == 4)
             {
-                // 109: 傭兵なし、直接ボス戦
+                // 109: おともだちなし、直接ボス戦
                 StartCoroutine(EnterMelodiasQueen());
                 return;
             }
@@ -2943,7 +3051,9 @@ public class MapManager : MonoBehaviour
         if (tileAtDest == TILE_FATHER_EXIT)
         {
             int areaForFatherExit = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
-            if (areaForFatherExit == 6)
+            if (areaForFatherExit == 7)
+                ExitJuku();
+            else if (areaForFatherExit == 6)
                 ExitWeaponShop();
             else
                 ExitFatherHouse();
@@ -2966,8 +3076,15 @@ public class MapManager : MonoBehaviour
         targetPosition = new Vector2(posX, posY);
         isMoving = true;
 
-        // 歩数カウント
-        stepCount++;
+        // 足音SE（前の音を止めてから再生）
+        if (seSource != null && seFootstep != null)
+        {
+            seSource.Stop();
+            seSource.pitch = Random.Range(0.92f, 1.08f);
+            seSource.clip = seFootstep;
+            seSource.volume = 0.2f;
+            seSource.Play();
+        }
 
         // DataCarrierに位置保存
         if (DataCarrier.Instance != null)
@@ -3006,6 +3123,11 @@ public class MapManager : MonoBehaviour
         {
             playerRect.anchoredPosition = targetPosition;
             isMoving = false;
+            // 足音停止
+            if (seSource != null && seSource.isPlaying && seSource.clip == seFootstep)
+                seSource.Stop();
+            // 歩行パーティクル
+            SpawnStepParticles(playerRect.anchoredPosition.x, playerRect.anchoredPosition.y);
             // はいはいアニメーションリセット
             crawlAnimTime = 0f;
             if (crawlHandL != null) crawlHandL.anchoredPosition = crawlHandLBase;
@@ -3034,9 +3156,58 @@ public class MapManager : MonoBehaviour
             // 商人NPC判定
             CheckMerchantNPC();
 
-            // 移動完了時にエンカウント判定
-            CheckRandomEncounter();
+            // 塾の先生NPC判定
+            CheckJukuTeacher();
         }
+    }
+
+    void SpawnStepParticles(float px, float py)
+    {
+        int count = Random.Range(3, 6);
+        for (int i = 0; i < count; i++)
+            StartCoroutine(StepParticle(px, py));
+    }
+
+    IEnumerator StepParticle(float px, float py)
+    {
+        var go = new GameObject("StepStar");
+        go.transform.SetParent(tilesContainer.transform, false);
+        var rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        float size = Random.Range(8f, 18f);
+        rt.sizeDelta = new Vector2(size, size);
+        float offsetX = Random.Range(-DISPLAY_TILE * 0.4f, DISPLAY_TILE * 0.4f);
+        float offsetY = Random.Range(-DISPLAY_TILE * 0.3f, DISPLAY_TILE * 0.3f);
+        rt.anchoredPosition = new Vector2(px + offsetX, py + offsetY);
+
+        var img = go.AddComponent<Image>();
+        Color[] pastels = {
+            new Color(1f, 0.8f, 0.9f),
+            new Color(0.8f, 0.9f, 1f),
+            new Color(1f, 1f, 0.7f),
+            new Color(0.7f, 1f, 0.85f),
+            new Color(0.9f, 0.8f, 1f),
+        };
+        img.color = pastels[Random.Range(0, pastels.Length)];
+        rt.localRotation = Quaternion.Euler(0, 0, 45f);
+
+        float duration = Random.Range(0.4f, 0.7f);
+        float elapsed = 0f;
+        float riseSpeed = Random.Range(30f, 60f);
+        Vector2 startPos = rt.anchoredPosition;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            rt.anchoredPosition = startPos + new Vector2(0, riseSpeed * t);
+            float scale = Mathf.Lerp(1f, 0.3f, t);
+            rt.localScale = Vector3.one * scale;
+            img.color = new Color(img.color.r, img.color.g, img.color.b, 1f - t);
+            yield return null;
+        }
+
+        Destroy(go);
     }
 
     void UpdateCameraFollow()
@@ -3074,38 +3245,138 @@ public class MapManager : MonoBehaviour
         }
     }
 
-    void CheckRandomEncounter()
+    // ===== シンボルエンカウント =====
+
+    static readonly Color[] EnemyColorsArea0 = {
+        new Color(0.6f, 0.8f, 1f),       // 水色
+        new Color(1f, 0.7f, 0.3f),        // オレンジ
+        new Color(0.8f, 0.5f, 0.9f),      // パープル
+        new Color(0.5f, 0.9f, 0.6f),      // グリーン
+    };
+    static readonly Color[] EnemyColorsArea1 = {
+        new Color(0.5f, 0.2f, 0.6f),      // ダーク紫
+        new Color(0.7f, 0.15f, 0.2f),     // 暗赤
+        new Color(0.3f, 0.2f, 0.5f),      // ダークインディゴ
+        new Color(0.6f, 0.1f, 0.4f),      // マゼンタ
+    };
+    static readonly Color[] EnemyColorsArea3 = {
+        new Color(1f, 0.5f, 0.6f),        // ピンク
+        new Color(0.9f, 0.3f, 0.5f),      // ローズ
+        new Color(1f, 0.4f, 0.8f),        // ホットピンク
+        new Color(0.8f, 0.35f, 0.65f),    // フューシャ
+    };
+
+    void SpawnEnemySymbols(int area)
     {
-        // 館内 (area 2) / 父親の家 (area 5) ではランダムエンカウントなし
-        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
-        if (area == 2 || area == 5) return;
+        int count;
+        Color[] palette;
 
-        // 草タイルの上でランダムエンカウント（移動完了時に判定）
-        if (mapData[playerTileX, playerTileY] == TILE_GRASS ||
-            mapData[playerTileX, playerTileY] == TILE_FLOWER)
+        switch (area)
         {
-            float rate;
-            if (area == 3)
-            {
-                // 小悪魔の森: 草5%, 花10%
-                rate = mapData[playerTileX, playerTileY] == TILE_FLOWER ? 0.10f : 0.05f;
-            }
-            else if (area == 1)
-            {
-                // 悪魔村: 草4%, 花8%（村の2倍）
-                rate = mapData[playerTileX, playerTileY] == TILE_FLOWER ? 0.08f : 0.04f;
-            }
-            else
-            {
-                // 村: 花畑は4%、草は2%
-                rate = mapData[playerTileX, playerTileY] == TILE_FLOWER ? 0.04f : 0.02f;
-            }
+            case 0: count = 4; palette = EnemyColorsArea0; break;
+            case 1: count = 5; palette = EnemyColorsArea1; break;
+            case 3: count = 6; palette = EnemyColorsArea3; break;
+            default: return; // area 2,4,5,6 はエンカウントなし
+        }
 
-            if (Random.Range(0f, 1f) < rate)
+        var candidates = new List<Vector2Int>();
+        for (int x = 0; x < mapWidth; x++)
+        {
+            for (int y = 0; y < mapHeight; y++)
             {
-                StartCoroutine(StartBattle());
+                if (!walkable[x, y]) continue;
+                // プレイヤーから3タイル以上離れた位置
+                int dist = Mathf.Abs(x - playerTileX) + Mathf.Abs(y - playerTileY);
+                if (dist < 3) continue;
+                // 草タイルか花タイルのみ
+                if (mapData[x, y] != TILE_GRASS && mapData[x, y] != TILE_FLOWER) continue;
+                candidates.Add(new Vector2Int(x, y));
             }
         }
+
+        // シャッフル
+        for (int i = candidates.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            var tmp = candidates[i];
+            candidates[i] = candidates[j];
+            candidates[j] = tmp;
+        }
+
+        int spawnCount = Mathf.Min(count, candidates.Count);
+        for (int i = 0; i < spawnCount; i++)
+        {
+            var pos = candidates[i];
+            Color color = palette[i % palette.Length];
+
+            var sym = new EnemySymbol();
+            sym.Initialize("", color, pos.x, pos.y,
+                tilesContainer.transform, DISPLAY_TILE, mapWidth, mapHeight);
+            enemySymbols.Add(sym);
+        }
+    }
+
+    void UpdateEnemySymbols()
+    {
+        if (menuOpen || symbolEncounterActive) return;
+
+        foreach (var sym in enemySymbols)
+        {
+            sym.Tick(playerTileX, playerTileY, walkable, mapWidth, mapHeight);
+
+            if (!sym.isMoving && !isMoving && sym.IsContactWith(playerTileX, playerTileY))
+            {
+                StartCoroutine(StartSymbolEncounter(sym));
+                return;
+            }
+        }
+    }
+
+    IEnumerator StartSymbolEncounter(EnemySymbol sym)
+    {
+        symbolEncounterActive = true;
+        menuOpen = true;
+        if (moveCtrl != null) moveCtrl.IsLocked = true;
+
+        // シンボルを非表示
+        sym.SetActive(false);
+
+        // フラッシュ演出
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.justifyContent = UIE.Justify.Center;
+        overlay.style.backgroundColor = new Color(1, 1, 1, 0);
+        overlayRoot.Add(overlay);
+
+        for (int i = 0; i < 3; i++)
+        {
+            float flashTime = 0.15f;
+            float elapsed = 0f;
+            while (elapsed < flashTime)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / flashTime;
+                overlay.style.backgroundColor = new Color(1, 1, 1, 1f - t);
+                yield return null;
+            }
+            yield return new WaitForSeconds(0.05f);
+        }
+
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.7f);
+
+        yield return new WaitForSeconds(0.5f);
+
+        if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.cameFromMap = true;
+            DataCarrier.Instance.isBossBattle = false;
+            DataCarrier.Instance.fixedEncounterEnemy = "";
+            DataCarrier.Instance.SaveData();
+        }
+
+        yield return StartCoroutine(CaptureMapScreenshot());
+        SceneManager.LoadScene("BattleScene");
     }
 
     IEnumerator PlayWipeIn()
@@ -3142,52 +3413,94 @@ public class MapManager : MonoBehaviour
         yield return StartCoroutine(ShowElderDialogue());
     }
 
+    IEnumerator PlayWipeInThenGorgeousIntro()
+    {
+        yield return StartCoroutine(PlayWipeIn());
+        yield return new WaitForSeconds(0.5f);
+        yield return StartCoroutine(ShowGorgeousIntro());
+    }
+
+    IEnumerator ShowGorgeousIntro()
+    {
+        menuOpen = true;
+
+        if (DataCarrier.Instance != null)
+            DataCarrier.Instance.AddMetNpc("gorgeous_intro");
+
+        bool tapped = false;
+
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.flexDirection = UIE.FlexDirection.Column;
+        overlay.style.justifyContent = UIE.Justify.Center;
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+        overlayRoot.Add(overlay);
+
+        // フェードイン
+        float elapsed = 0f;
+        while (elapsed < 0.5f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.7f * (elapsed / 0.5f));
+            yield return null;
+        }
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.7f);
+
+        // テキストラベル
+        var textLabel = UIHelper.CreateLabel("", "milk-dialog-text");
+        textLabel.style.color = Color.white;
+        textLabel.style.fontSize = 34;
+        textLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        textLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
+        textLabel.style.width = 900;
+        UIHelper.ApplyFont(textLabel);
+        overlay.Add(textLabel);
+
+        var tapHint = UIHelper.CreateLabel("▼ タップで続く", "milk-dialog-hint");
+        tapHint.style.color = new Color(1, 1, 1, 0.5f);
+        tapHint.style.marginTop = 40;
+        UIHelper.ApplyFont(tapHint);
+        overlay.Add(tapHint);
+
+        string[] messages = new string[]
+        {
+            Localization.Get("gorgeous_intro_1"),
+            Localization.Get("gorgeous_intro_2"),
+            Localization.Get("gorgeous_intro_3"),
+        };
+
+        for (int i = 0; i < messages.Length; i++)
+        {
+            textLabel.text = messages[i];
+            tapHint.text = (i < messages.Length - 1) ? "▼ タップで続く" : "▼ タップで閉じる";
+
+            yield return new WaitForSeconds(0.3f);
+            tapped = false;
+            while (!tapped) yield return null;
+        }
+
+        // フェードアウト
+        elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            float fadeT = 1f - (elapsed / 0.3f);
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.7f * fadeT);
+            textLabel.style.opacity = fadeT;
+            tapHint.style.opacity = fadeT;
+            yield return null;
+        }
+
+        overlay.RemoveFromHierarchy();
+        menuOpen = false;
+    }
+
     IEnumerator AutoElderGuide()
     {
         yield return new WaitForSeconds(0.8f);
         yield return StartCoroutine(ShowElderDialogue());
-    }
-
-    IEnumerator StartBattle()
-    {
-        menuOpen = true;
-
-        var overlay = new UIE.VisualElement();
-        overlay.AddToClassList("fill");
-        overlay.style.alignItems = UIE.Align.Center;
-        overlay.style.justifyContent = UIE.Justify.Center;
-        overlay.style.backgroundColor = new Color(1, 1, 1, 0);
-        overlayRoot.Add(overlay);
-
-        // フラッシュエフェクト
-        for (int i = 0; i < 3; i++)
-        {
-            float flashTime = 0.15f;
-            float elapsed = 0f;
-            while (elapsed < flashTime)
-            {
-                elapsed += Time.deltaTime;
-                float t = elapsed / flashTime;
-                overlay.style.backgroundColor = new Color(1, 1, 1, 1f - t);
-                yield return null;
-            }
-            yield return new WaitForSeconds(0.05f);
-        }
-
-        overlay.style.backgroundColor = new Color(0, 0, 0, 0.7f);
-        var label = UIHelper.CreateLabel(Localization.Get("map_encounter"), "map-encounter-text");
-        overlay.Add(label);
-
-        yield return new WaitForSeconds(1.0f);
-
-        if (DataCarrier.Instance != null)
-        {
-            DataCarrier.Instance.cameFromMap = true;
-            DataCarrier.Instance.isBossBattle = false;
-            DataCarrier.Instance.SaveData();
-        }
-
-        SceneManager.LoadScene("BattleScene");
     }
 
     void Interact()
@@ -3203,7 +3516,9 @@ public class MapManager : MonoBehaviour
         if (IsAdjacentTo(TILE_FATHER_EXIT))
         {
             int areaForExit = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
-            if (areaForExit == 6)
+            if (areaForExit == 7)
+                ExitJuku();
+            else if (areaForExit == 6)
                 ExitWeaponShop();
             else
                 ExitFatherHouse();
@@ -3214,6 +3529,13 @@ public class MapManager : MonoBehaviour
         if (IsAdjacentTo(TILE_WEAPON_SHOP))
         {
             StartCoroutine(EnterWeaponShop());
+            return;
+        }
+
+        // 塾に隣接している場合 → 塾内部へ
+        if (IsAdjacentTo(TILE_JUKU))
+        {
+            StartCoroutine(EnterJuku());
             return;
         }
 
@@ -3229,7 +3551,7 @@ public class MapManager : MonoBehaviour
             }
             if (area == 1)
             {
-                // 悪魔村: 館内（area 2）に入る
+                // ゴージャス・ヴィレッジ: 館内（area 2）に入る
                 StartCoroutine(EnterMansionArea());
                 return;
             }
@@ -3273,10 +3595,11 @@ public class MapManager : MonoBehaviour
             DataCarrier.Instance.isBossBattle = true;
             DataCarrier.Instance.SaveData();
         }
+        yield return StartCoroutine(CaptureMapScreenshot());
         SceneManager.LoadScene("BattleScene");
     }
 
-    // 悪魔村から館内（area 2）に入る
+    // ゴージャス・ヴィレッジから館内（area 2）に入る
     IEnumerator EnterMansionArea()
     {
         yield return StartCoroutine(ShowTransitionOverlay(Localization.Get("map_mansion_enter")));
@@ -3292,7 +3615,7 @@ public class MapManager : MonoBehaviour
     }
 
     // 固定エンカウント発動
-    void StartFixedEncounter(string enemyName)
+    IEnumerator StartFixedEncounter(string enemyName)
     {
         if (DataCarrier.Instance != null)
         {
@@ -3301,6 +3624,7 @@ public class MapManager : MonoBehaviour
             DataCarrier.Instance.isBossBattle = false;
             DataCarrier.Instance.SaveData();
         }
+        yield return StartCoroutine(CaptureMapScreenshot());
         SceneManager.LoadScene("BattleScene");
     }
 
@@ -3315,10 +3639,11 @@ public class MapManager : MonoBehaviour
             DataCarrier.Instance.isBossBattle = true;
             DataCarrier.Instance.SaveData();
         }
+        yield return StartCoroutine(CaptureMapScreenshot());
         SceneManager.LoadScene("BattleScene");
     }
 
-    // 館から悪魔村に戻る
+    // 館からゴージャス・ヴィレッジに戻る
     void ExitMansion()
     {
         if (DataCarrier.Instance != null)
@@ -3359,7 +3684,7 @@ public class MapManager : MonoBehaviour
         SceneManager.LoadScene("MapScene");
     }
 
-    // 悪魔村から武器屋内部（area 6）に入る
+    // ゴージャス・ヴィレッジから武器屋内部（area 6）に入る
     IEnumerator EnterWeaponShop()
     {
         yield return StartCoroutine(ShowTransitionOverlay(Localization.Get("shop_enter")));
@@ -3382,7 +3707,13 @@ public class MapManager : MonoBehaviour
         {
             int returnArea = DataCarrier.Instance.shopEntryArea;
             DataCarrier.Instance.currentArea = returnArea;
-            if (returnArea == 3)
+            if (returnArea == 0)
+            {
+                // 村: 武器屋の近くに戻る
+                DataCarrier.Instance.mapPlayerX = 4;
+                DataCarrier.Instance.mapPlayerY = 14;
+            }
+            else if (returnArea == 3)
             {
                 // 小悪魔の街: 武器屋の近くに戻る
                 DataCarrier.Instance.mapPlayerX = 8;
@@ -3390,10 +3721,38 @@ public class MapManager : MonoBehaviour
             }
             else
             {
-                // 悪魔村: 既存の戻り位置
+                // ゴージャス・ヴィレッジ: 既存の戻り位置
                 DataCarrier.Instance.mapPlayerX = 4;
                 DataCarrier.Instance.mapPlayerY = 14;
             }
+            DataCarrier.Instance.SaveData();
+        }
+        SceneManager.LoadScene("MapScene");
+    }
+
+    // 村から塾内部（area 7）に入る
+    IEnumerator EnterJuku()
+    {
+        yield return StartCoroutine(ShowTransitionOverlay("じゅくに はいった"));
+
+        if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.currentArea = 7;
+            DataCarrier.Instance.mapPlayerX = 4;
+            DataCarrier.Instance.mapPlayerY = 2;
+            DataCarrier.Instance.SaveData();
+        }
+        SceneManager.LoadScene("MapScene");
+    }
+
+    // 塾内部から村に戻る
+    void ExitJuku()
+    {
+        if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.currentArea = 0;
+            DataCarrier.Instance.mapPlayerX = 9;
+            DataCarrier.Instance.mapPlayerY = 24;
             DataCarrier.Instance.SaveData();
         }
         SceneManager.LoadScene("MapScene");
@@ -3425,6 +3784,7 @@ public class MapManager : MonoBehaviour
             DataCarrier.Instance.isBossBattle = true;
             DataCarrier.Instance.SaveData();
         }
+        yield return StartCoroutine(CaptureMapScreenshot());
         SceneManager.LoadScene("BattleScene");
     }
 
@@ -3543,12 +3903,12 @@ public class MapManager : MonoBehaviour
         {
             switch (curArea)
             {
-                case 1: // 悪魔村 → 村
+                case 1: // ゴージャス・ヴィレッジ → 村
                     DataCarrier.Instance.currentArea = 0;
                     DataCarrier.Instance.mapPlayerX = 5;
                     DataCarrier.Instance.mapPlayerY = 33;
                     break;
-                case 3: // 小悪魔の街 → 悪魔村
+                case 3: // 小悪魔の街 → ゴージャス・ヴィレッジ
                     DataCarrier.Instance.currentArea = 1;
                     DataCarrier.Instance.mapPlayerX = 5;
                     DataCarrier.Instance.mapPlayerY = 9;
@@ -3877,6 +4237,60 @@ public class MapManager : MonoBehaviour
         goldenEggObj = null;
 
         ShowMessage(Localization.Get("map_golden_egg"));
+        StartCoroutine(ShowGoldenEggHint());
+    }
+
+    IEnumerator ShowGoldenEggHint()
+    {
+        yield return new WaitForSeconds(1.5f);
+
+        menuOpen = true;
+        bool tapped = false;
+
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.flexDirection = UIE.FlexDirection.Column;
+        overlay.style.justifyContent = UIE.Justify.FlexEnd;
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+        overlayRoot.Add(overlay);
+
+        // フェードイン
+        float elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * (elapsed / 0.3f));
+            yield return null;
+        }
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
+
+        var textLabel = UIHelper.CreateLabel(Localization.Get("map_golden_egg_hint"), "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        var tapHint = UIHelper.CreateLabel("▼ タップで閉じる", "milk-dialog-hint");
+        dialogBox.Add(tapHint);
+
+        yield return new WaitForSeconds(0.3f);
+        tapped = false;
+        while (!tapped) yield return null;
+
+        // フェードアウト
+        elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            float fadeT = 1f - (elapsed / 0.3f);
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * fadeT);
+            yield return null;
+        }
+        overlay.RemoveFromHierarchy();
+        menuOpen = false;
     }
 
     // ===== ミルクポイント（回復） =====
@@ -4311,12 +4725,119 @@ public class MapManager : MonoBehaviour
         motherDialogueActive = false;
         menuOpen = false;
 
-        // アイテムをくれたら母親は家に帰る
-        if (giveItem && motherNpcObj != null)
+        // アイテムをくれたら装備チュートリアル → 母親は家に帰る
+        if (giveItem)
         {
-            Destroy(motherNpcObj);
-            motherNpcObj = null;
+            yield return StartCoroutine(ShowEquipmentTutorial(itemName));
+
+            if (motherNpcObj != null)
+            {
+                Destroy(motherNpcObj);
+                motherNpcObj = null;
+            }
         }
+    }
+
+    IEnumerator ShowEquipmentTutorial(string itemName)
+    {
+        menuOpen = true;
+        SetTouchControlsVisible(false);
+
+        // チュートリアルオーバーレイ
+        var tutOverlay = UIHelper.CreateOverlay();
+        tutOverlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        tutOverlay.style.justifyContent = UIE.Justify.Center;
+        tutOverlay.style.alignItems = UIE.Align.Center;
+
+        // フェードイン
+        float fadeDur = 0.3f;
+        float elapsed = 0f;
+        while (elapsed < fadeDur)
+        {
+            elapsed += Time.deltaTime;
+            tutOverlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0, 0.6f, elapsed / fadeDur));
+            yield return null;
+        }
+        tutOverlay.style.backgroundColor = new Color(0, 0, 0, 0.6f);
+
+        // チュートリアルカード
+        var card = new UIE.VisualElement();
+        card.style.width = 900;
+        card.style.borderTopLeftRadius = 48;
+        card.style.borderTopRightRadius = 48;
+        card.style.borderBottomLeftRadius = 48;
+        card.style.borderBottomRightRadius = 48;
+        card.style.backgroundColor = new Color(1, 1, 1, 1);
+        card.style.paddingTop = 40;
+        card.style.paddingBottom = 36;
+        card.style.paddingLeft = 40;
+        card.style.paddingRight = 40;
+        card.style.alignItems = UIE.Align.Center;
+        card.style.opacity = 0;
+        tutOverlay.Add(card);
+
+        // タイトル
+        var titleLabel = UIHelper.CreateLabel("そうびを てにいれた！");
+        UIHelper.ApplyFontBold(titleLabel);
+        titleLabel.style.fontSize = 40;
+        titleLabel.style.color = new Color(0.051f, 0.051f, 0.078f);
+        titleLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+        titleLabel.style.marginBottom = 24;
+        card.Add(titleLabel);
+
+        // 説明テキスト
+        var descLabel = UIHelper.CreateLabel(
+            "メニューの「そうび」から\nそうびの つけはずし ができるよ！\n\nそうびすると おあそびで つよくなるよ！");
+        UIHelper.ApplyFont(descLabel);
+        descLabel.style.fontSize = 30;
+        descLabel.style.color = new Color(0.051f, 0.051f, 0.078f, 0.7f);
+        descLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+        descLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
+        descLabel.style.width = new UIE.StyleLength(new UIE.Length(100, UIE.LengthUnit.Percent));
+        descLabel.style.marginBottom = 32;
+        card.Add(descLabel);
+
+        // 「そうびを みる」ボタン
+        var openBtn = UIHelper.CreatePillButton("そうびを みる");
+        openBtn.style.width = 500;
+        openBtn.style.height = 100;
+        openBtn.style.borderTopLeftRadius = 50;
+        openBtn.style.borderTopRightRadius = 50;
+        openBtn.style.borderBottomLeftRadius = 50;
+        openBtn.style.borderBottomRightRadius = 50;
+        openBtn.style.backgroundColor = new Color(1f, 0.718f, 0.773f); // #FFB7C5
+        UIHelper.ApplyFontBold(openBtn);
+        openBtn.style.fontSize = 34;
+        openBtn.style.color = Color.white;
+        card.Add(openBtn);
+
+        // カードフェードイン
+        elapsed = 0f;
+        float cardFade = 0.3f;
+        while (elapsed < cardFade)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / cardFade);
+            card.style.opacity = t;
+            card.style.translate = new UIE.StyleTranslate(
+                new UIE.Translate(0, 30 * (1f - t)));
+            yield return null;
+        }
+        card.style.opacity = 1;
+        card.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 0));
+
+        // ボタンタップ待ち
+        bool btnTapped = false;
+        openBtn.clicked += () => btnTapped = true;
+        while (!btnTapped) yield return null;
+
+        // チュートリアルオーバーレイ除去
+        tutOverlay.RemoveFromHierarchy();
+        menuOpen = false;
+        SetTouchControlsVisible(true);
+
+        // 装備パネルを自動で開く
+        OpenEquipmentPanel();
     }
 
     // ===== 父親の家（家の中にいる） =====
@@ -4516,35 +5037,19 @@ public class MapManager : MonoBehaviour
 
     void DrawMerchantNPC(Transform parent, float scale)
     {
-        float s = scale;
-        Color skin = new Color(0.85f, 0.72f, 0.58f);
-        Color robe = new Color(0.35f, 0.15f, 0.5f);      // 紫ローブ
-        Color robeInner = new Color(0.5f, 0.25f, 0.65f);
-        Color hood = new Color(0.28f, 0.1f, 0.4f);
-
-        // 影
-        FacePart("Shadow", parent, new Vector2(0, -34 * s), new Vector2(36 * s, 10 * s))
-            .AddComponent<Image>().color = new Color(0, 0, 0, 0.25f);
-        // ローブ（体）
-        FacePart("Body", parent, new Vector2(0, -14 * s), new Vector2(30 * s, 34 * s))
-            .AddComponent<Image>().color = robe;
-        // ローブ内側
-        FacePart("BodyInner", parent, new Vector2(0, -18 * s), new Vector2(16 * s, 24 * s))
-            .AddComponent<Image>().color = robeInner;
-        // 頭
-        FacePart("Head", parent, new Vector2(0, 14 * s), new Vector2(28 * s, 28 * s))
-            .AddComponent<Image>().color = skin;
-        // フード
-        FacePart("Hood", parent, new Vector2(0, 26 * s), new Vector2(34 * s, 16 * s))
-            .AddComponent<Image>().color = hood;
-        // 目
-        FacePart("EyeL", parent, new Vector2(-6 * s, 14 * s), new Vector2(4 * s, 3 * s))
-            .AddComponent<Image>().color = new Color(0.15f, 0.1f, 0.2f);
-        FacePart("EyeR", parent, new Vector2(6 * s, 14 * s), new Vector2(4 * s, 3 * s))
-            .AddComponent<Image>().color = new Color(0.15f, 0.1f, 0.2f);
-        // ニヤリ口
-        FacePart("Mouth", parent, new Vector2(0, 6 * s), new Vector2(10 * s, 2 * s))
-            .AddComponent<Image>().color = new Color(0.6f, 0.3f, 0.2f);
+        Sprite spr = Resources.Load<Sprite>("MapCharacters/Weapon_men");
+        if (spr != null)
+        {
+            var go = new GameObject("MerchantSprite");
+            go.transform.SetParent(parent, false);
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(DISPLAY_TILE * scale, DISPLAY_TILE * scale);
+            var img = go.AddComponent<Image>();
+            img.sprite = spr;
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+        }
     }
 
     void CheckMerchantNPC()
@@ -4569,7 +5074,7 @@ public class MapManager : MonoBehaviour
 
         // 縁の書に登録
         if (DataCarrier.Instance != null)
-            DataCarrier.Instance.AddMetNpc("武器商人");
+            DataCarrier.Instance.AddMetNpc("おあそびどうぐやさん");
 
         // オーバーレイ
         var overlay = new UIE.VisualElement();
@@ -4590,12 +5095,20 @@ public class MapManager : MonoBehaviour
         }
         overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
 
+        // ポートレート
+        var portraitEl = new UIE.VisualElement();
+        portraitEl.AddToClassList("milk-dialog-portrait");
+        var merchantSpr = Resources.Load<Sprite>("MapCharacters/Weapon_men");
+        if (merchantSpr != null)
+            portraitEl.style.backgroundImage = new UIE.StyleBackground(merchantSpr);
+        overlay.Add(portraitEl);
+
         // ダイアログボックス
         var dialogBox = new UIE.VisualElement();
         dialogBox.AddToClassList("milk-dialog-box");
         overlay.Add(dialogBox);
 
-        var nameLabel = UIHelper.CreateLabel("武器商人", "milk-dialog-name");
+        var nameLabel = UIHelper.CreateLabel("おあそびどうぐやさん", "milk-dialog-name");
         dialogBox.Add(nameLabel);
 
         var textLabel = UIHelper.CreateLabel("", "milk-dialog-text");
@@ -4630,6 +5143,525 @@ public class MapManager : MonoBehaviour
 
         // ショップUIを開く
         OpenWeaponShop();
+    }
+
+    void ShowMerchantMessage(string message)
+    {
+        StartCoroutine(ShowMerchantMessageCoroutine(message));
+    }
+
+    IEnumerator ShowMerchantMessageCoroutine(string message)
+    {
+        merchantDialogueActive = true;
+        menuOpen = true;
+
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+        overlay.style.alignItems = UIE.Align.FlexEnd;
+        overlay.style.justifyContent = UIE.Justify.FlexEnd;
+        overlayRoot.Add(overlay);
+
+        // ポートレート
+        var portraitEl = new UIE.VisualElement();
+        portraitEl.AddToClassList("milk-dialog-portrait");
+        var merchantSpr = Resources.Load<Sprite>("MapCharacters/Weapon_men");
+        if (merchantSpr != null)
+            portraitEl.style.backgroundImage = new UIE.StyleBackground(merchantSpr);
+        overlay.Add(portraitEl);
+
+        // ダイアログボックス
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
+
+        var nameLabel = UIHelper.CreateLabel("おあそびどうぐやさん", "milk-dialog-name");
+        dialogBox.Add(nameLabel);
+
+        var textLabel = UIHelper.CreateLabel(message, "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        var tapHint = UIHelper.CreateLabel("▼ タップで続く", "milk-dialog-hint");
+        dialogBox.Add(tapHint);
+
+        yield return new WaitForSeconds(0.3f);
+
+        bool tapped = false;
+        overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+        while (!tapped) yield return null;
+
+        // フェードアウト
+        float fadeOut = 0.2f;
+        float fadeElapsed = 0f;
+        while (fadeElapsed < fadeOut)
+        {
+            fadeElapsed += Time.deltaTime;
+            dialogBox.style.opacity = 1f - fadeElapsed / fadeOut;
+            yield return null;
+        }
+        overlay.RemoveFromHierarchy();
+        merchantDialogueActive = false;
+        menuOpen = false;
+
+        // ショップを再度開く
+        OpenWeaponShop();
+    }
+
+    // ============================================================
+    // 塾の先生NPC & クイズシステム
+    // ============================================================
+
+    static readonly (string question, string[] choices, int answer)[] JukuQuizData = {
+        ("にほんで いちばん たかい やまは？", new[]{"ふじさん","たかおさん","あそさん","つくばさん"}, 0),
+        ("たいようけいで いちばん おおきい わくせいは？", new[]{"ちきゅう","かせい","もくせい","どせい"}, 2),
+        ("みずの かがくしきは？", new[]{"CO2","H2O","O2","NaCl"}, 1),
+        ("にじは なんしょく？", new[]{"5しょく","6しょく","7しょく","8しょく"}, 2),
+        ("いちねんで いちばん ひが ながいのは？", new[]{"はるぶん","げし","しゅうぶん","とうじ"}, 1),
+        ("ちきゅうの えいせいは？", new[]{"たいよう","つき","かせい","きんせい"}, 1),
+        ("1ダースは なんこ？", new[]{"6こ","10こ","12こ","24こ"}, 2),
+        ("おんがくの 「ド」は えいごで？", new[]{"A","B","C","D"}, 2),
+        ("にほんの しゅとは？", new[]{"おおさか","とうきょう","きょうと","なごや"}, 1),
+        ("パンダの しょくじは おもに？", new[]{"にく","さかな","ささ","くだもの"}, 2),
+        ("いっしゅうかんは なんにち？", new[]{"5にち","6にち","7にち","8にち"}, 2),
+        ("ひかりの さんげんしょくで ないのは？", new[]{"あか","きいろ","あお","みどり"}, 1),
+        ("にんげんの ほねの かずは やく？", new[]{"100ほん","150ほん","200ほん","300ほん"}, 2),
+        ("さんかくけいの かくどの ごうけいは？", new[]{"90ど","180ど","270ど","360ど"}, 1),
+        ("かんじの 「山」の かくすうは？", new[]{"2かく","3かく","4かく","5かく"}, 1),
+        ("ちきゅうから いちばん ちかい ほしは？", new[]{"かせい","きんせい","もくせい","どせい"}, 1),
+        ("1キロメートルは なんメートル？", new[]{"100m","500m","1000m","10000m"}, 2),
+        ("にほんの こっかは？", new[]{"さくら","きく","うめ","ばら"}, 0),
+        ("おおきい じゅんに ならべると？", new[]{"kg, g, mg","mg, g, kg","g, kg, mg","kg, mg, g"}, 0),
+        ("でんきを とおさない ものは？", new[]{"てつ","どう","ゴム","アルミ"}, 2),
+    };
+
+    void CreateJukuTeacherNPC()
+    {
+        if (tilesContainer == null) return;
+
+        jukuTeacherObj = new GameObject("JukuTeacherNPC");
+        jukuTeacherObj.transform.SetParent(tilesContainer.transform, false);
+
+        var rect = jukuTeacherObj.AddComponent<RectTransform>();
+        float posX = (jukuTeacherX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (jukuTeacherY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(DISPLAY_TILE, DISPLAY_TILE);
+
+        var btnImg = jukuTeacherObj.AddComponent<Image>();
+        btnImg.color = new Color(0, 0, 0, 0);
+        var btn = jukuTeacherObj.AddComponent<Button>();
+        btn.transition = Selectable.Transition.None;
+        btn.onClick.AddListener(() => OnJukuTeacherTapped());
+
+        DrawJukuTeacherNPC(jukuTeacherObj.transform, 0.8f);
+        jukuTeacherObj.transform.SetAsLastSibling();
+    }
+
+    void DrawJukuTeacherNPC(Transform parent, float scale)
+    {
+        Sprite spr = Resources.Load<Sprite>("MapCharacters/Teacher_Lady");
+        if (spr != null)
+        {
+            var go = new GameObject("TeacherSprite");
+            go.transform.SetParent(parent, false);
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(DISPLAY_TILE * scale, DISPLAY_TILE * scale);
+            var img = go.AddComponent<Image>();
+            img.sprite = spr;
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+        }
+    }
+
+    void CheckJukuTeacher()
+    {
+        if (jukuTeacherObj == null) return;
+        if (playerTileX == jukuTeacherX && playerTileY == jukuTeacherY)
+            OnJukuTeacherTapped();
+    }
+
+    void OnJukuTeacherTapped()
+    {
+        if (jukuQuizActive) return;
+        if (menuOpen) return;
+
+        StartCoroutine(JukuQuizSequence());
+    }
+
+    IEnumerator JukuQuizSequence()
+    {
+        jukuQuizActive = true;
+        menuOpen = true;
+
+        // 縁の書に登録
+        if (DataCarrier.Instance != null)
+            DataCarrier.Instance.AddMetNpc("じゅくの先生");
+
+        // オーバーレイ
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.justifyContent = UIE.Justify.FlexEnd;
+        overlayRoot.Add(overlay);
+
+        // フェードイン
+        float fadeIn = 0.3f;
+        float fadeElapsed = 0f;
+        while (fadeElapsed < fadeIn)
+        {
+            fadeElapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0, 0.5f, fadeElapsed / fadeIn));
+            yield return null;
+        }
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+
+        // ポートレート
+        var portraitEl = new UIE.VisualElement();
+        portraitEl.AddToClassList("milk-dialog-portrait");
+        var teacherSpr = Resources.Load<Sprite>("MapCharacters/Teacher_Lady");
+        if (teacherSpr != null)
+            portraitEl.style.backgroundImage = new UIE.StyleBackground(teacherSpr);
+        overlay.Add(portraitEl);
+
+        // 導入ダイアログ
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
+
+        var nameLabel = UIHelper.CreateLabel("じゅくの先生", "milk-dialog-name");
+        dialogBox.Add(nameLabel);
+
+        int currentWisdom = DataCarrier.Instance != null ? DataCarrier.Instance.babyIntelligence : 0;
+        var textLabel = UIHelper.CreateLabel(string.Format(Localization.Get("juku_intro"), currentWisdom), "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        var tapHint = UIHelper.CreateLabel("▼ タップで はじめる", "milk-dialog-hint");
+        dialogBox.Add(tapHint);
+
+        yield return new WaitForSeconds(0.3f);
+
+        bool tapped = false;
+        overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+        while (!tapped) yield return null;
+
+        // ダイアログを消す
+        dialogBox.RemoveFromHierarchy();
+
+        // クイズ出題: ランダムに3問選ぶ
+        var indices = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < JukuQuizData.Length; i++) indices.Add(i);
+        // シャッフル
+        for (int i = indices.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (indices[i], indices[j]) = (indices[j], indices[i]);
+        }
+
+        int correctCount = 0;
+        bool failed = false;
+
+        for (int q = 0; q < 3 && !failed; q++)
+        {
+            var quiz = JukuQuizData[indices[q]];
+
+            // クイズパネル
+            var panel = new UIE.VisualElement();
+            panel.AddToClassList("juku-panel");
+            overlay.Add(panel);
+
+            var numLabel = UIHelper.CreateLabel($"もんだい {q + 1}/3", "juku-question-num");
+            panel.Add(numLabel);
+
+            var qLabel = UIHelper.CreateLabel(quiz.question, "juku-question-text");
+            panel.Add(qLabel);
+
+            int selectedChoice = -1;
+            var choiceBtns = new UIE.VisualElement[4];
+            for (int c = 0; c < 4; c++)
+            {
+                int choiceIdx = c;
+                var choiceBtn = new UIE.VisualElement();
+                choiceBtn.AddToClassList("juku-choice-btn");
+
+                var choiceLabel = UIHelper.CreateLabel(quiz.choices[c], "juku-choice-label");
+                choiceBtn.Add(choiceLabel);
+
+                choiceBtn.RegisterCallback<UIE.ClickEvent>(evt =>
+                {
+                    if (selectedChoice < 0) selectedChoice = choiceIdx;
+                });
+                panel.Add(choiceBtn);
+                choiceBtns[c] = choiceBtn;
+            }
+
+            // 結果テキスト
+            var resultLabel = UIHelper.CreateLabel("", "juku-result-text");
+            panel.Add(resultLabel);
+
+            yield return new WaitForSeconds(0.2f);
+
+            // 回答待ち
+            while (selectedChoice < 0) yield return null;
+
+            if (selectedChoice == quiz.answer)
+            {
+                // 正解
+                if (seSource != null && seQuizCorrect != null)
+                    seSource.PlayOneShot(seQuizCorrect, 0.8f);
+                choiceBtns[selectedChoice].style.backgroundColor = new Color(0.3f, 0.75f, 0.35f);
+                resultLabel.text = "せいかい！";
+                resultLabel.style.color = new Color(0.2f, 0.65f, 0.25f);
+                correctCount++;
+            }
+            else
+            {
+                // 不正解
+                if (seSource != null && seQuizWrong != null)
+                    seSource.PlayOneShot(seQuizWrong, 0.8f);
+                choiceBtns[selectedChoice].style.backgroundColor = new Color(0.85f, 0.3f, 0.3f);
+                choiceBtns[quiz.answer].style.backgroundColor = new Color(0.3f, 0.75f, 0.35f);
+                resultLabel.text = "ざんねん…";
+                resultLabel.style.color = new Color(0.8f, 0.25f, 0.25f);
+                failed = true;
+            }
+
+            yield return new WaitForSeconds(1.0f);
+
+            panel.RemoveFromHierarchy();
+        }
+
+        // 結果ダイアログ
+        var resultDialog = new UIE.VisualElement();
+        resultDialog.AddToClassList("milk-dialog-box");
+        overlay.Add(resultDialog);
+
+        var resultName = UIHelper.CreateLabel("じゅくの先生", "milk-dialog-name");
+        resultDialog.Add(resultName);
+
+        if (correctCount == 3)
+        {
+            var resultText = UIHelper.CreateLabel(Localization.Get("juku_reward_text"), "milk-dialog-text");
+            resultDialog.Add(resultText);
+
+            // 旧ちえ値を記憶してから+1
+            int oldWisdom = DataCarrier.Instance != null ? DataCarrier.Instance.babyIntelligence : 0;
+            if (DataCarrier.Instance != null)
+            {
+                DataCarrier.Instance.babyIntelligence += 1;
+                DataCarrier.Instance.SaveData();
+            }
+            int newWisdom = DataCarrier.Instance != null ? DataCarrier.Instance.babyIntelligence : oldWisdom + 1;
+
+            var closeTap = UIHelper.CreateLabel("▼ タップ", "milk-dialog-hint");
+            resultDialog.Add(closeTap);
+
+            yield return new WaitForSeconds(0.3f);
+            tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+
+            // ちえアップ演出パネル
+            resultDialog.RemoveFromHierarchy();
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+
+            var growthPanel = new UIE.VisualElement();
+            growthPanel.style.width = 900;
+            growthPanel.style.backgroundColor = new Color(0.969f, 0.906f, 0.808f, 1f); // #F7E7CE
+            growthPanel.style.borderTopLeftRadius = 48;
+            growthPanel.style.borderTopRightRadius = 48;
+            growthPanel.style.borderBottomLeftRadius = 48;
+            growthPanel.style.borderBottomRightRadius = 48;
+            growthPanel.style.paddingTop = 40;
+            growthPanel.style.paddingBottom = 40;
+            growthPanel.style.paddingLeft = 32;
+            growthPanel.style.paddingRight = 32;
+            growthPanel.style.alignItems = UIE.Align.Center;
+            growthPanel.style.alignSelf = UIE.Align.Center;
+            overlay.Add(growthPanel);
+
+            // タイトル「ちえ アップ！」
+            var growthTitle = UIHelper.CreateLabel(Localization.Get("juku_wisdom_up_title"), "");
+            growthTitle.style.fontSize = 52;
+            growthTitle.style.color = Color.black;
+            growthTitle.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+            UIHelper.ApplyFontBold(growthTitle);
+            growthPanel.Add(growthTitle);
+
+            // ちえ行 (フェードイン + スケールアニメーション)
+            var row = new UIE.VisualElement();
+            row.style.flexDirection = UIE.FlexDirection.Row;
+            row.style.alignItems = UIE.Align.Center;
+            row.style.justifyContent = UIE.Justify.Center;
+            row.style.width = UIE.Length.Percent(100);
+            row.style.height = 120;
+            row.style.marginTop = 24;
+            row.style.backgroundColor = new Color(1f, 1f, 1f, 0.6f);
+            row.style.borderTopLeftRadius = 30;
+            row.style.borderTopRightRadius = 30;
+            row.style.borderBottomLeftRadius = 30;
+            row.style.borderBottomRightRadius = 30;
+            row.style.opacity = 0f;
+            row.style.scale = new UIE.Scale(new Vector2(0.85f, 0.85f));
+            row.style.transitionProperty = new System.Collections.Generic.List<UIE.StylePropertyName> {
+                new UIE.StylePropertyName("opacity"),
+                new UIE.StylePropertyName("scale")
+            };
+            row.style.transitionDuration = new System.Collections.Generic.List<UIE.TimeValue> {
+                new UIE.TimeValue(0.4f),
+                new UIE.TimeValue(0.4f)
+            };
+            row.style.transitionTimingFunction = new System.Collections.Generic.List<UIE.EasingFunction> {
+                new UIE.EasingFunction(UIE.EasingMode.EaseOut),
+                new UIE.EasingFunction(UIE.EasingMode.EaseOut)
+            };
+            growthPanel.Add(row);
+
+            // カラーバー
+            var bar = new UIE.VisualElement();
+            bar.style.width = 6;
+            bar.style.height = UIE.Length.Percent(70);
+            bar.style.borderTopLeftRadius = 3;
+            bar.style.borderTopRightRadius = 3;
+            bar.style.borderBottomLeftRadius = 3;
+            bar.style.borderBottomRightRadius = 3;
+            bar.style.backgroundColor = new Color(0.667f, 0.941f, 0.82f); // accent #AAF0D1
+            bar.style.marginLeft = 28;
+            row.Add(bar);
+
+            // ラベル「ちえ」
+            var statLabel = UIHelper.CreateLabel("ちえ", "");
+            statLabel.style.fontSize = 36;
+            statLabel.style.color = new Color(0.667f, 0.941f, 0.82f);
+            statLabel.style.width = 120;
+            statLabel.style.marginLeft = 16;
+            statLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleLeft;
+            UIHelper.ApplyFontBold(statLabel);
+            row.Add(statLabel);
+
+            // 旧値
+            var oldLabel = UIHelper.CreateLabel(oldWisdom.ToString(), "");
+            oldLabel.style.fontSize = 38;
+            oldLabel.style.color = new Color(0, 0, 0, 0.35f);
+            oldLabel.style.width = 100;
+            oldLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleRight;
+            row.Add(oldLabel);
+
+            // 矢印
+            var arrow = UIHelper.CreateLabel("\u2192", "");
+            arrow.style.fontSize = 36;
+            arrow.style.color = new Color(1f, 0.718f, 0.773f); // sub #FFB7C5
+            arrow.style.width = 70;
+            arrow.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+            row.Add(arrow);
+
+            // 新値
+            var newLabel = UIHelper.CreateLabel(newWisdom.ToString(), "");
+            newLabel.style.fontSize = 44;
+            newLabel.style.color = Color.black;
+            newLabel.style.width = 100;
+            newLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleRight;
+            UIHelper.ApplyFontBold(newLabel);
+            row.Add(newLabel);
+
+            // +1 バッジ
+            var diffBadge = new UIE.VisualElement();
+            diffBadge.style.height = 44;
+            diffBadge.style.borderTopLeftRadius = 22;
+            diffBadge.style.borderTopRightRadius = 22;
+            diffBadge.style.borderBottomLeftRadius = 22;
+            diffBadge.style.borderBottomRightRadius = 22;
+            diffBadge.style.paddingLeft = 14;
+            diffBadge.style.paddingRight = 14;
+            diffBadge.style.alignItems = UIE.Align.Center;
+            diffBadge.style.justifyContent = UIE.Justify.Center;
+            diffBadge.style.marginLeft = 10;
+            diffBadge.style.backgroundColor = new Color(0.667f, 0.941f, 0.82f, 0.12f);
+            var diffText = UIHelper.CreateLabel("+1", "");
+            diffText.style.fontSize = 26;
+            diffText.style.color = new Color(0.667f, 0.941f, 0.82f);
+            UIHelper.ApplyFontBold(diffText);
+            diffBadge.Add(diffText);
+            row.Add(diffBadge);
+
+            // 行のフェードインアニメーション開始
+            yield return null; // 1フレーム待ってtransition発火
+            row.style.opacity = 1f;
+            row.style.scale = new UIE.Scale(new Vector2(1f, 1f));
+            yield return new WaitForSeconds(0.5f);
+
+            // OKボタン
+            bool dismissed = false;
+            var okBtn = UIHelper.CreatePillButton("OK", "");
+            okBtn.style.width = 500;
+            okBtn.style.height = 100;
+            okBtn.style.borderTopLeftRadius = 50;
+            okBtn.style.borderTopRightRadius = 50;
+            okBtn.style.borderBottomLeftRadius = 50;
+            okBtn.style.borderBottomRightRadius = 50;
+            okBtn.style.fontSize = 34;
+            okBtn.style.marginTop = 30;
+            okBtn.style.backgroundColor = new Color(1f, 0.718f, 0.773f); // sub
+            okBtn.style.color = Color.white;
+            okBtn.clicked += () => dismissed = true;
+            UIHelper.ApplyFontBold(okBtn);
+            growthPanel.Add(okBtn);
+
+            // OKフェードイン
+            okBtn.style.opacity = 0f;
+            float okElapsed = 0f;
+            while (okElapsed < 0.2f)
+            {
+                okElapsed += Time.deltaTime;
+                okBtn.style.opacity = Mathf.Clamp01(okElapsed / 0.2f);
+                yield return null;
+            }
+            okBtn.style.opacity = 1f;
+
+            while (!dismissed) yield return null;
+
+            // フェードアウト
+            float fadeOut = 0.2f;
+            fadeElapsed = 0f;
+            while (fadeElapsed < fadeOut)
+            {
+                fadeElapsed += Time.deltaTime;
+                overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0.5f, 0, fadeElapsed / fadeOut));
+                growthPanel.style.opacity = 1f - fadeElapsed / fadeOut;
+                yield return null;
+            }
+            overlay.RemoveFromHierarchy();
+        }
+        else
+        {
+            var resultText = UIHelper.CreateLabel("また ちょうせん してね！", "milk-dialog-text");
+            resultDialog.Add(resultText);
+
+            var closeTap = UIHelper.CreateLabel("▼ タップで とじる", "milk-dialog-hint");
+            resultDialog.Add(closeTap);
+
+            yield return new WaitForSeconds(0.3f);
+
+            tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+
+            // フェードアウト
+            float fadeOut = 0.2f;
+            fadeElapsed = 0f;
+            while (fadeElapsed < fadeOut)
+            {
+                fadeElapsed += Time.deltaTime;
+                overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0.5f, 0, fadeElapsed / fadeOut));
+                resultDialog.style.opacity = 1f - fadeElapsed / fadeOut;
+                yield return null;
+            }
+            overlay.RemoveFromHierarchy();
+        }
+
+        jukuQuizActive = false;
+        menuOpen = false;
     }
 
     void CheckElderNPC()
@@ -4705,18 +5737,18 @@ public class MapManager : MonoBehaviour
         {
             messages = new string[]
             {
-                "おお…お前がいじわるベイビーを倒したのか。大した赤ん坊だ。この村は長く奴に怯えていたからな…。",
-                "この先には強い敵もいる。傷ついたらあそこにいるミルクの母さんを頼るといい。温かいミルクで回復させてくれるぞ。",
-                "気をつけて行くのだぞ。お前の冒険はまだ始まったばかりだ。"
+                "おお…お前が ぷんぷんベイビーと あそんだのか。たいした あかんぼうだ。この さとは ながく あいつに こまっていたからな…。",
+                "この先には もっと あそびたがりの おともだちも いる。つかれたら わしの左にいる ミルクの母さんを頼るといい。温かいミルクで げんきに してくれるぞ。",
+                "気をつけて行くのだぞ。お前の ぼうけんは まだ はじまったばかりだ。"
             };
         }
         else
         {
             messages = new string[]
             {
-                "おお、小さな戦士よ。ここは広い世界への入口じゃ。",
-                "あそこにいるミルクの母さんを頼るといい。温かいミルクで傷を癒してくれるぞ。",
-                "気をつけて行くのだぞ。お前の冒険はまだ始まったばかりだ。"
+                "おお、ちいさな ぼうけんしゃさんよ。ここは ひろい せかいへの いりぐちじゃ。",
+                "わしの左にいる ミルクの母さんを頼るといい。温かいミルクで げんきに してくれるぞ。",
+                "気をつけて行くのだぞ。お前の ぼうけんは まだ はじまったばかりだ。"
             };
         }
 
@@ -4855,7 +5887,7 @@ public class MapManager : MonoBehaviour
         {
             messages = new string[]
             {
-                "あらあら、こんなに小さなおててで武器を握って…。お腹が空いたでしょう？さあ、ミルクをお飲み。",
+                "あらあら、こんなに小さなおててで おもちゃを にぎって…。お腹が空いたでしょう？さあ、ミルクをお飲み。",
                 "よしよし、いっぱい飲んで大きくなるのよ。母さんの祈りがあなたを守ってくれるわ。",
                 "危なくなったら、いつでも戻っておいで。温かいミルクを用意して待っているからね。"
             };
@@ -4926,13 +5958,8 @@ public class MapManager : MonoBehaviour
 
         statusDetailEl = new UIE.VisualElement();
         statusDetailEl.AddToClassList("map-detail-panel");
-        statusDetailEl.style.width = 750;
-        statusDetailEl.style.paddingTop = 36;
-        statusDetailEl.style.paddingBottom = 30;
-        statusDetailEl.style.alignItems = UIE.Align.Center;
 
         var title = UIHelper.CreateLabel(Localization.Get("map_status_title"), "map-detail-title");
-        title.style.fontSize = 38;
         statusDetailEl.Add(title);
 
         // 赤ちゃん画像
@@ -4956,7 +5983,7 @@ public class MapManager : MonoBehaviour
 
         string genderColor = dc.babyGender == "\u7537\u306e\u5b50" ? "#00BFFF" : "#FF69B4";
         string traitColor = dc.trait1 == "\u8987\u738b\u8272" ? "#FF4500" : "#FFA500";
-        string godLabel = dc.isGodBaby ? "  <color=#FFD700>\u2605GOD BABY\u2605</color>" : "";
+        string godLabel = dc.isGodBaby ? "  <color=#FFD700>\u2605STAR BABY\u2605</color>" : "";
 
         string content = $"<b>{dc.babyName}</b>{godLabel}\n" +
             $"<color={genderColor}>{Localization.GetGender(dc.babyGender)}</color>\u3000\u3000{Localization.GetAge(dc.babyAge)}\n" +
@@ -4972,8 +5999,6 @@ public class MapManager : MonoBehaviour
 
         var contentLabel = UIHelper.CreateLabel(content, "map-detail-content");
         contentLabel.enableRichText = true;
-        contentLabel.style.color = new Color(0f, 0f, 0f, 1f);
-        contentLabel.style.fontSize = 28;
         contentLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
         contentLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
         contentLabel.style.width = 680;
@@ -5281,14 +6306,14 @@ public class MapManager : MonoBehaviour
                 var row = new UIE.VisualElement();
                 row.style.flexDirection = UIE.FlexDirection.Row;
                 row.style.alignItems = UIE.Align.Center;
-                row.style.minHeight = 90;
-                row.style.marginTop = 4;
-                row.style.paddingLeft = 8;
-                row.style.paddingRight = 8;
-                row.style.borderTopLeftRadius = 10;
-                row.style.borderTopRightRadius = 10;
-                row.style.borderBottomLeftRadius = 10;
-                row.style.borderBottomRightRadius = 10;
+                row.style.minHeight = 110;
+                row.style.marginTop = 8;
+                row.style.paddingLeft = 16;
+                row.style.paddingRight = 16;
+                row.style.borderTopLeftRadius = 24;
+                row.style.borderTopRightRadius = 24;
+                row.style.borderBottomLeftRadius = 24;
+                row.style.borderBottomRightRadius = 24;
                 row.style.backgroundColor = isEquipped
                     ? new UIE.StyleColor(new Color(1f, 1f, 1f, 1f))
                     : new UIE.StyleColor(new Color(1f, 1f, 1f, 0.5f));
@@ -5297,11 +6322,11 @@ public class MapManager : MonoBehaviour
                 if (eqSprite != null)
                 {
                     var imgEl = new UIE.VisualElement();
-                    imgEl.style.width = 64;
-                    imgEl.style.height = 64;
+                    imgEl.style.width = 80;
+                    imgEl.style.height = 80;
                     imgEl.style.backgroundImage = new UIE.StyleBackground(eqSprite);
                     imgEl.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
-                    imgEl.style.marginRight = 12;
+                    imgEl.style.marginRight = 16;
                     imgEl.style.flexShrink = 0;
                     row.Add(imgEl);
                 }
@@ -5309,19 +6334,19 @@ public class MapManager : MonoBehaviour
                 {
                     // ショップ装備：色付き丸プレースホルダ
                     var placeholder = new UIE.VisualElement();
-                    placeholder.style.width = 64;
-                    placeholder.style.height = 64;
-                    placeholder.style.borderTopLeftRadius = 32;
-                    placeholder.style.borderTopRightRadius = 32;
-                    placeholder.style.borderBottomLeftRadius = 32;
-                    placeholder.style.borderBottomRightRadius = 32;
+                    placeholder.style.width = 80;
+                    placeholder.style.height = 80;
+                    placeholder.style.borderTopLeftRadius = 40;
+                    placeholder.style.borderTopRightRadius = 40;
+                    placeholder.style.borderBottomLeftRadius = 40;
+                    placeholder.style.borderBottomRightRadius = 40;
                     placeholder.style.backgroundColor = new UIE.StyleColor(new Color(1f, 0.718f, 0.773f, 1f)); // sub color
                     placeholder.style.alignItems = UIE.Align.Center;
                     placeholder.style.justifyContent = UIE.Justify.Center;
-                    placeholder.style.marginRight = 12;
+                    placeholder.style.marginRight = 16;
                     placeholder.style.flexShrink = 0;
                     var phLabel = UIHelper.CreateLabel(eq.Substring(0, 1));
-                    phLabel.style.fontSize = 28;
+                    phLabel.style.fontSize = 32;
                     phLabel.style.color = new UIE.StyleColor(Color.white);
                     phLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
                     phLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
@@ -5366,8 +6391,9 @@ public class MapManager : MonoBehaviour
         int currentMilk = DataCarrier.Instance != null ? DataCarrier.Instance.milk : 0;
         var milkLabel = UIHelper.CreateLabel(Localization.Get("inv_milk", currentMilk), "map-inv-item");
         milkLabel.enableRichText = true;
-        milkLabel.style.marginTop = 16;
-        milkLabel.style.minHeight = 60;
+        milkLabel.style.marginTop = 20;
+        milkLabel.style.minHeight = 80;
+        milkLabel.style.paddingLeft = 16;
         inventoryOverlayEl.Add(milkLabel);
 
         // 持ち物欄
@@ -5390,7 +6416,8 @@ public class MapManager : MonoBehaviour
                     "<color=#FFD700>\u2605 " + Localization.Get("map_item_golden_egg") + "</color>" : item;
                 var itemLabel = UIHelper.CreateLabel(displayText, "map-inv-item");
                 itemLabel.enableRichText = true;
-                itemLabel.style.minHeight = 60;
+                itemLabel.style.minHeight = 80;
+                itemLabel.style.paddingLeft = 16;
                 inventoryOverlayEl.Add(itemLabel);
             }
         }
@@ -5461,6 +6488,16 @@ public class MapManager : MonoBehaviour
                 return;
             }
         }
+        foreach (var si in villageShopItems)
+        {
+            if (si.equipName == equipName)
+            {
+                string ek = "shop_effect_" + si.key;
+                string et = Localization.Get(ek);
+                if (et != ek) effectText = et;
+                return;
+            }
+        }
     }
 
     void OpenEquipmentPanel()
@@ -5477,8 +6514,6 @@ public class MapManager : MonoBehaviour
 
         equipmentOverlayEl = new UIE.VisualElement();
         equipmentOverlayEl.AddToClassList("map-equip-panel");
-        equipmentOverlayEl.style.maxHeight = 1200;
-        equipmentOverlayEl.style.width = 700;
 
         int equippedCount = DataCarrier.Instance != null ? DataCarrier.Instance.GetEquippedCount() : 0;
         var title = UIHelper.CreateLabel(
@@ -5503,6 +6538,14 @@ public class MapManager : MonoBehaviour
                 {
                     GetEquipItemInfo(eq, out Sprite eqSprite, out string eqEffect, out string _);
                     var itemRow = BuildEquipRow(eq, eqSprite, eqEffect, true);
+
+                    // タップで詳細表示
+                    string capturedEqDetail = eq;
+                    itemRow.RegisterCallback<UIE.ClickEvent>(evt =>
+                    {
+                        evt.StopPropagation();
+                        ShowEquipDetailOverlay(capturedEqDetail);
+                    });
 
                     string capturedEq = eq;
                     var unequipBtn = UIHelper.CreatePillButton(Localization.Get("equip_remove"), "pill-button-small");
@@ -5543,6 +6586,14 @@ public class MapManager : MonoBehaviour
                 GetEquipItemInfo(ow, out Sprite owSprite, out string owEffect, out string _);
                 var itemRow = BuildEquipRow(ow, owSprite, owEffect, false);
 
+                // タップで詳細表示
+                string capturedOwDetail = ow;
+                itemRow.RegisterCallback<UIE.ClickEvent>(evt =>
+                {
+                    evt.StopPropagation();
+                    ShowEquipDetailOverlay(capturedOwDetail);
+                });
+
                 bool slotsFull = DataCarrier.Instance != null && DataCarrier.Instance.GetEquippedCount() >= DataCarrier.MAX_EQUIP_SLOTS;
                 string capturedOw = ow;
                 var equipBtn = UIHelper.CreatePillButton(Localization.Get("equip_set"), "pill-button-small");
@@ -5569,8 +6620,7 @@ public class MapManager : MonoBehaviour
             }
         }
 
-        var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "pill-button-small");
-        closeBtn.style.marginTop = 20;
+        var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "map-save-close-btn");
         closeBtn.clicked += () => CloseEquipmentPanel();
         equipmentOverlayEl.Add(closeBtn);
 
@@ -5585,14 +6635,14 @@ public class MapManager : MonoBehaviour
         row.style.flexDirection = UIE.FlexDirection.Row;
         row.style.alignItems = UIE.Align.Center;
         row.style.justifyContent = UIE.Justify.SpaceBetween;
-        row.style.minHeight = 80;
-        row.style.marginTop = 6;
-        row.style.paddingLeft = 10;
-        row.style.paddingRight = 10;
-        row.style.borderTopLeftRadius = 10;
-        row.style.borderTopRightRadius = 10;
-        row.style.borderBottomLeftRadius = 10;
-        row.style.borderBottomRightRadius = 10;
+        row.style.minHeight = 110;
+        row.style.marginTop = 8;
+        row.style.paddingLeft = 16;
+        row.style.paddingRight = 16;
+        row.style.borderTopLeftRadius = 24;
+        row.style.borderTopRightRadius = 24;
+        row.style.borderBottomLeftRadius = 24;
+        row.style.borderBottomRightRadius = 24;
         row.style.backgroundColor = isEquipped
             ? new UIE.StyleColor(new Color(0.93f, 0.93f, 1f))
             : new UIE.StyleColor(new Color(0.96f, 0.96f, 0.96f));
@@ -5602,30 +6652,30 @@ public class MapManager : MonoBehaviour
         if (sprite != null)
         {
             var imgEl = new UIE.VisualElement();
-            imgEl.style.width = 60;
-            imgEl.style.height = 60;
+            imgEl.style.width = 80;
+            imgEl.style.height = 80;
             imgEl.style.backgroundImage = new UIE.StyleBackground(sprite);
             imgEl.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
-            imgEl.style.marginRight = 12;
+            imgEl.style.marginRight = 16;
             imgEl.style.flexShrink = 0;
             row.Add(imgEl);
         }
         else
         {
             var placeholder = new UIE.VisualElement();
-            placeholder.style.width = 60;
-            placeholder.style.height = 60;
-            placeholder.style.borderTopLeftRadius = 30;
-            placeholder.style.borderTopRightRadius = 30;
-            placeholder.style.borderBottomLeftRadius = 30;
-            placeholder.style.borderBottomRightRadius = 30;
+            placeholder.style.width = 80;
+            placeholder.style.height = 80;
+            placeholder.style.borderTopLeftRadius = 40;
+            placeholder.style.borderTopRightRadius = 40;
+            placeholder.style.borderBottomLeftRadius = 40;
+            placeholder.style.borderBottomRightRadius = 40;
             placeholder.style.backgroundColor = new UIE.StyleColor(new Color(0.7f, 0.75f, 0.9f));
             placeholder.style.alignItems = UIE.Align.Center;
             placeholder.style.justifyContent = UIE.Justify.Center;
-            placeholder.style.marginRight = 12;
+            placeholder.style.marginRight = 16;
             placeholder.style.flexShrink = 0;
             var phLabel = UIHelper.CreateLabel(equipName.Substring(0, 1));
-            phLabel.style.fontSize = 24;
+            phLabel.style.fontSize = 32;
             phLabel.style.color = new UIE.StyleColor(Color.white);
             phLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             phLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
@@ -5665,7 +6715,7 @@ public class MapManager : MonoBehaviour
         }
     }
 
-    /// <summary>持ち物パネルからタップで装備詳細を表示</summary>
+    /// <summary>装備詳細オーバーレイを表示（持ち物・装備パネルからタップ）</summary>
     void ShowEquipDetailOverlay(string equipName)
     {
         GetEquipItemInfo(equipName, out Sprite sprite, out string effectText, out string bioText);
@@ -5679,26 +6729,45 @@ public class MapManager : MonoBehaviour
 
         var card = new UIE.VisualElement();
         card.AddToClassList("map-equip-bio-panel");
-        card.style.width = 600;
-        card.style.paddingTop = 28;
-        card.style.paddingBottom = 24;
 
-        // 画像
+        // 画像（大きく表示）
         if (sprite != null)
         {
             var imgEl = new UIE.VisualElement();
-            imgEl.style.width = 120;
-            imgEl.style.height = 120;
+            imgEl.style.width = 200;
+            imgEl.style.height = 200;
             imgEl.style.backgroundImage = new UIE.StyleBackground(sprite);
             imgEl.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
-            imgEl.style.marginBottom = 12;
+            imgEl.style.marginBottom = 16;
             card.Add(imgEl);
+        }
+        else
+        {
+            // プレースホルダー（頭文字）
+            var placeholder = new UIE.VisualElement();
+            placeholder.style.width = 200;
+            placeholder.style.height = 200;
+            placeholder.style.borderTopLeftRadius = 100;
+            placeholder.style.borderTopRightRadius = 100;
+            placeholder.style.borderBottomLeftRadius = 100;
+            placeholder.style.borderBottomRightRadius = 100;
+            placeholder.style.backgroundColor = new UIE.StyleColor(new Color(0.7f, 0.75f, 0.9f));
+            placeholder.style.alignItems = UIE.Align.Center;
+            placeholder.style.justifyContent = UIE.Justify.Center;
+            placeholder.style.marginBottom = 16;
+            var phLabel = UIHelper.CreateLabel(equipName.Substring(0, 1));
+            phLabel.style.fontSize = 60;
+            phLabel.style.color = new UIE.StyleColor(Color.white);
+            phLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            phLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            placeholder.Add(phLabel);
+            card.Add(placeholder);
         }
 
         // 名前
         var nameLabel = UIHelper.CreateLabel(equipName, "map-equip-item-name");
-        nameLabel.style.fontSize = 30;
-        nameLabel.style.marginBottom = 8;
+        nameLabel.style.fontSize = 38;
+        nameLabel.style.marginBottom = 12;
         nameLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
         card.Add(nameLabel);
 
@@ -5706,22 +6775,37 @@ public class MapManager : MonoBehaviour
         if (isEquipped)
         {
             var badge = UIHelper.CreateLabel("\ud83d\udee1 " + Localization.Get("equip_equipped_badge"));
-            badge.style.fontSize = 20;
+            badge.style.fontSize = 24;
             badge.style.color = new UIE.StyleColor(new Color(0.3f, 0.5f, 0.8f));
             badge.style.unityFontStyleAndWeight = FontStyle.Bold;
             badge.style.unityTextAlign = TextAnchor.MiddleCenter;
-            badge.style.marginBottom = 6;
+            badge.style.marginBottom = 8;
             card.Add(badge);
         }
 
-        // 効果
+        // 効果（目立つ表示）
         if (!string.IsNullOrEmpty(effectText))
         {
-            var effectLabel = UIHelper.CreateLabel(effectText, "map-equip-item-effect");
-            effectLabel.style.fontSize = 22;
+            var effectBox = new UIE.VisualElement();
+            effectBox.style.backgroundColor = new UIE.StyleColor(new Color(0.95f, 0.93f, 1f));
+            effectBox.style.borderTopLeftRadius = 20;
+            effectBox.style.borderTopRightRadius = 20;
+            effectBox.style.borderBottomLeftRadius = 20;
+            effectBox.style.borderBottomRightRadius = 20;
+            effectBox.style.paddingTop = 14;
+            effectBox.style.paddingBottom = 14;
+            effectBox.style.paddingLeft = 24;
+            effectBox.style.paddingRight = 24;
+            effectBox.style.marginBottom = 12;
+            effectBox.style.alignItems = UIE.Align.Center;
+
+            var effectLabel = UIHelper.CreateLabel(effectText);
+            effectLabel.style.fontSize = 32;
+            effectLabel.style.color = new UIE.StyleColor(new Color(0.4f, 0.2f, 0.6f));
+            effectLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             effectLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            effectLabel.style.marginBottom = 10;
-            card.Add(effectLabel);
+            effectBox.Add(effectLabel);
+            card.Add(effectBox);
         }
 
         // Bio
@@ -5733,8 +6817,8 @@ public class MapManager : MonoBehaviour
         }
 
         // 閉じるボタン
-        var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "pill-button-small");
-        closeBtn.style.marginTop = 16;
+        var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "map-save-close-btn");
+        closeBtn.style.marginTop = 20;
         closeBtn.clicked += () => overlay.RemoveFromHierarchy();
         card.Add(closeBtn);
 
@@ -5749,6 +6833,7 @@ public class MapManager : MonoBehaviour
         public string key;     // localization key suffix
         public string equipName; // equipment name for DataCarrier
         public int price;
+        public bool requiresS;  // Sランク限定
     }
 
     static readonly ShopItem[] shopItems = new ShopItem[]
@@ -5759,6 +6844,13 @@ public class MapManager : MonoBehaviour
         new ShopItem { key = "omutsu", equipName = "魔法のおむつ", price = 60 },
         new ShopItem { key = "honyubin", equipName = "黄金のほ乳瓶", price = 80 },
         new ShopItem { key = "tiara", equipName = "悪魔のティアラ", price = 100 },
+    };
+
+    static readonly ShopItem[] villageShopItems = new ShopItem[]
+    {
+        new ShopItem { key = "nakineko", equipName = "泣き猫パンチ", price = 20 },
+        new ShopItem { key = "yodarekake_mini", equipName = "ミニよだれかけ", price = 15 },
+        new ShopItem { key = "niji_rattle", equipName = "にじいろガラガラ", price = 50, requiresS = true },
     };
 
     void OpenWeaponShop()
@@ -5784,7 +6876,13 @@ public class MapManager : MonoBehaviour
         milkLabel.name = "shop-milk-label";
         shopOverlayEl.Add(milkLabel);
 
-        foreach (var item in shopItems)
+        // エリアに応じて商品リストを切り替え
+        int entryArea = DataCarrier.Instance != null ? DataCarrier.Instance.shopEntryArea : 1;
+        ShopItem[] currentShopItems = entryArea == 0 ? villageShopItems : shopItems;
+        bool isSRank = DataCarrier.Instance != null
+            && BabySynthesizer.DetermineRank(DataCarrier.Instance.babyFortune) == BabySynthesizer.BabyRank.S;
+
+        foreach (var item in currentShopItems)
         {
             var row = new UIE.VisualElement();
             row.AddToClassList("map-shop-row");
@@ -5799,14 +6897,40 @@ public class MapManager : MonoBehaviour
             var effectLabel = UIHelper.CreateLabel(Localization.Get("shop_effect_" + item.key), "map-shop-item-effect");
             infoCol.Add(effectLabel);
 
+            // Sランク限定表示
+            if (item.requiresS)
+            {
+                var sLabel = UIHelper.CreateLabel(Localization.Get("shop_s_rank_only"), "map-shop-item-effect");
+                sLabel.style.color = new Color(0.9f, 0.6f, 0.1f);
+                infoCol.Add(sLabel);
+            }
+
             row.Add(infoCol);
 
             bool owned = DataCarrier.Instance != null && DataCarrier.Instance.HasEquipment(item.equipName);
 
             if (owned)
             {
-                var purchasedLabel = UIHelper.CreateLabel(Localization.Get("shop_purchased"), "map-shop-purchased");
-                row.Add(purchasedLabel);
+                var purchasedBtn = UIHelper.CreatePillButton(Localization.Get("shop_purchased"), "map-shop-buy-btn");
+                purchasedBtn.style.opacity = 0.4f;
+                purchasedBtn.clicked += () =>
+                {
+                    CloseWeaponShop();
+                    ShowMerchantMessage(Localization.Get("shop_merchant_already_owned"));
+                };
+                row.Add(purchasedBtn);
+            }
+            else if (item.requiresS && !isSRank)
+            {
+                // Sランク限定で、Sランクでない場合は購入不可
+                var lockedBtn = UIHelper.CreatePillButton(Localization.Get("shop_s_rank_only"), "map-shop-buy-btn");
+                lockedBtn.style.opacity = 0.4f;
+                lockedBtn.clicked += () =>
+                {
+                    CloseWeaponShop();
+                    ShowMerchantMessage(Localization.Get("shop_merchant_need_s_rank"));
+                };
+                row.Add(lockedBtn);
             }
             else
             {
@@ -5919,38 +7043,20 @@ public class MapManager : MonoBehaviour
 
         touchSwipeEl.RegisterCallback<UIE.PointerDownEvent>(evt =>
         {
-            touchStartPos = new Vector2(evt.position.x, evt.position.y);
-            isTouchDragging = true;
-            touchDx = 0; touchDy = 0;
+            if (moveCtrl != null)
+                moveCtrl.OnPointerDown(new Vector2(evt.position.x, evt.position.y));
         });
 
         touchSwipeEl.RegisterCallback<UIE.PointerMoveEvent>(evt =>
         {
-            if (!isTouchDragging) return;
-            Vector2 current = new Vector2(evt.position.x, evt.position.y);
-            Vector2 delta = current - touchStartPos;
-            if (delta.magnitude < SWIPE_THRESHOLD)
-            {
-                touchDx = 0; touchDy = 0;
-                return;
-            }
-            if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
-            {
-                touchDx = delta.x > 0 ? 1 : -1;
-                touchDy = 0;
-            }
-            else
-            {
-                touchDx = 0;
-                // UI Toolkit Y is inverted vs screen coords
-                touchDy = delta.y < 0 ? 1 : -1;
-            }
+            if (moveCtrl != null)
+                moveCtrl.OnPointerMove(new Vector2(evt.position.x, evt.position.y));
         });
 
         touchSwipeEl.RegisterCallback<UIE.PointerUpEvent>(evt =>
         {
-            isTouchDragging = false;
-            touchDx = 0; touchDy = 0;
+            if (moveCtrl != null)
+                moveCtrl.OnPointerUp(new Vector2(evt.position.x, evt.position.y));
         });
 
         overlayRoot.Add(touchSwipeEl);
@@ -5965,6 +7071,8 @@ public class MapManager : MonoBehaviour
 
     void OnDestroy()
     {
+        foreach (var sym in enemySymbols) sym.Destroy();
+        if (moveCtrl != null) moveCtrl.Destroy();
         if (villagePanelSettings != null)
             Destroy(villagePanelSettings);
         if (overlayPanelSettings != null)

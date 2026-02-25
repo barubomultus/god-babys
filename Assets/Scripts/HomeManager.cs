@@ -56,9 +56,10 @@ public class HomeManager : MonoBehaviour
     {
         var dc = DataCarrier.Instance;
 
-        // 全画面背景（装飾用）
+        // 背景
         var bg = new UIE.VisualElement();
-        bg.AddToClassList("bg-screen");
+        bg.AddToClassList("home-bg");
+        bg.pickingMode = UIE.PickingMode.Ignore;
         root.Add(bg);
 
         // フレックスボックスのルートコンテナ
@@ -85,8 +86,7 @@ public class HomeManager : MonoBehaviour
 
         // Separator
         var sep = new UIE.VisualElement();
-        sep.AddToClassList("separator");
-        sep.style.marginTop = 20;
+        sep.AddToClassList("home-separator");
         profile.Add(sep);
 
         // --- 中央: ガチャ説明 + こいみこし ---
@@ -119,19 +119,19 @@ public class HomeManager : MonoBehaviour
         buttons.style.paddingBottom = 260 + safeBottom;
         homeRoot.Add(buttons);
 
-        // Meet button (pink border)
+        // Meet button (ピンク塗りつぶし)
         CreateMeetButton(buttons);
 
-        // Babys button (gold border)
+        // Babys button (ゴールド枠)
         CreateBorderedButton(buttons, Localization.Get("home_babys"),
-            new Color(0.85f, 0.65f, 0.13f),
-            new Color(0.45f, 0.45f, 0.5f),
+            new Color(0.82f, 0.63f, 0.18f),
+            new Color(0.55f, 0.45f, 0.15f),
             () => SceneManager.LoadScene("BabysScene"));
 
-        // Enishi button (purple border)
+        // Enishi button (パープル枠)
         CreateBorderedButton(buttons, Localization.Get("home_enishi"),
-            new Color(0.55f, 0.35f, 0.65f),
-            new Color(0.45f, 0.45f, 0.5f),
+            new Color(0.55f, 0.38f, 0.65f),
+            new Color(0.40f, 0.28f, 0.50f),
             () => SceneManager.LoadScene("EnishiScene"));
     }
 
@@ -174,18 +174,15 @@ public class HomeManager : MonoBehaviour
         var row = new UIE.VisualElement();
         row.AddToClassList("home-btn-row");
 
-        // Pink border behind
         var borderEl = new UIE.VisualElement();
         borderEl.AddToClassList("meet-btn-border");
-        borderEl.style.backgroundColor = new Color(0.95f, 0.30f, 0.55f);
+        borderEl.style.backgroundColor = new Color(0.85f, 0.25f, 0.45f);
 
-        // Shadow
         var shadow = new UIE.VisualElement();
         shadow.AddToClassList("shadow-layer");
-        shadow.style.backgroundColor = new Color(0.95f, 0.30f, 0.55f, 0.15f);
+        shadow.style.backgroundColor = new Color(0.85f, 0.25f, 0.45f, 0.15f);
         borderEl.Add(shadow);
 
-        // White button
         var btn = new UIE.Button();
         btn.AddToClassList("meet-btn");
         UIHelper.ApplyFont(btn);

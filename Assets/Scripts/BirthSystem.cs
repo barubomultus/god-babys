@@ -113,12 +113,18 @@ public class BirthSystem : MonoBehaviour
     Texture2D hollowWearTexture;
     SynthesizeParams lastSynthParams;
 
-    // DrawFace と同じ定数からプレビューサイズを計算
-    // uniformR = max(FACE_HOLE_RX, FACE_HOLE_RY) * 1.05 * 1080
-    // facePreviewUniform = uniformR * 2 * (700 / 1080) ≈ 191
-    const float facePreviewUniform = 0.13f * 1.05f * 2f * 700f; // = 191.1
-    // 顔穴中心の上からの比率 (1 - FACE_HOLE_CY)
-    const float FACE_HOLE_TOP_PCT = 32f; // (1 - 0.68) * 100
+    // DrawFace と同じ定数からプレビューサイズを計算（BabySynthesizerの検出値を使用）
+    float GetFacePreviewUniform()
+    {
+        float rx = babySynthesizer != null ? babySynthesizer.GetFaceHoleRX() : 0.13f;
+        float ry = babySynthesizer != null ? babySynthesizer.GetFaceHoleRY() : 0.12f;
+        return Mathf.Max(rx, ry) * 1.05f * 2f * 700f;
+    }
+    float GetFaceHoleTopPct()
+    {
+        float cy = babySynthesizer != null ? babySynthesizer.GetFaceHoleCY() : 0.68f;
+        return (1f - cy) * 100f;
+    }
 
     // 背景
     Image mainBgImg;
@@ -143,7 +149,7 @@ public class BirthSystem : MonoBehaviour
     {
         new ParentData("タケシ",   "takeshi", 70, 30, 180, 40, 85, 30, 20, new Color(0.9f, 0.7f, 0.5f), "元・格闘技世界王者 / 握力: 180kg"),
         new ParentData("ユウキ",   "yuuki",   50, 50, 150, 70, 60, 50, 40, new Color(0.6f, 0.8f, 1.0f), "天才ハッカー / 特許数: 3,200件"),
-        new ParentData("ゴウ",     "gou",     80, 25, 190, 30, 90, 20, 15, new Color(1.0f, 0.5f, 0.4f), "伝説の傭兵 / 戦闘力: 計測不能"),
+        new ParentData("ゴウ",     "gou",     80, 25, 190, 30, 90, 20, 15, new Color(1.0f, 0.5f, 0.4f), "つよい ぼうけんか / ぼうけんりょく: 計測不能"),
         new ParentData("シンジ",   "shinji",  30, 70, 140, 95, 35, 60, 30, new Color(0.7f, 0.7f, 1.0f), "ノーベル賞3回受賞 / IQ: 250"),
         new ParentData("リョウマ", "ryouma",  60, 60, 170, 55, 70, 70, 95, new Color(0.5f, 1.0f, 0.6f), "総資産: 43兆円 / 世界一の実業家"),
         new ParentData("テツヤ",   "tetuya",  45, 45, 160, 60, 55, 80, 60, new Color(1.0f, 0.9f, 0.5f), "伝説のロックスター / ファン数: 8億人"),
@@ -152,7 +158,7 @@ public class BirthSystem : MonoBehaviour
     // 母親6パターン
     static readonly ParentData[] Mothers = new[]
     {
-        new ParentData("サクラ",   "sakura",  40, 60, 150, 60, 65, 40, 25, new Color(1.0f, 0.7f, 0.8f), "暗殺拳の継承者 / 全戦全勝"),
+        new ParentData("サクラ",   "sakura",  40, 60, 150, 60, 65, 40, 25, new Color(1.0f, 0.7f, 0.8f), "つよーい おかあさん / ぜんせん むてき"),
         new ParentData("ヒナタ",   "hinata",  50, 50, 145, 70, 60, 55, 90, new Color(0.8f, 0.6f, 1.0f), "総資産: 28兆円 / 美容帝国CEO"),
         new ParentData("アキラ",   "akira",   65, 30, 160, 45, 80, 45, 35, new Color(1.0f, 0.6f, 0.4f), "五輪金メダル7個 / 100m走: 10.1秒"),
         new ParentData("ミサト",   "misato",  35, 55, 140, 90, 30, 65, 45, new Color(0.6f, 0.9f, 1.0f), "量子物理学者 / IQ: 270"),
@@ -195,31 +201,31 @@ public class BirthSystem : MonoBehaviour
     static readonly System.Collections.Generic.Dictionary<string, string> LoveStories = new System.Collections.Generic.Dictionary<string, string>
     {
         // タケシ（格闘家）× 各母親
-        {"タケシ_サクラ", "裏格闘技界の頂点を決める戦い。\nタケシとサクラは決勝で激突した。\n\n拳と暗殺拳が交錯する中、\n二人は互いの強さに惹かれていく。\n\n死闘は引き分けに終わり、\n「決着は別の形でつけよう」と\nタケシが差し出した手を、\nサクラは静かに握り返した。\n最強の血統がここに誕生する。"},
+        {"タケシ_サクラ", "ぶじゅつかいの頂点を決める大会。\nタケシとサクラは決勝で激突した。\n\nつよいわざが交錯する中、\n二人は互いの強さに惹かれていく。\n\nしあいは引き分けに終わり、\n「決着は別の形でつけよう」と\nタケシが差し出した手を、\nサクラは静かに握り返した。\n最強の血統がここに誕生する。"},
         {"タケシ_ヒナタ", "「格闘家専用コスメを作りたい」\nヒナタからの突然の依頼。\n\nビジネスミーティングのはずが、\nタケシの素朴な優しさに触れ、\nヒナタの心は揺れ始める。\n\n「数字じゃ測れないものがある」\nタケシの言葉に、\n28兆円の帝国を築いた女は\n初めて涙を流した。\n愛は最高の投資だと知った日。"},
         {"タケシ_アキラ", "オリンピック選手村での出会い。\n格闘技代表のタケシと\n陸上代表のアキラ。\n\n食堂で偶然隣り合わせになり、\n互いの鍛え抜かれた肉体に\n目を奪われた。\n\n「一緒にトレーニングしないか？」\nその一言から始まった朝練は、\nいつしか二人だけの時間に変わり、\n閉会式の夜、二人は結ばれた。"},
         {"タケシ_ミサト", "「筋肉の収縮は量子力学で\n説明できるんですよ」\n\n学会に招かれたタケシに、\nミサトは熱心に語りかけた。\n\n「難しいことはわからねえが、\nあんたの目は本気だな」\n\n理論と実践、正反対の二人。\nだが夜通し語り合ううちに、\n科学者の心は格闘家に奪われ、\n最強の頭脳と肉体が融合した。"},
-        {"タケシ_カエデ", "世界格闘技選手権の決勝戦。\nタケシは宿敵との死闘の末、\n右腕を複雑骨折した。\n\n「二度と戦えない」と宣告される中、\n唯一の希望は天才外科医カエデだった。\n\n12時間に及ぶ手術。\n目覚めたタケシの最初の言葉は\n「俺の腕を救ってくれた君を、\n俺の人生に迎えたい」だった。"},
+        {"タケシ_カエデ", "世界格闘技選手権の決勝戦。\nタケシは宿敵とのはげしいしあいの末、\n右腕をけがしてしまった。\n\n「二度とうごかせない」と宣告される中、\n唯一の希望は天才外科医カエデだった。\n\n12時間に及ぶ手術。\n目覚めたタケシの最初の言葉は\n「俺の腕を救ってくれた君を、\n俺の人生に迎えたい」だった。"},
         {"タケシ_ルナ", "スポーツ雑誌の表紙撮影。\n格闘家とスーパーモデルの共演。\n\nカメラの前で火花が散り、\n「もっと近づいて」という\nカメラマンの指示に、\n二人の心臓が高鳴る。\n\n撮影後、ルナが言った。\n「あなたの隣にいると、\n自分が美しく見える気がする」\nスポットライトの下で恋が始まった。"},
 
         // ユウキ（ハッカー）× 各母親
-        {"ユウキ_サクラ", "暗殺組織のサーバーに侵入した夜、\nユウキは追手に囲まれた。\n\nその中にいたのがサクラ。\n「殺すつもりはない。\nあなたの腕が必要なの」\n\n組織を裏切り、共に逃亡する日々。\n追われる中で芽生えた信頼は、\nいつしか愛に変わっていた。\n\n「俺のファイアウォールは\n君だけ通過できる」\n不器用な告白だった。"},
+        {"ユウキ_サクラ", "あやしい組織のサーバーに侵入した夜、\nユウキは追手に囲まれた。\n\nその中にいたのがサクラ。\n「あなたを とめるつもりはない。\nあなたの腕が必要なの」\n\n組織を裏切り、共に逃亡する日々。\n追われる中で芽生えた信頼は、\nいつしか愛に変わっていた。\n\n「俺のファイアウォールは\n君だけ通過できる」\n不器用な告白だった。"},
         {"ユウキ_ヒナタ", "美容帝国のDX化プロジェクト。\n億単位の契約書を前に、\nユウキは言った。\n\n「報酬はいらない。\nその代わり、週に一度\n食事に付き合ってほしい」\n\n最初は呆れていたヒナタも、\n彼の純粋さに惹かれていく。\n\n「私に値段をつけない人は\n初めてよ」\n28兆円より価値ある愛を知った。"},
         {"ユウキ_アキラ", "アスリート向けAIトレーナーの開発中、\nテストランナーとして\nアキラが研究所に現れた。\n\n「データが全然取れない...\n君は規格外すぎる」\n困惑するユウキに、\nアキラは笑って言った。\n\n「じゃあ毎日来てあげる」\n\nデータ収集という名目の\nデートが始まり、\n数値では測れない感情が芽生えた。"},
         {"ユウキ_ミサト", "量子コンピュータの共同研究。\n世界最高峰の頭脳が二つ、\n同じ研究室に集まった。\n\n夜通しのプログラミング、\nコーヒーカップが触れ合う音、\n「この暗号、解ける？」\n「君となら、どんな問題でも」\n\n二人だけの言語で愛を語り、\n論文より大切な答えを見つけた。\nそれは「共に生きる」という\nシンプルな真実だった。"},
         {"ユウキ_カエデ", "大病院のシステムがハッキングされた。\n犯人を追うカエデの前に現れたのは、\nセキュリティ専門家のユウキだった。\n\n夜通しの作業、\nコードを書く指とメスを握る指が\n偶然触れ合った瞬間、\n二人は目を合わせた。\n\n「君の手は人を救う手だ」\n「あなたの手もよ」\n異なる世界の天才が、\n同じ未来を見つめ始めた。"},
         {"ユウキ_ルナ", "SNSで炎上したルナ。\n誹謗中傷の嵐の中、\n匿名の誰かが彼女を守り続けた。\n\n悪質な投稿を消し、\n真実を広め、\n見えない騎士のように戦った。\n\nある日、IPアドレスを辿ったルナは\nユウキを見つけた。\n「なぜ私のために？」\n「君の笑顔を守りたかった」\nその日、二人は恋人になった。"},
 
-        // ゴウ（傭兵）× 各母親
-        {"ゴウ_サクラ", "暗殺任務で鉢合わせた二人。\n互いに銃口を向けながら、\n奇妙な沈黙が流れた。\n\n「お前を殺す理由がない」\n「私もよ」\n\n銃を下ろした瞬間、\n組織に追われる身となった。\n\n「一緒に逃げないか」\n「どこまでも」\n\n世界中を逃げ回る日々が、\n二人を離れられない関係にした。"},
-        {"ゴウ_ヒナタ", "要人警護の任務。\n標的にされたのはヒナタだった。\n\n三度の暗殺未遂、\nその全てからゴウは彼女を守った。\n三発目の銃弾を\n自らの体で受け止めた時、\nヒナタは悟った。\n\n「お金じゃ買えないものがある」\n\n病室で目覚めたゴウに、\n彼女は涙ながらに言った。\n「私の人生を守って」"},
-        {"ゴウ_アキラ", "紛争地帯でのスポーツ親善大使。\nアキラの警護を任されたゴウは、\n彼女の無邪気さに戸惑った。\n\n「怖くないのか？」\n「あなたがいるから」\n\n銃声の中でも笑顔を絶やさない彼女。\n守るべき存在が、\nいつしか愛する人に変わっていた。\n\n任務終了の日、\nゴウは傭兵を辞める決意をした。"},
-        {"ゴウ_ミサト", "軍事衛星のデータ解析依頼。\n冷徹な傭兵ゴウと、\n純粋な物理学者ミサト。\n\n「なぜ人を殺すの？」\n直球の質問に、\nゴウは言葉を失った。\n\n「...答えが見つからない」\n「一緒に探しましょう」\n\nミサトの純粋さが、\n凍った心を少しずつ溶かしていく。\n戦場の狼が愛を知った瞬間だった。"},
-        {"ゴウ_カエデ", "戦場で倒れた仲間を救うため、\nゴウは国境を越えて\n天才外科医を探した。\n\n「報酬はいくらでも払う」\n「お金じゃないの。\nあなたが連れてきて」\n\n危険な戦地に飛び込んだカエデ。\n命がけの手術を終えた夜、\nゴウは初めて泣いた。\n\n「俺の人生を守ってくれないか」\n傭兵の不器用なプロポーズだった。"},
-        {"ゴウ_ルナ", "戦場カメラマンとして同行したルナ。\n「真実を伝えたい」という\n彼女の覚悟に、ゴウは驚いた。\n\n砲撃の夜、塹壕で肩を寄せ合い、\n生と死の狭間で\n二人は唇を重ねた。\n\n「生きて帰ろう」\n「ああ、一緒にな」\n\n戦場で誓った愛は、\nどんな平和な恋より強く、\n深く結ばれていた。"},
+        // ゴウ（ぼうけんか）× 各母親
+        {"ゴウ_サクラ", "ぼうけんの途中で出会った二人。\nにらみ合いながら、\n奇妙な沈黙が流れた。\n\n「きみとたたかう理由がない」\n「私もよ」\n\nにらみあいをやめた瞬間、\n組織に追われる身となった。\n\n「一緒に逃げないか」\n「どこまでも」\n\n世界中を逃げ回る日々が、\n二人を離れられない関係にした。"},
+        {"ゴウ_ヒナタ", "要人警護の任務。\n標的にされたのはヒナタだった。\n\n三度のきけん、\nその全てからゴウは彼女を守った。\n三度目のきけんを\n身を挺してかばった時、\nヒナタは悟った。\n\n「お金じゃ買えないものがある」\n\n病室で目覚めたゴウに、\n彼女は涙ながらに言った。\n「私の人生を守って」"},
+        {"ゴウ_アキラ", "とおい国でのスポーツ親善大使。\nアキラの警護を任されたゴウは、\n彼女の無邪気さに戸惑った。\n\n「怖くないのか？」\n「あなたがいるから」\n\nきけんの中でも笑顔を絶やさない彼女。\n守るべき存在が、\nいつしか愛する人に変わっていた。\n\n任務終了の日、\nゴウはぼうけんかを辞める決意をした。"},
+        {"ゴウ_ミサト", "ふしぎなほしのデータ解析依頼。\nつよいぼうけんかゴウと、\n純粋な物理学者ミサト。\n\n「なぜひとりでたたかうの？」\n直球の質問に、\nゴウは言葉を失った。\n\n「...答えが見つからない」\n「一緒に探しましょう」\n\nミサトの純粋さが、\n凍った心を少しずつ溶かしていく。\nぼうけんのおおかみが愛を知った瞬間だった。"},
+        {"ゴウ_カエデ", "ぼうけんでたおれた仲間を救うため、\nゴウは国境を越えて\n天才外科医を探した。\n\n「報酬はいくらでも払う」\n「お金じゃないの。\nあなたが連れてきて」\n\nきけんな場所に飛び込んだカエデ。\n命がけの手術を終えた夜、\nゴウは初めて泣いた。\n\n「俺の人生を守ってくれないか」\nぼうけんかの不器用なプロポーズだった。"},
+        {"ゴウ_ルナ", "ぼうけん写真家として同行したルナ。\n「真実を伝えたい」という\n彼女の覚悟に、ゴウは驚いた。\n\nあらしの夜、ほら穴で肩を寄せ合い、\nつよいきずなの中で\n二人は唇を重ねた。\n\n「生きて帰ろう」\n「ああ、一緒にな」\n\nぼうけんの中で誓った愛は、\nどんな平和な恋より強く、\n深く結ばれていた。"},
 
         // シンジ（天才科学者）× 各母親
-        {"シンジ_サクラ", "「暗殺拳の科学的解明」\nその研究テーマに、\nサクラは協力を申し出た。\n\n動きを解析するうちに、\nシンジの目は彼女自身に向いていた。\n\n「論文より君を研究したい」\n「それ、口説いてる？」\n「...多分」\n\n世界一不器用な告白に、\n暗殺者は初めて頬を染めた。\n愛は科学で証明できないと知った。"},
+        {"シンジ_サクラ", "「ぶじゅつの科学的解明」\nその研究テーマに、\nサクラは協力を申し出た。\n\n動きを解析するうちに、\nシンジの目は彼女自身に向いていた。\n\n「論文より君を研究したい」\n「それ、口説いてる？」\n「...多分」\n\n世界一不器用な告白に、\nつわものは初めて頬を染めた。\n愛は科学で証明できないと知った。"},
         {"シンジ_ヒナタ", "「美の方程式」を共著で出版したい。\nヒナタからの依頼に、\nシンジは興味を持った。\n\n数式とビジネス、\n異色のコラボレーション。\n\nグラフを描くうちに、\n二人の線は一点で交わった。\n\n「この交点が僕たちの未来だ」\n「ロマンチストね、意外と」\n\n28兆円の女帝が、\n数式に恋をした日だった。"},
         {"シンジ_アキラ", "「人体の限界」を科学する研究。\n被験者として現れたアキラの\n笑顔を見た瞬間、\nシンジの心拍データは乱れた。\n\n「先生、大丈夫？」\n「い、異常値が出ている...\n僕の心臓に」\n\n「それ、恋って言うんですよ」\nアキラの言葉に、\n天才科学者は顔を真っ赤にした。\n答えは最初から出ていたのだ。"},
         {"シンジ_ミサト", "国際物理学会での激論。\n「あなたの理論は穴だらけよ」\n「君こそ基礎が甘い」\n\n壇上で火花を散らした二人は、\nなぜかホテルのバーで再会した。\n\nIQ250とIQ270。\n合わせて520の恋が始まる。\n\n「数式より美しいものを見つけた」\n「何？」\n「君だよ」\n天才にしては陳腐な台詞だった。"},
@@ -227,7 +233,7 @@ public class BirthSystem : MonoBehaviour
         {"シンジ_ルナ", "「完璧な顔の数学的定義」\nその研究のため、\nルナがモデルとして協力した。\n\n何百枚もの写真、\n何千ものデータポイント。\n\n「結論が出たよ」\n「どんな顔が完璧なの？」\n「君だ。君以外にない」\n\n論文には書けない結論だった。\n美しさの究極の答えは、\n愛する人の顔だと気づいた。"},
 
         // リョウマ（実業家）× 各母親
-        {"リョウマ_サクラ", "ボディガードとして雇った暗殺者。\n命を預けた相手に、\n心まで奪われるとは思わなかった。\n\n「金で動く女か」\n「いいえ、あなたを守りたいから」\n\n嘘のない瞳だった。\n\n43兆円あっても買えないもの。\nそれは信頼と愛だと、\nリョウマは初めて知った。\n「俺の傍にいてくれ、永遠に」"},
+        {"リョウマ_サクラ", "ボディガードとして雇ったつわもの。\n命を預けた相手に、\n心まで奪われるとは思わなかった。\n\n「金で動く女か」\n「いいえ、あなたを守りたいから」\n\n嘘のない瞳だった。\n\n43兆円あっても買えないもの。\nそれは信頼と愛だと、\nリョウマは初めて知った。\n「俺の傍にいてくれ、永遠に」"},
         {"リョウマ_ヒナタ", "美容帝国との合併話。\n二つの巨大企業、\n最初は敵対から始まった。\n\n「あなたには負けないわ」\n「俺もだ」\n\n激しい交渉の末、\n二人は互いを認め合った。\n\n「合併より、\n結婚しないか」\n「...それ、逆じゃない？」\n\n71兆円の帝国が誕生した。\n株式より価値ある絆と共に。"},
         {"リョウマ_アキラ", "スポーツ球団買収の記者会見。\n看板選手アキラとの握手の瞬間、\n世界一の資産家は恋に落ちた。\n\n「君をチームの顔にしたい」\n「顔じゃなくて、\n私を見てほしいな」\n\n真っ直ぐな言葉が胸を打った。\n\n株価より大切なもの。\n利益より価値あるもの。\nそれは彼女の笑顔だった。"},
         {"リョウマ_ミサト", "研究所への100億円の投資。\nその見返りに求めたのは、\n論文でも特許でもなかった。\n\n「週に一度、\n一緒に星を見てほしい」\n\nミサトは驚きながらも頷いた。\n\n屋上で星を眺める夜が続き、\n宇宙の話から人生の話へ。\n\n「君という星を見つけた」\n物理学者は、\nその方程式を解けなかった。"},
@@ -235,7 +241,7 @@ public class BirthSystem : MonoBehaviour
         {"リョウマ_ルナ", "プライベートジェットで偶然の隣席。\nパリへ向かう12時間、\n二人は語り合った。\n\n仕事のこと、夢のこと、\n誰にも言えない弱さのこと。\n\n雲の上、地上から離れた空間で、\n肩書きも資産も意味を失った。\n\n着陸した時、\n二人は恋人になっていた。\n「地上に降りても、この気持ちは変わらない」"},
 
         // テツヤ（ロックスター）× 各母親
-        {"テツヤ_サクラ", "新曲MVの殺陣シーン。\n指導者として現れたサクラの\n鋭い動きに、テツヤは見惚れた。\n\n「もっと本気で来て」\n「怪我させるぞ」\n「それくらいが丁度いい」\n\nステージで刃を交えるうちに、\n二人の距離は縮まっていった。\n\n撮影終了後の楽屋で、\n二人は激しく唇を重ねた。"},
+        {"テツヤ_サクラ", "新曲MVのアクションシーン。\n指導者として現れたサクラの\n鋭い動きに、テツヤは見惚れた。\n\n「もっと本気で来て」\n「怪我させるぞ」\n「それくらいが丁度いい」\n\nステージでわざを交えるうちに、\n二人の距離は縮まっていった。\n\n撮影終了後の楽屋で、\n二人は激しく唇を重ねた。"},
         {"テツヤ_ヒナタ", "化粧品CMソングの打ち合わせ。\n譜面を見るふりをして、\nテツヤはヒナタを見つめていた。\n\n「曲より私を見てない？」\n「バレた？」\n「わかりやすいのよ、あなた」\n\nスタジオに響く笑い声。\nその日、二人は朝まで語り合った。\n\n「君のための歌を書きたい」\n「それ、プロポーズ？」\n「かもしれない」"},
         {"テツヤ_アキラ", "オリンピック応援ソングの依頼。\n「勝利の歌を書いてほしい」\n\nアキラの走る姿を見て、\nテツヤのペンが走り出した。\n\nスタジアムに響く歌声、\n金メダルを取った瞬間、\nアキラはテツヤのもとへ走った。\n\n「この歌があったから勝てた」\n「君がいたから書けた」\n\n金メダルより輝く愛が生まれた。"},
         {"テツヤ_ミサト", "「音楽と物理学の共通点」\n雑誌のインタビューで出会った二人。\n\n「音は波でしょ？\n愛も波かもしれない」\n「周波数が合えば共鳴する...」\n「そう、今の僕たちみたいに」\n\n理屈っぽい会話が心地よかった。\n\nインタビューは終わっても、\n二人の会話は終わらなかった。\n共鳴した心は離れられない。"},
@@ -857,7 +863,7 @@ public class BirthSystem : MonoBehaviour
         var battleBtn = new UIE.Button();
         battleBtn.AddToClassList("birth-share-battle-btn");
         UIHelper.ApplyFont(battleBtn);
-        battleBtn.text = "戦場へ";
+        battleBtn.text = "おあそびへ";
         battleBtn.clicked += () => StartCoroutine(GoToBattleFromShare());
         shareBtnWrapper.Add(battleBtn);
 
@@ -894,35 +900,50 @@ public class BirthSystem : MonoBehaviour
     {
         if (overlayRoot == null) yield break;
 
+        // メインカラー背景
+        Color bgColor = new Color(0.969f, 0.906f, 0.808f); // #F7E7CE
+        Color textColor = new Color(0.051f, 0.051f, 0.078f); // #0d0d14
+        Color subColor = new Color(1f, 0.718f, 0.773f); // #FFB7C5
+
         var panel = new UIE.VisualElement();
         panel.style.position = UIE.Position.Absolute;
         panel.style.left = 0; panel.style.right = 0;
         panel.style.top = 0; panel.style.bottom = 0;
-        panel.style.backgroundColor = new Color(0, 0, 0, 0);
+        panel.style.backgroundColor = new Color(bgColor.r, bgColor.g, bgColor.b, 0f);
         panel.style.alignItems = UIE.Align.Center;
         panel.style.justifyContent = UIE.Justify.Center;
         overlayRoot.Add(panel);
 
-        // フェードイン（暗転）
+        // フェードイン
         float elapsed = 0f;
         while (elapsed < 0.8f)
         {
             elapsed += Time.deltaTime;
-            panel.style.backgroundColor = new Color(0, 0, 0, Mathf.Clamp01(elapsed / 0.8f));
+            float t = Mathf.Clamp01(elapsed / 0.8f);
+            panel.style.backgroundColor = new Color(bgColor.r, bgColor.g, bgColor.b, t);
             yield return null;
         }
-        panel.style.backgroundColor = Color.black;
+        panel.style.backgroundColor = bgColor;
 
         yield return new WaitForSeconds(0.3f);
 
         // 章タイトルテキスト
-        var titleLabel = UIHelper.CreateLabel("第一章：血脈の初陣");
-        titleLabel.style.fontSize = 56;
-        titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-        titleLabel.style.color = new Color(1f, 1f, 1f, 0f);
+        var titleLabel = UIHelper.CreateLabel("第一章");
+        UIHelper.ApplyFontBold(titleLabel);
+        titleLabel.style.fontSize = 112;
+        titleLabel.style.color = new Color(textColor.r, textColor.g, textColor.b, 0f);
         titleLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
         titleLabel.style.letterSpacing = 8;
         panel.Add(titleLabel);
+
+        // サブタイトル
+        var subLabel = UIHelper.CreateLabel("はじめての おあそび");
+        UIHelper.ApplyFontBold(subLabel);
+        subLabel.style.fontSize = 76;
+        subLabel.style.color = new Color(subColor.r, subColor.g, subColor.b, 0f);
+        subLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+        subLabel.style.marginTop = 16;
+        panel.Add(subLabel);
 
         // テキストフェードイン
         elapsed = 0f;
@@ -930,20 +951,24 @@ public class BirthSystem : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float a = Mathf.Clamp01(elapsed / 1.0f);
-            titleLabel.style.color = new Color(1f, 1f, 1f, a);
+            titleLabel.style.color = new Color(textColor.r, textColor.g, textColor.b, a);
+            subLabel.style.color = new Color(subColor.r, subColor.g, subColor.b, a);
             yield return null;
         }
-        titleLabel.style.color = Color.white;
+        titleLabel.style.color = textColor;
+        subLabel.style.color = subColor;
 
         yield return new WaitForSeconds(1.5f);
 
-        // テキスト＋画面フェードアウト
+        // フェードアウト
         elapsed = 0f;
         while (elapsed < 1.0f)
         {
             elapsed += Time.deltaTime;
             float a = 1f - Mathf.Clamp01(elapsed / 1.0f);
-            titleLabel.style.color = new Color(1f, 1f, 1f, a);
+            titleLabel.style.color = new Color(textColor.r, textColor.g, textColor.b, a);
+            subLabel.style.color = new Color(subColor.r, subColor.g, subColor.b, a);
+            panel.style.backgroundColor = new Color(bgColor.r, bgColor.g, bgColor.b, a);
             yield return null;
         }
 
@@ -1058,9 +1083,9 @@ public class BirthSystem : MonoBehaviour
         if (childStatusText != null) childStatusText.text = "";
         if (babyBioLabel != null) babyBioLabel.text = "";
 
-        // 紹介文を非表示にリセット
-        if (fatherIntroText != null) fatherIntroText.style.display = UIE.DisplayStyle.None;
-        if (motherIntroText != null) motherIntroText.style.display = UIE.DisplayStyle.None;
+        // 紹介文を非表示にリセット（visibilityでレイアウト確保）
+        if (fatherIntroText != null) fatherIntroText.style.visibility = UIE.Visibility.Hidden;
+        if (motherIntroText != null) motherIntroText.style.visibility = UIE.Visibility.Hidden;
         if (nextButtonEl != null) nextButtonEl.style.display = UIE.DisplayStyle.None;
 
         // 父親カードのみ表示、母親カードは非表示
@@ -1093,7 +1118,7 @@ public class BirthSystem : MonoBehaviour
         if (fatherIntroText != null)
         {
             fatherIntroText.text = Localization.GetParentIntro(father.name).Replace(" / ", "\n");
-            fatherIntroText.style.display = UIE.DisplayStyle.Flex;
+            fatherIntroText.style.visibility = UIE.Visibility.Visible;
         }
         // 「愛する女性を探す」ボタンで待機
         yield return new WaitForSeconds(0.5f);
@@ -1137,7 +1162,7 @@ public class BirthSystem : MonoBehaviour
         if (motherIntroText != null)
         {
             motherIntroText.text = Localization.GetParentIntro(mother.name).Replace(" / ", "\n");
-            motherIntroText.style.display = UIE.DisplayStyle.Flex;
+            motherIntroText.style.visibility = UIE.Visibility.Visible;
         }
         // 「恋の始まり」ボタンで待機
         yield return new WaitForSeconds(0.5f);
@@ -1189,7 +1214,7 @@ public class BirthSystem : MonoBehaviour
             }
         }
 
-        // ── フェーズ4.7: サクラ（暗殺拳）の場合20%で子供に恵まれない ──
+        // ── フェーズ4.7: サクラ（ぶじゅつの達人）の場合20%で子供に恵まれない ──
         if (mother.name == "サクラ")
         {
             bool sakuraSuccess = Random.Range(0, 100) < 80; // 80%で成功
@@ -1274,6 +1299,9 @@ public class BirthSystem : MonoBehaviour
         Debug.Log("[BirthSystem] Phase 5: Sacred birth cutin");
         yield return StartCoroutine(ShowBirthCutin());
 
+        // ── フェーズ5.1: 誕生アナウンス ──
+        yield return StartCoroutine(ShowBirthAnnouncement(father, mother));
+
         // カットイン除去後に1フレーム描画を挟み、画面遷移を反映させる
         yield return null;
 
@@ -1285,7 +1313,7 @@ public class BirthSystem : MonoBehaviour
         yield return null;
 
         // ── フェーズ6: ステータス1行ずつ表示 ──
-        // 上位1%判定（GOD BABY判定）、上位10%判定（大物判定）
+        // 上位1%判定（STAR BABY判定）、上位10%判定（大物判定）
         bool isGodBaby = IsGodBaby(c_atk, c_def, c_hp, c_intelligence, c_athletic);
 
         // BabySynthesizer でレイヤー合成表示
@@ -1322,6 +1350,10 @@ public class BirthSystem : MonoBehaviour
             SaveSynthBabyImage();
         }
 
+        // 結果コンテナを表示（合成完了後）
+        var resultContainer = UIE.UQueryExtensions.Q(overlayRoot, className: "birth-result-container");
+        if (resultContainer != null) resultContainer.style.opacity = 1;
+
         // ── 誕生インパクト演出（SE + シェイク + 紙吹雪） ──
         PlayBirthRevealEffect();
 
@@ -1335,7 +1367,7 @@ public class BirthSystem : MonoBehaviour
 
         bool isPromisingBaby = !isGodBaby && IsPromisingBaby(c_atk, c_def, c_hp, c_intelligence, c_athletic);
 
-        // ── 稲妻演出（GOD BABY or 大物の場合） ──
+        // ── 稲妻演出（STAR BABY or 大物の場合） ──
         if (isGodBaby || isPromisingBaby)
         {
             yield return StartCoroutine(LightningEffect(isGodBaby));
@@ -1372,8 +1404,8 @@ public class BirthSystem : MonoBehaviour
         yield return new WaitForSeconds(0.3f);
 
         // 3. ステータスメモ
-        string line1 = $"HP {c_hp}  攻 {c_atk}  防 {c_def}";
-        string line2 = $"知 {c_intelligence}  体 {c_athletic}  運 {c_luck}  財 {c_fortune}";
+        string line1 = $"ごきげん {c_hp}  ぬくもり {c_atk}  おちつき {c_def}";
+        string line2 = $"ちえ {c_intelligence}  体 {c_athletic}  運 {c_luck}  財 {c_fortune}";
         if (memoTextLabel != null) memoTextLabel.text = line1;
         yield return new WaitForSeconds(0.2f);
         if (memoTextLabel != null) memoTextLabel.text = line1 + "\n" + line2;
@@ -1550,7 +1582,7 @@ public class BirthSystem : MonoBehaviour
 
         lightningContainer.SetActive(true);
 
-        // 稲妻の回数（GOD BABYは多め）
+        // 稲妻の回数（STAR BABYは多め）
         int lightningCount = isGodBaby ? 5 : 3;
 
         for (int i = 0; i < lightningCount; i++)
@@ -1563,7 +1595,7 @@ public class BirthSystem : MonoBehaviour
             {
                 flashOverlay.gameObject.SetActive(true);
                 flashOverlay.color = isGodBaby
-                    ? new Color(1f, 0.9f, 0.3f, 0.7f)  // GOD BABY: 金色フラッシュ
+                    ? new Color(1f, 0.9f, 0.3f, 0.7f)  // STAR BABY: 金色フラッシュ
                     : new Color(0.5f, 1f, 0.7f, 0.5f); // 大物: 緑色フラッシュ
             }
 
@@ -1589,7 +1621,7 @@ public class BirthSystem : MonoBehaviour
         {
             flashOverlay.gameObject.SetActive(true);
             flashOverlay.color = isGodBaby
-                ? new Color(1f, 0.85f, 0f, 0.9f)  // GOD BABY: 強い金色
+                ? new Color(1f, 0.85f, 0f, 0.9f)  // STAR BABY: 強い金色
                 : new Color(0.3f, 1f, 0.5f, 0.7f); // 大物: 強い緑色
 
             float duration = 0.4f;
@@ -1696,9 +1728,9 @@ public class BirthSystem : MonoBehaviour
 
     void ShowBothParentsMini(int fIdx, ParentData father, int mIdx, ParentData mother)
     {
-        // 紹介文を非表示
-        if (fatherIntroText != null) fatherIntroText.style.display = UIE.DisplayStyle.None;
-        if (motherIntroText != null) motherIntroText.style.display = UIE.DisplayStyle.None;
+        // 紹介文を非表示（visibilityでレイアウト確保）
+        if (fatherIntroText != null) fatherIntroText.style.visibility = UIE.Visibility.Hidden;
+        if (motherIntroText != null) motherIntroText.style.visibility = UIE.Visibility.Hidden;
 
         // 両カードを表示
         if (fatherCard != null) fatherCard.style.display = UIE.DisplayStyle.Flex;
@@ -1767,7 +1799,7 @@ public class BirthSystem : MonoBehaviour
     // DetermineTrait は廃止 — 16種からランダムに選ばれる
 
     /// <summary>
-    /// 上位1%の「GOD BABY」判定
+    /// 上位1%の「STAR BABY」判定
     /// ポテンシャルスコアが閾値を超えるか、単一ステータスが極端に高い場合にtrue
     /// </summary>
     bool IsGodBaby(int atk, int def, int hp, int intelligence, int athletic)
@@ -1780,7 +1812,7 @@ public class BirthSystem : MonoBehaviour
         if (potentialScore >= 360)
             return true;
 
-        // 単一ステータスが極端に高い場合も GOD BABY
+        // 単一ステータスが極端に高い場合も STAR BABY
         // 正規分布で約2.5σ以上 = 上位約1%
         if (atk >= 90) return true;      // 攻撃の天才
         if (def >= 90) return true;      // 防御の天才
@@ -1912,7 +1944,7 @@ public class BirthSystem : MonoBehaviour
 
         Debug.Log($"[BirthSystem] Baby sprite set on image, enabled: {targetImage.enabled}");
 
-        // GOD BABYオーラを追加
+        // STAR BABYオーラを追加
         if (isGodBaby)
         {
             for (int i = 3; i >= 0; i--)
@@ -1999,7 +2031,7 @@ public class BirthSystem : MonoBehaviour
             Mathf.Min(1f, baseSkin.b * 1.05f)
         );
 
-        // GOD BABYオーラ
+        // STAR BABYオーラ
         if (isGodBaby)
         {
             for (int i = 3; i >= 0; i--)
@@ -2453,6 +2485,7 @@ public class BirthSystem : MonoBehaviour
 
         // 名前テキスト (上部)
         nameText = UIHelper.CreateLabel("", "birth-parent-name");
+        UIHelper.ApplyFontBold(nameText);
         card.Add(nameText);
 
         // 区切り線
@@ -2467,9 +2500,10 @@ public class BirthSystem : MonoBehaviour
         card.Add(face);
         faceImage = face;
 
-        // 紹介文テキスト (下部)
+        // 紹介文テキスト (下部) — visibilityで切り替え（レイアウト確保）
         introText = UIHelper.CreateLabel("", "birth-parent-intro");
-        introText.style.display = UIE.DisplayStyle.None;
+        UIHelper.ApplyFontBold(introText);
+        introText.style.visibility = UIE.Visibility.Hidden;
         card.Add(introText);
 
         parent.Add(card);
@@ -2598,6 +2632,9 @@ public class BirthSystem : MonoBehaviour
         birthResultCard.Add(frame);
         resultContainer.Add(birthResultCard);
         overlayRoot.Add(resultContainer);
+
+        // 赤ちゃん合成完了まで非表示（プレースホルダーが一瞬見えるのを防止）
+        resultContainer.style.opacity = 0;
 
         // Canvas上のbabyFaceは非表示（UI Toolkit合成表示に切替）
         if (babyFace != null)
@@ -2944,8 +2981,9 @@ public class BirthSystem : MonoBehaviour
 
         // 顔画像の基準位置（ピクセル）— translate上書き問題を回避
         float faceCenterX = 700f / 2f;
-        float faceCenterY = 700f * FACE_HOLE_TOP_PCT / 100f;
-        float halfFace = facePreviewUniform / 2f;
+        float faceCenterY = 700f * GetFaceHoleTopPct() / 100f;
+        float facePreviewSize = GetFacePreviewUniform();
+        float halfFace = facePreviewSize / 2f;
 
         // Layer 1: 顔画像（最背面）— DrawFace の uniformR*2 に対応する正方形
         facePreviewImage = new UIE.VisualElement();
@@ -2953,16 +2991,15 @@ public class BirthSystem : MonoBehaviour
         facePreviewImage.style.position = UIE.Position.Absolute;
         facePreviewImage.style.left = faceCenterX - halfFace;
         facePreviewImage.style.top = faceCenterY - halfFace;
-        facePreviewImage.style.width = facePreviewUniform;
-        facePreviewImage.style.height = facePreviewUniform;
+        facePreviewImage.style.width = facePreviewSize;
+        facePreviewImage.style.height = facePreviewSize;
         facePreviewImage.style.backgroundImage = new UIE.StyleBackground(pendingFaceTexture);
         facePreviewImage.pickingMode = UIE.PickingMode.Ignore;
         preview.Add(facePreviewImage);
 
         // Layer 2: BabyWear オーバーレイ（顔穴をくり抜いた状態）
         var rank = BabySynthesizer.DetermineRank(lastSynthParams.fortune);
-        string wearPath = BabySynthesizer.GetWearPath(rank);
-        Sprite wearSprite = Resources.Load<Sprite>(wearPath);
+        Sprite wearSprite = BabySynthesizer.LoadWearSprite(rank);
         if (wearSprite != null && wearSprite.texture.isReadable)
         {
             // BabyWearテクスチャの顔穴をくり抜いたコピーを作成
@@ -3040,7 +3077,7 @@ public class BirthSystem : MonoBehaviour
         if (!isDraggingFace) return;
 
         // ドラッグ差分をオフセットに変換（DrawFaceのuniformR*2に対応）
-        float uniformSize = facePreviewUniform;
+        float uniformSize = GetFacePreviewUniform();
         float dx = evt.position.x - dragStartPos.x;
         float dy = evt.position.y - dragStartPos.y;
         faceAdjOffsetX = dragStartOffsetX + dx / (uniformSize * faceAdjScale);
@@ -3059,7 +3096,7 @@ public class BirthSystem : MonoBehaviour
         if (facePreviewImage == null) return;
         facePreviewImage.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(faceAdjScale, faceAdjScale)));
         // DrawFaceのuniformR*2に対応するプレビューサイズ
-        float uniformSize = facePreviewUniform;
+        float uniformSize = GetFacePreviewUniform();
         float tx = faceAdjOffsetX * uniformSize * faceAdjScale;
         float ty = -faceAdjOffsetY * uniformSize * faceAdjScale;
         facePreviewImage.style.translate = new UIE.StyleTranslate(new UIE.Translate(tx, ty));
@@ -3116,7 +3153,9 @@ public class BirthSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// BabyWearテクスチャの顔穴部分を透明にしたコピーを作成する
+    /// BabyWearテクスチャの顔穴部分を透明にしたコピーを作成する。
+    /// Default_Wear PNGは顔穴部分が既に透過されているので、そのままコピーする。
+    /// 透過がない場合はBabySynthesizerのパラメータで楕円くり抜きにフォールバック。
     /// </summary>
     Texture2D CreateHollowWearTexture(Texture2D srcTex)
     {
@@ -3125,22 +3164,30 @@ public class BirthSystem : MonoBehaviour
         var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
         Color[] pixels = srcTex.GetPixels();
 
-        // BabySynthesizerと同じ顔穴パラメータ
-        float holeCx = w * 0.50f;
-        float holeCy = h * 0.68f;
-        float holeRx = w * 0.13f;
-        float holeRy = h * 0.12f;
-
-        for (int y = 0; y < h; y++)
+        // PNGに透過ピクセルが存在するかチェック
+        bool hasTransparency = false;
+        for (int i = 0; i < pixels.Length; i++)
         {
-            for (int x = 0; x < w; x++)
-            {
-                float fx = (x - holeCx) / holeRx;
-                float fy = (y - holeCy) / holeRy;
-                if (fx * fx + fy * fy < 1f)
-                    pixels[y * w + x] = new Color(0, 0, 0, 0);
-            }
+            if (pixels[i].a < 0.1f) { hasTransparency = true; break; }
         }
+
+        if (!hasTransparency)
+        {
+            // 透過がない場合はBabySynthesizerのパラメータで楕円くり抜き
+            float holeCx = w * (babySynthesizer != null ? babySynthesizer.GetFaceHoleCX() : 0.50f);
+            float holeCy = h * (babySynthesizer != null ? babySynthesizer.GetFaceHoleCY() : 0.68f);
+            float holeRx = w * (babySynthesizer != null ? babySynthesizer.GetFaceHoleRX() : 0.20f);
+            float holeRy = h * (babySynthesizer != null ? babySynthesizer.GetFaceHoleRY() : 0.20f);
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    float fx = (x - holeCx) / holeRx;
+                    float fy = (y - holeCy) / holeRy;
+                    if (fx * fx + fy * fy < 1f)
+                        pixels[y * w + x] = new Color(0, 0, 0, 0);
+                }
+        }
+        // PNGに既に透過がある場合はそのままコピー
 
         tex.SetPixels(pixels);
         tex.Apply();
@@ -3177,6 +3224,7 @@ public class BirthSystem : MonoBehaviour
 
         synthBabyImageEl = new UIE.VisualElement();
         synthBabyImageEl.name = "synth-baby-image";
+        synthBabyImageEl.pickingMode = UIE.PickingMode.Ignore; // タップをphotoBtnに透過
         synthBabyImageEl.AddToClassList("birth-polaroid-image");
         synthBabyImageEl.style.backgroundImage = new UIE.StyleBackground(synthSprite);
         photoBtn.Add(synthBabyImageEl);
@@ -4019,6 +4067,10 @@ public class BirthSystem : MonoBehaviour
     {
         if (overlayRoot == null || string.IsNullOrEmpty(cutinText)) yield break;
 
+        // テーマカラー
+        Color bandColor = new Color(0.969f, 0.906f, 0.808f); // #F7E7CE
+        Color textColor = new Color(0.051f, 0.051f, 0.078f); // #0d0d14
+
         // ── 帯（画面中央の横帯） ──
         var band = new UIE.VisualElement();
         band.style.position = UIE.Position.Absolute;
@@ -4026,15 +4078,16 @@ public class BirthSystem : MonoBehaviour
         band.style.right = 0;
         band.style.top = new UIE.StyleLength(new UIE.Length(38, UIE.LengthUnit.Percent));
         band.style.bottom = new UIE.StyleLength(new UIE.Length(38, UIE.LengthUnit.Percent));
-        band.style.backgroundColor = new Color(0, 0, 0, 0);
+        band.style.backgroundColor = new Color(bandColor.r, bandColor.g, bandColor.b, 0);
         band.style.alignItems = UIE.Align.Center;
         band.style.justifyContent = UIE.Justify.Center;
         overlayRoot.Add(band);
 
         // ── テキスト ──
         var label = UIHelper.CreateLabel(cutinText);
+        UIHelper.ApplyFontBold(label);
         label.style.fontSize = 52;
-        label.style.color = new Color(1, 1, 1, 0);
+        label.style.color = new Color(textColor.r, textColor.g, textColor.b, 0);
         label.style.whiteSpace = UIE.WhiteSpace.NoWrap;
         label.style.paddingLeft = 40;
         label.style.paddingRight = 40;
@@ -4052,14 +4105,14 @@ public class BirthSystem : MonoBehaviour
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / fadeInDuration);
             float easeT = 1f - (1f - t) * (1f - t);
-            band.style.backgroundColor = new Color(0, 0, 0, 0.8f * easeT);
-            label.style.color = new Color(1, 1, 1, easeT);
+            band.style.backgroundColor = new Color(bandColor.r, bandColor.g, bandColor.b, 0.9f * easeT);
+            label.style.color = new Color(textColor.r, textColor.g, textColor.b, easeT);
             label.style.translate = new UIE.StyleTranslate(
                 new UIE.Translate(slideOffset * (1f - easeT), 0));
             yield return null;
         }
-        band.style.backgroundColor = new Color(0, 0, 0, 0.8f);
-        label.style.color = Color.white;
+        band.style.backgroundColor = new Color(bandColor.r, bandColor.g, bandColor.b, 0.9f);
+        label.style.color = textColor;
         label.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 0));
 
         yield return new WaitForSeconds(holdDuration);
@@ -4069,8 +4122,8 @@ public class BirthSystem : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / fadeOutDuration);
-            band.style.backgroundColor = new Color(0, 0, 0, 0.8f * (1f - t));
-            label.style.color = new Color(1, 1, 1, 1f - t);
+            band.style.backgroundColor = new Color(bandColor.r, bandColor.g, bandColor.b, 0.9f * (1f - t));
+            label.style.color = new Color(textColor.r, textColor.g, textColor.b, 1f - t);
             yield return null;
         }
 
@@ -4081,6 +4134,10 @@ public class BirthSystem : MonoBehaviour
     {
         if (overlayRoot == null || string.IsNullOrEmpty(cutinText)) yield break;
 
+        // テーマカラー
+        Color bandColor = new Color(0.969f, 0.906f, 0.808f); // #F7E7CE
+        Color textColor = new Color(0.051f, 0.051f, 0.078f); // #0d0d14
+
         // ── 帯（画面中央の横帯） ──
         var band = new UIE.VisualElement();
         band.style.position = UIE.Position.Absolute;
@@ -4088,15 +4145,16 @@ public class BirthSystem : MonoBehaviour
         band.style.right = 0;
         band.style.top = new UIE.StyleLength(new UIE.Length(38, UIE.LengthUnit.Percent));
         band.style.bottom = new UIE.StyleLength(new UIE.Length(38, UIE.LengthUnit.Percent));
-        band.style.backgroundColor = new Color(0, 0, 0, 0);
+        band.style.backgroundColor = new Color(bandColor.r, bandColor.g, bandColor.b, 0f);
         band.style.alignItems = UIE.Align.Center;
         band.style.justifyContent = UIE.Justify.Center;
         overlayRoot.Add(band);
 
-        // ── テキスト ──
+        // ── テキスト（太字） ──
         var label = UIHelper.CreateLabel(cutinText);
+        UIHelper.ApplyFontBold(label);
         label.style.fontSize = 52;
-        label.style.color = new Color(1, 1, 1, 0);
+        label.style.color = new Color(textColor.r, textColor.g, textColor.b, 0f);
         label.style.whiteSpace = UIE.WhiteSpace.NoWrap;
         label.style.paddingLeft = 40;
         label.style.paddingRight = 40;
@@ -4116,13 +4174,13 @@ public class BirthSystem : MonoBehaviour
             float t = Mathf.Clamp01(elapsed / fadeInDuration);
             float easeT = 1f - (1f - t) * (1f - t) * (1f - t);
             float s = Mathf.Lerp(scaleFrom, scaleTo, easeT);
-            band.style.backgroundColor = new Color(0, 0, 0, 0.8f * easeT);
-            label.style.color = new Color(1, 1, 1, easeT);
+            band.style.backgroundColor = new Color(bandColor.r, bandColor.g, bandColor.b, 0.9f * easeT);
+            label.style.color = new Color(textColor.r, textColor.g, textColor.b, easeT);
             label.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(s, s, 1f)));
             yield return null;
         }
-        band.style.backgroundColor = new Color(0, 0, 0, 0.8f);
-        label.style.color = Color.white;
+        band.style.backgroundColor = new Color(bandColor.r, bandColor.g, bandColor.b, 0.9f);
+        label.style.color = textColor;
         label.style.scale = new UIE.StyleScale(new UIE.Scale(Vector3.one));
 
         yield return new WaitForSeconds(holdDuration);
@@ -4134,13 +4192,158 @@ public class BirthSystem : MonoBehaviour
             float t = Mathf.Clamp01(elapsed / fadeOutDuration);
             float easeT = t * t;
             float s = Mathf.Lerp(1.0f, 1.05f, easeT);
-            band.style.backgroundColor = new Color(0, 0, 0, 0.8f * (1f - easeT));
-            label.style.color = new Color(1, 1, 1, 1f - easeT);
+            band.style.backgroundColor = new Color(bandColor.r, bandColor.g, bandColor.b, 0.9f * (1f - easeT));
+            label.style.color = new Color(textColor.r, textColor.g, textColor.b, 1f - easeT);
             label.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(s, s, 1f)));
             yield return null;
         }
 
         band.RemoveFromHierarchy();
+    }
+
+    // ===== 誕生アナウンス =====
+
+    IEnumerator ShowBirthAnnouncement(ParentData father, ParentData mother)
+    {
+        if (overlayRoot == null) yield break;
+
+        var panel = new UIE.VisualElement();
+        panel.style.position = UIE.Position.Absolute;
+        panel.style.left = 0; panel.style.right = 0;
+        panel.style.top = 0; panel.style.bottom = 0;
+        panel.style.backgroundColor = new Color(0.969f, 0.906f, 0.808f, 0f);
+        panel.style.alignItems = UIE.Align.Center;
+        panel.style.justifyContent = UIE.Justify.Center;
+        overlayRoot.Add(panel);
+
+        // コンテンツラッパー（opacity で一括フェード）
+        var content = new UIE.VisualElement();
+        content.style.alignItems = UIE.Align.Center;
+        content.style.opacity = 0f;
+        panel.Add(content);
+
+        // 親画像行: [父] ♥ [母]
+        var faceRow = new UIE.VisualElement();
+        faceRow.style.flexDirection = UIE.FlexDirection.Row;
+        faceRow.style.alignItems = UIE.Align.Center;
+        faceRow.style.justifyContent = UIE.Justify.Center;
+        faceRow.style.marginBottom = 32;
+        content.Add(faceRow);
+
+        // 父画像（丸）
+        var fatherFace = new UIE.VisualElement();
+        fatherFace.style.width = 300;
+        fatherFace.style.height = 300;
+        fatherFace.style.borderTopLeftRadius = 150;
+        fatherFace.style.borderTopRightRadius = 150;
+        fatherFace.style.borderBottomLeftRadius = 150;
+        fatherFace.style.borderBottomRightRadius = 150;
+        fatherFace.style.borderTopWidth = 5;
+        fatherFace.style.borderBottomWidth = 5;
+        fatherFace.style.borderLeftWidth = 5;
+        fatherFace.style.borderRightWidth = 5;
+        fatherFace.style.borderTopColor = Color.white;
+        fatherFace.style.borderBottomColor = Color.white;
+        fatherFace.style.borderLeftColor = Color.white;
+        fatherFace.style.borderRightColor = Color.white;
+        fatherFace.style.overflow = UIE.Overflow.Hidden;
+        Sprite fatherSp = Resources.Load<Sprite>($"Parents/{father.imageName}");
+        if (fatherSp != null)
+            fatherFace.style.backgroundImage = new UIE.StyleBackground(fatherSp);
+        else
+            fatherFace.style.backgroundColor = father.faceColor;
+        faceRow.Add(fatherFace);
+
+        // ハートマーク
+        var heart = UIHelper.CreateLabel("\u2665");
+        UIHelper.ApplyFontBold(heart);
+        heart.style.fontSize = 80;
+        heart.style.color = new Color(1f, 0.718f, 0.773f); // #FFB7C5 サブカラー
+        heart.style.unityTextAlign = TextAnchor.MiddleCenter;
+        heart.style.marginLeft = 24;
+        heart.style.marginRight = 24;
+        faceRow.Add(heart);
+
+        // 母画像（丸）
+        var motherFace = new UIE.VisualElement();
+        motherFace.style.width = 300;
+        motherFace.style.height = 300;
+        motherFace.style.borderTopLeftRadius = 150;
+        motherFace.style.borderTopRightRadius = 150;
+        motherFace.style.borderBottomLeftRadius = 150;
+        motherFace.style.borderBottomRightRadius = 150;
+        motherFace.style.borderTopWidth = 5;
+        motherFace.style.borderBottomWidth = 5;
+        motherFace.style.borderLeftWidth = 5;
+        motherFace.style.borderRightWidth = 5;
+        motherFace.style.borderTopColor = Color.white;
+        motherFace.style.borderBottomColor = Color.white;
+        motherFace.style.borderLeftColor = Color.white;
+        motherFace.style.borderRightColor = Color.white;
+        motherFace.style.overflow = UIE.Overflow.Hidden;
+        Sprite motherSp = Resources.Load<Sprite>($"Parents/{mother.imageName}");
+        if (motherSp != null)
+            motherFace.style.backgroundImage = new UIE.StyleBackground(motherSp);
+        else
+            motherFace.style.backgroundColor = mother.faceColor;
+        faceRow.Add(motherFace);
+
+        // テキスト
+        string fatherDisplay = Localization.GetParent(father.name);
+        string motherDisplay = Localization.GetParent(mother.name);
+        var label = UIHelper.CreateLabel($"{fatherDisplay} と {motherDisplay} の\nあかちゃんが たんじょうした！");
+        UIHelper.ApplyFontBold(label);
+        label.style.fontSize = 40;
+        label.style.color = new Color(0.051f, 0.051f, 0.078f);
+        label.style.unityTextAlign = TextAnchor.MiddleCenter;
+        label.style.whiteSpace = UIE.WhiteSpace.Normal;
+        label.style.width = 800;
+        content.Add(label);
+
+        // フェードイン（背景 + コンテンツ）
+        float elapsed = 0f;
+        while (elapsed < 0.6f)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / 0.6f);
+            panel.style.backgroundColor = new Color(0.969f, 0.906f, 0.808f, t);
+            content.style.opacity = t;
+            yield return null;
+        }
+        panel.style.backgroundColor = new Color(0.969f, 0.906f, 0.808f, 1f);
+        content.style.opacity = 1f;
+
+        // ハートバウンスアニメーション
+        float bounceElapsed = 0f;
+        float bounceDur = 0.4f;
+        while (bounceElapsed < bounceDur)
+        {
+            bounceElapsed += Time.deltaTime;
+            float bt = Mathf.Clamp01(bounceElapsed / bounceDur);
+            float s;
+            if (bt < 0.5f)
+                s = Mathf.Lerp(1f, 1.4f, bt * 2f);
+            else
+                s = Mathf.Lerp(1.4f, 1f, (bt - 0.5f) * 2f);
+            heart.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(s, s)));
+            yield return null;
+        }
+        heart.style.scale = new UIE.StyleScale(new UIE.Scale(Vector2.one));
+
+        yield return new WaitForSeconds(1.2f);
+
+        // フェードアウト
+        elapsed = 0f;
+        while (elapsed < 0.5f)
+        {
+            elapsed += Time.deltaTime;
+            float t = 1f - Mathf.Clamp01(elapsed / 0.5f);
+            panel.style.backgroundColor = new Color(0.969f, 0.906f, 0.808f, t);
+            content.style.opacity = t;
+            yield return null;
+        }
+
+        panel.RemoveFromHierarchy();
     }
 
     // ===== 運命カットイン: 光の引力演出 =====
@@ -4172,17 +4375,17 @@ public class BirthSystem : MonoBehaviour
         // Skipボタン
         var skipBtn = CreateSkipButton(panel);
 
-        // ── Phase 1: 暗転 ──
+        // ── Phase 1: テーマカラーにフェードイン ──
         float elapsed = 0f;
         float fadeInDur = 0.8f;
         while (elapsed < fadeInDur && !skipRequested)
         {
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / fadeInDur);
-            panel.style.backgroundColor = new Color(0.01f, 0.005f, 0.04f, t * 0.97f);
+            panel.style.backgroundColor = new Color(0.969f, 0.906f, 0.808f, t * 0.97f);
             yield return null;
         }
-        panel.style.backgroundColor = new Color(0.01f, 0.005f, 0.04f, 0.97f);
+        panel.style.backgroundColor = new Color(0.969f, 0.906f, 0.808f, 0.97f);
 
         if (!skipRequested) yield return new WaitForSeconds(0.3f);
 
@@ -4199,7 +4402,7 @@ public class BirthSystem : MonoBehaviour
             lightCore.style.translate = new UIE.StyleTranslate(
                 new UIE.Translate(-coreSize / 2, -coreSize / 2));
             SetAllRadius(lightCore, coreSize / 2);
-            lightCore.style.backgroundColor = new Color(1f, 1f, 0.92f, 0f);
+            lightCore.style.backgroundColor = new Color(1f, 0.718f, 0.773f, 0f); // サブカラー
             panel.Add(lightCore);
 
             elapsed = 0f;
@@ -4215,7 +4418,7 @@ public class BirthSystem : MonoBehaviour
                 lightCore.style.translate = new UIE.StyleTranslate(
                     new UIE.Translate(-s / 2, -s / 2));
                 SetAllRadius(lightCore, s / 2);
-                lightCore.style.backgroundColor = new Color(1f, 1f, 0.92f, easeT * 0.9f);
+                lightCore.style.backgroundColor = new Color(1f, 0.718f, 0.773f, easeT * 0.9f);
                 yield return null;
             }
             yield return StartCoroutine(SkippableWait(0.2f));
@@ -4269,14 +4472,14 @@ public class BirthSystem : MonoBehaviour
         {
             // ── Phase 4-5: テキスト出現 + 脈動 ──
             var textLabel = UIHelper.CreateLabel(Localization.Get("cutin_fate_moment"));
+            UIHelper.ApplyFontBold(textLabel);
             textLabel.style.position = UIE.Position.Absolute;
             textLabel.style.left = 0;
             textLabel.style.right = 0;
             textLabel.style.top = new UIE.StyleLength(new UIE.Length(46, UIE.LengthUnit.Percent));
             textLabel.style.fontSize = 52;
-            textLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             textLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            textLabel.style.color = new Color(1f, 0.95f, 0.82f, 0f);
+            textLabel.style.color = new Color(0.051f, 0.051f, 0.078f, 0f); // ダークテキスト
             panel.Add(textLabel);
 
             float textInDur = 1.8f;
@@ -4290,7 +4493,7 @@ public class BirthSystem : MonoBehaviour
                 float baseScale = Mathf.Lerp(0.8f, 1.1f, easeT);
                 float pulse = 1f + Mathf.Sin(elapsed * Mathf.PI * 2.5f) * 0.025f;
                 float finalScale = baseScale * pulse;
-                textLabel.style.color = new Color(1f, 0.95f, 0.82f, alpha);
+                textLabel.style.color = new Color(0.051f, 0.051f, 0.078f, alpha);
                 textLabel.style.scale = new UIE.StyleScale(
                     new UIE.Scale(new Vector3(finalScale, finalScale, 1f)));
                 yield return null;
@@ -4393,17 +4596,17 @@ public class BirthSystem : MonoBehaviour
         // Skipボタン
         var skipBtn = CreateSkipButton(panel);
 
-        // ── Phase 1: 暗転 ──
+        // ── Phase 1: テーマカラーにフェードイン ──
         float elapsed = 0f;
         float fadeDur = 1.0f;
         while (elapsed < fadeDur && !skipRequested)
         {
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / fadeDur);
-            panel.style.backgroundColor = new Color(0.01f, 0.01f, 0.03f, t * t * 0.98f);
+            panel.style.backgroundColor = new Color(0.969f, 0.906f, 0.808f, t * t * 0.98f);
             yield return null;
         }
-        panel.style.backgroundColor = new Color(0.01f, 0.01f, 0.03f, 0.98f);
+        panel.style.backgroundColor = new Color(0.969f, 0.906f, 0.808f, 0.98f);
         yield return StartCoroutine(SkippableWait(0.6f));
 
         if (!skipRequested)
@@ -4419,7 +4622,7 @@ public class BirthSystem : MonoBehaviour
             seed.style.translate = new UIE.StyleTranslate(
                 new UIE.Translate(-seedSize / 2, -seedSize / 2));
             SetAllRadius(seed, seedSize / 2);
-            seed.style.backgroundColor = new Color(1f, 1f, 0.95f, 0f);
+            seed.style.backgroundColor = new Color(1f, 0.718f, 0.773f, 0f); // サブカラー
             panel.Add(seed);
 
             elapsed = 0f;
@@ -4433,7 +4636,7 @@ public class BirthSystem : MonoBehaviour
                 seed.style.translate = new UIE.StyleTranslate(
                     new UIE.Translate(-s / 2, -s / 2));
                 SetAllRadius(seed, s / 2);
-                seed.style.backgroundColor = new Color(1f, 1f, 0.95f, t * t * 0.85f);
+                seed.style.backgroundColor = new Color(1f, 0.718f, 0.773f, t * t * 0.85f);
                 yield return null;
             }
             yield return StartCoroutine(SkippableWait(0.3f));
@@ -4473,13 +4676,13 @@ public class BirthSystem : MonoBehaviour
         {
             // ── Phase 4: テキスト出現 ──
             var textLabel = UIHelper.CreateLabel(Localization.Get("cutin_birth_wish"));
+            UIHelper.ApplyFontBold(textLabel);
             textLabel.style.position = UIE.Position.Absolute;
             textLabel.style.left = 0; textLabel.style.right = 0;
             textLabel.style.top = new UIE.StyleLength(new UIE.Length(44, UIE.LengthUnit.Percent));
             textLabel.style.fontSize = 46;
-            textLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             textLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            textLabel.style.color = new Color(1f, 1f, 1f, 0f);
+            textLabel.style.color = new Color(0.051f, 0.051f, 0.078f, 0f); // ダークテキスト
             panel.Add(textLabel);
 
             elapsed = 0f;
@@ -4490,7 +4693,7 @@ public class BirthSystem : MonoBehaviour
                 float alpha = Mathf.Clamp01(elapsed / 0.4f);
                 float easeT = 1f - (1f - t) * (1f - t);
                 float s = Mathf.Lerp(0.85f, 1.05f, easeT) * (1f + Mathf.Sin(elapsed * Mathf.PI * 2f) * 0.02f);
-                textLabel.style.color = new Color(1f, 1f, 1f, alpha);
+                textLabel.style.color = new Color(0.051f, 0.051f, 0.078f, alpha);
                 textLabel.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(s, s, 1f)));
                 yield return null;
             }
@@ -4523,10 +4726,10 @@ public class BirthSystem : MonoBehaviour
         ripple.style.borderBottomWidth = borderWidth;
         ripple.style.borderLeftWidth = borderWidth;
         ripple.style.borderRightWidth = borderWidth;
-        ripple.style.borderTopColor = new Color(1f, 1f, 0.95f, 0.7f);
-        ripple.style.borderBottomColor = new Color(1f, 1f, 0.95f, 0.7f);
-        ripple.style.borderLeftColor = new Color(1f, 1f, 0.95f, 0.7f);
-        ripple.style.borderRightColor = new Color(1f, 1f, 0.95f, 0.7f);
+        ripple.style.borderTopColor = new Color(1f, 0.718f, 0.773f, 0.7f);
+        ripple.style.borderBottomColor = new Color(1f, 0.718f, 0.773f, 0.7f);
+        ripple.style.borderLeftColor = new Color(1f, 0.718f, 0.773f, 0.7f);
+        ripple.style.borderRightColor = new Color(1f, 0.718f, 0.773f, 0.7f);
         parent.Add(ripple);
 
         // 波紋の拡大 + フェードアウト
@@ -4547,10 +4750,10 @@ public class BirthSystem : MonoBehaviour
 
             // フェードアウト
             float alpha = 0.7f * (1f - t);
-            ripple.style.borderTopColor = new Color(1f, 1f, 0.95f, alpha);
-            ripple.style.borderBottomColor = new Color(1f, 1f, 0.95f, alpha);
-            ripple.style.borderLeftColor = new Color(1f, 1f, 0.95f, alpha);
-            ripple.style.borderRightColor = new Color(1f, 1f, 0.95f, alpha);
+            ripple.style.borderTopColor = new Color(1f, 0.718f, 0.773f, alpha);
+            ripple.style.borderBottomColor = new Color(1f, 0.718f, 0.773f, alpha);
+            ripple.style.borderLeftColor = new Color(1f, 0.718f, 0.773f, alpha);
+            ripple.style.borderRightColor = new Color(1f, 0.718f, 0.773f, alpha);
 
             yield return null;
         }

@@ -42,103 +42,120 @@ public class BattleManager : MonoBehaviour
     int playerEvasionBuffTurns;// 回避バフ残りターン
     int playerPoisonTurns;     // プレイヤー毒残りターン
     int playerAtkDebuffTurns;  // プレイヤーATKデバフ残りターン
-    bool isDevilEnemy;         // 悪魔村敵フラグ
+    bool isDevilEnemy;         // ゴージャス・ヴィレッジ敵フラグ
     bool cannotRun;            // 逃走不可フラグ（固定エンカウント）
     Color enemyBgColor = Color.clear; // スプライト無し時の背景色
+
+    // 敵ごとの固有メーター名（HPの呼称）
+    static readonly System.Collections.Generic.Dictionary<string, string> EnemyMeterName = new System.Collections.Generic.Dictionary<string, string>
+    {
+        {"えんえんベイビー", "えんえんど"},
+        {"うずうずベイビー", "うずうずど"},
+        {"ぷんぷんベイビー", "ぷんぷんど"},
+        {"いやだいやだベイビー", "いやいやど"},
+        {"どたばたベイビー", "どたばたど"},
+    };
+
+    string GetEnemyMeterLabel()
+    {
+        if (EnemyMeterName.TryGetValue(enemyName, out string meter))
+            return meter;
+        return "HP";
+    }
 
     // 母親ベースの第2攻撃データ（母親名 → [技名, 説明, 効果タイプ]）
     static readonly System.Collections.Generic.Dictionary<string, string[]> MotherSkillData = new System.Collections.Generic.Dictionary<string, string[]>
     {
-        {"サクラ", new[]{"ヒーリングストライク", "攻撃しつつ自分のHPを回復する医療の技", "heal"}},
-        {"ヒナタ", new[]{"毒霧", "敵に毒を浴びせ、3ターンの間じわじわダメージを与える", "poison"}},
-        {"アキラ", new[]{"疾風ステップ", "素早い動きで攻撃し、2ターンの間回避率が上がる", "evasion"}},
-        {"ミサト", new[]{"分析波動", "敵の弱点を解析し、2ターンの間敵の防御を下げる", "defdown"}},
-        {"カエデ", new[]{"威圧のオーラ", "圧倒的な威圧感で、2ターンの間敵の攻撃力を下げる", "atkdown"}},
-        {"ルナ", new[]{"スターダスト", "星屑をまとった攻撃。与ダメージの一部をHPとして吸収する", "drain"}},
+        {"サクラ", new[]{"ヒーリングタッチ", "あそびつつ じぶんの ごきげんを かいふくする やさしい わざ", "heal"}},
+        {"ヒナタ", new[]{"トゲトゲ・バブル", "おともだちに バブルをかけて、3ターンの あいだ じわじわ まんぞくさせる", "poison"}},
+        {"アキラ", new[]{"かぜのステップ", "すばやい うごきで あそび、2ターンの あいだ かいひりょくが あがる", "evasion"}},
+        {"ミサト", new[]{"おべんきょうウェーブ", "おともだちの にがてを みつけて、2ターンの あいだ おちつきを さげる", "defdown"}},
+        {"カエデ", new[]{"ほんわかオーラ", "ほんわかした ふんいきで、2ターンの あいだ あそびぢからを さげる", "atkdown"}},
+        {"ルナ", new[]{"スターダスト", "ほしくずを まとった あそび。まんぞく度の いちぶを ごきげんとして きゅうしゅうする", "drain"}},
     };
 
     // 36通りの固有技説明（父親名_母親名 → [通常技説明, 必殺技説明]）
     static readonly System.Collections.Generic.Dictionary<string, string[]> SkillDescData = new System.Collections.Generic.Dictionary<string, string[]>
     {
-        {"タケシ_サクラ", new[]{"外科の精密さで急所を突くパンチ", "父の拳と母のメスが融合した一撃必殺の手術パンチ"}},
-        {"タケシ_ヒナタ", new[]{"暗殺術を応用した見えないキック", "闇に溶ける格闘技の奥義。回避不能"}},
-        {"タケシ_アキラ", new[]{"黄金に輝く連続パンチ", "オリンピック級の破壊力で叩き潰す"}},
-        {"タケシ_ミサト", new[]{"量子力学で軌道を読めないパンチ", "重力すら歪める究極の一撃"}},
-        {"タケシ_カエデ", new[]{"華麗なフォームの美しい一撃", "全財産を込めた黄金に輝く鉄拳"}},
-        {"タケシ_ルナ", new[]{"カリスマ性を纏った蹴り", "見る者全てを魅了し打ち砕く衝撃波"}},
-        {"ユウキ_サクラ", new[]{"電子メスで敵のデータを切り裂く", "完全なるサイバー手術で敵を分解する"}},
-        {"ユウキ_ヒナタ", new[]{"痕跡を残さないハッキング攻撃", "対象のシステムを完全に暗殺するプログラム"}},
-        {"ユウキ_アキラ", new[]{"高速データ転送のような連続攻撃", "電脳空間でのオリンピック級演算攻撃"}},
-        {"ユウキ_ミサト", new[]{"量子コンピュータで弱点を解析", "技術的特異点を超えた破壊コード"}},
-        {"ユウキ_カエデ", new[]{"敵の資産データを食い荒らすウイルス", "全世界の資産をハックする究極ウイルス"}},
-        {"ユウキ_ルナ", new[]{"仮想空間から放つ光線", "デジタルとリアルを超越したオーラ攻撃"}},
-        {"ゴウ_サクラ", new[]{"戦場仕込みの精密な切開攻撃", "戦場で命を救い命を奪う天使の一撃"}},
-        {"ゴウ_ヒナタ", new[]{"傭兵と暗殺者の合わせ技", "影から影へ、姿なき暗殺者の最終奥義"}},
-        {"ゴウ_アキラ", new[]{"軍事訓練で鍛えた突進攻撃", "戦場を駆け抜ける全力スプリント攻撃"}},
-        {"ゴウ_ミサト", new[]{"戦術的量子機動による奇襲", "核融合エネルギーを戦術転用した究極兵器"}},
-        {"ゴウ_カエデ", new[]{"金で雇った傭兵団の一斉攻撃", "黄金の弾丸で全てを制圧する"}},
-        {"ゴウ_ルナ", new[]{"美しさで敵を油断させる迷彩術", "完全透明化からの奇襲攻撃"}},
-        {"シンジ_サクラ", new[]{"論理的に最適な切開ポイントを突く", "ノーベル賞級の完璧な外科手術攻撃"}},
-        {"シンジ_ヒナタ", new[]{"計算し尽くされた正確なキック", "IQ300の頭脳が導く暗殺の方程式"}},
-        {"シンジ_アキラ", new[]{"物理法則を最大活用した攻撃", "科学の全てを結集したオリンピック級攻撃"}},
-        {"シンジ_ミサト", new[]{"量子もつれで離れた敵にもダメージ", "二つの天才頭脳が融合した究極の知性攻撃"}},
-        {"シンジ_カエデ", new[]{"経済理論に基づく効率的な攻撃", "ノーベル経済学賞の理論を破壊力に変換"}},
-        {"シンジ_ルナ", new[]{"美の黄金比を計算した攻撃", "相対性理論で時空を歪めるオーラ"}},
-        {"リョウマ_サクラ", new[]{"札束を投げつけて攻撃", "医療ビジネスの全資産を投入した一撃"}},
-        {"リョウマ_ヒナタ", new[]{"金の力で繰り出すキック", "暗殺ビジネスの全てを賭けた攻撃"}},
-        {"リョウマ_アキラ", new[]{"投資のように確実にリターンを得る攻撃", "金メダルごと買収する圧倒的資金力攻撃"}},
-        {"リョウマ_ミサト", new[]{"量子投資理論に基づく攻撃", "無限の資産を生む理論の破壊的応用"}},
-        {"リョウマ_カエデ", new[]{"財閥の力を見せつける連続攻撃", "兆を超える資産で全てを支配する"}},
-        {"リョウマ_ルナ", new[]{"セレブの品格で圧倒する", "世界最高峰の富と美の融合攻撃"}},
-        {"テツヤ_サクラ", new[]{"ロックのリズムで切り刻む", "ライブ会場が手術室になる究極パフォーマンス"}},
-        {"テツヤ_ヒナタ", new[]{"静寂から放つロックの衝撃波", "音のない暗殺メロディ"}},
-        {"テツヤ_アキラ", new[]{"高速ビートのような連続攻撃", "オリンピック級のライブパフォーマンス攻撃"}},
-        {"テツヤ_ミサト", new[]{"量子力学的な音波攻撃", "観測するまで生死不明な究極の歌"}},
-        {"テツヤ_カエデ", new[]{"プラチナディスク級の衝撃を与える", "音楽史に刻まれる究極のアンセム攻撃"}},
-        {"テツヤ_ルナ", new[]{"スターのオーラで圧倒する", "超新星のように全てを飲み込むハーモニー"}},
+        {"タケシ_サクラ", new[]{"おいしゃさんの ていねいな たかいたかい", "パパのうでと ママの やさしさが あわさった とっておきの あそび"}},
+        {"タケシ_ヒナタ", new[]{"ひみつの みえないステップ", "かくれんぼの おうぎ。みつからない！"}},
+        {"タケシ_アキラ", new[]{"きんいろに かがやく れんぞくあそび", "オリンピックきゅうの パワーで おおよろこびさせる"}},
+        {"タケシ_ミサト", new[]{"りょうしりきがくで よめない たかいたかい", "じゅうりょくすら まげる きゅうきょくの あそび"}},
+        {"タケシ_カエデ", new[]{"けいざいりろんで さいてきかされた あそび", "かぶかのように きゅうじょうしょうする たのしさ"}},
+        {"タケシ_ルナ", new[]{"ほしぞらの したで ほうつ たかいたかい", "せいざの ちからを やどした きゅうきょくの あそび"}},
+        {"ユウキ_サクラ", new[]{"でんしメスで データを なおす", "かんぺきな サイバーしゅじゅつで おともだちを びっくりさせる"}},
+        {"ユウキ_ヒナタ", new[]{"こんせきを のこさない ハッキング", "たいしょうの システムを こっそり かきかえる プログラム"}},
+        {"ユウキ_アキラ", new[]{"AIが さいてきかした こうそくあそび", "きかいがくしゅうで しんかしつづける あそびパターン"}},
+        {"ユウキ_ミサト", new[]{"りょうしコンピュータで にがてを かいせき", "ぎじゅつてき とくいてんを こえた びっくりコード"}},
+        {"ユウキ_カエデ", new[]{"フィンテックで けいざいに アクセス", "ぜんせかいの きんゆうを ハッキングする びっくり"}},
+        {"ユウキ_ルナ", new[]{"ほしの データを かいせきした あそび", "うちゅうの ソースコードを かきかえる"}},
+        {"ゴウ_サクラ", new[]{"ぼうけんじこみの ていねいな あそび", "ぼうけんで みんなを えがおにする てんしの あそび"}},
+        {"ゴウ_ヒナタ", new[]{"ぼうけんかと ひみつの あわせわざ", "かげから かげへ、すがたなき ダンサーの さいしゅうおうぎ"}},
+        {"ゴウ_アキラ", new[]{"くんれんで きたえた とっしんあそび", "フィールドを かけぬける ぜんりょく スプリントあそび"}},
+        {"ゴウ_ミサト", new[]{"せんじゅつてき りょうし きどうの サプライズ", "ふしぎエネルギーを つかった きゅうきょくの びっくり"}},
+        {"ゴウ_カエデ", new[]{"ぼうけんけいざいを おうようした あそび", "ぜんりょくを つぎこんだ そうりょくあそび"}},
+        {"ゴウ_ルナ", new[]{"ぼうけんの ほしぞらの したで ほうつ あそび", "ほしあかりだけを たよりにした ひみつの おうぎ"}},
+        {"シンジ_サクラ", new[]{"ろんりてきに さいてきな ポイントを みつける", "ノーベルしょうきゅうの かんぺきな やさしいタッチ"}},
+        {"シンジ_ヒナタ", new[]{"けいさんしつくされた せいかくな ステップ", "IQ300の ずのうが みちびく ひみつの ほうていしき"}},
+        {"シンジ_アキラ", new[]{"科学的に最適化された動き", "人体工学の極致による完璧な身体運用"}},
+        {"シンジ_ミサト", new[]{"りろんぶつりがくの おうよう あそび", "ちょうげんりろんを じったいかさせた きゅうきょくの びっくり"}},
+        {"シンジ_カエデ", new[]{"けいざいりろんに もとづく こうりつてきな あそび", "ノーベルけいざいがくしょうの りろんを たのしさに へんかん"}},
+        {"シンジ_ルナ", new[]{"てんたいかんそくデータを おうようした あそび", "うちゅうの しんりを ときあかす びっくり"}},
+        {"リョウマ_サクラ", new[]{"さつたばを なげて びっくりさせる", "いりょうビジネスの ぜんしさんを とうにゅうした あそび"}},
+        {"リョウマ_ヒナタ", new[]{"おかねの ちからで くりだす あそび", "ひみつの ビジネスの すべてを かけた あそび"}},
+        {"リョウマ_アキラ", new[]{"とうしのように かくじつに リターンを える あそび", "きんメダルごと かいしゅうする あっとうてき しきんりょく あそび"}},
+        {"リョウマ_ミサト", new[]{"りょうしとうしりろんに もとづく あそび", "むげんの しさんを うむ りろんの びっくりおうよう"}},
+        {"リョウマ_カエデ", new[]{"ざいばつの ちからを みせつける れんぞくあそび", "ちょうを こえる しさんで みんなを えがおにする"}},
+        {"リョウマ_ルナ", new[]{"セレブの ひんかくで あっとうする", "せかいさいこうほうの とみと びの ゆうごうあそび"}},
+        {"テツヤ_サクラ", new[]{"ロックの リズムで ノリノリにする", "ライブかいじょうが えがおで いっぱいになる きゅうきょく パフォーマンス"}},
+        {"テツヤ_ヒナタ", new[]{"せいじゃくから ほうつ ロックの しょうげきは", "おとのない ひみつの メロディ"}},
+        {"テツヤ_アキラ", new[]{"こうそくビートのような れんぞくあそび", "オリンピックきゅうの ライブパフォーマンスあそび"}},
+        {"テツヤ_ミサト", new[]{"りょうしりきがくてきな おんぱ あそび", "きくまで ふしぎな きゅうきょくの うた"}},
+        {"テツヤ_カエデ", new[]{"プラチナディスクきゅうの びっくりを あたえる", "おんがくしに きざまれる きゅうきょくの アンセムあそび"}},
+        {"テツヤ_ルナ", new[]{"スターの オーラで あっとうする", "ちょうしんせいのように すべてを つつみこむ ハーモニー"}},
     };
 
     // 36通りの固有技データ（父親名_母親名 → [通常技, 必殺技]）
     static readonly System.Collections.Generic.Dictionary<string, string[]> SkillData = new System.Collections.Generic.Dictionary<string, string[]>
     {
         // タケシ（格闘家）× 各母親
-        {"タケシ_サクラ", new[]{"メスパンチ", "外科キングブロー"}},
-        {"タケシ_ヒナタ", new[]{"暗殺キック", "暗黒格闘技"}},
+        {"タケシ_サクラ", new[]{"メスタッチ", "おいしゃさんのキングタッチ"}},
+        {"タケシ_ヒナタ", new[]{"ひみつのキック", "ほしぞらダンス"}},
         {"タケシ_アキラ", new[]{"ゴールドラッシュ", "オリンピック・スマッシュ"}},
-        {"タケシ_ミサト", new[]{"量子パンチ", "ブラックホール・ストライク"}},
-        {"タケシ_カエデ", new[]{"ビューティーブロー", "黄金の拳"}},
+        {"タケシ_ミサト", new[]{"りょうしタッチ", "ブラックホール・ストライク"}},
+        {"タケシ_カエデ", new[]{"ゴールデン・タッチ", "黄金のあそび"}},
         {"タケシ_ルナ", new[]{"モデルキック", "カリスマ・インパクト"}},
         // ユウキ（ハッカー）× 各母親
         {"ユウキ_サクラ", new[]{"電脳メス", "サイバー・オペレーション"}},
-        {"ユウキ_ヒナタ", new[]{"ステルスハック", "暗殺プログラム"}},
+        {"ユウキ_ヒナタ", new[]{"ステルスハック", "ひみつのプログラム"}},
         {"ユウキ_アキラ", new[]{"データストリーム", "電脳オリンピック"}},
         {"ユウキ_ミサト", new[]{"量子ハッキング", "シンギュラリティ・コード"}},
         {"ユウキ_カエデ", new[]{"マネーウイルス", "ビリオネア・ハック"}},
         {"ユウキ_ルナ", new[]{"バーチャルビーム", "デジタル・オーラ"}},
-        // ゴウ（傭兵）× 各母親
-        {"ゴウ_サクラ", new[]{"コンバットメス", "戦場の天使"}},
-        {"ゴウ_ヒナタ", new[]{"暗殺コンボ", "シャドウ・アサシン"}},
+        // ゴウ（ぼうけんか）× 各母親
+        {"ゴウ_サクラ", new[]{"ぼうけんメス", "ぼうけんの天使"}},
+        {"ゴウ_ヒナタ", new[]{"ひみつのコンボ", "シャドウ・ダンサー"}},
         {"ゴウ_アキラ", new[]{"ミリタリーダッシュ", "ウォー・スプリント"}},
-        {"ゴウ_ミサト", new[]{"タクティカル量子", "戦術核融合"}},
-        {"ゴウ_カエデ", new[]{"傭兵マネー", "ゴールド・ウォーフェア"}},
+        {"ゴウ_ミサト", new[]{"タクティカル量子", "タクティカル・ふしぎ"}},
+        {"ゴウ_カエデ", new[]{"ぼうけんマネー", "ゴールド・パレード"}},
         {"ゴウ_ルナ", new[]{"カモフラージュ", "ステルス・グラマー"}},
         // シンジ（天才科学者）× 各母親
         {"シンジ_サクラ", new[]{"論理メス", "ノーベル・サージェリー"}},
-        {"シンジ_ヒナタ", new[]{"計算キック", "IQ暗殺術"}},
+        {"シンジ_ヒナタ", new[]{"計算キック", "IQひみつじゅつ"}},
         {"シンジ_アキラ", new[]{"物理エンジン", "科学オリンピック"}},
         {"シンジ_ミサト", new[]{"量子もつれ", "ダブルIQ・フュージョン"}},
-        {"シンジ_カエデ", new[]{"経済理論", "ノーベル経済砲"}},
+        {"シンジ_カエデ", new[]{"経済理論", "ノーベルけいざいウェーブ"}},
         {"シンジ_ルナ", new[]{"美の方程式", "相対性オーラ"}},
         // リョウマ（実業家）× 各母親
         {"リョウマ_サクラ", new[]{"札束メス", "メディカル・ビリオン"}},
-        {"リョウマ_ヒナタ", new[]{"マネーキック", "暗殺ビジネス"}},
+        {"リョウマ_ヒナタ", new[]{"マネーキック", "ひみつのビジネス"}},
         {"リョウマ_アキラ", new[]{"投資ダッシュ", "ゴールドメダル買収"}},
         {"リョウマ_ミサト", new[]{"量子投資", "無限マネー理論"}},
         {"リョウマ_カエデ", new[]{"帝国コンボ", "トリリオン・エンパイア"}},
         {"リョウマ_ルナ", new[]{"セレブオーラ", "ワールドクラス・リッチ"}},
         // テツヤ（ロックスター）× 各母親
         {"テツヤ_サクラ", new[]{"ロックメス", "ライブ・サージェリー"}},
-        {"テツヤ_ヒナタ", new[]{"サイレントロック", "暗殺セレナーデ"}},
+        {"テツヤ_ヒナタ", new[]{"サイレントロック", "ひみつのセレナーデ"}},
         {"テツヤ_アキラ", new[]{"スピードビート", "オリンピック・ライブ"}},
         {"テツヤ_ミサト", new[]{"量子メロディ", "シュレディンガーズ・ソング"}},
         {"テツヤ_カエデ", new[]{"ゴールドレコード", "プラチナ・アンセム"}},
@@ -169,12 +186,18 @@ public class BattleManager : MonoBehaviour
     UIE.VisualElement interactionBlocker;
     UIE.VisualElement flashOverlay;
     UIE.VisualElement battleLogEl;
+    UIE.VisualElement battleBgEl, enemyAreaEl, playerAreaEl, centerAreaEl;
 
     // UI Toolkit — オーバーレイ
     UIE.PanelSettings overlayPanelSettings;
     UIE.VisualElement overlayRoot;
     UIE.VisualElement menuOverlayEl;
     UIE.VisualElement skillInfoEl;
+
+    // オーディオ
+    AudioSource bgmSource;
+    AudioSource seSource;
+    AudioClip seTap;
 
     // バトル状態
     bool isBattleActive;
@@ -206,6 +229,20 @@ public class BattleManager : MonoBehaviour
 
         // CreateMenuBar(); // メニュー無効化
 
+        // 前シーンの残留BGMを全停止
+        foreach (var src in FindObjectsByType<AudioSource>(FindObjectsSortMode.None))
+            src.Stop();
+
+        // オーディオ初期化
+        bgmSource = gameObject.AddComponent<AudioSource>();
+        bgmSource.loop = true;
+        bgmSource.volume = 0.5f;
+        var bgmClip = Resources.Load<AudioClip>("BGM/Battle_Bgm");
+        if (bgmClip != null) { bgmSource.clip = bgmClip; }
+
+        seSource = gameObject.AddComponent<AudioSource>();
+        seTap = Resources.Load<AudioClip>("SE/SE_Tap");
+
         StartCoroutine(BattleStart());
     }
 
@@ -215,6 +252,12 @@ public class BattleManager : MonoBehaviour
             Destroy(mainPanelSettings);
         if (overlayPanelSettings != null)
             Destroy(overlayPanelSettings);
+        // マップスクショのメモリ解放
+        if (DataCarrier.Instance != null && DataCarrier.Instance.battleBgTexture != null)
+        {
+            Destroy(DataCarrier.Instance.battleBgTexture);
+            DataCarrier.Instance.battleBgTexture = null;
+        }
     }
 
     void InitializePlayer()
@@ -262,6 +305,9 @@ public class BattleManager : MonoBehaviour
             if (DataCarrier.Instance.IsEquipped("魔法のおむつ")) playerDef += 3;
             if (DataCarrier.Instance.IsEquipped("黄金のほ乳瓶")) { playerAtk += 3; playerDef += 3; }
             if (DataCarrier.Instance.IsEquipped("悪魔のティアラ")) { playerAtk += 6; playerDef -= 2; }
+            if (DataCarrier.Instance.IsEquipped("泣き猫パンチ")) playerAtk += 2;
+            if (DataCarrier.Instance.IsEquipped("ミニよだれかけ")) playerDef += 2;
+            if (DataCarrier.Instance.IsEquipped("にじいろガラガラ")) { playerAtk += 5; playerDef += 2; }
 
             playerFatherName = DataCarrier.Instance.fatherName ?? "";
             playerMotherName = DataCarrier.Instance.motherName ?? "";
@@ -363,7 +409,7 @@ public class BattleManager : MonoBehaviour
         }
         else if (fromMap && bossBattle)
         {
-            enemyName = "村の王シバ";
+            enemyName = "青年のシバ";
             enemyAge = -1;
             enemyMaxHp = 500;
             enemyHp = enemyMaxHp;
@@ -379,7 +425,7 @@ public class BattleManager : MonoBehaviour
         }
         else
         {
-            enemyName = "いじわるベイビー";
+            enemyName = "ぷんぷんベイビー";
             enemyAge = -1;
             enemyMaxHp = 108;
             enemyHp = enemyMaxHp;
@@ -429,22 +475,22 @@ public class BattleManager : MonoBehaviour
         else if (area == 1)
         {
             enemyDefs = new object[][] {
-                new object[]{ "どくベイビー",     Resources.Load<Sprite>("EnemyBabys/poison/doku-baby"),  80, 22, 13, 22,  6,  9, new Color(0.4f, 0.1f, 0.5f) },
-                new object[]{ "のろいベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/noroi-baby"), 90, 27, 18, 20,  7, 10, new Color(0.3f, 0.0f, 0.3f) },
-                new object[]{ "やみベイビー",     Resources.Load<Sprite>("EnemyBabys/poison/yami-baby"), 100, 32, 20, 27,  8, 11, new Color(0.15f, 0.05f, 0.2f) },
-                new object[]{ "あくまベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/akuma-baby"), 115, 38, 25, 32,  9, 13, new Color(0.5f, 0.0f, 0.1f) },
-                new object[]{ "じゃあくベイビー", Resources.Load<Sprite>("EnemyBabys/poison/jyaaku-baby"), 135, 43, 29, 34, 11, 14, new Color(0.2f, 0.0f, 0.0f) },
-                new object[]{ "まおうベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/maou-baby"), 160, 50, 34, 38, 13, 15, new Color(0.1f, 0.0f, 0.15f) },
+                new object[]{ "にがにがベイビー",     Resources.Load<Sprite>("EnemyBabys/poison/doku-baby"),  80, 22, 13, 22,  6,  9, new Color(0.4f, 0.1f, 0.5f) },
+                new object[]{ "ぐちぐちベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/noroi-baby"), 90, 27, 18, 20,  7, 10, new Color(0.3f, 0.0f, 0.3f) },
+                new object[]{ "どよよんベイビー",     Resources.Load<Sprite>("EnemyBabys/poison/yami-baby"), 100, 32, 20, 27,  8, 11, new Color(0.15f, 0.05f, 0.2f) },
+                new object[]{ "つんつんベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/akuma-baby"), 115, 38, 25, 32,  9, 13, new Color(0.5f, 0.0f, 0.1f) },
+                new object[]{ "いじいじベイビー", Resources.Load<Sprite>("EnemyBabys/poison/jyaaku-baby"), 135, 43, 29, 34, 11, 14, new Color(0.2f, 0.0f, 0.0f) },
+                new object[]{ "ごーじゃすベイビー",   Resources.Load<Sprite>("EnemyBabys/poison/maou-baby"), 160, 50, 34, 38, 13, 15, new Color(0.1f, 0.0f, 0.15f) },
             };
         }
         else
         {
             enemyDefs = new object[][] {
-                new object[]{ "なきむしベイビー",     "EnemyBabys/common-nakimushi",    60, 15, 10, 20, 0, 99 },
-                new object[]{ "やんちゃベイビー",     "EnemyBabys/common-yantya",       75, 22, 12, 30, 0, 99 },
-                new object[]{ "いじわるベイビー",     "EnemyBabys/first-enemy",         85, 28, 18, 25, 0, 99 },
-                new object[]{ "わがままベイビー",     "EnemyBabys/common-wagamama",    100, 32, 22, 28, 0, 99 },
-                new object[]{ "あばれんぼうベイビー", "EnemyBabys/common-abarennbou",  120, 40, 25, 35, 0, 99 },
+                new object[]{ "えんえんベイビー",       "EnemyBabys/common-nakimushi",    60, 15, 10, 20, 0, 99 },
+                new object[]{ "うずうずベイビー",       "EnemyBabys/common-yantya",       75, 22, 12, 30, 0, 99 },
+                new object[]{ "ぷんぷんベイビー",       "EnemyBabys/first-enemy",         85, 28, 18, 25, 0, 99 },
+                new object[]{ "いやだいやだベイビー",   "EnemyBabys/common-wagamama",    100, 32, 22, 28, 0, 99 },
+                new object[]{ "どたばたベイビー",       "EnemyBabys/common-abarennbou",  120, 40, 25, 35, 0, 99 },
             };
         }
 
@@ -466,7 +512,7 @@ public class BattleManager : MonoBehaviour
             chosen = candidates[Random.Range(0, candidates.Count)];
             safetyCount++;
             string cName = (string)chosen[0];
-            if ((cName == "まおうベイビー" || cName == "小悪魔れい") && Random.value > 0.03f && candidates.Count > 1)
+            if ((cName == "ごーじゃすベイビー" || cName == "小悪魔れい") && Random.value > 0.03f && candidates.Count > 1)
                 continue;
             break;
         } while (safetyCount < 20);
@@ -524,10 +570,18 @@ public class BattleManager : MonoBehaviour
         battleRoot.AddToClassList("battle-root");
         root.Add(battleRoot);
 
-        // 背景
-        var bg = new UIE.VisualElement();
-        bg.AddToClassList("battle-bg");
-        battleRoot.Add(bg);
+        // 背景（マップスクショがあれば使用 — ぼかし＋暗く）
+        battleBgEl = new UIE.VisualElement();
+        battleBgEl.AddToClassList("battle-bg");
+        battleBgEl.pickingMode = UIE.PickingMode.Ignore;
+        if (DataCarrier.Instance != null && DataCarrier.Instance.battleBgTexture != null)
+        {
+            var blurred = BlurTexture(DataCarrier.Instance.battleBgTexture, 4);
+            var sprite = Sprite.Create(blurred, new Rect(0, 0, blurred.width, blurred.height), new Vector2(0.5f, 0.5f));
+            battleBgEl.style.backgroundImage = new UIE.StyleBackground(sprite);
+        }
+        battleBgEl.style.opacity = 0;
+        battleRoot.Add(battleBgEl);
 
         // フラッシュオーバーレイ
         flashOverlay = new UIE.VisualElement();
@@ -536,32 +590,35 @@ public class BattleManager : MonoBehaviour
         battleRoot.Add(flashOverlay);
 
         // 敵エリア（上）
-        var enemyArea = new UIE.VisualElement();
-        enemyArea.AddToClassList("battle-enemy-area");
-        enemyArea.style.paddingTop = safeTop + 30;
-        battleRoot.Add(enemyArea);
-        enemyPanel = BuildCharPanel(enemyArea, false);
+        enemyAreaEl = new UIE.VisualElement();
+        enemyAreaEl.AddToClassList("battle-enemy-area");
+        enemyAreaEl.style.paddingTop = safeTop + 30;
+        enemyAreaEl.style.opacity = 0;
+        battleRoot.Add(enemyAreaEl);
+        enemyPanel = BuildCharPanel(enemyAreaEl, false);
 
         // 中央エリア（VS + ログ）
-        var centerArea = new UIE.VisualElement();
-        centerArea.AddToClassList("battle-center");
-        battleRoot.Add(centerArea);
+        centerAreaEl = new UIE.VisualElement();
+        centerAreaEl.AddToClassList("battle-center");
+        centerAreaEl.style.opacity = 0;
+        battleRoot.Add(centerAreaEl);
 
         vsTextEl = UIHelper.CreateLabel("VS", "battle-vs");
-        centerArea.Add(vsTextEl);
+        centerAreaEl.Add(vsTextEl);
 
         battleLogEl = new UIE.VisualElement();
         battleLogEl.AddToClassList("battle-log");
-        centerArea.Add(battleLogEl);
+        centerAreaEl.Add(battleLogEl);
 
         battleLogLabel = UIHelper.CreateLabel("", "battle-log-text");
         battleLogEl.Add(battleLogLabel);
 
         // プレイヤーエリア（下）
-        var playerArea = new UIE.VisualElement();
-        playerArea.AddToClassList("battle-player-area");
-        battleRoot.Add(playerArea);
-        playerPanel = BuildCharPanel(playerArea, true);
+        playerAreaEl = new UIE.VisualElement();
+        playerAreaEl.AddToClassList("battle-player-area");
+        playerAreaEl.style.opacity = 0;
+        battleRoot.Add(playerAreaEl);
+        playerPanel = BuildCharPanel(playerAreaEl, true);
 
         // 上部バー（にげる左端 / オートバトル右端）— アクションエリアの上
         bottomBar = new UIE.VisualElement();
@@ -731,7 +788,15 @@ public class BattleManager : MonoBehaviour
         btn.AddToClassList("battle-cmd-btn");
         UIHelper.ApplyFont(btn);
         btn.text = label;
-        btn.clicked += () => onClick();
+        btn.clicked += () =>
+        {
+            if (seSource != null && seTap != null)
+            {
+                seSource.pitch = Random.Range(0.96f, 1.08f);
+                seSource.PlayOneShot(seTap, 0.7f);
+            }
+            onClick();
+        };
         parent.Add(btn);
     }
 
@@ -790,7 +855,16 @@ public class BattleManager : MonoBehaviour
         var descLabel = UIHelper.CreateLabel(desc, "battle-submenu-item-desc");
         btn.Add(descLabel);
 
-        btn.clicked += () => { CloseSubmenu(); onClick(); };
+        btn.clicked += () =>
+        {
+            if (seSource != null && seTap != null)
+            {
+                seSource.pitch = Random.Range(0.96f, 1.08f);
+                seSource.PlayOneShot(seTap, 0.7f);
+            }
+            CloseSubmenu();
+            onClick();
+        };
     }
 
     void CloseSubmenu()
@@ -892,7 +966,7 @@ public class BattleManager : MonoBehaviour
             {
                 string gender = DataCarrier.Instance.babyGender;
                 if (!string.IsNullOrEmpty(gender))
-                    babyName = gender == "男の子" ? "GOD BOY" : "GOD GIRL";
+                    babyName = gender == "男の子" ? "STAR BOY" : "STAR GIRL";
             }
             babyAge = DataCarrier.Instance.babyAge;
         }
@@ -1005,7 +1079,8 @@ public class BattleManager : MonoBehaviour
         enemyNameLabel.text = Localization.GetEnemy(enemyName);
         if (enemyAgeEl != null)
             enemyAgeEl.text = enemyAge >= 0 ? Localization.GetAge(enemyAge) : "";
-        enemyHpLabel.text = $"HP:{enemyHp}/{enemyMaxHp}";
+        string meterLabel = GetEnemyMeterLabel();
+        enemyHpLabel.text = $"{meterLabel}:{enemyHp}/{enemyMaxHp}";
 
         float hpRatio = (float)enemyHp / enemyMaxHp;
         enemyHpFill.style.width = new UIE.Length(hpRatio * 100f, UIE.LengthUnit.Percent);
@@ -1563,6 +1638,122 @@ public class BattleManager : MonoBehaviour
         flashOverlay.style.opacity = 0f;
     }
 
+    IEnumerator IntroFlashEffect()
+    {
+        if (flashOverlay == null) yield break;
+        flashOverlay.style.backgroundColor = Color.white;
+        flashOverlay.style.opacity = 1f;
+        yield return null;
+        float duration = 0.4f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            flashOverlay.style.opacity = Mathf.Lerp(1f, 0f, elapsed / duration);
+            yield return null;
+        }
+        flashOverlay.style.opacity = 0f;
+    }
+
+    IEnumerator FadeOutBGM(float duration = 1.5f)
+    {
+        if (bgmSource == null || !bgmSource.isPlaying) yield break;
+        float startVol = bgmSource.volume;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            bgmSource.volume = Mathf.Lerp(startVol, 0f, elapsed / duration);
+            yield return null;
+        }
+        bgmSource.volume = 0f;
+        bgmSource.Stop();
+    }
+
+    IEnumerator BounceInEffect(UIE.VisualElement el)
+    {
+        if (el == null) yield break;
+
+        // Phase 1: 上から落下 (0.35s) — opacity + translate + scale
+        float dropDuration = 0.35f;
+        float elapsed = 0f;
+        float startY = -300f;
+        while (elapsed < dropDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / dropDuration;
+            // ease-in (加速)
+            float eased = t * t;
+            float y = Mathf.Lerp(startY, 0f, eased);
+            float s = Mathf.Lerp(0.3f, 1f, eased);
+            el.style.opacity = Mathf.Lerp(0f, 1f, Mathf.Clamp01(t * 2f));
+            el.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, y));
+            el.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(s, s, 1f)));
+            yield return null;
+        }
+
+        // Phase 2: 着地スクワッシュ (0.1s) — 横に潰れる
+        elapsed = 0f;
+        float squashDuration = 0.1f;
+        while (elapsed < squashDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / squashDuration;
+            float sx = Mathf.Lerp(1f, 1.25f, t);
+            float sy = Mathf.Lerp(1f, 0.75f, t);
+            el.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 0));
+            el.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(sx, sy, 1f)));
+            yield return null;
+        }
+
+        // Phase 3: バウンス戻り (0.15s) — 縦に伸びて跳ねる
+        elapsed = 0f;
+        float stretchDuration = 0.15f;
+        while (elapsed < stretchDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / stretchDuration;
+            float sx = Mathf.Lerp(1.25f, 0.9f, t);
+            float sy = Mathf.Lerp(0.75f, 1.1f, t);
+            float y = Mathf.Lerp(0f, -40f, Mathf.Sin(t * Mathf.PI));
+            el.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, y));
+            el.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(sx, sy, 1f)));
+            yield return null;
+        }
+
+        // Phase 4: 小バウンス (0.12s) — 軽い着地
+        elapsed = 0f;
+        float settleDuration = 0.12f;
+        while (elapsed < settleDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / settleDuration;
+            float sx = Mathf.Lerp(0.9f, 1.05f, t);
+            float sy = Mathf.Lerp(1.1f, 0.97f, t);
+            float y = Mathf.Lerp(0f, -10f, Mathf.Sin(t * Mathf.PI));
+            el.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, y));
+            el.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(sx, sy, 1f)));
+            yield return null;
+        }
+
+        // Phase 5: 安定 (0.08s)
+        elapsed = 0f;
+        float restoreDuration = 0.08f;
+        while (elapsed < restoreDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / restoreDuration;
+            float sx = Mathf.Lerp(1.05f, 1f, t);
+            float sy = Mathf.Lerp(0.97f, 1f, t);
+            el.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(sx, sy, 1f)));
+            yield return null;
+        }
+
+        el.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 0));
+        el.style.scale = new UIE.StyleScale(new UIE.Scale(Vector3.one));
+        el.style.opacity = 1f;
+    }
+
     IEnumerator AttackAnimation(UIE.VisualElement attacker, UIE.VisualElement target, bool isSpecial)
     {
         if (attacker == null || target == null) yield break;
@@ -1602,19 +1793,195 @@ public class BattleManager : MonoBehaviour
         yield return new WaitForSeconds(shakeDuration);
     }
 
-    IEnumerator DamageFlash(UIE.VisualElement faceEl)
+    IEnumerator DamageEffect(UIE.VisualElement faceEl, UIE.VisualElement panel, bool isHeavy = false)
     {
         if (faceEl == null) yield break;
+
+        // 画面フラッシュ（赤）
+        float flashOpacity = isHeavy ? 0.5f : 0.3f;
+        if (flashOverlay != null)
+        {
+            flashOverlay.style.backgroundColor = new Color(1f, 0.1f, 0.1f);
+            flashOverlay.style.opacity = flashOpacity;
+        }
+
+        // パネルシェイク
+        if (panel != null)
+            StartCoroutine(ShakeEffect(panel, isHeavy ? 0.3f : 0.2f, isHeavy ? 15f : 8f));
+
+        // スプライト赤点滅（tintColor + opacity フリッカー）
         for (int i = 0; i < 3; i++)
         {
-            faceEl.style.opacity = 0.3f;
+            faceEl.style.unityBackgroundImageTintColor = new Color(1f, 0.3f, 0.3f);
+            faceEl.style.opacity = 0.4f;
             yield return new WaitForSeconds(0.08f);
+            faceEl.style.unityBackgroundImageTintColor = Color.white;
             faceEl.style.opacity = 1f;
             yield return new WaitForSeconds(0.08f);
+        }
+
+        // フラッシュフェードアウト
+        if (flashOverlay != null)
+        {
+            float elapsed = 0f;
+            float fadeDur = 0.15f;
+            while (elapsed < fadeDur)
+            {
+                elapsed += Time.deltaTime;
+                flashOverlay.style.opacity = Mathf.Lerp(flashOpacity * 0.5f, 0f, elapsed / fadeDur);
+                yield return null;
+            }
+            flashOverlay.style.opacity = 0f;
         }
     }
 
     // ===== カード粉砕演出 =====
+
+    IEnumerator NikonikoDefeatEffect(UIE.VisualElement panel)
+    {
+        if (panel == null) yield break;
+
+        var parent = panel.parent;
+        if (parent == null) yield break;
+
+        // パネルの位置・サイズを保存
+        var layout = panel.layout;
+        float panelCenterX = layout.x + layout.width * 0.5f;
+        float panelCenterY = layout.y + layout.height * 0.5f;
+
+        // --- Step 1: ホワイトアウト (0.4s) ---
+        // 白いオーバーレイをパネル内に追加して徐々に不透明にする
+        var whiteOverlay = new UIE.VisualElement();
+        whiteOverlay.pickingMode = UIE.PickingMode.Ignore;
+        whiteOverlay.style.position = UIE.Position.Absolute;
+        whiteOverlay.style.left = 0; whiteOverlay.style.top = 0;
+        whiteOverlay.style.right = 0; whiteOverlay.style.bottom = 0;
+        whiteOverlay.style.backgroundColor = new Color(1f, 0.96f, 0.88f, 0f); // パステルゴールド
+        whiteOverlay.style.borderTopLeftRadius = 40;
+        whiteOverlay.style.borderTopRightRadius = 40;
+        whiteOverlay.style.borderBottomLeftRadius = 40;
+        whiteOverlay.style.borderBottomRightRadius = 40;
+        panel.Add(whiteOverlay);
+
+        float whiteDur = 0.4f;
+        float elapsed = 0f;
+        while (elapsed < whiteDur)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / whiteDur);
+            float ease = t * t; // ease-in
+            whiteOverlay.style.backgroundColor = new Color(1f, 0.96f, 0.88f, ease);
+            yield return null;
+        }
+        whiteOverlay.style.backgroundColor = new Color(1f, 0.96f, 0.88f, 1f);
+        yield return new WaitForSeconds(0.15f);
+
+        // --- Step 2: ぽんぽんバウンス (3回) ---
+        float[] bounceHeights = { -30f, -20f, -12f };
+        for (int i = 0; i < bounceHeights.Length; i++)
+        {
+            float bounceDur = 0.15f;
+            elapsed = 0f;
+            // 上へ
+            while (elapsed < bounceDur)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / bounceDur);
+                float ease = Mathf.Sin(t * Mathf.PI); // sin曲線で自然なバウンス
+                panel.style.translate = new UIE.StyleTranslate(
+                    new UIE.Translate(0, bounceHeights[i] * ease));
+                yield return null;
+            }
+            panel.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 0));
+        }
+
+        yield return new WaitForSeconds(0.1f);
+
+        // --- Step 3 & 4: パーティクル噴出 + 昇天 (同時進行) ---
+        // パーティクルコンテナ（parent上に配置）
+        var particleContainer = new UIE.VisualElement();
+        particleContainer.pickingMode = UIE.PickingMode.Ignore;
+        particleContainer.style.position = UIE.Position.Absolute;
+        particleContainer.style.left = 0; particleContainer.style.top = 0;
+        particleContainer.style.right = 0; particleContainer.style.bottom = 0;
+        particleContainer.style.overflow = UIE.Overflow.Visible;
+        parent.Add(particleContainer);
+
+        // パーティクルを生成
+        string[] symbols = { "\u2665", "\u2605", "\u2665", "\u2606", "\u2665", "\u2605" }; // ♥ ★
+        Color[] particleColors = {
+            new Color(1f, 0.44f, 0.56f),  // ピンク
+            new Color(1f, 0.84f, 0.3f),   // ゴールド
+            new Color(0.67f, 0.94f, 0.82f), // ミント
+            new Color(1f, 0.72f, 0.77f),  // ライトピンク
+            new Color(1f, 0.92f, 0.5f),   // ライトゴールド
+        };
+
+        int particleCount = 18;
+        var particles = new List<(UIE.Label el, float px, float py, float vx, float vy, float rotSpeed)>();
+
+        for (int i = 0; i < particleCount; i++)
+        {
+            var p = new UIE.Label();
+            p.pickingMode = UIE.PickingMode.Ignore;
+            p.text = symbols[i % symbols.Length];
+            p.style.position = UIE.Position.Absolute;
+            p.style.fontSize = Random.Range(18, 36);
+            p.style.color = particleColors[i % particleColors.Length];
+            p.style.left = panelCenterX;
+            p.style.top = panelCenterY;
+            p.style.unityTextAlign = TextAnchor.MiddleCenter;
+            particleContainer.Add(p);
+
+            float angle = Random.Range(-70f, 70f) * Mathf.Deg2Rad; // 上方向中心に扇状
+            float speed = Random.Range(200f, 450f);
+            float vx = Mathf.Sin(angle) * speed;
+            float vy = -Mathf.Cos(angle) * speed; // 上方向がマイナス
+            float rotSpeed = Random.Range(-180f, 180f);
+            particles.Add((p, panelCenterX, panelCenterY, vx, vy, rotSpeed));
+        }
+
+        // 昇天 + パーティクル同時アニメーション
+        float ascendDur = 1.2f;
+        elapsed = 0f;
+
+        while (elapsed < ascendDur)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / ascendDur);
+
+            // パネル昇天: 上方向に移動 + フェードアウト
+            float ascendEase = t * t; // ease-in (加速しながら上昇)
+            float moveY = -300f * ascendEase;
+            float alpha = 1f - Mathf.Clamp01(t * 1.5f); // 後半で完全に消える
+            panel.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, moveY));
+            panel.style.opacity = alpha;
+
+            // パーティクル更新
+            float dt = Time.deltaTime;
+            for (int i = 0; i < particles.Count; i++)
+            {
+                var (el, px, py, vx, vy, rotSpeed) = particles[i];
+                px += vx * dt;
+                py += vy * dt;
+                vy += 200f * dt; // 軽い重力でアーチ状に
+                el.style.left = px;
+                el.style.top = py;
+                el.style.rotate = new UIE.StyleRotate(
+                    new UIE.Rotate(new UIE.Angle(rotSpeed * elapsed, UIE.AngleUnit.Degree)));
+                el.style.opacity = Mathf.Clamp01(1f - t * 1.2f);
+                particles[i] = (el, px, py, vx, vy, rotSpeed);
+            }
+
+            yield return null;
+        }
+
+        // クリーンアップ
+        panel.style.opacity = 0f;
+        panel.style.visibility = UIE.Visibility.Hidden;
+        particleContainer.RemoveFromHierarchy();
+        whiteOverlay.RemoveFromHierarchy();
+    }
 
     IEnumerator ShatterCardEffect(UIE.VisualElement panel)
     {
@@ -1780,22 +2147,50 @@ public class BattleManager : MonoBehaviour
         // テキスト
         var encounterText = new UIE.Label();
         encounterText.AddToClassList("battle-encounter-text");
-        encounterText.text = Localization.GetEnemy(enemyName) + " があらわれた！";
+        encounterText.text = Localization.GetEnemy(enemyName) + " が あそびにきた！";
         encounterOverlay.Add(encounterText);
 
         overlayRoot.Add(encounterOverlay);
 
-        // 1フレーム待ってからアニメーション開始
+        // バウンス登場アニメーション
         yield return null;
-        encounterImg.AddToClassList("battle-encounter-img-visible");
+        yield return StartCoroutine(BounceInEffect(encounterImg));
+
+        // テキストフェードイン
         encounterText.AddToClassList("battle-encounter-text-visible");
 
-        yield return new WaitForSeconds(2.2f);
+        yield return new WaitForSeconds(1.5f);
 
         // フェードアウト
         encounterOverlay.AddToClassList("battle-encounter-overlay-hide");
         yield return new WaitForSeconds(0.5f);
         encounterOverlay.RemoveFromHierarchy();
+
+        // デヴィル夫人ボス: 戦闘前イントロ台詞
+        bool isBossStart = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle;
+        if (isBossStart && enemyName == "デヴィル夫人")
+        {
+            yield return StartCoroutine(ShowDevilLadyIntro());
+        }
+
+        // バトルUI フェードイン
+        battleBgEl.AddToClassList("battle-ui-fadein");
+        enemyAreaEl.AddToClassList("battle-ui-fadein");
+        playerAreaEl.AddToClassList("battle-ui-fadein");
+        centerAreaEl.AddToClassList("battle-ui-fadein");
+        battleBgEl.style.opacity = 1;
+        enemyAreaEl.style.opacity = 1;
+        playerAreaEl.style.opacity = 1;
+        centerAreaEl.style.opacity = 1;
+
+        // バトルイントロ演出: 白フラッシュ + 画面シェイク
+        StartCoroutine(IntroFlashEffect());
+        StartCoroutine(ShakeEffect(root, 0.5f, 20f));
+        yield return new WaitForSeconds(0.5f);
+
+        // BGM再生
+        if (bgmSource != null && bgmSource.clip != null)
+            bgmSource.Play();
 
         // バトル開始
         battleLogLabel.text = "";
@@ -1839,7 +2234,7 @@ public class BattleManager : MonoBehaviour
         }
 
         bool isBoss = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle;
-        if (isBoss && enemyName == "村の王シバ" && (enemyTurnCount + 1) % 3 == 0 && enemyTurnCount > 0)
+        if (isBoss && enemyName == "青年のシバ" && (enemyTurnCount + 1) % 3 == 0 && enemyTurnCount > 0)
         {
             battleLogLabel.text = Localization.Get("battle_shiba_charging");
             yield return new WaitForSeconds(1.5f);
@@ -1893,7 +2288,10 @@ public class BattleManager : MonoBehaviour
             enemyHp = Mathf.Max(0, enemyHp - poisonDmg);
             enemyPoisonTurns--;
             UpdateEnemyDisplay();
-            battleLogLabel.text = Localization.Get("battle_poison_damage", Localization.GetEnemy(enemyName), poisonDmg);
+            string meterPoison = GetEnemyMeterLabel();
+            battleLogLabel.text = (meterPoison != "HP")
+                ? Localization.Get("battle_poison_damage_meter", Localization.GetEnemy(enemyName), poisonDmg, meterPoison)
+                : Localization.Get("battle_poison_damage", Localization.GetEnemy(enemyName), poisonDmg);
             yield return new WaitForSeconds(0.8f);
             if (enemyHp <= 0)
             {
@@ -1910,7 +2308,7 @@ public class BattleManager : MonoBehaviour
         enemyTurnCount++;
 
         bool isBoss = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle;
-        if (isBoss && enemyName == "村の王シバ" && enemyTurnCount % 3 == 0)
+        if (isBoss && enemyName == "青年のシバ" && enemyTurnCount % 3 == 0)
         {
             yield return StartCoroutine(EnemyDoUltimate());
             yield break;
@@ -1967,8 +2365,11 @@ public class BattleManager : MonoBehaviour
             int reflectDamage = CalculateDamage(effectiveEnemyAtk, enemyDef, enemyDefending);
             enemyHp = Mathf.Max(0, enemyHp - reflectDamage);
             UpdateEnemyDisplay();
-            StartCoroutine(DamageFlash(enemyFaceMask));
-            battleLogLabel.text = Localization.Get("battle_reflect", reflectDamage);
+            StartCoroutine(DamageEffect(enemyFaceMask, enemyPanel));
+            string meterRef = GetEnemyMeterLabel();
+            battleLogLabel.text = (meterRef != "HP")
+                ? Localization.Get("battle_reflect_meter", reflectDamage, meterRef)
+                : Localization.Get("battle_reflect", reflectDamage);
             yield return new WaitForSeconds(1.5f);
             yield return StartCoroutine(CheckEnemyDefeatAndContinue());
             yield break;
@@ -1978,7 +2379,7 @@ public class BattleManager : MonoBehaviour
         int damage = CalculateDamage(effectiveEnemyAtk2, playerDef, playerDefending);
         playerHp = Mathf.Max(0, playerHp - damage);
         UpdatePlayerDisplay();
-        StartCoroutine(DamageFlash(playerFaceMask));
+        StartCoroutine(DamageEffect(playerFaceMask, playerPanel));
 
         battleLogLabel.text = playerDefending
             ? Localization.Get("battle_defended", damage)
@@ -2009,7 +2410,7 @@ public class BattleManager : MonoBehaviour
         int damage = CalculateDamage(specialAtk, playerDef, playerDefending);
         playerHp = Mathf.Max(0, playerHp - damage);
         UpdatePlayerDisplay();
-        StartCoroutine(DamageFlash(playerFaceMask));
+        StartCoroutine(DamageEffect(playerFaceMask, playerPanel));
 
         battleLogLabel.text = Localization.Get("battle_enemy_special_hit", Localization.GetEnemy(enemyName), damage);
         yield return new WaitForSeconds(1.0f);
@@ -2069,7 +2470,7 @@ public class BattleManager : MonoBehaviour
 
         playerHp = Mathf.Max(0, playerHp - damage);
         UpdatePlayerDisplay();
-        StartCoroutine(DamageFlash(playerFaceMask));
+        StartCoroutine(DamageEffect(playerFaceMask, playerPanel, true));
 
         battleLogLabel.text = playerDefending
             ? Localization.Get("battle_shiba_ultimate_blocked", damage)
@@ -2077,6 +2478,52 @@ public class BattleManager : MonoBehaviour
         yield return new WaitForSeconds(1.2f);
 
         yield return StartCoroutine(CheckPlayerDefeatAndContinue());
+    }
+
+    IEnumerator ShowDevilLadyIntro()
+    {
+        var introOverlay = new UIE.VisualElement();
+        introOverlay.AddToClassList("fill");
+        introOverlay.style.flexDirection = UIE.FlexDirection.Column;
+        introOverlay.style.justifyContent = UIE.Justify.Center;
+        introOverlay.style.alignItems = UIE.Align.Center;
+        introOverlay.style.backgroundColor = new Color(0, 0, 0, 0.8f);
+        overlayRoot.Add(introOverlay);
+
+        var introText = new UIE.Label();
+        introText.enableRichText = true;
+        introText.style.color = Color.white;
+        introText.style.fontSize = 34;
+        introText.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        introText.style.whiteSpace = UIE.WhiteSpace.Normal;
+        introText.style.width = 900;
+        UIHelper.ApplyFont(introText);
+        introOverlay.Add(introText);
+
+        string[] lines = new string[]
+        {
+            Localization.Get("battle_devil_lady_intro_1"),
+            Localization.Get("battle_devil_lady_intro_2"),
+            Localization.Get("battle_devil_lady_intro_3"),
+        };
+
+        foreach (var line in lines)
+        {
+            introText.text = line;
+            yield return new WaitForSeconds(2.5f);
+        }
+
+        // フェードアウト
+        float elapsed = 0f;
+        while (elapsed < 0.5f)
+        {
+            elapsed += Time.deltaTime;
+            float fadeT = 1f - (elapsed / 0.5f);
+            introOverlay.style.backgroundColor = new Color(0, 0, 0, 0.8f * fadeT);
+            introText.style.opacity = fadeT;
+            yield return null;
+        }
+        introOverlay.RemoveFromHierarchy();
     }
 
     IEnumerator EnemyDoDevilLadyUltimate()
@@ -2099,7 +2546,7 @@ public class BattleManager : MonoBehaviour
 
         playerHp = Mathf.Max(0, playerHp - damage);
         UpdatePlayerDisplay();
-        StartCoroutine(DamageFlash(playerFaceMask));
+        StartCoroutine(DamageEffect(playerFaceMask, playerPanel, true));
 
         battleLogLabel.text = playerDefending
             ? Localization.Get("battle_devil_lady_ultimate_blocked", damage)
@@ -2139,7 +2586,7 @@ public class BattleManager : MonoBehaviour
 
         playerHp = Mathf.Max(0, playerHp - damage);
         UpdatePlayerDisplay();
-        StartCoroutine(DamageFlash(playerFaceMask));
+        StartCoroutine(DamageEffect(playerFaceMask, playerPanel, true));
 
         battleLogLabel.text = playerDefending
             ? Localization.Get("battle_melodias_ultimate_blocked", damage)
@@ -2306,9 +2753,12 @@ public class BattleManager : MonoBehaviour
         enemyDefending = false;
         enemyHp = Mathf.Max(0, enemyHp - damage);
         UpdateEnemyDisplay();
-        StartCoroutine(DamageFlash(enemyFaceMask));
+        StartCoroutine(DamageEffect(enemyFaceMask, enemyPanel));
 
-        battleLogLabel.text = Localization.Get("battle_attack_hit", normalAttackName, Localization.GetEnemy(enemyName), damage);
+        string meter = GetEnemyMeterLabel();
+        battleLogLabel.text = (meter != "HP")
+            ? Localization.Get("battle_attack_hit_meter", normalAttackName, Localization.GetEnemy(enemyName), damage, meter)
+            : Localization.Get("battle_attack_hit", normalAttackName, Localization.GetEnemy(enemyName), damage);
         yield return new WaitForSeconds(1.0f);
 
         if (enemyHp <= 0)
@@ -2345,9 +2795,12 @@ public class BattleManager : MonoBehaviour
 
         enemyHp = Mathf.Max(0, enemyHp - damage);
         UpdateEnemyDisplay();
-        StartCoroutine(DamageFlash(enemyFaceMask));
+        StartCoroutine(DamageEffect(enemyFaceMask, enemyPanel));
 
-        battleLogLabel.text = Localization.Get("battle_mother_damage", motherAttackName, damage);
+        string meterMom = GetEnemyMeterLabel();
+        battleLogLabel.text = (meterMom != "HP")
+            ? Localization.Get("battle_mother_damage_meter", motherAttackName, damage, meterMom)
+            : Localization.Get("battle_mother_damage", motherAttackName, damage);
         yield return new WaitForSeconds(0.8f);
 
         switch (motherAttackEffect)
@@ -2419,11 +2872,17 @@ public class BattleManager : MonoBehaviour
             enemyDefending = false;
             enemyHp = Mathf.Max(0, enemyHp - damage);
             UpdateEnemyDisplay();
-            StartCoroutine(DamageFlash(enemyFaceMask));
+            StartCoroutine(DamageEffect(enemyFaceMask, enemyPanel));
 
-            battleLogLabel.text = isGodBaby
-                ? Localization.Get("battle_god_special_hit", specialAttackName, damage)
-                : Localization.Get("battle_special_hit", specialAttackName, damage);
+            string meterSp = GetEnemyMeterLabel();
+            if (meterSp != "HP")
+                battleLogLabel.text = isGodBaby
+                    ? Localization.Get("battle_god_special_hit_meter", specialAttackName, damage, meterSp)
+                    : Localization.Get("battle_special_hit_meter", specialAttackName, damage, meterSp);
+            else
+                battleLogLabel.text = isGodBaby
+                    ? Localization.Get("battle_god_special_hit", specialAttackName, damage)
+                    : Localization.Get("battle_special_hit", specialAttackName, damage);
         }
         else
         {
@@ -2452,9 +2911,10 @@ public class BattleManager : MonoBehaviour
     IEnumerator BattleWin()
     {
         isBattleActive = false;
+        StartCoroutine(FadeOutBGM(1.5f));
 
-        // 敵カード粉砕演出
-        yield return StartCoroutine(ShatterCardEffect(enemyPanel));
+        // にこにこ昇天演出（ホワイトアウト → バウンス → ハート噴出 → 昇天）
+        yield return StartCoroutine(NikonikoDefeatEffect(enemyPanel));
         yield return new WaitForSeconds(0.3f);
 
         if (DataCarrier.Instance != null)
@@ -2758,6 +3218,7 @@ public class BattleManager : MonoBehaviour
     IEnumerator BattleLose()
     {
         isBattleActive = false;
+        StartCoroutine(FadeOutBGM(1.5f));
 
         // プレイヤーカード粉砕演出
         yield return StartCoroutine(ShatterCardEffect(playerPanel));
@@ -2795,7 +3256,7 @@ public class BattleManager : MonoBehaviour
         overlayRoot.Add(overlay);
     }
 
-    // ===== 固定エンカウント（傭兵）勝利 =====
+    // ===== 固定エンカウント（おともだち）勝利 =====
 
     IEnumerator FixedEncounterVictory()
     {
@@ -3113,5 +3574,88 @@ public class BattleManager : MonoBehaviour
     void OnGoTop()
     {
         SceneManager.LoadScene("TitleScene");
+    }
+
+    // CPU側ガウスぼかし（縮小→ボックスブラー→復元）
+    Texture2D BlurTexture(Texture2D src, int passes)
+    {
+        // 1/4 に縮小してからブラーすると高速
+        int w = src.width / 4;
+        int h = src.height / 4;
+        var rt = RenderTexture.GetTemporary(w, h);
+        Graphics.Blit(src, rt);
+        var small = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        RenderTexture.active = rt;
+        small.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+        small.Apply();
+        RenderTexture.active = null;
+        RenderTexture.ReleaseTemporary(rt);
+
+        var pixels = small.GetPixels();
+        for (int p = 0; p < passes; p++)
+        {
+            pixels = BoxBlur(pixels, w, h);
+        }
+
+        // 少し暗くする
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            pixels[i] = new Color(pixels[i].r * 0.65f, pixels[i].g * 0.65f, pixels[i].b * 0.65f, 1f);
+        }
+
+        small.SetPixels(pixels);
+        small.Apply();
+
+        // 元サイズに復元（ぼけた低解像度をアップスケール）
+        var result = new Texture2D(src.width, src.height, TextureFormat.RGBA32, false);
+        var rtUp = RenderTexture.GetTemporary(src.width, src.height);
+        Graphics.Blit(small, rtUp);
+        RenderTexture.active = rtUp;
+        result.ReadPixels(new Rect(0, 0, src.width, src.height), 0, 0);
+        result.Apply();
+        RenderTexture.active = null;
+        RenderTexture.ReleaseTemporary(rtUp);
+        Destroy(small);
+
+        return result;
+    }
+
+    Color[] BoxBlur(Color[] src, int w, int h)
+    {
+        var dst = new Color[src.Length];
+        // 水平パス
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                Color sum = Color.black;
+                int count = 0;
+                for (int dx = -2; dx <= 2; dx++)
+                {
+                    int nx = Mathf.Clamp(x + dx, 0, w - 1);
+                    sum += src[y * w + nx];
+                    count++;
+                }
+                dst[y * w + x] = sum / count;
+            }
+        }
+        // 垂直パス
+        var dst2 = new Color[src.Length];
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                Color sum = Color.black;
+                int count = 0;
+                for (int dy = -2; dy <= 2; dy++)
+                {
+                    int ny = Mathf.Clamp(y + dy, 0, h - 1);
+                    sum += dst[ny * w + x];
+                    count++;
+                }
+                dst2[y * w + x] = sum / count;
+            }
+        }
+        return dst2;
     }
 }

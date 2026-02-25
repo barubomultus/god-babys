@@ -15,11 +15,18 @@ public class BabySynthesizer : MonoBehaviour
 
     const int TEX_SIZE = 1080;
 
-    // BabyWear PNGの顔穴パラメータ（全ランク共通位置）
-    const float FACE_HOLE_CX = 0.50f;   // 顔穴中心X（比率）
-    const float FACE_HOLE_CY = 0.68f;   // 顔穴中心Y（比率、下から）
-    const float FACE_HOLE_RX = 0.13f;   // 顔穴半径X（比率）
-    const float FACE_HOLE_RY = 0.12f;   // 顔穴半径Y（比率）
+    // BabyWear PNGの顔穴パラメータ（Default_Wearの透過エリアから自動計算）
+    float FACE_HOLE_CX = 0.50f;   // 顔穴中心X（比率）
+    float FACE_HOLE_CY = 0.68f;   // 顔穴中心Y（比率、下から）
+    float FACE_HOLE_RX = 0.13f;   // 顔穴半径X（比率）
+    float FACE_HOLE_RY = 0.12f;   // 顔穴半径Y（比率）
+    bool faceHoleDetected = false;
+
+    // 外部参照用ゲッター
+    public float GetFaceHoleCX() { if (!faceHoleDetected) DetectFaceHoleFromWear(); return FACE_HOLE_CX; }
+    public float GetFaceHoleCY() { if (!faceHoleDetected) DetectFaceHoleFromWear(); return FACE_HOLE_CY; }
+    public float GetFaceHoleRX() { if (!faceHoleDetected) DetectFaceHoleFromWear(); return FACE_HOLE_RX; }
+    public float GetFaceHoleRY() { if (!faceHoleDetected) DetectFaceHoleFromWear(); return FACE_HOLE_RY; }
 
     // ===== Rank & Swaddle Determination =====
 
@@ -68,6 +75,10 @@ public class BabySynthesizer : MonoBehaviour
         Cleanup();
         lastParams = p;
 
+        // 初回のみDefault_Wearの透過エリアから顔穴パラメータを自動検出
+        if (!faceHoleDetected)
+            DetectFaceHoleFromWear();
+
         BabyRank rank = DetermineRank(p.fortune);
 
         Debug.Log($"[BabySynthesizer] Rank={rank}, Fortune={p.fortune}");
@@ -81,12 +92,8 @@ public class BabySynthesizer : MonoBehaviour
         // Layer 0: 背景を塗りつぶし
         DrawBackground(pixels, rank);
 
-        // Layer 1: カスタム顔（アップロード時のみ、BabyWearの下に描画）
-        if (hasCustomFace)
-            DrawFace(pixels, p);
-
-        // Layer 2: BabyWear PNG（カスタム顔がある場合は顔穴をくり抜く）
-        DrawSwaddle(pixels, rank, hasCustomFace);
+        // Layer 1+2: 顔 + おくるみ（PNGの実際の透過をマスクとして使用）
+        DrawSwaddleAndFace(pixels, rank, hasCustomFace, p);
 
         // Layer 3: アタッチメント
         DrawAttachment(pixels, p);
@@ -135,9 +142,7 @@ public class BabySynthesizer : MonoBehaviour
         // 背景なし（透明のまま）
 
         bool hasCustomFace = HasFaceTexture(p);
-        if (hasCustomFace)
-            DrawFace(pixels, p);
-        DrawSwaddle(pixels, rank, hasCustomFace);
+        DrawSwaddleAndFace(pixels, rank, hasCustomFace, p);
         DrawAttachment(pixels, p);
         DrawParentItemBadges(pixels, p);
         DrawCertificate(pixels);
@@ -278,43 +283,135 @@ public class BabySynthesizer : MonoBehaviour
         return false;
     }
 
-    void DrawSwaddle(Color[] pixels, BabyRank rank, bool punchFaceHole)
+    /// <summary>
+    /// おくるみとカスタム顔を1パスで合成する。
+    /// おくるみPNGの実際のピクセル透過をマスクとして使用するため、
+    /// 顔穴パラメータの検出精度に依存しない。
+    /// </summary>
+    void DrawSwaddleAndFace(Color[] pixels, BabyRank rank, bool hasCustomFace, SynthesizeParams p)
     {
-        // ランク別BabyWear PNGを読み込み
-        string wearPath = GetWearPath(rank);
-        Sprite wearSprite = Resources.Load<Sprite>(wearPath);
+        Sprite wearSprite = LoadWearSprite(rank);
+
+        // カスタム顔テクスチャの読み込み
+        Texture2D faceTex = hasCustomFace ? LoadFaceTexture(p) : null;
+
         if (wearSprite != null && wearSprite.texture.isReadable)
         {
-            if (punchFaceHole)
-                BlitSpriteWithFaceHole(pixels, wearSprite, 0, 0, TEX_SIZE, TEX_SIZE);
-            else
+            var swaddleTex = wearSprite.texture;
+            int srcW = swaddleTex.width;
+            int srcH = swaddleTex.height;
+            Color[] swaddlePixels = swaddleTex.GetPixels();
+
+            Debug.Log($"[BabySynthesizer] DrawSwaddleAndFace: PNG loaded ({srcW}x{srcH}), hasCustomFace={hasCustomFace}");
+
+            // カスタム顔がない場合 → おくるみのみ描画
+            if (faceTex == null)
+            {
                 BlitSpriteToCanvas(pixels, wearSprite, 0, 0, TEX_SIZE, TEX_SIZE);
+                return;
+            }
+
+            // 顔テクスチャの準備
+            int faceTexW = faceTex.width;
+            int faceTexH = faceTex.height;
+            Color[] facePixels = faceTex.GetPixels();
+
+            float faceCx = TEX_SIZE * FACE_HOLE_CX;
+            float faceCy = TEX_SIZE * FACE_HOLE_CY;
+            float faceRx = TEX_SIZE * FACE_HOLE_RX * 1.05f;
+            float faceRy = TEX_SIZE * FACE_HOLE_RY * 1.05f;
+            float uniformR = Mathf.Max(faceRx, faceRy);
+            float faceScale = p.faceScale > 0.01f ? p.faceScale : 1.0f;
+
+            // スキャンラインで各行の不透明境界を事前計算（外周透過 vs 顔穴透過の区別用）
+            // 各行で左端・右端の不透明ピクセル位置を記録し、その間の透過=顔穴、外側の透過=背景
+            int[] rowLeftOpaque = new int[srcH];
+            int[] rowRightOpaque = new int[srcH];
+            for (int y = 0; y < srcH; y++)
+            {
+                rowLeftOpaque[y] = -1;
+                rowRightOpaque[y] = -1;
+                for (int x = 0; x < srcW; x++)
+                {
+                    if (swaddlePixels[y * srcW + x].a >= 0.5f)
+                    {
+                        if (rowLeftOpaque[y] < 0) rowLeftOpaque[y] = x;
+                        rowRightOpaque[y] = x;
+                    }
+                }
+            }
+
+            // 1パスで合成
+            for (int dy = 0; dy < TEX_SIZE; dy++)
+            {
+                for (int dx = 0; dx < TEX_SIZE; dx++)
+                {
+                    // おくるみテクスチャからサンプリング
+                    float u = (float)dx / TEX_SIZE;
+                    float v = (float)dy / TEX_SIZE;
+                    int sx = Mathf.Clamp((int)(u * srcW), 0, srcW - 1);
+                    int sy = Mathf.Clamp((int)(v * srcH), 0, srcH - 1);
+                    Color swaddleColor = swaddlePixels[sy * srcW + sx];
+
+                    int idx = dy * TEX_SIZE + dx;
+
+                    if (swaddleColor.a >= 0.5f)
+                    {
+                        // おくるみが不透明 → おくるみを描画
+                        pixels[idx] = AlphaBlend(pixels[idx], swaddleColor);
+                    }
+                    else
+                    {
+                        // 透過ピクセル: 顔穴（内側）か背景（外側）かを判定
+                        bool isFaceHole = rowLeftOpaque[sy] >= 0
+                            && sx > rowLeftOpaque[sy]
+                            && sx < rowRightOpaque[sy];
+
+                        if (isFaceHole)
+                        {
+                            // 顔穴内 → 顔テクスチャを描画
+                            float fu = (dx - faceCx) / (uniformR * 2f) + 0.5f;
+                            float fv = (dy - faceCy) / (uniformR * 2f) + 0.5f;
+                            float fu_adj = (fu - 0.5f) / faceScale + 0.5f - p.faceOffsetX;
+                            float fv_adj = (fv - 0.5f) / faceScale + 0.5f - p.faceOffsetY;
+
+                            if (fu_adj >= 0f && fu_adj <= 1f && fv_adj >= 0f && fv_adj <= 1f)
+                            {
+                                int fsx = Mathf.Clamp((int)(fu_adj * faceTexW), 0, faceTexW - 1);
+                                int fsy = Mathf.Clamp((int)(fv_adj * faceTexH), 0, faceTexH - 1);
+                                Color faceColor = facePixels[fsy * faceTexW + fsx];
+                                if (faceColor.a > 0.01f)
+                                    pixels[idx] = AlphaBlend(pixels[idx], faceColor);
+                            }
+
+                            // 半透明のおくるみピクセルを顔の上に重ねる（装飾枠など）
+                            if (swaddleColor.a > 0.01f)
+                                pixels[idx] = AlphaBlend(pixels[idx], swaddleColor);
+                        }
+                        // 背景（外側）→ 何も描画しない（背景レイヤーがそのまま残る）
+                    }
+                }
+            }
             return;
         }
 
-        // 旧SwaddleType別PNGフォールバック
+        // === フォールバック: PNG読み込み失敗時のプロシージャルおくるみ ===
+        Debug.LogWarning("[BabySynthesizer] Using procedural swaddle fallback (PNG not loaded)");
+
+        // まず顔を描画
+        if (faceTex != null)
+            DrawFace(pixels, p);
+
         SwaddleType type = DetermineSwaddle(rank);
-        string path = GetSwaddlePath(type);
-        Sprite swaddleSprite = Resources.Load<Sprite>(path);
-        if (swaddleSprite != null && swaddleSprite.texture.isReadable)
-        {
-            if (punchFaceHole)
-                BlitSpriteWithFaceHole(pixels, swaddleSprite, 0, 0, TEX_SIZE, TEX_SIZE);
-            else
-                BlitSpriteToCanvas(pixels, swaddleSprite, 0, 0, TEX_SIZE, TEX_SIZE);
-            return;
-        }
-
-        // プロシージャルフォールバック: おくるみ形状（顔穴付き）
-        Color swaddleColor = GetSwaddleColor(type);
-        Color swaddleShadow = new Color(swaddleColor.r * 0.8f, swaddleColor.g * 0.8f, swaddleColor.b * 0.8f, 1f);
+        Color swaddleColor2 = GetSwaddleColor(type);
+        Color swaddleShadow = new Color(swaddleColor2.r * 0.8f, swaddleColor2.g * 0.8f, swaddleColor2.b * 0.8f, 1f);
 
         int wrapTop = TEX_SIZE * 55 / 100;
         int wrapBottom = TEX_SIZE * 5 / 100;
-        float holeCx = TEX_SIZE / 2f;
-        float holeCy = TEX_SIZE * 55 / 100f;
-        float holeRx = TEX_SIZE * 22 / 100f;
-        float holeRy = TEX_SIZE * 26 / 100f;
+        float holeCx = TEX_SIZE * FACE_HOLE_CX;
+        float holeCy = TEX_SIZE * FACE_HOLE_CY;
+        float holeRx = TEX_SIZE * FACE_HOLE_RX * 1.5f;
+        float holeRy = TEX_SIZE * FACE_HOLE_RY * 1.5f;
 
         for (int y = wrapBottom; y < wrapTop; y++)
         {
@@ -326,10 +423,10 @@ public class BabySynthesizer : MonoBehaviour
 
                 float hx = (x - holeCx) / holeRx;
                 float hy = (y - holeCy) / holeRy;
-                if (hx * hx + hy * hy < 0.85f) continue;
+                if (faceTex != null && hx * hx + hy * hy < 0.85f) continue;
 
                 float edgeFactor = Mathf.Clamp01(bx * bx + by * by);
-                Color c = Color.Lerp(swaddleColor, swaddleShadow, edgeFactor * 0.5f);
+                Color c = Color.Lerp(swaddleColor2, swaddleShadow, edgeFactor * 0.5f);
 
                 int idx = y * TEX_SIZE + x;
                 pixels[idx] = AlphaBlend(pixels[idx], c);
@@ -659,14 +756,92 @@ public class BabySynthesizer : MonoBehaviour
 
     public static string GetWearPath(BabyRank rank)
     {
-        switch (rank)
+        return "BabySynth/Swaddles/Default_Wear";
+    }
+
+    /// <summary>
+    /// BabyWearスプライトを確実に読み込む（spriteMode:2対応）
+    /// </summary>
+    public static Sprite LoadWearSprite(BabyRank rank)
+    {
+        string wearPath = GetWearPath(rank);
+        Sprite s = Resources.Load<Sprite>(wearPath);
+        if (s != null) return s;
+        // spriteMode:2 (Multiple)の場合、LoadAllで取得
+        Sprite[] all = Resources.LoadAll<Sprite>(wearPath);
+        if (all != null && all.Length > 0) return all[0];
+        return null;
+    }
+
+    /// <summary>
+    /// Default_Wear PNGの透過エリアをスキャンし、顔穴の中心・半径を自動検出する。
+    /// スキャンライン方式: 各行で左端・右端の不透明ピクセルを見つけ、
+    /// その間にある透明ピクセルのみを顔穴として検出する（外周の透明背景を無視）。
+    /// </summary>
+    void DetectFaceHoleFromWear()
+    {
+        faceHoleDetected = true;
+
+        Sprite wearSprite = LoadWearSprite(BabyRank.D);
+        if (wearSprite == null || !wearSprite.texture.isReadable)
         {
-            case BabyRank.S:   return "BabySynth/Swaddles/S_Wear";
-            case BabyRank.A:   return "BabySynth/Swaddles/A_Wear";
-            case BabyRank.B:   return "BabySynth/Swaddles/B_Wear";
-            case BabyRank.C:   return "BabySynth/Swaddles/C_Wear";
-            default:           return "BabySynth/Swaddles/D_Wear";
+            Debug.LogWarning("[BabySynthesizer] DetectFaceHoleFromWear: Failed to load wear sprite");
+            return;
         }
+
+        var tex = wearSprite.texture;
+        int w = tex.width;
+        int h = tex.height;
+        Color[] pixels = tex.GetPixels();
+
+        // スキャンライン方式: おくるみ内部の透明ピクセル（顔穴）のみ検出
+        int holeMinX = w, holeMaxX = 0, holeMinY = h, holeMaxY = 0;
+        int holeCount = 0;
+
+        for (int y = 0; y < h; y++)
+        {
+            // この行の左端・右端の不透明ピクセルを探す
+            int leftOpaque = -1, rightOpaque = -1;
+            for (int x = 0; x < w; x++)
+            {
+                if (pixels[y * w + x].a >= 0.5f)
+                {
+                    if (leftOpaque < 0) leftOpaque = x;
+                    rightOpaque = x;
+                }
+            }
+
+            // 不透明ピクセルがない行 → スキップ
+            if (leftOpaque < 0) continue;
+
+            // 左端と右端の間にある透明ピクセル = 顔穴
+            for (int x = leftOpaque + 1; x < rightOpaque; x++)
+            {
+                if (pixels[y * w + x].a < 0.1f)
+                {
+                    if (x < holeMinX) holeMinX = x;
+                    if (x > holeMaxX) holeMaxX = x;
+                    if (y < holeMinY) holeMinY = y;
+                    if (y > holeMaxY) holeMaxY = y;
+                    holeCount++;
+                }
+            }
+        }
+
+        if (holeCount < 10 || holeMaxX <= holeMinX || holeMaxY <= holeMinY) return;
+
+        // 中心と半径を比率で算出
+        float cx = (holeMinX + holeMaxX) * 0.5f / w;
+        float cy = (holeMinY + holeMaxY) * 0.5f / h;
+        float rx = (holeMaxX - holeMinX) * 0.5f / w;
+        float ry = (holeMaxY - holeMinY) * 0.5f / h;
+
+        FACE_HOLE_CX = cx;
+        FACE_HOLE_CY = cy;
+        FACE_HOLE_RX = rx;
+        FACE_HOLE_RY = ry;
+
+        Debug.Log($"[BabySynthesizer] Face hole detected: center=({cx:F3},{cy:F3}), radius=({rx:F3},{ry:F3})");
     }
 
     static string GetSwaddlePath(SwaddleType type)

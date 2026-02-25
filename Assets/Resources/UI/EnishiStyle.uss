@@ -102,7 +102,7 @@
 /* --- Detail panel --- */
 .detail-panel {
     background-color: rgb(248, 243, 250);
-    border-radius: 12px;
+    border-radius: 40px;
     width: 980px;
     align-self: center;
     align-items: center;
@@ -176,7 +176,7 @@
     width: 1000px;
     align-self: center;
     background-color: rgb(245, 235, 218);
-    border-radius: 8px;
+    border-radius: 40px;
     border-width: 2px;
     border-color: rgba(160, 130, 90, 0.4);
     padding-top: 40px;
@@ -280,7 +280,7 @@
     -unity-font-style: bold;
     color: white;
     background-color: rgb(198, 160, 80);
-    border-radius: 12px;
+    border-radius: 50px;
     border-width: 0;
     -unity-text-align: middle-center;
     margin-bottom: 16px;
@@ -299,7 +299,7 @@
     -unity-font-style: bold;
     color: rgb(80, 60, 40);
     background-color: rgba(255, 255, 255, 0.5);
-    border-radius: 10px;
+    border-radius: 40px;
     border-width: 2px;
     border-color: rgba(160, 130, 90, 0.5);
     -unity-text-align: middle-center;

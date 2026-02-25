@@ -31,13 +31,14 @@ public class DataCarrier : MonoBehaviour
     public bool isGodBaby;
     public bool cameFromMap = false;
     public bool isBossBattle = false;
-    public int currentArea = 0;     // 0=村, 1=悪魔村, 2=デヴィル夫人のやかた, 3=小悪魔の街, 4=109
-    public int shopEntryArea = 1;    // 武器屋に入った元エリア（戻り先）
+    public int currentArea = 0;     // 0=よちよちの里, 1=ゴージャス・ヴィレッジ, 2=デヴィル夫人のやかた, 3=小悪魔の街, 4=109
+    public int shopEntryArea = 1;    // おあそびどうぐやに入った元エリア（戻り先）
     public string fixedEncounterEnemy = "";  // 固定エンカウント敵名（空=ランダム）
-    public int babyCurrentHp = -1;  // 戦闘間HP持越し（-1=maxHP）
+    public int babyCurrentHp = -1;  // おあそび間HP持越し（-1=maxHP）
     public int babyPoisonTurns = 0;  // 毒残りターン
     public string customBabyImagePath = ""; // persistentDataPath内のカスタム画像ファイル名
     public string synthBabyImagePath = ""; // BabySynthesizer合成結果の画像ファイル名
+    [System.NonSerialized] public Texture2D battleBgTexture; // マップスクショ（バトル背景用、保存不要）
 
     [Header("Player Profile")]
     public string playerName = "";
@@ -76,6 +77,7 @@ public class DataCarrier : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            LoadProfile();
         }
         else
         {
@@ -380,7 +382,7 @@ public class DataCarrier : MonoBehaviour
         return inventory.Split(',');
     }
 
-    // ===== 縁の書（倒した敵管理） =====
+    // ===== 縁の書（あそんだおともだち管理） =====
 
     public bool HasDefeatedEnemy(string enemyName)
     {

@@ -41,17 +41,17 @@ public static class Localization
             "「この世界、ハズレばっかりだと思わないか？」\n",
             "\"Don't you think this world is full of duds?\"\n");
         Add("intro_line2",
-            "悪魔に支配された、クソゲーみたいなこの世界。\n 逆転の鍵は、最強の遺伝子を掛け合わせた「究極の親ガチャ」にある。\n\n",
+            "ちょっぴり つまらない この世界。\n 逆転の鍵は、最強の遺伝子を掛け合わせた「究極の親ガチャ」にある。\n\n",
             "A world ruled by demons, like some terrible game.\n The key to turning it around lies in the ultimate 'parent gacha' — crossing the strongest genes.\n\n");
         Add("intro_line3",
-            "父の力、母の知恵。\nそこに運命のダイスが振られた瞬間、\n 天をも恐れぬ**『GOD BABY』**が誕生する。\n\n",
-            "A father's power, a mother's wisdom.\nWhen the dice of fate are rolled,\n a **'GOD BABY'** fearless even of heaven is born.\n\n");
+            "父の力、母の知恵。\nそこに運命のダイスが振られた瞬間、\n みんなを えがおにする**『STAR BABY』**が誕生する。\n\n",
+            "A father's power, a mother's wisdom.\nWhen the dice of fate are rolled,\n a **'STAR BABY'** fearless even of heaven is born.\n\n");
         Add("intro_line4",
-            "凡才で終わるか、神の嬰児となるか。\n\n 育てろ、最強の赤子を。",
-            "Will you end as ordinary, or become a divine infant?\n\n Raise the ultimate baby.");
+            "凡才で終わるか、星の嬰児となるか。\n\n 育てろ、最強の赤子を。",
+            "Will you end as ordinary, or become a star infant?\n\n Raise the ultimate baby.");
 
         // ===== Birth Scene =====
-        Add("birth_summon_button", "いでよ、GOD BABY!!!", "Come forth, GOD BABY!!!");
+        Add("birth_summon_button", "いでよ、STAR BABY!!!", "Come forth, STAR BABY!!!");
         Add("birth_reroll_button", "もう一度うむ", "Reroll");
         Add("birth_name_button", "名前をつける", "Name Your Baby");
         Add("birth_gender_title", "どちらでプレイする？", "Choose your baby's gender:");
@@ -67,11 +67,11 @@ public static class Localization
         Add("birth_mother_gacha", "母親", "Mother");
         Add("birth_next", "次へ", "Next");
 
-        // Birth - God Baby / Promising
-        Add("birth_god_line1", "<color=#FFD700><size=120%><b>天からのお恵みだ。</b></size></color>",
-            "<color=#FFD700><size=120%><b>A blessing from the heavens.</b></size></color>");
-        Add("birth_god_line2", "<color=#FFD700><size=150%><b>GOD BABY 爆誕！</b></size></color>",
-            "<color=#FFD700><size=150%><b>GOD BABY is born!</b></size></color>");
+        // Birth - Star Baby / Promising
+        Add("birth_god_line1", "<color=#FFD700><size=120%><b>星からのお恵みだ。</b></size></color>",
+            "<color=#FFD700><size=120%><b>A blessing from the stars.</b></size></color>");
+        Add("birth_god_line2", "<color=#FFD700><size=150%><b>STAR BABY 爆誕！</b></size></color>",
+            "<color=#FFD700><size=150%><b>STAR BABY is born!</b></size></color>");
         Add("birth_promising_line1", "<color=#FF6B6B><size=120%><b>大物になりそうな赤ちゃんだ！</b></size></color>",
             "<color=#FF6B6B><size=120%><b>This baby is destined for greatness!</b></size></color>");
         Add("birth_normal_line1", "<color=#FFFF00><size=130%><b>【 新しい命が誕生！ 】</b></size></color>",
@@ -80,10 +80,10 @@ public static class Localization
 
         // Birth - Status labels
         Add("birth_stat_gender", "<b>性別:</b>", "<b>Gender:</b>");
-        Add("birth_stat_hp", "<b>HP:</b>", "<b>HP:</b>");
-        Add("birth_stat_atk", "<b>攻撃:</b>", "<b>ATK:</b>");
-        Add("birth_stat_def", "<b>防御:</b>", "<b>DEF:</b>");
-        Add("birth_stat_intelligence", "<b>知力:</b>", "<b>INT:</b>");
+        Add("birth_stat_hp", "<b>ごきげん度:</b>", "<b>Mood:</b>");
+        Add("birth_stat_atk", "<b>ぬくもり:</b>", "<b>Warmth:</b>");
+        Add("birth_stat_def", "<b>おちつき:</b>", "<b>Calm:</b>");
+        Add("birth_stat_intelligence", "<b>ちえ:</b>", "<b>Wisdom:</b>");
         Add("birth_stat_athletic", "<b>運動:</b>", "<b>AGI:</b>");
         Add("birth_stat_luck", "<b>運勢:</b>", "<b>LUK:</b>");
         Add("birth_stat_fortune", "<b>資産:</b>", "<b>FTN:</b>");
@@ -105,13 +105,13 @@ public static class Localization
         Add("birth_luna_line4", "<color=#AADDFF>もう一度運命に挑戦しよう。</color>",
             "<color=#AADDFF>Let's challenge fate once more.</color>");
 
-        // Birth - Sakura failure (暗殺拳の継承者)
-        Add("birth_sakura_line1", "サクラは夜も修行を続けていた。\n暗殺拳の道に終わりはなかった。\n",
-            "Sakura continued training through the night.\nThe path of the assassination fist had no end.\n");
+        // Birth - Sakura failure (ぶじゅつの達人)
+        Add("birth_sakura_line1", "サクラは夜も修行を続けていた。\nぶじゅつの道に終わりはなかった。\n",
+            "Sakura continued training through the night.\nThe path of martial arts had no end.\n");
         Add("birth_sakura_line2", "彼女の拳は誰よりも強かったが、\nその手は誰にも触れようとしなかった。\n",
             "Her fists were stronger than anyone's,\nbut those hands refused to touch anyone.\n");
-        Add("birth_sakura_line3", "全戦全勝の暗殺者は、\n愛だけには勝てなかった...\n",
-            "The undefeated assassin\ncouldn't win against love alone...\n");
+        Add("birth_sakura_line3", "ぜんせんむてきの つわものは、\n愛だけには勝てなかった...\n",
+            "The undefeated warrior\ncouldn't win against love alone...\n");
         Add("birth_sakura_line4", "<color=#FFAACC>それでも、拳を解き、手を繋ごう。</color>",
             "<color=#FFAACC>Even so, let's unclench our fists and hold hands.</color>");
 
@@ -202,7 +202,7 @@ public static class Localization
         // ===== Father Cut-in =====
         Add("cutin_タケシ", "元・格闘技世界王者のタケシだ！！", "It's Takeshi, the ex-World Champion!!");
         Add("cutin_ユウキ", "天才ハッカーのユウキだ！！", "It's Yuuki, the genius hacker!!");
-        Add("cutin_ゴウ", "伝説の傭兵のゴウだ！！", "It's Gou, the legendary mercenary!!");
+        Add("cutin_ゴウ", "つよい ぼうけんかの ゴウだ！！", "It's Gou, the legendary adventurer!!");
         Add("cutin_シンジ", "ノーベル賞受賞者のシンジだ！！", "It's Shinji, the Nobel laureate!!");
         Add("cutin_リョウマ", "世界一の実業家のリョウマだ！！", "It's Ryouma, the world's top tycoon!!");
         Add("cutin_テツヤ", "伝説のロックスターのテツヤだ！！", "It's Tetsuya, the legendary rockstar!!");
@@ -214,7 +214,7 @@ public static class Localization
         Add("cutin_ネオ", "永遠のニートのネオだ！！", "It's Neo, the eternal NEET!!");
 
         // ===== Mother Cut-in =====
-        Add("cutin_サクラ", "暗殺拳の継承者のサクラだ！！", "It's Sakura, heir of assassination arts!!");
+        Add("cutin_サクラ", "つよーい おかあさんの サクラだ！！", "It's Sakura, the super-strong mama!!");
         Add("cutin_ヒナタ", "美容帝国CEOのヒナタだ！！", "It's Hinata, the beauty empire CEO!!");
         Add("cutin_アキラ", "五輪金メダリストのアキラだ！！", "It's Akira, the Olympic gold medalist!!");
         Add("cutin_ミサト", "量子物理学者のミサトだ！！", "It's Misato, the quantum physicist!!");
@@ -230,11 +230,11 @@ public static class Localization
         // ===== Parent Intros =====
         Add("intro_タケシ", "元・格闘技世界王者 / 握力: 180kg", "Ex-World Martial Arts Champion / Grip: 180kg");
         Add("intro_ユウキ", "天才ハッカー / 特許数: 3,200件", "Genius Hacker / Patents: 3,200");
-        Add("intro_ゴウ", "伝説の傭兵 / 戦闘力: 計測不能", "Legendary Mercenary / Power: Immeasurable");
+        Add("intro_ゴウ", "つよい ぼうけんか / ぼうけんりょく: 計測不能", "Legendary Adventurer / Adventure Power: Immeasurable");
         Add("intro_シンジ", "ノーベル賞3回受賞 / IQ: 250", "3x Nobel Laureate / IQ: 250");
         Add("intro_リョウマ", "総資産: 43兆円 / 世界一の実業家", "Net Worth: $430B / World's Top Tycoon");
         Add("intro_テツヤ", "伝説のロックスター / ファン数: 8億人", "Legendary Rockstar / Fans: 800M");
-        Add("intro_サクラ", "暗殺拳の継承者 / 全戦全勝", "Heir of Assassination Arts / Undefeated");
+        Add("intro_サクラ", "つよーい おかあさん / ぜんせん むてき", "Super-Strong Mama / Undefeated");
         Add("intro_ヒナタ", "総資産: 28兆円 / 美容帝国CEO", "Net Worth: 28 Trillion Yen / Beauty Empire CEO");
         Add("intro_アキラ", "五輪金メダル7個 / 100m走: 10.1秒", "7 Olympic Golds / 100m: 10.1s");
         Add("intro_ミサト", "量子物理学者 / IQ: 270", "Quantum Physicist / IQ: 270");
@@ -261,8 +261,8 @@ public static class Localization
             "5歳でプログラミングを独学し、8歳で政府機関のセキュリティを突破した天才少年。12歳で逮捕されるも、才能を見込まれてサイバー防衛の特別顧問に抜擢される。17歳で立ち上げたスタートアップは3年で世界最大のAI企業に成長。特許数3200件は人類史上最多記録。表向きはクールなIT長者だが、実はゲーム廃人で週末は72時間ぶっ通しでMMOをプレイしている。「世界のバグは俺が直す」と豪語するが、自室の散らかりようは致命的なバグそのもの。",
             "Self-taught programming at 5, breached government security at 8 — a true prodigy. Arrested at 12, his talent earned him a position as a special cybersecurity advisor. His startup, founded at 17, became the world's largest AI company in three years. His 3,200 patents set a human record. Outwardly a cool tech mogul, he's secretly a gaming addict who plays MMOs for 72 hours straight on weekends. He boasts \"I'll fix every bug in the world,\" yet his own room is a catastrophic bug itself.");
         Add("bio_ゴウ",
-            "孤児として紛争地帯で育ち、10歳で少年兵として戦場に立った。15歳で傭兵団を脱走し、以後は一匹狼のフリーランス傭兵として世界中の紛争を渡り歩く。100を超える作戦を遂行し、一度も任務に失敗したことがない。その戦闘力は計測不能とされ、各国の軍事機関が恐れる存在。しかし、非戦闘員には一切手を出さない独自の掟を持つ。戦場から離れると花が好きで、拠点には小さな庭を作る習慣がある。「本当の強さは戦わずに済む力だ」と語るが、彼の前に立てる者はいない。",
-            "Raised as an orphan in a conflict zone, Gou became a child soldier at 10. At 15, he deserted his mercenary corps and went freelance, drifting through global conflicts. Over 100 operations completed, never a single failure. His combat ability is classified as immeasurable, feared by military agencies worldwide. Yet he lives by a code: never harm non-combatants. Away from battle, he loves flowers and always plants a small garden at his base. \"True strength means never having to fight,\" he says — but no one dares stand before him.");
+            "ちいさな村で育ち、10歳でぼうけんの旅に出た。15歳でひとりの ぼうけんかとして 世界を旅しはじめる。以後は一匹狼のフリーランスぼうけんかとして世界中を渡り歩く。100を超えるぼうけんを達成し、一度も任務に失敗したことがない。そのぼうけんりょくは計測不能とされ、各国が一目置く存在。しかし、よわいものには ぜったいに 手を出さない独自の掟を持つ。ぼうけんの合間に花が好きで、拠点には小さな庭を作る習慣がある。「本当の強さは戦わずに済む力だ」と語るが、彼の前に立てる者はいない。",
+            "Raised in a small village, Gou set out on an adventure at 10. At 15, he began traveling the world as a solo adventurer, drifting through lands far and wide. Over 100 adventures completed, never a single failure. His adventure power is classified as immeasurable, respected by nations worldwide. Yet he lives by a code: never harm the weak. Between adventures, he loves flowers and always plants a small garden at his base. \"True strength means never having to fight,\" he says — but no one dares stand before him.");
         Add("bio_シンジ",
             "3歳で微分方程式を解き、7歳で大学に飛び級入学した超天才。15歳でMITの博士課程を修了し、量子力学・遺伝子工学・宇宙工学の3分野でノーベル賞を受賞。IQ250は公式に測定された人類最高記録。しかし本人は「知性に限界はない」と更なる高みを目指し続ける。研究に没頭すると3日間食事を忘れるほどの集中力を見せる一方、日常生活では靴を左右逆に履いて出歩くこともしばしば。「宇宙の真理を解き明かす」という壮大な夢のため、現在は秘密研究所で禁断の実験を行っている。",
             "Solving differential equations at 3, entering university at 7 — a super-genius. Completed his MIT doctorate at 15 and won Nobel Prizes in quantum mechanics, genetic engineering, and aerospace. His IQ of 250 is the highest officially recorded in history. Yet he insists \"intelligence has no limits\" and keeps pushing higher. When deep in research, he forgets to eat for three days — but in daily life, he often walks around with his shoes on the wrong feet. Pursuing his grand dream to \"unravel the truth of the universe,\" he now conducts forbidden experiments in a secret lab.");
@@ -270,13 +270,13 @@ public static class Localization
             "貧しい漁村で生まれ、15歳で裸一貫から起業。最初のビジネスは中古の自転車修理だったが、独自の商才で事業を拡大し、20歳で初めての会社を上場させる。その後、IT・金融・宇宙開発と次々に新規事業を立ち上げ、30歳で総資産43兆円の世界一の実業家に。「稼いだ金は未来への投資だ」という信念のもと、資産の半分を教育と医療の支援に充てている。見た目はブランドスーツに身を包んだ冷徹な経営者だが、故郷の漁村には毎年必ず帰り、幼馴染と酒を酌み交わすのが唯一の息抜き。",
             "Born in a poor fishing village, Ryouma started from nothing at 15. His first business was fixing used bicycles, but his natural business instincts grew it rapidly — IPO at 20. He then launched ventures in IT, finance, and space, becoming the world's richest man at 30 with $430B. Believing \"money earned is invested in the future,\" he donates half his wealth to education and healthcare. In his designer suits, he appears ruthless, but he returns to his hometown every year without fail to drink with his childhood friends — his only escape.");
         Add("bio_テツヤ",
-            "中学時代にバンドを結成し、高校中退後に上京。路上ライブで注目を集め、17歳でメジャーデビュー。デビューシングルが全世界で1億枚を売り上げ、一夜にしてスターダムへ。カリスマ的なステージパフォーマンスとアーティスティックな楽曲で8億人のファンを獲得。しかし栄光の裏で薬物依存に苦しみ、一時は活動休止に追い込まれた。地獄のようなリハビリを経て復帰し、その経験を綴った楽曲「Rebirth」は音楽史上最も感動的な曲と称される。現在はソロ活動の傍ら、音楽で人を救う慈善活動にも力を入れている。",
-            "Formed a band in middle school, dropped out of high school and moved to Tokyo. Street performances caught attention, and he debuted at 17. His first single sold 100 million copies worldwide, catapulting him to stardom overnight. His charismatic stage presence and artistic songs amassed 800 million fans. But behind the glory, he battled addiction and was forced into hiatus. After hellish rehabilitation, he returned — his song \"Rebirth\" is hailed as the most moving in music history. Now he pursues solo work alongside charity, using music to save lives.");
+            "中学時代にバンドを結成し、高校中退後に上京。路上ライブで注目を集め、17歳でメジャーデビュー。デビューシングルが全世界で1億枚を売り上げ、一夜にしてスターダムへ。カリスマ的なステージパフォーマンスとアーティスティックな楽曲で8億人のファンを獲得。しかし栄光の裏でつらい時期があり、一時は活動休止に追い込まれた。長い休養を経て復帰し、その経験を綴った楽曲「Rebirth」は音楽史上最も感動的な曲と称される。現在はソロ活動の傍ら、音楽で人を救う慈善活動にも力を入れている。",
+            "Formed a band in middle school, dropped out of high school and moved to Tokyo. Street performances caught attention, and he debuted at 17. His first single sold 100 million copies worldwide, catapulting him to stardom overnight. His charismatic stage presence and artistic songs amassed 800 million fans. But behind the glory, he went through a difficult period and was forced into hiatus. After a long rest, he returned — his song \"Rebirth\" is hailed as the most moving in music history. Now he pursues solo work alongside charity, using music to save lives.");
 
         // ===== Mother Bios =====
         Add("bio_サクラ",
-            "名門暗殺一族の末裔として生まれ、物心つく前から暗殺拳の修行を課せられた。7歳で一族の試練を全て突破し、史上最年少で「継承者」の称号を得る。しかし15歳の時、暗殺任務の標的が無実の人間だと知り、一族を裏切り逃亡。追手を全て返り討ちにしながら世界を放浪し、裏格闘技界に身を投じる。全戦全勝の戦績を持ち、その拳は「触れた者の命を刈り取る」と恐れられている。だが素顔は甘いものに目がない少女で、任務後は必ずパフェを食べに行くのが唯一の秘密。",
-            "Born into an elite assassination clan, Sakura was trained in deadly arts before she could walk. At 7, she passed every trial and became the youngest heir in history. But at 15, she discovered her target was innocent, betrayed the clan, and fled. She defeated every pursuer while wandering the world, entering underground fighting. Undefeated in all bouts, her fists are said to reap the lives of those they touch. Yet beneath it all, she's a girl with a sweet tooth — her one secret is always getting a parfait after every mission.");
+            "つよさで名高い武術一族のまっすぐな血を引き、物心つく前からぶじゅつの修行を課せられた。7歳で一族の試練を全て突破し、史上最年少で「継承者」の称号を得る。しかし15歳の時、一族のやり方がまちがっていると気づき、一族を離れ旅に出た。追手をぜんいん かわしながら世界を放浪し、ぶじゅつの世界に身を投じる。全戦全勝の戦績を持ち、その拳は「だれにも負けない」と恐れられている。だが素顔は甘いものに目がない少女で、修行後は必ずパフェを食べに行くのが唯一の秘密。",
+            "Born into a renowned martial arts clan with a proud lineage, Sakura was trained in the fighting arts before she could walk. At 7, she passed every trial and became the youngest heir in history. But at 15, she realized the clan's ways were wrong, left them, and set out on her own journey. She evaded every pursuer while wandering the world, entering the martial arts world. Undefeated in all bouts, her fists are said to be unbeatable. Yet beneath it all, she's a girl with a sweet tooth — her one secret is always getting a parfait after every training session.");
         Add("bio_ヒナタ",
             "地方の貧しい家庭に生まれたが、幼少期から「美」への執着が人並み外れていた。13歳で独自の美容法をSNSで発信し始め、16歳でフォロワー1000万人を突破。高校在学中に美容ブランドを立ち上げ、卒業と同時に会社を設立。革新的なスキンケア技術と天性のビジネスセンスで、わずか5年で総資産28兆円の美容帝国を築き上げた。「美は力、力は自信、自信は世界を変える」が座右の銘。完璧主義者で部下には厳しいが、孤児院への匿名寄付を20年間続けている優しさも持つ。",
             "Born into a poor rural family, Hinata had an extraordinary obsession with beauty from childhood. At 13, she started sharing her own beauty methods online; by 16, she had 10 million followers. She launched a beauty brand while still in high school and founded her company upon graduation. With innovative skincare technology and natural business sense, she built a 28-trillion-yen beauty empire in just five years. Her motto: \"Beauty is power, power is confidence, confidence changes the world.\" A perfectionist who's tough on employees, she's secretly donated to orphanages anonymously for 20 years.");
@@ -336,8 +336,8 @@ public static class Localization
         // ===== Love Stories =====
         // タケシ × mothers
         Add("love_タケシ_サクラ",
-            "裏格闘技界の頂点を決める戦い。\nタケシとサクラは決勝で激突した。\n\n拳と暗殺拳が交錯する中、\n二人は互いの強さに惹かれていく。\n\n死闘は引き分けに終わり、\n「決着は別の形でつけよう」と\nタケシが差し出した手を、\nサクラは静かに握り返した。\n最強の血統がここに誕生する。",
-            "A battle to decide the king of underground fighting.\nTakeshi and Sakura clashed in the finals.\n\nAs fists met assassination arts,\nthey were drawn to each other's strength.\n\nThe death match ended in a draw.\n\"Let's settle this another way,\"\nTakeshi extended his hand,\nand Sakura quietly took it.\nThe strongest bloodline was born.");
+            "ぶじゅつかいの 頂点を決める大会。\nタケシとサクラは決勝で激突した。\n\nつよいわざが 交錯する中、\n二人は互いの強さに惹かれていく。\n\nしあいは 引き分けに終わり、\n「決着は別の形でつけよう」と\nタケシが差し出した手を、\nサクラは静かに握り返した。\n最強の血統がここに誕生する。",
+            "A tournament to decide the champion of martial arts.\nTakeshi and Sakura clashed in the finals.\n\nAs powerful techniques collided,\nthey were drawn to each other's strength.\n\nThe match ended in a draw.\n\"Let's settle this another way,\"\nTakeshi extended his hand,\nand Sakura quietly took it.\nThe strongest bloodline was born.");
         Add("love_タケシ_ヒナタ",
             "「格闘家専用コスメを作りたい」\nヒナタからの突然の依頼。\n\nビジネスミーティングのはずが、\nタケシの素朴な優しさに触れ、\nヒナタの心は揺れ始める。\n\n「数字じゃ測れないものがある」\nタケシの言葉に、\n28兆円の帝国を築いた女は\n初めて涙を流した。\n愛は最高の投資だと知った日。",
             "\"I want to create fighter-only cosmetics.\"\nA sudden request from Hinata.\n\nWhat was meant to be a business meeting—\nTakeshi's simple kindness\nshook Hinata's heart.\n\n\"Some things can't be measured in numbers.\"\nAt those words, the woman who built\na $280B empire shed tears\nfor the first time.\nThe day she learned love is the best investment.");
@@ -348,16 +348,16 @@ public static class Localization
             "「筋肉の収縮は量子力学で\n説明できるんですよ」\n\n学会に招かれたタケシに、\nミサトは熱心に語りかけた。\n\n「難しいことはわからねえが、\nあんたの目は本気だな」\n\n理論と実践、正反対の二人。\nだが夜通し語り合ううちに、\n科学者の心は格闘家に奪われ、\n最強の頭脳と肉体が融合した。",
             "\"Muscle contraction can be explained\nby quantum mechanics, you know.\"\n\nMisato eagerly spoke to Takeshi,\ninvited to a scientific conference.\n\n\"I don't get the hard stuff,\nbut your eyes are serious.\"\n\nTheory and practice — polar opposites.\nBut after talking all night,\nthe scientist's heart was captured,\nand the strongest mind and body merged.");
         Add("love_タケシ_カエデ",
-            "世界格闘技選手権の決勝戦。\nタケシは宿敵との死闘の末、\n右腕を複雑骨折した。\n\n「二度と戦えない」と宣告される中、\n唯一の希望は天才外科医カエデだった。\n\n12時間に及ぶ手術。\n目覚めたタケシの最初の言葉は\n「俺の腕を救ってくれた君を、\n俺の人生に迎えたい」だった。",
-            "The World Martial Arts Championship finals.\nTakeshi suffered a compound fracture\nafter a death match with his rival.\n\nTold he'd \"never fight again,\"\nhis only hope was genius surgeon Kaede.\n\nAfter 12 hours of surgery,\nTakeshi's first words upon waking:\n\"I want you, who saved my arm,\nto be part of my life.\"");
+            "世界格闘技選手権の決勝戦。\nタケシはライバルとの はげしい しあいの末、\n右腕をけがしてしまった。\n\n「二度とうごかせない」と宣告される中、\n唯一の希望は天才外科医カエデだった。\n\n12時間に及ぶ手術。\n目覚めたタケシの最初の言葉は\n「俺の腕を救ってくれた君を、\n俺の人生に迎えたい」だった。",
+            "The World Martial Arts Championship finals.\nTakeshi injured his arm badly\nafter an intense match with his rival.\n\nTold he'd \"never move it again,\"\nhis only hope was genius surgeon Kaede.\n\nAfter 12 hours of surgery,\nTakeshi's first words upon waking:\n\"I want you, who saved my arm,\nto be part of my life.\"");
         Add("love_タケシ_ルナ",
             "スポーツ雑誌の表紙撮影。\n格闘家とスーパーモデルの共演。\n\nカメラの前で火花が散り、\n「もっと近づいて」という\nカメラマンの指示に、\n二人の心臓が高鳴る。\n\n撮影後、ルナが言った。\n「あなたの隣にいると、\n自分が美しく見える気がする」\nスポットライトの下で恋が始まった。",
             "A sports magazine cover shoot.\nA fighter and supermodel together.\n\nSparks flew before the camera.\n\"Get closer,\" the photographer said,\nand both their hearts raced.\n\nAfter the shoot, Luna said:\n\"Standing next to you,\nI feel more beautiful.\"\nLove began under the spotlight.");
 
         // ユウキ × mothers
         Add("love_ユウキ_サクラ",
-            "暗殺組織のサーバーに侵入した夜、\nユウキは追手に囲まれた。\n\nその中にいたのがサクラ。\n「殺すつもりはない。\nあなたの腕が必要なの」\n\n組織を裏切り、共に逃亡する日々。\n追われる中で芽生えた信頼は、\nいつしか愛に変わっていた。\n\n「俺のファイアウォールは\n君だけ通過できる」\n不器用な告白だった。",
-            "The night Yuuki infiltrated an\nassassination group's server,\nhe was surrounded by pursuers.\n\nAmong them was Sakura.\n\"I won't kill you.\nI need your skills.\"\n\nBetraying the organization, fleeing together.\nTrust born while on the run\neventually became love.\n\n\"My firewall only lets you through.\"\nAn awkward confession.");
+            "あやしい組織のサーバーに侵入した夜、\nユウキは追手に囲まれた。\n\nその中にいたのがサクラ。\n「あなたを とめるつもりはない。\nあなたの腕が必要なの」\n\n組織を離れ、共に逃亡する日々。\n追われる中で芽生えた信頼は、\nいつしか愛に変わっていた。\n\n「俺のファイアウォールは\n君だけ通過できる」\n不器用な告白だった。",
+            "The night Yuuki infiltrated a\nsuspicious organization's server,\nhe was surrounded by pursuers.\n\nAmong them was Sakura.\n\"I won't stop you.\nI need your skills.\"\n\nLeaving the organization, fleeing together.\nTrust born while on the run\neventually became love.\n\n\"My firewall only lets you through.\"\nAn awkward confession.");
         Add("love_ユウキ_ヒナタ",
             "美容帝国のDX化プロジェクト。\n億単位の契約書を前に、\nユウキは言った。\n\n「報酬はいらない。\nその代わり、週に一度\n食事に付き合ってほしい」\n\n最初は呆れていたヒナタも、\n彼の純粋さに惹かれていく。\n\n「私に値段をつけない人は\n初めてよ」\n28兆円より価値ある愛を知った。",
             "A digital transformation project\nfor the beauty empire.\nFacing a billion-dollar contract,\nYuuki said:\n\n\"I don't need payment.\nInstead, have dinner with me\nonce a week.\"\n\nHinata, initially speechless,\nwas drawn to his sincerity.\n\n\"You're the first person\nwho didn't put a price on me.\"\nShe discovered love worth more than $280B.");
@@ -376,28 +376,28 @@ public static class Localization
 
         // ゴウ × mothers
         Add("love_ゴウ_サクラ",
-            "暗殺任務で鉢合わせた二人。\n互いに銃口を向けながら、\n奇妙な沈黙が流れた。\n\n「お前を殺す理由がない」\n「私もよ」\n\n銃を下ろした瞬間、\n組織に追われる身となった。\n\n「一緒に逃げないか」\n「どこまでも」\n\n世界中を逃げ回る日々が、\n二人を離れられない関係にした。",
-            "Two who met on an assassination mission.\nGuns pointed at each other,\nan eerie silence fell.\n\n\"I have no reason to kill you.\"\n\"Neither do I.\"\n\nThe moment they lowered their guns,\nthey became hunted by the organization.\n\n\"Run away with me?\"\n\"Anywhere.\"\n\nDays fleeing across the world\nmade them inseparable.");
+            "ぼうけんの途中で 出会った二人。\nにらみ合いながら、\n奇妙な沈黙が流れた。\n\n「きみと たたかう理由がない」\n「私もよ」\n\nにらみあいをやめた瞬間、\n組織に追われる身となった。\n\n「一緒に逃げないか」\n「どこまでも」\n\n世界中を逃げ回る日々が、\n二人を離れられない関係にした。",
+            "Two who met in the middle of an adventure.\nStaring each other down,\nan eerie silence fell.\n\n\"I have no reason to fight you.\"\n\"Neither do I.\"\n\nThe moment they stopped their standoff,\nthey became hunted by the organization.\n\n\"Run away with me?\"\n\"Anywhere.\"\n\nDays fleeing across the world\nmade them inseparable.");
         Add("love_ゴウ_ヒナタ",
-            "要人警護の任務。\n標的にされたのはヒナタだった。\n\n三度の暗殺未遂、\nその全てからゴウは彼女を守った。\n三発目の銃弾を\n自らの体で受け止めた時、\nヒナタは悟った。\n\n「お金じゃ買えないものがある」\n\n病室で目覚めたゴウに、\n彼女は涙ながらに言った。\n「私の人生を守って」",
-            "A VIP protection mission.\nHinata was the target.\n\nThree assassination attempts —\nGou protected her from all of them.\nWhen he took the third bullet\nwith his own body,\nHinata realized:\n\n\"There are things money can't buy.\"\n\nTo Gou, waking in the hospital,\nshe said through tears:\n\"Protect my life.\"");
+            "要人警護の任務。\nねらわれていたのはヒナタだった。\n\n三度のきけん、\nその全てからゴウは彼女を守った。\n三度目のきけんから\n身を挺してかばった時、\nヒナタは悟った。\n\n「お金じゃ買えないものがある」\n\n病室で目覚めたゴウに、\n彼女は涙ながらに言った。\n「私の人生を守って」",
+            "A VIP protection mission.\nHinata was the one being targeted.\n\nThree dangers —\nGou protected her from all of them.\nWhen he shielded her\nwith his own body the third time,\nHinata realized:\n\n\"There are things money can't buy.\"\n\nTo Gou, waking in the hospital,\nshe said through tears:\n\"Protect my life.\"");
         Add("love_ゴウ_アキラ",
-            "紛争地帯でのスポーツ親善大使。\nアキラの警護を任されたゴウは、\n彼女の無邪気さに戸惑った。\n\n「怖くないのか？」\n「あなたがいるから」\n\n銃声の中でも笑顔を絶やさない彼女。\n守るべき存在が、\nいつしか愛する人に変わっていた。\n\n任務終了の日、\nゴウは傭兵を辞める決意をした。",
-            "A sports goodwill ambassador in a conflict zone.\nGou, assigned to guard Akira,\nwas bewildered by her innocence.\n\n\"Aren't you afraid?\"\n\"You're here, so no.\"\n\nShe never stopped smiling amid gunfire.\nThe person he had to protect\nbecame the person he loved.\n\nOn the last day of the mission,\nGou decided to quit being a mercenary.");
+            "とおい国でのスポーツ親善大使。\nアキラの警護を任されたゴウは、\n彼女の無邪気さに戸惑った。\n\n「怖くないのか？」\n「あなたがいるから」\n\nきけんの中でも笑顔を絶やさない彼女。\n守るべき存在が、\nいつしか愛する人に変わっていた。\n\n任務終了の日、\nゴウは ぼうけんかを やめる決意をした。",
+            "A sports goodwill ambassador in a distant land.\nGou, assigned to guard Akira,\nwas bewildered by her innocence.\n\n\"Aren't you afraid?\"\n\"You're here, so no.\"\n\nShe never stopped smiling amid danger.\nThe person he had to protect\nbecame the person he loved.\n\nOn the last day of the mission,\nGou decided to quit being an adventurer.");
         Add("love_ゴウ_ミサト",
-            "軍事衛星のデータ解析依頼。\n冷徹な傭兵ゴウと、\n純粋な物理学者ミサト。\n\n「なぜ人を殺すの？」\n直球の質問に、\nゴウは言葉を失った。\n\n「...答えが見つからない」\n「一緒に探しましょう」\n\nミサトの純粋さが、\n凍った心を少しずつ溶かしていく。\n戦場の狼が愛を知った瞬間だった。",
-            "A military satellite data analysis request.\nGou, the cold mercenary,\nand Misato, the pure physicist.\n\n\"Why do you kill people?\"\nAt her blunt question,\nGou was speechless.\n\n\"...I can't find the answer.\"\n\"Let's search together.\"\n\nMisato's purity slowly melted\nhis frozen heart.\nThe moment a battlefield wolf learned love.");
+            "ふしぎな ほしのデータ解析依頼。\nつよい ぼうけんかゴウと、\n純粋な物理学者ミサト。\n\n「なぜ ひとりで たたかうの？」\n直球の質問に、\nゴウは言葉を失った。\n\n「...答えが見つからない」\n「一緒に探しましょう」\n\nミサトの純粋さが、\n凍った心を少しずつ溶かしていく。\nぼうけんの おおかみが 愛を知った瞬間だった。",
+            "A request to analyze data from a mysterious star.\nGou, the strong adventurer,\nand Misato, the pure physicist.\n\n\"Why do you fight alone?\"\nAt her blunt question,\nGou was speechless.\n\n\"...I can't find the answer.\"\n\"Let's search together.\"\n\nMisato's purity slowly melted\nhis frozen heart.\nThe moment the adventure wolf learned love.");
         Add("love_ゴウ_カエデ",
-            "戦場で倒れた仲間を救うため、\nゴウは国境を越えて\n天才外科医を探した。\n\n「報酬はいくらでも払う」\n「お金じゃないの。\nあなたが連れてきて」\n\n危険な戦地に飛び込んだカエデ。\n命がけの手術を終えた夜、\nゴウは初めて泣いた。\n\n「俺の人生を守ってくれないか」\n傭兵の不器用なプロポーズだった。",
-            "To save a fallen comrade,\nGou crossed borders seeking\na genius surgeon.\n\n\"I'll pay any price.\"\n\"It's not about money.\nBring me there.\"\n\nKaede dove into the war zone.\nAfter a life-risking surgery that night,\nGou cried for the first time.\n\n\"Will you protect my life?\"\nA mercenary's clumsy proposal.");
+            "ぼうけんで たおれた仲間を救うため、\nゴウは国境を越えて\n天才外科医を探した。\n\n「報酬はいくらでも払う」\n「お金じゃないの。\nあなたが連れてきて」\n\nきけんな場所に 飛び込んだカエデ。\n命がけの手術を終えた夜、\nゴウは初めて泣いた。\n\n「俺の人生を守ってくれないか」\nぼうけんかの 不器用な プロポーズだった。",
+            "To save a comrade who fell during an adventure,\nGou crossed borders seeking\na genius surgeon.\n\n\"I'll pay any price.\"\n\"It's not about money.\nBring me there.\"\n\nKaede dove into the dangerous place.\nAfter a life-risking surgery that night,\nGou cried for the first time.\n\n\"Will you protect my life?\"\nAn adventurer's clumsy proposal.");
         Add("love_ゴウ_ルナ",
-            "戦場カメラマンとして同行したルナ。\n「真実を伝えたい」という\n彼女の覚悟に、ゴウは驚いた。\n\n砲撃の夜、塹壕で肩を寄せ合い、\n生と死の狭間で\n二人は唇を重ねた。\n\n「生きて帰ろう」\n「ああ、一緒にな」\n\n戦場で誓った愛は、\nどんな平和な恋より強く、\n深く結ばれていた。",
-            "Luna joined as a war photographer.\n\"I want to show the truth\" —\nher resolve surprised Gou.\n\nUnder shelling, huddled in a trench,\nbetween life and death,\nthey kissed.\n\n\"Let's make it home alive.\"\n\"Yeah, together.\"\n\nLove sworn on the battlefield\nwas stronger and deeper\nthan any peacetime romance.");
+            "ぼうけん写真家として同行したルナ。\n「真実を伝えたい」という\n彼女の覚悟に、ゴウは驚いた。\n\nあらしの夜、ほら穴で 肩を寄せ合い、\nつよい きずなの なかで\n二人は唇を重ねた。\n\n「生きて帰ろう」\n「ああ、一緒にな」\n\nぼうけんの中で 誓った愛は、\nどんな平和な恋より強く、\n深く結ばれていた。",
+            "Luna joined as an adventure photographer.\n\"I want to show the truth\" —\nher resolve surprised Gou.\n\nOn a stormy night, huddled in a cave,\nwithin their strong bond,\nthey kissed.\n\n\"Let's make it home alive.\"\n\"Yeah, together.\"\n\nLove sworn during an adventure\nwas stronger and deeper\nthan any peacetime romance.");
 
         // シンジ × mothers
         Add("love_シンジ_サクラ",
-            "「暗殺拳の科学的解明」\nその研究テーマに、\nサクラは協力を申し出た。\n\n動きを解析するうちに、\nシンジの目は彼女自身に向いていた。\n\n「論文より君を研究したい」\n「それ、口説いてる？」\n「...多分」\n\n世界一不器用な告白に、\n暗殺者は初めて頬を染めた。\n愛は科学で証明できないと知った。",
-            "\"Scientific Analysis of Assassination Arts\"\nSakura volunteered to help\nwith this research topic.\n\nWhile analyzing her movements,\nShinji's eyes turned to her.\n\n\"I want to study you, not the paper.\"\n\"Is that a pickup line?\"\n\"...Probably.\"\n\nAt the world's most awkward confession,\nthe assassin blushed for the first time.\nHe learned love can't be proven by science.");
+            "「ぶじゅつの科学的解明」\nその研究テーマに、\nサクラは協力を申し出た。\n\n動きを解析するうちに、\nシンジの目は彼女自身に向いていた。\n\n「論文より君を研究したい」\n「それ、口説いてる？」\n「...多分」\n\n世界一不器用な告白に、\nつわものは 初めて 頬を染めた。\n愛は科学で証明できないと知った。",
+            "\"Scientific Analysis of Martial Arts\"\nSakura volunteered to help\nwith this research topic.\n\nWhile analyzing her movements,\nShinji's eyes turned to her.\n\n\"I want to study you, not the paper.\"\n\"Is that a pickup line?\"\n\"...Probably.\"\n\nAt the world's most awkward confession,\nthe warrior blushed for the first time.\nHe learned love can't be proven by science.");
         Add("love_シンジ_ヒナタ",
             "「美の方程式」を共著で出版したい。\nヒナタからの依頼に、\nシンジは興味を持った。\n\n数式とビジネス、\n異色のコラボレーション。\n\nグラフを描くうちに、\n二人の線は一点で交わった。\n\n「この交点が僕たちの未来だ」\n「ロマンチストね、意外と」\n\n28兆円の女帝が、\n数式に恋をした日だった。",
             "\"The Equation of Beauty\" — a co-authored book.\nHinata's proposal caught\nShinji's interest.\n\nMathematics and business,\nan unusual collaboration.\n\nAs they drew graphs,\ntheir two lines intersected.\n\n\"This intersection is our future.\"\n\"How romantic, unexpectedly.\"\n\nThe day a $280B empress\nfell in love with equations.");
@@ -416,8 +416,8 @@ public static class Localization
 
         // リョウマ × mothers
         Add("love_リョウマ_サクラ",
-            "ボディガードとして雇った暗殺者。\n命を預けた相手に、\n心まで奪われるとは思わなかった。\n\n「金で動く女か」\n「いいえ、あなたを守りたいから」\n\n嘘のない瞳だった。\n\n43兆円あっても買えないもの。\nそれは信頼と愛だと、\nリョウマは初めて知った。\n「俺の傍にいてくれ、永遠に」",
-            "An assassin hired as a bodyguard.\nHe never thought he'd lose his heart\nto the person he trusted with his life.\n\n\"A woman who works for money?\"\n\"No — I want to protect you.\"\n\nHer eyes held no lies.\n\nSomething $430B can't buy:\ntrust and love.\nRyouma learned this for the first time.\n\"Stay by my side, forever.\"");
+            "ボディガードとして雇った つわもの。\n命を預けた相手に、\n心まで奪われるとは思わなかった。\n\n「金で動く女か」\n「いいえ、あなたを守りたいから」\n\n嘘のない瞳だった。\n\n43兆円あっても買えないもの。\nそれは信頼と愛だと、\nリョウマは初めて知った。\n「俺の傍にいてくれ、永遠に」",
+            "A warrior hired as a bodyguard.\nHe never thought he'd lose his heart\nto the person he trusted with his life.\n\n\"A woman who works for money?\"\n\"No — I want to protect you.\"\n\nHer eyes held no lies.\n\nSomething $430B can't buy:\ntrust and love.\nRyouma learned this for the first time.\n\"Stay by my side, forever.\"");
         Add("love_リョウマ_ヒナタ",
             "美容帝国との合併話。\n二つの巨大企業、\n最初は敵対から始まった。\n\n「あなたには負けないわ」\n「俺もだ」\n\n激しい交渉の末、\n二人は互いを認め合った。\n\n「合併より、\n結婚しないか」\n「...それ、逆じゃない？」\n\n71兆円の帝国が誕生した。\n株式より価値ある絆と共に。",
             "Merger talks with the beauty empire.\nTwo massive corporations,\nstarting as rivals.\n\n\"I won't lose to you.\"\n\"Neither will I.\"\n\nAfter fierce negotiations,\nthey recognized each other.\n\n\"Instead of a merger,\nwhy not marry me?\"\n\"...Isn't that backwards?\"\n\nA $710B empire was born.\nAlong with bonds worth more than stocks.");
@@ -436,8 +436,8 @@ public static class Localization
 
         // テツヤ × mothers
         Add("love_テツヤ_サクラ",
-            "新曲MVの殺陣シーン。\n指導者として現れたサクラの\n鋭い動きに、テツヤは見惚れた。\n\n「もっと本気で来て」\n「怪我させるぞ」\n「それくらいが丁度いい」\n\nステージで刃を交えるうちに、\n二人の距離は縮まっていった。\n\n撮影終了後の楽屋で、\n二人は激しく唇を重ねた。",
-            "A sword fight scene for a new music video.\nTetsuya was mesmerized by\nSakura's sharp movements as instructor.\n\n\"Come at me for real.\"\n\"I'll hurt you.\"\n\"That's exactly what I want.\"\n\nAs they crossed blades on stage,\nthe distance between them closed.\n\nIn the dressing room after filming,\nthey shared a passionate kiss.");
+            "新曲MVのアクションシーン。\n指導者として現れたサクラの\n鋭い動きに、テツヤは見惚れた。\n\n「もっと本気で来て」\n「怪我させるぞ」\n「それくらいが丁度いい」\n\nステージで わざを 交えるうちに、\n二人の距離は縮まっていった。\n\n撮影終了後の楽屋で、\n二人は激しく唇を重ねた。",
+            "An action scene for a new music video.\nTetsuya was mesmerized by\nSakura's sharp movements as instructor.\n\n\"Come at me for real.\"\n\"I'll hurt you.\"\n\"That's exactly what I want.\"\n\nAs they exchanged techniques on stage,\nthe distance between them closed.\n\nIn the dressing room after filming,\nthey shared a passionate kiss.");
         Add("love_テツヤ_ヒナタ",
             "化粧品CMソングの打ち合わせ。\n譜面を見るふりをして、\nテツヤはヒナタを見つめていた。\n\n「曲より私を見てない？」\n「バレた？」\n「わかりやすいのよ、あなた」\n\nスタジオに響く笑い声。\nその日、二人は朝まで語り合った。\n\n「君のための歌を書きたい」\n「それ、プロポーズ？」\n「かもしれない」",
             "A meeting for a cosmetics CM song.\nPretending to read the score,\nTetsuya was staring at Hinata.\n\n\"You're looking at me, not the music.\"\n\"Caught me?\"\n\"You're obvious.\"\n\nLaughter echoed through the studio.\nThat day, they talked until dawn.\n\n\"I want to write a song for you.\"\n\"Is that a proposal?\"\n\"Maybe.\"");
@@ -577,71 +577,71 @@ public static class Localization
         // ===== Battle Scene =====
         // Enemy names
         Add("enemy_わるいベイビー", "わるいベイビー", "Evil Baby");
-        Add("enemy_村の王シバ", "村の王シバ", "King Shiba of the Village");
-        Add("enemy_やんちゃベイビー", "やんちゃベイビー", "Naughty Baby");
-        Add("enemy_いじわるベイビー", "いじわるベイビー", "Mean Baby");
-        Add("enemy_なきむしベイビー", "なきむしベイビー", "Crybaby Baby");
-        Add("enemy_あばれんぼうベイビー", "あばれんぼうベイビー", "Rowdy Baby");
-        Add("enemy_わがままベイビー", "わがままベイビー", "Spoiled Baby");
-        Add("enemy_どくベイビー", "どくベイビー", "Poison Baby");
-        Add("enemy_のろいベイビー", "のろいベイビー", "Cursed Baby");
-        Add("enemy_やみベイビー", "やみベイビー", "Dark Baby");
-        Add("enemy_あくまベイビー", "あくまベイビー", "Demon Baby");
-        Add("enemy_じゃあくベイビー", "じゃあくベイビー", "Wicked Baby");
-        Add("enemy_まおうベイビー", "まおうベイビー", "Overlord Baby");
-        Add("enemy_デヴィル傭兵A", "デヴィル傭兵A", "Devil Mercenary A");
-        Add("enemy_デヴィル傭兵B", "デヴィル傭兵B", "Devil Mercenary B");
+        Add("enemy_青年のシバ", "青年のシバ", "Young Shiba");
+        Add("enemy_うずうずベイビー", "うずうずベイビー", "Restless Baby");
+        Add("enemy_ぷんぷんベイビー", "ぷんぷんベイビー", "Grumpy Baby");
+        Add("enemy_えんえんベイビー", "えんえんベイビー", "Wailing Baby");
+        Add("enemy_どたばたベイビー", "どたばたベイビー", "Rambunctious Baby");
+        Add("enemy_いやだいやだベイビー", "いやだいやだベイビー", "No-No Baby");
+        Add("enemy_にがにがベイビー", "にがにがベイビー", "Bitter Baby");
+        Add("enemy_ぐちぐちベイビー", "ぐちぐちベイビー", "Grumbly Baby");
+        Add("enemy_どよよんベイビー", "どよよんベイビー", "Gloomy Baby");
+        Add("enemy_つんつんベイビー", "つんつんベイビー", "Prickly Baby");
+        Add("enemy_いじいじベイビー", "いじいじベイビー", "Sulky Baby");
+        Add("enemy_ごーじゃすベイビー", "ごーじゃすベイビー", "Gorgeous Baby");
+        Add("enemy_デヴィル傭兵A", "おもてなし給仕A", "Hospitality Server A");
+        Add("enemy_デヴィル傭兵B", "おもてなし給仕B", "Hospitality Server B");
         Add("enemy_デヴィル夫人", "デヴィル夫人", "Devil Lady");
 
         // Enemy bios
-        Add("enemy_bio_なきむしベイビー",
+        Add("enemy_bio_えんえんベイビー",
             "いつもメソメソ泣いている気弱な赤ちゃん。でも油断は禁物。涙は弱さの証ではなく、溜め込んだ感情がいつか爆発する前触れなのだ。泣き声を聞いた敵は不思議と力が抜けてしまう。本人は友達がほしいだけなのに、泣き声のせいで誰も近づいてくれないのが悩み。「えーん、ぼくと遊んでよぉ…」が口ぐせ。実は夜中にこっそり星を見るのが好き。",
             "A timid baby who's always crying. But don't let your guard down—those tears aren't a sign of weakness, they're a sign of emotions about to explode. Enemies who hear the crying mysteriously lose their strength. All this baby wants is a friend, but the crying keeps everyone away. Favorite phrase: \"Waah, play with me...\" Secretly loves watching stars at night.");
-        Add("enemy_bio_やんちゃベイビー",
-            "とにかく元気いっぱいで落ち着きのない赤ちゃん。じっとしていることが大の苦手で、目に入るもの全てにちょっかいを出す。その無尽蔵の体力は村でも有名で、大人たちも手を焼いている。いたずらの天才で、村の柵を何度も壊しては直させている。本人に悪気はなく、ただ世界が楽しすぎるだけ。将来は誰よりも速く走れる戦士になりたいらしい。",
+        Add("enemy_bio_うずうずベイビー",
+            "とにかく元気いっぱいで落ち着きのない赤ちゃん。じっとしていることが大の苦手で、目に入るもの全てにちょっかいを出す。その無尽蔵の体力は里でも有名で、大人たちも手を焼いている。いたずらの天才で、里の柵を何度も壊しては直させている。本人に悪気はなく、ただ世界が楽しすぎるだけ。将来は誰よりも速く走れる戦士になりたいらしい。",
             "An endlessly energetic baby who can't sit still. Everything in sight becomes a target for mischief. Famous in the village for inexhaustible stamina that exhausts even adults. A prank genius who keeps breaking the village fences. No ill intent—the world is just too fun. Dreams of becoming the fastest warrior someday.");
-        Add("enemy_bio_いじわるベイビー",
+        Add("enemy_bio_ぷんぷんベイビー",
             "ニヤニヤ笑いながら他の赤ちゃんをからかうのが趣味の小悪魔的な赤ちゃん。頭の回転が速く、相手の弱点を見抜くのが得意。そのずる賢さは戦闘でも発揮され、予想外の攻撃で翻弄してくる。でも実は誰よりも寂しがり屋で、構ってほしくてイジワルをしているだけ。夜になると一人でぬいぐるみを抱きしめている姿を目撃されたことがあるとか。",
             "A little devil who loves teasing other babies with a sly grin. Quick-witted and skilled at finding weaknesses. That cunning shines in battle with unexpected attacks. But deep down, this baby is lonelier than anyone—the teasing is just a cry for attention. Rumor has it they've been spotted hugging a stuffed toy alone at night.");
-        Add("enemy_bio_わがままベイビー",
-            "「ぼくの！ぜんぶぼくの！」が口ぐせの、自己主張が強すぎる赤ちゃん。欲しいものは絶対に手に入れる執念を持ち、その強い意志は戦闘において驚くべき粘り強さとなって現れる。村のおやつを独り占めしようとして何度も怒られているが、全く反省しない。でもたまに気まぐれで他の赤ちゃんにおやつを分けることもあり、根は優しい一面も。",
+        Add("enemy_bio_いやだいやだベイビー",
+            "「ぼくの！ぜんぶぼくの！」が口ぐせの、自己主張が強すぎる赤ちゃん。欲しいものは絶対に手に入れる執念を持ち、その強い意志は戦闘において驚くべき粘り強さとなって現れる。里のおやつを独り占めしようとして何度も怒られているが、全く反省しない。でもたまに気まぐれで他の赤ちゃんにおやつを分けることもあり、根は優しい一面も。",
             "\"Mine! It's all mine!\" is this baby's motto. With overwhelming determination, what they want, they get. That willpower translates into remarkable tenacity in battle. Constantly scolded for hoarding village snacks but never learns. Occasionally shares snacks on a whim, showing a hidden gentle side.");
-        Add("enemy_bio_あばれんぼうベイビー",
-            "村で一番力が強いと恐れられている赤ちゃん。怒ると手がつけられなくなり、村の岩を素手で砕いたという伝説がある。その圧倒的なパワーは生まれつきのもので、本人もコントロールしきれていない。暴れるのは力を持て余しているからで、本当は花を育てるのが好きな優しい心の持ち主。花畑の花は実はこの子が密かに世話しているらしい。",
+        Add("enemy_bio_どたばたベイビー",
+            "里で一番力が強いと恐れられている赤ちゃん。怒ると手がつけられなくなり、里の岩を素手で砕いたという伝説がある。その圧倒的なパワーは生まれつきのもので、本人もコントロールしきれていない。暴れるのは力を持て余しているからで、本当は花を育てるのが好きな優しい心の持ち主。花畑の花は実はこの子が密かに世話しているらしい。",
             "The most feared baby in the village for sheer strength. Once angered, there's no stopping them—legends say they shattered a boulder with bare hands. That overwhelming power is innate and even they can't fully control it. The rampaging comes from pent-up energy. In truth, this baby loves growing flowers—the village flower patch is secretly their handiwork.");
-        Add("enemy_bio_村の王シバ",
-            "この村を治める長であり、最強の戦士。かつては悪魔族と戦うことを夢見て、日夜修行に明け暮れていた。しかし実際に悪魔と対峙すると身体が震えて動けなくなるという体質が判明。自ら悪魔と戦うことを諦めたシバは、代わりに悪魔と戦える強い赤ちゃんを育てることに人生を捧げた。村の子どもたちに厳しくも愛情深い指導を行い、いつか悪魔を倒す勇者が現れることを信じている。必殺技「シバの裁き」は容赦ないが、それも愛ゆえ。",
-            "The village chief and its strongest warrior. Once dreamed of fighting demons and trained relentlessly. But upon actually facing a demon, discovered an involuntary trembling that left him immobile. Having given up fighting demons himself, Shiba dedicated his life to raising babies strong enough to fight in his stead. He trains the village children with strictness born of deep love, believing a hero who can defeat the demons will one day emerge. His ultimate technique 'Shiba's Judgment' shows no mercy—but it's all out of love.");
+        Add("enemy_bio_青年のシバ",
+            "この村を治める長であり、最強の戦士。かつてはおともだちと あそぶことを 夢見て、日夜修行に明け暮れていた。しかし実際に悪魔と対峙すると身体が震えて動けなくなるという体質が判明。自らみんなと あそぶことを諦めたシバは、代わりに強い赤ちゃんを育てることに人生を捧げた。村の子どもたちに厳しくも愛情深い指導を行い、いつかおともだちを みんな まんぞくさせる ゆうしゃが現れることを信じている。とっておき「シバのおしおき」は きびしいが、それも愛ゆえ。",
+            "The village chief and its strongest warrior. Once dreamed of playing with friends and trained relentlessly. But upon actually facing a demon, discovered an involuntary trembling that left him immobile. Having given up playing himself, Shiba dedicated his life to raising strong babies in his stead. He trains the village children with strictness born of deep love, believing a hero who can satisfy all friends will one day emerge. His special move 'Shiba's Scolding' is strict—but it's all out of love.");
         Add("enemy_bio_わるいベイビー",
-            "なぜ悪いのか、誰にもわからない。生まれた時からどこか影のある赤ちゃん。何を考えているか読めない表情と、不気味な笑顔で村の赤ちゃんたちを怯えさせている。でもたまに迷子の子猫を助けたり、雨の日に花にそっと傘をかけたりする姿が目撃されている。悪いのは表面だけで、本当は繊細で傷つきやすい心を守るための鎧なのかもしれない。",
+            "なぜ悪いのか、誰にもわからない。生まれた時からどこか影のある赤ちゃん。何を考えているか読めない表情と、不気味な笑顔で里の赤ちゃんたちを怯えさせている。でもたまに迷子の子猫を助けたり、雨の日に花にそっと傘をかけたりする姿が目撃されている。悪いのは表面だけで、本当は繊細で傷つきやすい心を守るための鎧なのかもしれない。",
             "Why so bad? Nobody knows. A baby with a shadow from birth. An unreadable expression and eerie smile that frightens the village babies. But occasionally spotted rescuing lost kittens or sheltering flowers from rain. Perhaps the 'badness' is just armor protecting a sensitive, easily hurt heart underneath.");
-        Add("enemy_bio_どくベイビー",
-            "悪魔村に漂う瘴気を浴びて生まれた赤ちゃん。紫色の肌から常に毒の霧を放ち、近づくだけで体が痺れてしまう。本人は毒を出していることに気づいておらず、なぜ誰も遊んでくれないのか不思議に思っている。唯一の友達は毒に耐性のある小さな毒蛙で、いつも頭の上に乗せている。「あそぼーよー」と近づくたびに周りの花が枯れていくのが切ない。",
+        Add("enemy_bio_にがにがベイビー",
+            "ゴージャス・ヴィレッジの おしゃれなカフェで にがーいエスプレッソを のんでしまった赤ちゃん。にがい顔が くせになって、まわりにも トゲトゲ・バブルを ふりまいている。本人は おとなっぽく なりたいだけなのに、にがすぎて だれも ちかづけない。ゆいいつの ともだちは にがい味が すきな ちいさなカエルで、いつも あたまの上に のっている。「ぼくって おとなでしょ？」が くちぐせ。",
             "A baby born bathed in the miasma of Devil Village. Purple skin constantly emits a poisonous mist that numbs anyone who gets close. Unaware of its own toxicity, it wonders why nobody will play. Its only friend is a small poison frog that sits on its head. Every time it approaches saying \"Let's play!\" the nearby flowers wilt—a tragic sight.");
-        Add("enemy_bio_のろいベイビー",
-            "悪魔村の古い祠の前で見つかった赤ちゃん。生まれながらにして呪いの力を持ち、睨んだ相手の体が重くなるという恐ろしい能力がある。しかしその力は本人の意思とは関係なく発動するため、笑顔を見せようとしても相手を呪ってしまう悲しい体質。暗い場所が好きで、祠の中で一人きりで古い絵本を読んでいる姿がたまに目撃される。実は笑うと呪いが弱まることに最近気づいた。",
+        Add("enemy_bio_ぐちぐちベイビー",
+            "ゴージャス・ヴィレッジの すみっこで いつも ぶつぶつ いっている赤ちゃん。「あれが いやだ」「これも いやだ」と ぐちが とまらないけれど、ほんとうは だれかに はなしを きいてほしいだけ。そのぐちパワーは あいてを どんより させる ふしぎな ちからがある。くらいばしょが すきで、ふるい えほんを ひとりで よんでいる すがたが もくげきされている。さいきん、わらうと ぐちパワーが よわまることに きづいた。",
             "A baby found before an ancient shrine in Devil Village. Born with the power of curses, its gaze makes others' bodies grow heavy. But the power activates beyond its will—even a smile curses others. Prefers dark places, sometimes spotted reading old picture books alone in the shrine. Recently discovered that laughing weakens the curse.");
-        Add("enemy_bio_やみベイビー",
-            "闇そのものから生まれたとされる赤ちゃん。影の中を自在に移動でき、気配を完全に消すことができる。その速さは悪魔村でも随一で、姿を捉えることすら困難。しかし本当は暗闇が怖くて、明るい場所に憧れている矛盾した性格の持ち主。夜な夜な村の灯りを遠くから眺めているのは、その温かさに惹かれているから。いつか光の中で暮らしたいと密かに願っている。",
+        Add("enemy_bio_どよよんベイビー",
+            "くらやみから うまれたと うわさされる ナゾの赤ちゃん。かげに とけこんで すがたを けすのが とくい。ゴージャス・ヴィレッジで いちばん あしが はやく、すがたを みることすら むずかしい。でも じつは くらいところが にがてで、ひかりに あこがれている。まいばん、とおくの ランタンの あかりを じっと みつめている すがたが かわいい。いつか ひなたで くらしたいと ひそかに おもっている。",
             "Said to be born from darkness itself. Can freely move through shadows and erase its presence completely. The fastest in Devil Village—even catching a glimpse is difficult. Yet paradoxically, it fears the dark and yearns for light. Night after night, it watches village lanterns from afar, drawn to their warmth. Secretly wishes to live in the light someday.");
-        Add("enemy_bio_あくまベイビー",
-            "悪魔の血を色濃く受け継いだ赤ちゃん。小さな角と尻尾を持ち、生まれた時から圧倒的な戦闘本能を備えている。怒ると目が赤く光り、触れるもの全てを焼き尽くす業火を放つ。悪魔村の中でも恐れられる存在だが、実は甘いミルクが大好きで、こっそり村の牧場からミルクを盗んでは至福の表情を浮かべている。「俺様が最強だ」と叫ぶ姿は可愛いらしいと評判。",
+        Add("enemy_bio_つんつんベイビー",
+            "ちいさな ツノと しっぽが チャームポイントの おしゃれな赤ちゃん。プライドが たかくて すなおに なれないけれど、あまい ミルクが だいすきで、こっそり ヴィレッジの ミルクバーに かよっている。おこると ほっぺが まっかに なるのが とくちょう。「ぼくが いちばん つよいんだから！」が くちぐせだけど、みんなには かわいいと おもわれている。",
             "A baby with strong demon blood. Born with small horns and a tail, possessing overwhelming combat instinct. When angered, its eyes glow red and it unleashes hellfire that incinerates everything. Feared even in Devil Village, but secretly loves sweet milk—stealing from the village dairy with a blissful expression. Its shout of \"I'm the strongest!\" is considered adorable.");
-        Add("enemy_bio_じゃあくベイビー",
-            "悪魔村の最深部に棲む、邪悪な力を宿した赤ちゃん。周囲の空気を歪めるほどの強大な魔力を持ち、その泣き声は聞いた者の心を蝕む。かつては普通の赤ちゃんだったが、禁断の魔法陣に触れてしまい変貌した。時折、元の姿に戻りかけることがあり、その瞬間だけは穏やかな笑顔を見せる。完全に邪悪になりきれない中途半端さが、逆に不気味さを増している。",
+        Add("enemy_bio_いじいじベイビー",
+            "ゴージャス・ヴィレッジの おくふかくに すんでいる はずかしがりやの赤ちゃん。ふしぎな ちからを もっていて、なきごえを きくと こころが ざわざわする。むかしは ふつうの赤ちゃんだったが、きんだんの まほうじんに ふれて かわってしまった。ときどき もとに もどりかけて、そのときだけ やさしい えがおを みせる。すなおに なれない じぶんが いちばん もどかしい。",
             "A baby dwelling in Devil Village's deepest area, harboring wicked power. Its magical force distorts the air around it, and its cry erodes the hearts of all who hear. Once an ordinary baby, it was transformed after touching a forbidden magic circle. Occasionally reverts partially, showing a gentle smile in those moments. Its inability to become fully evil only makes it more unsettling.");
-        Add("enemy_bio_まおうベイビー",
-            "悪魔村を統べる王の血族とされる伝説の赤ちゃん。その存在は悪魔村でも噂でしか語られず、実際に目撃した者はほとんどいない。全身から放たれる漆黒のオーラは、見る者の魂を凍りつかせる。しかし伝承によれば、この赤ちゃんは世界のバランスを保つために生まれた存在であり、本当の敵ではないとも言われている。真実は誰にもわからない。その瞳の奥には、悲しみとも覚悟ともつかない光が宿っている。",
+        Add("enemy_bio_ごーじゃすベイビー",
+            "ゴージャス・ヴィレッジを おさめると いわれる でんせつの赤ちゃん。そのそんざいは うわさでしか かたられず、じっさいに あったものは ほとんど いない。からだから はなつ きらびやかな オーラに みとれて うごけなく なってしまう。でも でんせつでは、このよの バランスを たもつために うまれた そんざいで、ほんとうの てきでは ないかもしれない。そのひとみの おくには、かなしみか、かくごか、だれにも わからない ひかりが やどっている。",
             "A legendary baby said to be of the bloodline that rules Devil Village. Its existence is spoken of only in rumors—almost no one has actually seen it. The jet-black aura radiating from its body freezes the souls of onlookers. Yet legend says this baby was born to maintain the world's balance and may not be a true enemy. No one knows the truth. Deep within its eyes dwells a light that could be sorrow or resolve.");
         Add("enemy_bio_デヴィル傭兵A",
-            "デヴィル夫人に忠誠を誓う傭兵の一人。元は人間だったが、夫人の毒の力に魅せられて配下となった。常に館の入口を守り、侵入者を容赦なく排除する。無表情で冷酷だが、夫人のことを語る時だけは目に光が宿る。戦闘では毒を纏った拳で攻撃し、相手の体力をじわじわと奪っていく。「夫人の命令は絶対だ」が口ぐせ。",
-            "One of the mercenaries sworn to Devil Lady. Once human, he was captivated by the Lady's poisonous power and became her subordinate. Always guarding the mansion entrance, he eliminates intruders without mercy. Cold and expressionless, but his eyes light up only when speaking of the Lady. Fights with poison-coated fists that slowly drain the enemy's stamina. His motto: \"The Lady's orders are absolute.\"");
+            "ゴージャス・ヴィレッジの おやしきで おもてなしを する きゅうじの赤ちゃん。きびきびした うごきと れいぎただしい たいどの うらに、おきゃくさまを ためす するどい めを もっている。デヴィル夫人に みとめられた じつりょくしゃで、かんたんには とおしてくれない。とくいわざは トゲトゲ・バブルを のせた カクテル。",
+            "One of the friends sworn to Devil Lady. Once human, he was captivated by the Lady's mysterious power and became her follower. Always guarding the mansion entrance, he gently welcomes visitors. Cool and expressionless, but his eyes light up only when speaking of the Lady. Plays with mist-coated hands, gradually satisfying friends. His motto: \"The Lady's orders are absolute.\"");
         Add("enemy_bio_デヴィル傭兵B",
-            "デヴィル夫人の右腕とも呼ばれる傭兵。傭兵Aとは幼馴染で、共に夫人に仕えることを選んだ。Aよりも攻撃的な性格で、戦闘では容赦ない連続攻撃を仕掛けてくる。しかし仲間想いの一面もあり、傭兵Aが倒された時は怒りに燃えるという噂がある。趣味は毒花の栽培で、館の裏庭には美しくも危険な花が咲き誇っている。",
-            "A mercenary called Devil Lady's right hand. Childhood friends with Mercenary A, they both chose to serve the Lady. More aggressive than A, unleashing relentless combo attacks in battle. Yet has a caring side—rumor says he burns with rage when Mercenary A falls. His hobby is cultivating poisonous flowers, and the mansion's back garden blooms with beautiful yet dangerous flora.");
+            "おもてなし給仕Aの あいかたで、さらに てごわい ベテランきゅうじ。おだやかな えがおの うらに とんでもない じつりょくを かくしている。デヴィル夫人の おやしきを まもる さいごの とりでであり、すべての ちょうせんしゃを ていねいに、しかし ようしゃなく おもてなしする。「おきゃくさま、おかくごは よろしいですか？」が けっせりふ。",
+            "A friend called Devil Lady's right hand. Childhood friends with Friend A, they both chose to serve the Lady. More energetic than A, unleashing spirited combo play in battle. Yet has a caring side—rumor says he shows burning determination when Friend A falls asleep. His hobby is cultivating mysterious flowers, and the mansion's back garden blooms with beautiful yet mysterious flora.");
         Add("enemy_bio_デヴィル夫人",
-            "悪魔村の奥深くに建つ館の主。かつては高名な薬師だったが、禁断の毒を研究するうちに闇に堕ちた。その美貌は年齢を超越し、毒の力で永遠の若さを保っているとされる。館に足を踏み入れた者は、彼女の「毒の洗礼」から逃れることはできない。しかし、その瞳の奥には薬師だった頃の面影が残っており、本当は世界を救いたいという想いが眠っているのかもしれない。必殺技「毒の洗礼」は触れた者の魂まで蝕む。",
-            "The mistress of the mansion deep in Devil Village. Once a renowned pharmacist, she fell to darkness while researching forbidden poisons. Her beauty transcends age, preserved eternally by poisonous power. Those who enter her mansion cannot escape her 'Poison Baptism.' Yet deep in her eyes lingers the shadow of her pharmacist days—perhaps a sleeping wish to save the world. Her ultimate technique 'Poison Baptism' corrodes even the soul of those it touches.");
+            "ゴージャス・ヴィレッジの奥深くに建つ館の主。かつては高名な薬師だったが、禁断のふしぎなチカラを研究するうちに闇に堕ちた。その美貌は年齢を超越し、ふしぎなチカラで永遠の若さを保っているとされる。館に足を踏み入れた者は、彼女の「トゲトゲ・バブルの洗礼」から逃れることはできない。しかし、その瞳の奥には薬師だった頃の面影が残っており、本当は世界を救いたいという想いが眠っているのかもしれない。とっておき「トゲトゲ・バブルの洗礼」は あびた おともだちの こころまで くすぐる。",
+            "The mistress of the mansion deep in Devil Village. Once a renowned pharmacist, she fell to darkness while researching forbidden mysterious powers. Her beauty transcends age, preserved eternally by mysterious power. Those who enter her mansion cannot escape her 'Playful Mist Baptism.' Yet deep in her eyes lingers the shadow of her pharmacist days—perhaps a sleeping wish to save the world. Her special move 'Playful Mist Baptism' tickles the very heart of any friend it touches.");
 
         // 小悪魔の街
         Add("enemy_bio_小悪魔ひとみ",
@@ -669,10 +669,10 @@ public static class Localization
 
         // NPC bios
         Add("npc_bio_ミルク母さん",
-            "村のはずれで温かいミルクを振る舞う謎の女性。誰の母親なのかは不明だが、傷ついた赤ちゃんを見過ごすことができない慈愛の人。「危なくなったら、いつでも戻っておいで」が口癖。その微笑みの奥に、かつて自分の子を失った悲しみが宿っているとも噂されるが、本人は何も語らない。",
+            "里のはずれで温かいミルクを振る舞う謎の女性。誰の母親なのかは不明だが、傷ついた赤ちゃんを見過ごすことができない慈愛の人。「危なくなったら、いつでも戻っておいで」が口癖。その微笑みの奥に、かつて自分の子を失った悲しみが宿っているとも噂されるが、本人は何も語らない。",
             "A mysterious woman who serves warm milk at the edge of the village. No one knows whose mother she is, but she cannot ignore an injured baby. Her catchphrase is 'Come back whenever you're in danger.' Behind her gentle smile, some say she carries the sorrow of losing her own child, but she never speaks of it.");
         Add("npc_bio_長老",
-            "村の入口に立つ白髪の老人。かつては名のある戦士だったらしいが、今は杖をつき、訪れる者たちに道を示す門番として余生を過ごしている。「お前の冒険はまだ始まったばかりだ」と語るその目には、自らも歩んだ険しい道の記憶が宿っている。",
+            "里の入口に立つ白髪の老人。かつては名のある戦士だったらしいが、今は杖をつき、訪れる者たちに道を示す門番として余生を過ごしている。「お前の冒険はまだ始まったばかりだ」と語るその目には、自らも歩んだ険しい道の記憶が宿っている。",
             "A white-haired old man who stands at the village entrance. Once said to have been a renowned warrior, he now spends his days as a gatekeeper, guiding those who visit. When he says 'Your adventure has only just begun,' his eyes hold memories of the harsh path he himself once walked.");
 
         // 母親NPC bio（実家）
@@ -692,127 +692,139 @@ public static class Localization
         Add("npc_bio_ネオ", "引きこもりの王。布団から出ずに世界を救おうとする男。子供だけが外出のモチベーション。", "King of the shut-ins. A man who tries to save the world without leaving his futon. His child is the only motivation to go outside.");
 
         // Battle UI labels
-        Add("battle_normal_attack", "通常攻撃", "Attack");
-        Add("battle_special_attack", "特殊攻撃", "Sp. Attack");
-        Add("battle_defend", "防御", "Defend");
-        Add("battle_special_skill", "必殺技", "Ultimate");
-        Add("battle_defend_name", "ぼうぎょ", "Guard");
-        Add("battle_defend_desc", "防御態勢をとり、受けるダメージを半減する", "Take a defensive stance and halve incoming damage");
-        Add("battle_default_attack", "パンチ", "Punch");
-        Add("battle_default_special", "GOD SMASH", "GOD SMASH");
-        Add("battle_default_attack_desc", "基本的なパンチ攻撃", "A basic punch attack");
-        Add("battle_default_special_desc", "全力の必殺技で大ダメージを与える", "An all-out ultimate that deals massive damage");
-        Add("battle_default_mother_attack", "体当たり", "Tackle");
-        Add("battle_default_mother_desc", "全身でぶつかる基本攻撃", "A basic full-body charge attack");
+        Add("battle_normal_attack", "おあそび", "Play");
+        Add("battle_special_attack", "とくべつあそび", "Special Play");
+        Add("battle_defend", "まもり", "Defend");
+        Add("battle_special_skill", "とっておき", "Ace Move");
+        Add("battle_defend_name", "まもり", "Guard");
+        Add("battle_defend_desc", "まもりの たいせいで おあそびの いたさを やわらげる", "Take a defensive stance and halve incoming damage");
+        Add("battle_default_attack", "たかいたかい", "Peek-a-boo");
+        Add("battle_default_special", "STAR SMILE", "STAR SMILE");
+        Add("battle_default_attack_desc", "きほんの たかいたかい", "A basic peek-a-boo");
+        Add("battle_default_special_desc", "とっておきの スマイルで おともだちを まんぞくさせる", "An all-out ultimate that deals massive damage");
+        Add("battle_default_mother_attack", "ぎゅっ", "Hug");
+        Add("battle_default_mother_desc", "ぜんしんで ぎゅっとする きほんのあそび", "A basic full-body charge attack");
 
         // Battle messages
-        Add("battle_enemy_appeared", "<color=#FF0000>{0}</color> があらわれた！",
-            "<color=#FF0000>{0}</color> appeared!");
-        Add("battle_boy_power", "<color=#66ccff>おとこのこパワー！</color>\nこうげきりょく UP！ (ATK:{0})",
+        Add("battle_enemy_appeared", "<color=#FF0000>{0}</color> が あそびにきた！",
+            "<color=#FF0000>{0}</color> wants to play!");
+        Add("battle_boy_power", "<color=#66ccff>おとこのこパワー！</color>\nあそびぢから UP！ (ATK:{0})",
             "<color=#66ccff>Boy Power!</color>\nAttack UP! (ATK:{0})");
         Add("battle_girl_power", "<color=#ff99cc>ちいさくて すばしっこい！</color>\nかいひりょく {0}%！",
             "<color=#ff99cc>Small and agile!</color>\nEvasion {0}%!");
-        Add("battle_start", "バトル スタート！", "Battle Start!");
-        Add("battle_player_first", "<color=#00FFFF>すばやさで まさった！ せんこうだ！</color>",
+        Add("battle_start", "おあそび スタート！", "Play Start!");
+        Add("battle_player_first", "<color=#00FFFF>すばやさで まさった！ さきにあそぶよ！</color>",
             "<color=#00FFFF>You're faster! First strike!</color>");
-        Add("battle_enemy_first", "<color=#FF8800>{0} のほうが すばやい！</color>",
+        Add("battle_enemy_first", "<color=#FF8800>{0} のほうが はやい！</color>",
             "<color=#FF8800>{0} is faster!</color>");
-        Add("battle_your_turn", "あなたのターン！ 行動を選んでください",
+        Add("battle_your_turn", "あなたのばん！ あそびをえらんでね",
             "Your turn! Choose an action");
-        Add("battle_enemy_attack", "{0} のこうげき！", "{0} attacks!");
-        Add("battle_enemy_special", "<color=#FF4444>{0} の とくしゅこうげき！</color>",
+        Add("battle_enemy_attack", "{0} の おあそび！", "{0} attacks!");
+        Add("battle_enemy_special", "<color=#FF4444>{0} の とくべつあそび！</color>",
             "<color=#FF4444>{0} uses a special attack!</color>");
-        Add("battle_enemy_special_hit", "<color=#FF4444>{0} の とくしゅこうげき！</color>\n{1} ダメージ！",
-            "<color=#FF4444>{0}'s special attack!</color>\n{1} damage!");
-        Add("battle_enemy_defend", "<color=#4488FF>{0} は ぼうぎょ体勢をとった！</color>",
-            "<color=#4488FF>{0} takes a defensive stance!</color>");
-        Add("battle_enemy_defend_heal", "<color=#4488FF>{0} は ぼうぎょしつつ HPが {1} かいふくした！</color>",
+        Add("battle_enemy_special_hit", "<color=#FF4444>{0} の とくべつあそび！</color>\nまんぞく度 {1} アップ！",
+            "<color=#FF4444>{0}'s special play!</color>\nSatisfaction up by {1}!");
+        Add("battle_enemy_defend", "<color=#4488FF>{0} は まもりの たいせいをとった！</color>",
+            "<color=#4488FF>{0} takes a guarding stance!</color>");
+        Add("battle_enemy_defend_heal", "<color=#4488FF>{0} は おちつきつつ ごきげんが {1} かいふくした！</color>",
             "<color=#4488FF>{0} defends and recovers {1} HP!</color>");
-        Add("battle_shiba_charging", "<color=#FF4444><size=130%>シバが ちからを ためている…！</size></color>\n<color=#FFAA00>つぎのターン ひっさつわざが くる！</color>",
+        Add("battle_shiba_charging", "<color=#FF4444><size=130%>シバが おあそびの ちからを ためている…！</size></color>\n<color=#FFAA00>つぎのターン とっておきが くる！</color>",
             "<color=#FF4444><size=130%>Shiba is gathering power...!</size></color>\n<color=#FFAA00>An ultimate attack is coming next turn!</color>");
-        Add("battle_shiba_ultimate_announce", "<color=#FF0000><size=150%>シバ「くらえ！！」</size></color>",
+        Add("battle_shiba_ultimate_announce", "<color=#FF0000><size=150%>シバ「いくぞ！！」</size></color>",
             "<color=#FF0000><size=150%>Shiba: \"Take this!!\"</size></color>");
-        Add("battle_shiba_ultimate_name", "<color=#FF0000><size=140%>🔥 おうのいかり 🔥</size></color>",
+        Add("battle_shiba_ultimate_name", "<color=#FF0000><size=140%>🔥 おうの ほんきあそび 🔥</size></color>",
             "<color=#FF0000><size=140%>🔥 King's Wrath 🔥</size></color>");
-        Add("battle_shiba_ultimate_hit", "<color=#FF0000>おうのいかり が さくれつ！</color>\n<color=#FF4444>{0} の だいダメージ！</color>",
+        Add("battle_shiba_ultimate_hit", "<color=#FF0000>おうの ほんきあそび が きまった！</color>\n<color=#FF4444>まんぞく度 だいアップ！</color>",
             "<color=#FF0000>King's Wrath explodes!</color>\n<color=#FF4444>{0} massive damage!</color>");
-        Add("battle_shiba_ultimate_blocked", "<color=#4488FF>ぼうぎょで こらえた！</color>\n{0} ダメージ！",
+        Add("battle_shiba_ultimate_blocked", "<color=#4488FF>まもりで こらえた！</color>\nまんぞく度 {0} アップ！",
             "<color=#4488FF>Held on with defense!</color>\n{0} damage!");
         Add("battle_evaded", "<color=#00FFFF>ひらりとかわした！</color>",
             "<color=#00FFFF>Dodged it!</color>");
-        Add("battle_reflect", "<color=#FFD700>金色のスマホが光った！\n攻撃を跳ね返した！ {0} ダメージ！</color>",
-            "<color=#FFD700>The Golden Smartphone glowed!\nReflected the attack! {0} damage!</color>");
-        Add("battle_defended", "ぼうぎょした！ {0} ダメージ！", "Guarded! {0} damage!");
-        Add("battle_took_damage", "{0} ダメージをうけた！", "Took {0} damage!");
-        Add("battle_punch", "パンチ！ <color=#FFA500>{0}</color>！", "Punch! <color=#FFA500>{0}</color>!");
-        Add("battle_attack_hit", "<color=#FFA500>{0}</color> が きまった！\n{1} に {2} ダメージ！",
+        Add("battle_reflect", "<color=#FFD700>金色のスマホが光った！\nおあそびを はねかえした！ まんぞく度 {0} アップ！</color>",
+            "<color=#FFD700>The Golden Smartphone glowed!\nReflected the play! Satisfaction up by {0}!</color>");
+        Add("battle_reflect_meter", "<color=#FFD700>金色のスマホが光った！\nおあそびを はねかえした！ {1} が {0} さがった！</color>",
+            "<color=#FFD700>The Golden Smartphone glowed!\nReflected the play! {1} went down by {0}!</color>");
+        Add("battle_defended", "まもった！ まんぞく度 {0} アップ！", "Guarded! Satisfaction up by {0}!");
+        Add("battle_took_damage", "まんぞく度 {0} アップ！", "Took {0} damage!");
+        Add("battle_punch", "たかいたかい！ <color=#FFA500>{0}</color>！", "Peek-a-boo! <color=#FFA500>{0}</color>!");
+        Add("battle_attack_hit", "<color=#FFA500>{0}</color> が きまった！\n{1} の まんぞく度 {2} アップ！",
             "<color=#FFA500>{0}</color> landed!\n{2} damage to {1}!");
-        Add("battle_defend_stance", "ぼうぎょ体勢をとった！", "Took a defensive stance!");
+        Add("battle_attack_hit_meter", "<color=#FFA500>{0}</color> が きまった！\n{1} の {3} が {2} さがった！",
+            "<color=#FFA500>{0}</color> landed!\n{1}'s {3} went down by {2}!");
+        Add("battle_defend_stance", "まもりの たいせいをとった！", "Took a guarding stance!");
         Add("battle_mother_skill", "<color=#55DDAA>{0}</color>！", "<color=#55DDAA>{0}</color>!");
-        Add("battle_mother_damage", "<color=#55DDAA>{0}</color> で {1} ダメージ！",
-            "<color=#55DDAA>{0}</color> dealt {1} damage!");
-        Add("battle_heal", "<color=#00FF00>HPが {0} かいふくした！</color>",
+        Add("battle_mother_damage", "<color=#55DDAA>{0}</color> で まんぞく度 {1} アップ！",
+            "<color=#55DDAA>{0}</color> — satisfaction up by {1}!");
+        Add("battle_mother_damage_meter", "<color=#55DDAA>{0}</color> で {2} が {1} さがった！",
+            "<color=#55DDAA>{0}</color> — {2} went down by {1}!");
+        Add("battle_heal", "<color=#00FF00>ごきげんが {0} かいふくした！</color>",
             "<color=#00FF00>HP recovered by {0}!</color>");
-        Add("battle_poison", "<color=#AA00FF>{0} は どくに おかされた！</color>",
+        Add("battle_poison", "<color=#AA00FF>{0} は トゲトゲ・バブルを あびた！</color>",
             "<color=#AA00FF>{0} was poisoned!</color>");
         Add("battle_evasion_up", "<color=#00FFFF>かいひりょくが アップした！</color>",
             "<color=#00FFFF>Evasion UP!</color>");
-        Add("battle_def_down", "<color=#FFAA00>{0} の ぼうぎょが ダウン！</color>",
+        Add("battle_def_down", "<color=#FFAA00>{0} の おちつきが ダウン！</color>",
             "<color=#FFAA00>{0}'s defense DOWN!</color>");
-        Add("battle_atk_down", "<color=#FFAA00>{0} の こうげきが ダウン！</color>",
+        Add("battle_atk_down", "<color=#FFAA00>{0} の あそびぢからが ダウン！</color>",
             "<color=#FFAA00>{0}'s attack DOWN!</color>");
-        Add("battle_drain", "<color=#00FF00>HPを {0} きゅうしゅうした！</color>",
-            "<color=#00FF00>Absorbed {0} HP!</color>");
-        Add("battle_poison_damage", "<color=#AA00FF>{0} は どくで {1} ダメージ！</color>",
+        Add("battle_drain", "<color=#00FF00>ごきげんを {0} きゅうしゅうした！</color>",
+            "<color=#00FF00>Absorbed {0} mood!</color>");
+        Add("battle_poison_damage", "<color=#AA00FF>{0} は トゲトゲ・バブルで まんぞく度 {1} アップ！</color>",
             "<color=#AA00FF>{0} took {1} poison damage!</color>");
-        Add("battle_god_special", "<color=#FFD700>GOD BABY の ひっさつわざ！</color>\n<color=#FFD700>神・{0}！</color>",
-            "<color=#FFD700>GOD BABY's Ultimate!</color>\n<color=#FFD700>Divine {0}!</color>");
-        Add("battle_special", "ひっさつわざ！\n<color=#FFFF00>{0}！</color>",
+        Add("battle_poison_damage_meter", "<color=#AA00FF>トゲトゲ・バブルで {0} の {2} が {1} さがった！</color>",
+            "<color=#AA00FF>{0}'s {2} went down by {1} from Prickly Bubbles!</color>");
+        Add("battle_god_special", "<color=#FFD700>STAR BABY の とっておき！</color>\n<color=#FFD700>星・{0}！</color>",
+            "<color=#FFD700>STAR BABY's Ultimate!</color>\n<color=#FFD700>Stellar {0}!</color>");
+        Add("battle_special", "とっておき！\n<color=#FFFF00>{0}！</color>",
             "Ultimate Move!\n<color=#FFFF00>{0}!</color>");
-        Add("battle_god_special_hit", "<color=#FFD700>神・{0}</color> が さくれつ！\n{1} ダメージ！",
-            "<color=#FFD700>Divine {0}</color> landed!\n{1} damage!");
-        Add("battle_special_hit", "<color=#FFFF00>{0}</color> が さくれつ！\n{1} ダメージ！",
-            "<color=#FFFF00>{0}</color> landed!\n{1} damage!");
+        Add("battle_god_special_hit", "<color=#FFD700>星・{0}</color> が きまった！\nまんぞく度 {1} アップ！",
+            "<color=#FFD700>Stellar {0}</color> landed!\nSatisfaction up by {1}!");
+        Add("battle_god_special_hit_meter", "<color=#FFD700>星・{0}</color> が きまった！\n{2} が {1} さがった！",
+            "<color=#FFD700>Stellar {0}</color> landed!\n{2} went down by {1}!");
+        Add("battle_special_hit", "<color=#FFFF00>{0}</color> が きまった！\nまんぞく度 {1} アップ！",
+            "<color=#FFFF00>{0}</color> landed!\nSatisfaction up by {1}!");
+        Add("battle_special_hit_meter", "<color=#FFFF00>{0}</color> が きまった！\n{2} が {1} さがった！",
+            "<color=#FFFF00>{0}</color> landed!\n{2} went down by {1}!");
         Add("battle_special_miss", "{0}...\nしかし はずれてしまった...",
             "{0}...\nBut it missed...");
-        Add("battle_fighting_spirit", "<color=#FFD700>とうしが みなぎる！ こうげきりょく UP！</color>",
+        Add("battle_fighting_spirit", "<color=#FFD700>わくわくが みなぎる！ あそびぢから UP！</color>",
             "<color=#FFD700>Fighting spirit surges! ATK UP!</color>");
-        Add("battle_conqueror_revive", "覇王色の覚醒！ たおれかけたが ふっかつした！",
+        Add("battle_conqueror_revive", "覇王色の覚醒！ ねむりかけたが めをさました！",
             "Conqueror's Haki awakens! Nearly fell, but revived!");
-        Add("battle_enemy_defeated", "<color=#FFFF00>{0} をたおした！</color>",
+        Add("battle_enemy_defeated", "<color=#FFFF00>{0} は まんぞくして スヤスヤ ねんねした！</color>",
             "<color=#FFFF00>{0} defeated!</color>");
-        Add("battle_victory", "<color=#00FF00><size=130%>しょうり！</size></color>",
+        Add("battle_victory", "<color=#00FF00><size=130%>おあそび だいせいこう！</size></color>",
             "<color=#00FF00><size=130%>Victory!</size></color>");
         Add("battle_defeat", "<color=#FF0000>{0}はおねむの時間になった...</color>",
             "<color=#FF0000>{0} fell asleep...</color>");
         Add("battle_game_over", "<color=#FF69B4><size=80%>ミルクの時間</size></color>",
             "<color=#FF69B4><size=80%>Milk Time</size></color>");
-        Add("battle_exp_gained", "<color=#00FFFF>けいけんち {0} をかくとく！</color>",
-            "<color=#00FFFF>Gained {0} EXP!</color>");
+        Add("battle_exp_gained", "<color=#00FFFF>おもいで {0} をかくとく！</color>",
+            "<color=#00FFFF>Gained {0} memories!</color>");
         Add("battle_age_up", "<color=#FFD700><size=150%>\U0001f382 {0}ヶ月になった！ \U0001f382</size></color>",
             "<color=#FFD700><size=150%>\U0001f382 Now {0} months old! \U0001f382</size></color>");
         Add("battle_growth_title", "<color=#FFD700>\u2728 せいちょう！ \u2728</color>",
             "<color=#FFD700>\u2728 Growth! \u2728</color>");
-        Add("battle_stat_atk", "こうげき", "ATK");
-        Add("battle_stat_def", "ぼうぎょ", "DEF");
-        Add("battle_stat_hp_label", "HP", "HP");
+        Add("battle_stat_atk", "ぬくもり", "Warmth");
+        Add("battle_stat_def", "おちつき", "Calm");
+        Add("battle_stat_hp_label", "ごきげん", "Mood");
         Add("battle_stat_athletic", "うんどう", "AGI");
-        Add("battle_hp_full_heal", "<color=#00FF00>HPがぜんかいふく！</color>",
-            "<color=#00FF00>HP fully restored!</color>");
-        Add("battle_exp_remaining", "つぎのせいちょうまで あと <color=#FFFF00>{0}</color> けいけんち\n({1}/{2})",
+        Add("battle_hp_full_heal", "<color=#00FF00>ごきげん ぜんかいふく！</color>",
+            "<color=#00FF00>Mood fully restored!</color>");
+        Add("battle_exp_remaining", "つぎのせいちょうまで あと <color=#FFFF00>{0}</color> おもいで\n({1}/{2})",
             "Next growth in <color=#FFFF00>{0}</color> EXP\n({1}/{2})");
         Add("battle_months", "ヶ月", " months");
-        Add("battle_result_exp", "けいけんち", "EXP");
+        Add("battle_result_exp", "おもいで", "Memories");
         Add("battle_result_milk", "ミルク", "Milk");
 
         // Player poison (devil village enemies)
-        Add("battle_player_poisoned", "<color=#AA00FF>どくに おかされた！ からだが しびれる...</color>",
+        Add("battle_player_poisoned", "<color=#AA00FF>トゲトゲ・バブルを あびた！ からだが しびれる...</color>",
             "<color=#AA00FF>Poisoned! Body going numb...</color>");
-        Add("battle_player_poison_already", "<color=#AA00FF>すでに どくに おかされている...</color>",
+        Add("battle_player_poison_already", "<color=#AA00FF>すでに トゲトゲ・バブルを あびている...</color>",
             "<color=#AA00FF>Already poisoned...</color>");
-        Add("battle_player_poison_damage", "<color=#AA00FF>どくで {0} ダメージ！</color>",
+        Add("battle_player_poison_damage", "<color=#AA00FF>トゲトゲ・バブルで まんぞく度 {0} アップ！</color>",
             "<color=#AA00FF>Took {0} poison damage!</color>");
-        Add("map_poison_damage", "<color=#AA00FF>どくで {0} ダメージ！</color>",
+        Add("map_poison_damage", "<color=#AA00FF>トゲトゲ・バブルで まんぞく度 {0} アップ！</color>",
             "<color=#AA00FF>Took {0} poison damage!</color>");
         Add("map_poison_cured", "<color=#00FF00>どくが なおった！</color>",
             "<color=#00FF00>Poison cured!</color>");
@@ -820,56 +832,72 @@ public static class Localization
         // Run / Escape
         Add("battle_run", "にげる", "Run");
         Add("battle_run_name", "にげる", "Escape");
-        Add("battle_run_desc", "戦闘から逃げる（成功率50%）", "Flee from battle (50% success rate)");
+        Add("battle_run_desc", "おあそびから にげる（成功率50%）", "Flee from battle (50% success rate)");
         Add("battle_run_success", "うまく にげきれた！", "Got away safely!");
         Add("battle_run_fail", "にげられなかった！", "Couldn't escape!");
-        Add("battle_run_boss", "ボスからは にげられない！", "Can't run from a boss!");
+        Add("battle_run_boss", "このおともだちからは にげられない！", "Can't run from a boss!");
 
-        // Devil village
-        Add("map_devil_village", "悪魔村", "Devil Village");
+        // Gorgeous Village (旧: Devil village)
+        Add("map_devil_village", "ゴージャス・ヴィレッジ", "Gorgeous Village");
         Add("map_devil_boss_sign", "<color=#AA44FF>デヴィル夫人のやかた</color>", "<color=#AA44FF>Devil Lady's Mansion</color>");
 
+        // ゴージャス・ヴィレッジ到着イントロ
+        Add("gorgeous_intro_1", "きらびやかな あかりが みえてきた…\nここが ゴージャス・ヴィレッジ。",
+            "Glittering lights come into view...\nThis is the Gorgeous Village.");
+        Add("gorgeous_intro_2", "おとなたちが あつまる\nちょっぴり おしゃれな ばしょ。\nでも なんだか トゲトゲした くうきが\nただよっている…",
+            "A fancy place where grown-ups gather.\nBut something prickly hangs in the air...");
+        Add("gorgeous_intro_3", "あわの なかに まじった いじわるが\nみんなの じしんを うばっているみたい。\nよちよちの里で まなんだ\n「あそびの ちから」で\nみんなを えがおに しよう！",
+            "Meanness hidden in bubbles seems to\nbe stealing everyone's confidence.\nUse the power of play you learned\nat the Training Ground to\nbring back everyone's smiles!");
+
         // Boss defeat
-        Add("boss_defeat_line1", "村の王シバ が たおれた...\n", "King Shiba has fallen...\n");
+        Add("boss_defeat_line1", "青年のシバ が にっこり バイバイした…\n", "Young Shiba waved goodbye...\n");
         Add("boss_defeat_line2", "「これは 試練に すぎなかった。」\n",
             "\"That was merely a trial.\"\n");
-        Add("boss_defeat_line3", "村の外には さらに強大な 敵が待っている。\nおまえの ちからは まだ 足りない。\n",
+        Add("boss_defeat_line3", "里の外には もっと あそびたがりの おともだちが まっている。\nおまえの ちからは まだ 足りない。\n",
             "Beyond the village, even mightier foes await.\nYour power is not yet enough.\n");
-        Add("boss_defeat_line4", "成長し、すべての 敵を 打ち砕け。\n世界は おまえを 待っている。\n",
+        Add("boss_defeat_line4", "せいちょうして みんなと たくさん あそぼう。\n世界は おまえを 待っている。\n",
             "Grow stronger, and crush all your enemies.\nThe world is waiting for you.\n");
 
         // Devil Lady's Mansion
         Add("map_mansion_enter", "<color=#AA44FF><size=130%>デヴィル夫人のやかたに\n足を踏み入れた…</size></color>",
             "<color=#AA44FF><size=130%>You entered\nDevil Lady's Mansion...</size></color>");
-        Add("map_mansion_mercenary_block", "<color=#FF4444>デヴィル傭兵が 立ちはだかっている！</color>",
-            "<color=#FF4444>A Devil Mercenary stands in the way!</color>");
-        Add("map_mansion_boss_locked", "傭兵を 倒さないと 進めない…",
+        Add("map_mansion_mercenary_block", "<color=#FF4444>おともだちが まちかまえている！</color>",
+            "<color=#FF4444>A friend is waiting to play!</color>");
+        Add("map_mansion_boss_locked", "おともだちと あそばないと すすめない…",
             "Must defeat the mercenaries to proceed...");
-        Add("battle_run_fixed", "この てきからは にげられない！",
+        Add("battle_run_fixed", "このおともだちからは にげられない！",
             "Can't run from this enemy!");
-        Add("map_mansion_boss_enter", "<color=#AA44FF><size=130%>デヴィル夫人 が 立ちはだかる！</size></color>",
-            "<color=#AA44FF><size=130%>Devil Lady stands in your way!</size></color>");
+        Add("map_mansion_boss_enter", "<color=#AA44FF><size=130%>デヴィル夫人の サロンへ\n足を踏み入れた…</size></color>",
+            "<color=#AA44FF><size=130%>You entered\nDevil Lady's Salon...</size></color>");
+
+        // Devil Lady battle intro
+        Add("battle_devil_lady_intro_1", "<color=#AA00FF><size=130%>デヴィル夫人「あら、ちいさな おきゃくさま？」</size></color>",
+            "<color=#AA00FF><size=130%>Devil Lady: \"Oh my, a tiny guest?\"</size></color>");
+        Add("battle_devil_lady_intro_2", "<color=#AA00FF><size=120%>「この ヴィレッジの しゅやくは わたくし。\nトゲトゲ・シャンパンの あじ、\nおしえて あげましょう。」</size></color>",
+            "<color=#AA00FF><size=120%>\"I am the star of this Village.\nLet me show you the taste of\nmy Prickly Champagne.\"</size></color>");
+        Add("battle_devil_lady_intro_3", "デヴィル夫人が グラスを かかげた！\nトゲトゲ・バブルが あふれだす…！",
+            "Devil Lady raises her glass!\nPrickly Bubbles overflow...!");
 
         // Devil Lady battle
-        Add("battle_devil_lady_charge", "<color=#AA00FF><size=130%>デヴィル夫人が 毒の力を 溜めている…！</size></color>\n<color=#FFAA00>つぎのターン ひっさつわざが くる！</color>",
-            "<color=#AA00FF><size=130%>Devil Lady is gathering poison power...!</size></color>\n<color=#FFAA00>An ultimate attack is coming next turn!</color>");
-        Add("battle_devil_lady_ultimate", "<color=#AA00FF><size=150%>デヴィル夫人「毒の洗礼よ！」</size></color>",
-            "<color=#AA00FF><size=150%>Devil Lady: \"Poison Baptism!\"</size></color>");
-        Add("battle_devil_lady_ultimate_name", "<color=#AA00FF><size=140%>\u2620 毒の洗礼 \u2620</size></color>",
-            "<color=#AA00FF><size=140%>\u2620 Poison Baptism \u2620</size></color>");
-        Add("battle_devil_lady_ultimate_hit", "<color=#AA00FF>毒の洗礼 が さくれつ！</color>\n<color=#FF4444>{0} の だいダメージ！</color>",
-            "<color=#AA00FF>Poison Baptism explodes!</color>\n<color=#FF4444>{0} massive damage!</color>");
-        Add("battle_devil_lady_ultimate_blocked", "<color=#4488FF>ぼうぎょで こらえた！</color>\n{0} ダメージ！",
+        Add("battle_devil_lady_charge", "<color=#AA00FF><size=130%>デヴィル夫人が トゲトゲ・シャンパンを ふりまわしている…！</size></color>\n<color=#FFAA00>つぎのターン とっておきが くる！</color>",
+            "<color=#AA00FF><size=130%>Devil Lady is shaking her Prickly Champagne...!</size></color>\n<color=#FFAA00>An ultimate attack is coming next turn!</color>");
+        Add("battle_devil_lady_ultimate", "<color=#AA00FF><size=150%>デヴィル夫人「トゲトゲ・シャンパン、あびなさい！」</size></color>",
+            "<color=#AA00FF><size=150%>Devil Lady: \"Bathe in Prickly Champagne!\"</size></color>");
+        Add("battle_devil_lady_ultimate_name", "<color=#AA00FF><size=140%>\u2728 トゲトゲ・シャンパン \u2728</size></color>",
+            "<color=#AA00FF><size=140%>\u2728 Prickly Champagne \u2728</size></color>");
+        Add("battle_devil_lady_ultimate_hit", "<color=#AA00FF>トゲトゲ・シャンパン が きまった！</color>\n<color=#FF4444>まんぞく度 だいアップ！</color>",
+            "<color=#AA00FF>Prickly Champagne explodes!</color>\n<color=#FF4444>Massive satisfaction up!</color>");
+        Add("battle_devil_lady_ultimate_blocked", "<color=#4488FF>まもりで こらえた！</color>\nまんぞく度 {0} アップ！",
             "<color=#4488FF>Held on with defense!</color>\n{0} damage!");
-        Add("battle_devil_lady_poisoned", "<color=#AA00FF>猛毒に おかされた！ 5ターンの間 どくダメージ！</color>",
-            "<color=#AA00FF>Severely poisoned! Poison damage for 5 turns!</color>");
+        Add("battle_devil_lady_poisoned", "<color=#AA00FF>トゲトゲ・バブルを たっぷり あびた！ 5ターンの間 まんぞく度アップ！</color>",
+            "<color=#AA00FF>Drenched in Prickly Bubbles! Satisfaction up for 5 turns!</color>");
 
         // Devil Lady defeat
-        Add("devil_lady_defeat_line1", "デヴィル夫人 が たおれた...\n", "Devil Lady has fallen...\n");
-        Add("devil_lady_defeat_line2", "「…まさか この私が…\nあの頃の 光を 思い出すとは…」\n",
-            "\"...To think that I...\nwould remember the light of those days...\"\n");
-        Add("devil_lady_defeat_line3", "館に 静寂が 戻った。\n毒の霧が 晴れていく…\n",
-            "Silence returns to the mansion.\nThe poisonous mist clears...\n");
+        Add("devil_lady_defeat_line1", "デヴィル夫人 が にっこり わらった…\n", "Devil Lady smiled gently...\n");
+        Add("devil_lady_defeat_line2", "「…まさか この わたくしが…\nこんなに あたたかい きもちに なるなんて…」\n",
+            "\"...To think that I...\nwould feel this warm inside...\"\n");
+        Add("devil_lady_defeat_line3", "トゲトゲ・バブルが きえて\nあまい 星のサイダーの かおりが ひろがった…\n",
+            "The Prickly Bubbles vanish,\nreplaced by the sweet scent of Star Cider...\n");
 
         // 109 mansion
         Add("map_109_sign", "<color=#FF69B4>109</color>", "<color=#FF69B4>109</color>");
@@ -879,8 +907,8 @@ public static class Localization
             "<color=#FF69B4><size=130%>Queen Melodias stands in your way!</size></color>");
 
         // エリア名
-        Add("area_name_0", "村", "Village");
-        Add("area_name_1", "悪魔村", "Devil Village");
+        Add("area_name_0", "よちよちの里", "Toddler's Training Ground");
+        Add("area_name_1", "ゴージャス・ヴィレッジ", "Gorgeous Village");
         Add("area_name_3", "小悪魔の街", "Imp Town");
 
         // 前のステージに戻る
@@ -894,7 +922,7 @@ public static class Localization
         // 実家（母親NPC）
         Add("map_mother_msg1", "おかえり、{0}。ちゃんとごはん食べてる？\nあなたが元気でいてくれるだけで、母さんは幸せよ。",
             "Welcome home, {0}. Are you eating properly?\nJust knowing you're doing well makes me happy.");
-        Add("map_mother_msg2", "外は怖い敵がたくさんいるでしょう？\n無理しないで、疲れたらいつでも帰ってきなさいね。",
+        Add("map_mother_msg2", "外はあそびたがりの おともだちが たくさんいるでしょう？\n無理しないで、疲れたらいつでも帰ってきなさいね。",
             "There are scary enemies out there, right?\nDon't push yourself. Come home whenever you're tired.");
         Add("map_mother_msg3", "さあ、行っておいで。あなたなら大丈夫。\n母さんはここで待ってるからね。",
             "Now go on. You'll be just fine.\nMom will be right here waiting for you.");
@@ -916,8 +944,8 @@ public static class Localization
 
         // 母親装備アイテム効果
         Add("equip_effect_イザナミ", "ATK+3 DEF+3", "ATK+3 DEF+3");
-        Add("equip_effect_ミク", "10%で敵の攻撃を反射", "10% chance to reflect attacks");
-        Add("equip_effect_カヨコ", "毎ターンHP+2回復", "Recover HP+2 each turn");
+        Add("equip_effect_ミク", "10%で おともだちの あそびを はねかえす", "10% chance to reflect attacks");
+        Add("equip_effect_カヨコ", "毎ターンごきげん+2回復", "Recover Mood+2 each turn");
         Add("equip_effect_フクトク", "LUCK+5", "LUCK+5");
         Add("equip_effect_ヨネ", "DEF+5", "DEF+5");
         Add("equip_effect_ドクコ", "ATK+5 DEF-2", "ATK+5 DEF-2");
@@ -927,7 +955,7 @@ public static class Localization
             "神代より伝わる黄金の王冠。\nイザナミが我が子の旅立ちに託した、母の愛の結晶。\n被ると不思議と背筋が伸び、\n小さな体に王者の風格が宿る。",
             "A golden crown passed down from the age of gods.\nA crystal of maternal love entrusted by Izanami for her child's journey.\nWearing it straightens the spine and grants a regal aura.");
         Add("equip_bio_ミク",
-            "最新型を超えた超最新型スマホ。\n全面ゴールド仕上げで、通話もゲームもサクサク。\n敵の攻撃を画面で跳ね返す\n謎のバリア機能を搭載。",
+            "最新型を超えた超最新型スマホ。\n全面ゴールド仕上げで、通話もゲームもサクサク。\nおともだちの おあそびを画面で はねかえす\n謎のバリア機能を搭載。",
             "An ultra-latest smartphone beyond the cutting edge.\nFull gold finish, smooth for calls and games.\nEquipped with a mysterious barrier that reflects enemy attacks off its screen.");
         Add("equip_bio_カヨコ",
             "カヨコ特製の手作りお菓子セット。\nクッキー、マドレーヌ、ラムネが入っている。\n食べるとほっこり元気が出る。\n戦闘中もこっそりつまみ食いして回復。",
@@ -936,10 +964,10 @@ public static class Localization
             "フクトクが当てた伝説の当たりくじ。\n「この運を赤ちゃんに」と手渡された。\n持っているだけで不思議とラッキーな\n出来事が起こりやすくなる。",
             "A legendary winning lottery ticket drawn by Fukutoku.\nHanded over with the words 'May this luck protect the baby.'\nJust holding it mysteriously makes lucky events more likely.");
         Add("equip_bio_ヨネ",
-            "ヨネがいつもポケットに忍ばせている\n高級ティッシュ。驚くほど柔らかく、\n涙も鼻水もやさしく包み込む。\n薄いのに防御力が上がる不思議な逸品。",
+            "ヨネがいつもポケットに忍ばせている\n高級ティッシュ。驚くほど柔らかく、\n涙も鼻水もやさしく包み込む。\n薄いのに おちつきが上がる不思議な逸品。",
             "Premium tissues that Yone always keeps in her pocket.\nSurprisingly soft, gently wrapping up tears and sniffles.\nA mysterious item that boosts defense despite being thin.");
         Add("equip_bio_ドクコ",
-            "ドクコが書いた正式な借用書。\n「借りたものは必ず返す」という\n強い意志が宿っており、\n攻撃力が上がるが防御が少し甘くなる。",
+            "ドクコが書いた正式な借用書。\n「借りたものは必ず返す」という\n強い意志が宿っており、\nぬくもりが上がるが おちつきが少し甘くなる。",
             "An official loan agreement written by Dokuko.\nImbued with the strong will that 'borrowed things must be returned.'\nBoosts attack power but slightly lowers defense.");
 
         // 装備欄
@@ -966,21 +994,21 @@ public static class Localization
             "Listen, even if you lose, come back home.\n...This is your house. Always.");
 
         // Melodias Queen battle
-        Add("battle_melodias_charge", "<color=#FF69B4><size=130%>メロディアス女王が 魅惑の力を 溜めている…！</size></color>\n<color=#FFAA00>つぎのターン ひっさつわざが くる！</color>",
+        Add("battle_melodias_charge", "<color=#FF69B4><size=130%>メロディアス女王が 魅惑の力を 溜めている…！</size></color>\n<color=#FFAA00>つぎのターン とっておきが くる！</color>",
             "<color=#FF69B4><size=130%>Queen Melodias is gathering enchanting power...!</size></color>\n<color=#FFAA00>An ultimate attack is coming next turn!</color>");
         Add("battle_melodias_ultimate", "<color=#FF69B4><size=150%>メロディアス女王「聴きなさい…」</size></color>",
             "<color=#FF69B4><size=150%>Queen Melodias: \"Listen...\"</size></color>");
         Add("battle_melodias_ultimate_name", "<color=#FFD700><size=140%>\u266B 魅惑のメロディ \u266B</size></color>",
             "<color=#FFD700><size=140%>\u266B Enchanting Melody \u266B</size></color>");
-        Add("battle_melodias_ultimate_hit", "<color=#FF69B4>魅惑のメロディ が さくれつ！</color>\n<color=#FF4444>{0} の だいダメージ！</color>",
+        Add("battle_melodias_ultimate_hit", "<color=#FF69B4>魅惑のメロディ が きまった！</color>\n<color=#FF4444>まんぞく度 だいアップ！</color>",
             "<color=#FF69B4>Enchanting Melody explodes!</color>\n<color=#FF4444>{0} massive damage!</color>");
-        Add("battle_melodias_ultimate_blocked", "<color=#4488FF>ぼうぎょで こらえた！</color>\n{0} ダメージ！",
+        Add("battle_melodias_ultimate_blocked", "<color=#4488FF>まもりで こらえた！</color>\nまんぞく度 {0} アップ！",
             "<color=#4488FF>Held on with defense!</color>\n{0} damage!");
-        Add("battle_melodias_debuffed", "<color=#FF69B4>魅惑の力で こうげきりょくが さがった！ 3ターン！</color>",
+        Add("battle_melodias_debuffed", "<color=#FF69B4>ふしぎな ちからで あそびぢからが さがった！ 3ターン！</color>",
             "<color=#FF69B4>Attack power dropped from enchanting power! 3 turns!</color>");
 
         // Melodias Queen defeat
-        Add("melodias_defeat_line1", "メロディアス女王 が たおれた...\n", "Queen Melodias has fallen...\n");
+        Add("melodias_defeat_line1", "メロディアス女王 が にっこり おやすみした…\n", "Queen Melodias has fallen...\n");
         Add("melodias_defeat_line2", "「…私の メロディが…\n届かなかった というの…？」\n",
             "\"...My melody...\ndidn't reach you...?\"\n");
         Add("melodias_defeat_line3", "109に 静寂が 戻った。\n魅惑の音色が 消えていく…\n",
@@ -1001,9 +1029,9 @@ public static class Localization
         Add("map_boss_sign", "<color=#FF4444>ボスのやかた</color>", "<color=#FF4444>Boss Mansion</color>");
         Add("map_help_text", "矢印キー / WASD: 移動　　スペース: 調べる　　ESC: メニュー",
             "Arrow Keys / WASD: Move    Space: Interact    ESC: Menu");
-        Add("map_encounter", "<color=#FF0000>てきが あらわれた！</color>",
+        Add("map_encounter", "<color=#FF0000>おともだちが あそびにきた！</color>",
             "<color=#FF0000>An enemy appeared!</color>");
-        Add("map_boss_enter", "<color=#FF2222><size=130%>ボスのやかた に はいった！</size></color>\n\n<size=80%>つよい てきの けはいがする...</size>",
+        Add("map_boss_enter", "<color=#FF2222><size=130%>おともだちの おやかたに はいった！</size></color>\n\n<size=80%>つよい てきの けはいがする...</size>",
             "<color=#FF2222><size=130%>Entered the Boss Mansion!</size></color>\n\n<size=80%>A powerful presence lurks...</size>");
 
         // Map interact messages
@@ -1016,6 +1044,8 @@ public static class Localization
         Add("map_nothing", "...", "...");
         Add("map_golden_egg", "<color=#FFD700>★ 金のたまご を てにいれた！★</color>",
             "<color=#FFD700>★ Got a Golden Egg! ★</color>");
+        Add("map_golden_egg_hint", "きんのたまごを てにいれた！\nメニューの「もちもの」から\nかくにん してみよう！",
+            "Got a golden egg!\nCheck it in Inventory\nfrom the menu!");
         Add("map_milk_heal", "赤ちゃんミルクで元気いっぱい！", "Baby milk! Feeling great!");
         Add("map_milk_full", "もう元気いっぱいだよ！", "Already feeling great!");
 
@@ -1039,7 +1069,7 @@ public static class Localization
         Add("enishi_title", "縁（えにし）の書", "Book of Bonds");
         Add("enishi_added", "{0}が縁（えにし）の書に追加された。", "{0} was added to the Book of Bonds.");
         Add("enishi_empty", "まだ誰とも縁を結んでいない。", "No bonds have been formed yet.");
-        Add("enishi_section_enemies", "倒した敵", "Defeated Enemies");
+        Add("enishi_section_enemies", "あそんだ おともだち", "Defeated Enemies");
         Add("enishi_section_npcs", "出会った人々", "People Met");
         Add("enishi_section_fathers", "父親", "Fathers");
         Add("enishi_section_mothers", "母親", "Mothers");
@@ -1048,16 +1078,16 @@ public static class Localization
         // Map status panel
         Add("map_status_title", "ステータス", "Status");
         Add("map_status_months", "ヶ月", " months");
-        Add("map_status_hp", "<b>HP:</b>", "<b>HP:</b>");
-        Add("map_status_atk", "<b>攻撃:</b>", "<b>ATK:</b>");
-        Add("map_status_def", "<b>防御:</b>", "<b>DEF:</b>");
-        Add("map_status_intelligence", "<b>知力:</b>", "<b>INT:</b>");
+        Add("map_status_hp", "<b>ごきげん度:</b>", "<b>Mood:</b>");
+        Add("map_status_atk", "<b>ぬくもり:</b>", "<b>Warmth:</b>");
+        Add("map_status_def", "<b>おちつき:</b>", "<b>Calm:</b>");
+        Add("map_status_intelligence", "<b>ちえ:</b>", "<b>Wisdom:</b>");
         Add("map_status_athletic", "<b>運動:</b>", "<b>AGI:</b>");
         Add("map_status_luck", "<b>運勢:</b>", "<b>LUK:</b>");
         Add("map_status_fortune", "<b>資産:</b>", "<b>FTN:</b>");
         Add("map_status_trait", "<b>特徴:</b>", "<b>Trait:</b>");
-        Add("map_status_exp", "<b>経験値:</b>", "<b>EXP:</b>");
-        Add("map_status_enemies", "<b>倒した敵:</b>", "<b>Defeated:</b>");
+        Add("map_status_exp", "<b>おもいで:</b>", "<b>EXP:</b>");
+        Add("map_status_enemies", "<b>あそんだ おともだち:</b>", "<b>Defeated:</b>");
         Add("map_status_father", "<b>父:</b>", "<b>Father:</b>");
         Add("map_status_mother", "<b>母:</b>", "<b>Mother:</b>");
 
@@ -1077,18 +1107,18 @@ public static class Localization
         Add("map_save_cancel", "やめる", "Cancel");
 
         // Mother skill data
-        Add("mskill_name_サクラ", "ヒーリングストライク", "Healing Strike");
-        Add("mskill_desc_サクラ", "攻撃しつつ自分のHPを回復する医療の技", "Attack while healing your HP with medical arts");
-        Add("mskill_name_ヒナタ", "毒霧", "Poison Mist");
-        Add("mskill_desc_ヒナタ", "敵に毒を浴びせ、3ターンの間じわじわダメージを与える", "Spray poison on the enemy, dealing damage over 3 turns");
-        Add("mskill_name_アキラ", "疾風ステップ", "Gale Step");
-        Add("mskill_desc_アキラ", "素早い動きで攻撃し、2ターンの間回避率が上がる", "Quick attack that boosts evasion for 2 turns");
-        Add("mskill_name_ミサト", "分析波動", "Analysis Wave");
-        Add("mskill_desc_ミサト", "敵の弱点を解析し、2ターンの間敵の防御を下げる", "Analyze enemy weakness, lowering DEF for 2 turns");
-        Add("mskill_name_カエデ", "威圧のオーラ", "Intimidation Aura");
-        Add("mskill_desc_カエデ", "圧倒的な威圧感で、2ターンの間敵の攻撃力を下げる", "Overwhelming aura that lowers enemy ATK for 2 turns");
+        Add("mskill_name_サクラ", "ヒーリングタッチ", "Healing Touch");
+        Add("mskill_desc_サクラ", "あそびつつ じぶんの ごきげんを かいふくする やさしいわざ", "Play gently while restoring own mood");
+        Add("mskill_name_ヒナタ", "トゲトゲ・バブル", "Playful Mist");
+        Add("mskill_desc_ヒナタ", "おともだちに ミストをかけて、3ターンの あいだ じわじわ まんぞくさせる", "Spray mist on friend, satisfying them over 3 turns");
+        Add("mskill_name_アキラ", "かぜのステップ", "Breeze Step");
+        Add("mskill_desc_アキラ", "すばやい うごきで あそび、2ターンの あいだ かいひりょくが あがる", "Quick play that boosts evasion for 2 turns");
+        Add("mskill_name_ミサト", "おべんきょうウェーブ", "Study Wave");
+        Add("mskill_desc_ミサト", "おともだちの にがてを みつけて、2ターンの あいだ おちつきを さげる", "Find friend's weakness, lowering calm for 2 turns");
+        Add("mskill_name_カエデ", "ほんわかオーラ", "Cozy Aura");
+        Add("mskill_desc_カエデ", "ほんわかした ふんいきで、2ターンの あいだ あそびぢからを さげる", "Cozy aura that lowers play power for 2 turns");
         Add("mskill_name_ルナ", "スターダスト", "Stardust");
-        Add("mskill_desc_ルナ", "星屑をまとった攻撃。与ダメージの一部をHPとして吸収する", "An attack wrapped in stardust. Absorb part of damage dealt as HP");
+        Add("mskill_desc_ルナ", "ほしくずを まとった あそび。まんぞく度の いちぶを ごきげんとして きゅうしゅうする", "Play wrapped in stardust. Absorb part of satisfaction as mood");
 
         // ===== Touch UI =====
         Add("touch_interact", "調べる", "Interact");
@@ -1110,31 +1140,46 @@ public static class Localization
         Add("profile_icon_saved", "アイコンを保存しました", "Icon saved");
 
         // ===== Weapon Shop =====
-        Add("shop_title", "ぶきや", "Weapon Shop");
+        Add("shop_title", "おあそびどうぐや", "Weapon Shop");
         Add("shop_milk_label", "ミルク: {0}ml", "Milk: {0}ml");
         Add("shop_buy", "買う ({0})", "Buy ({0})");
         Add("shop_purchased", "購入済み", "Purchased");
         Add("shop_not_enough", "ミルクが足りない…", "Not enough milk...");
         Add("shop_bought", "{0} を手に入れた！", "Got {0}!");
-        Add("shop_item_garagara", "ガラガラソード", "Rattle Sword");
-        Add("shop_item_yodare", "よだれかけシールド", "Bib Shield");
+        Add("shop_item_garagara", "ガラガラ", "Rattle Sword");
+        Add("shop_item_yodare", "よだれかけ", "Bib Shield");
         Add("shop_item_oshaburi", "おしゃぶりチャーム", "Pacifier Charm");
-        Add("shop_item_omutsu", "魔法のおむつ", "Magic Diaper");
-        Add("shop_item_honyubin", "黄金のほ乳瓶", "Golden Bottle");
-        Add("shop_item_tiara", "悪魔のティアラ", "Devil Tiara");
+        Add("shop_item_omutsu", "まほうのおむつ", "Magic Diaper");
+        Add("shop_item_honyubin", "きんいろのほ乳瓶", "Golden Bottle");
+        Add("shop_item_tiara", "ほしのティアラ", "Devil Tiara");
         Add("shop_effect_garagara", "ATK+4", "ATK+4");
         Add("shop_effect_yodare", "DEF+4", "DEF+4");
-        Add("shop_effect_oshaburi", "毎ターンHP+3回復", "HP+3 per turn");
-        Add("shop_effect_omutsu", "DEF+3 毒耐性", "DEF+3 Poison resist");
+        Add("shop_effect_oshaburi", "毎ターンごきげん+3回復", "Mood+3 per turn");
+        Add("shop_effect_omutsu", "DEF+3 トゲトゲ・バブル耐性", "DEF+3 Poison resist");
         Add("shop_effect_honyubin", "ATK+3 DEF+3", "ATK+3 DEF+3");
         Add("shop_effect_tiara", "ATK+6 DEF-2", "ATK+6 DEF-2");
-        Add("shop_interact", "ぶきやだ。入ってみよう。", "A weapon shop. Let's go in.");
-        Add("shop_enter", "ぶきやに 足を踏み入れた…", "Entered the weapon shop...");
-        Add("shop_merchant_greet", "いらっしゃい！何がほしいんだ？", "Welcome! What can I get ya?");
+        Add("shop_item_nakineko", "なきねこミット", "Crying Cat Punch");
+        Add("shop_item_yodarekake_mini", "ミニよだれかけ", "Mini Bib");
+        Add("shop_item_niji_rattle", "にじいろガラガラ", "Rainbow Rattle");
+        Add("shop_effect_nakineko", "ATK+2", "ATK+2");
+        Add("shop_effect_yodarekake_mini", "DEF+2", "DEF+2");
+        Add("shop_effect_niji_rattle", "ATK+5 DEF+2", "ATK+5 DEF+2");
+        Add("shop_s_rank_only", "Sランク限定", "S Rank Only");
+        Add("shop_interact", "おあそびどうぐやだ。入ってみよう。", "A weapon shop. Let's go in.");
+        Add("shop_enter", "おあそびどうぐやに はいった…", "Entered the weapon shop...");
+        Add("shop_merchant_greet", "いらっしゃい！なにが ほしいのかな？", "Welcome! What can I get ya?");
+        Add("shop_merchant_already_owned", "もう もってるよ？ ほかのを みてみてね！", "Hey, you already got that one! Check out something else!");
+        Add("shop_merchant_need_s_rank", "Sランクの あかちゃんじゃないと あつかえないんだ。もっと せいちょうしてから きてね！", "That one's for S Rank babies only! Come back when you're stronger!");
         Add("battle_milk_gained", "<color=#FFB6C1>ミルク {0}ml をかくとく！</color>",
             "<color=#FFB6C1>Gained {0}ml milk!</color>");
-        Add("battle_oshaburi_heal", "<color=#00FF00>おしゃぶりチャームで HP+{0}！</color>",
-            "<color=#00FF00>Pacifier Charm heals HP+{0}!</color>");
+        Add("battle_oshaburi_heal", "<color=#00FF00>おしゃぶりチャームで ごきげん+{0}！</color>",
+            "<color=#00FF00>Pacifier Charm restores Mood+{0}!</color>");
+
+        // ===== Juku (Cram school) =====
+        Add("juku_intro", "きょうも おべんきょう しましょう！\nいまの ちえ: {0}\n3もん れんぞく せいかいで ちえ アップ！",
+            "Let's study today!\nCurrent Wisdom: {0}\nGet 3 correct in a row to level up!");
+        Add("juku_wisdom_up_title", "ちえ アップ！", "Wisdom Up!");
+        Add("juku_reward_text", "すばらしい！\nちえが 1 あがった！", "Wonderful!\nWisdom increased by 1!");
 
         // ===== Cutscene (after profile creation) =====
         Add("cutscene_line1",
