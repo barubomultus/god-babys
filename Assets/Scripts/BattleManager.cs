@@ -1930,7 +1930,7 @@ public class BattleManager : MonoBehaviour
             p.style.color = particleColors[i % particleColors.Length];
             p.style.left = panelCenterX;
             p.style.top = panelCenterY;
-            p.style.unityTextAlign = TextAnchor.MiddleCenter;
+            p.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
             particleContainer.Add(p);
 
             float angle = Random.Range(-70f, 70f) * Mathf.Deg2Rad; // 上方向中心に扇状
@@ -3369,7 +3369,7 @@ public class BattleManager : MonoBehaviour
             UIHelper.ApplyFont(cutinLabel);
             cutinLabel.style.fontSize = 36;
             cutinLabel.style.color = Color.white;
-            cutinLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            cutinLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
             cutinLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
             cutinLabel.style.width = 800;
             cutinLabel.style.opacity = 0f;

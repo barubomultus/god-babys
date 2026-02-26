@@ -993,6 +993,24 @@ public static class Localization
         Add("map_father_msg3", "いいか、負けても帰ってこい。\n…ここはお前の家だ。いつでもな。",
             "Listen, even if you lose, come back home.\n...This is your house. Always.");
 
+        // 実家の母親（帰宅後）
+        Add("home_mother_msg1", "おかえり、{0}。\nおうちに いると やっぱり おちつくわね。",
+            "Welcome back, {0}.\nIt's nice to be home, isn't it?");
+        Add("home_mother_msg2", "さあ、そろそろ おそとで あそんできなさい。\nまたいつでも かえってきてね。",
+            "Now, go play outside.\nYou can come back anytime.");
+
+        // ベッドにいる時のセリフ
+        Add("bed_line1", "…きちゃダメ！\nそとで あそんできなさい！",
+            "...Don't come in here!\nGo play outside!");
+        Add("bed_line2", "…zzz …zzz\n（ふたりで ぐっすり ねむっている…）",
+            "...zzz ...zzz\n(They're both fast asleep...)");
+        Add("bed_line3", "こっちを みないで！\nはやく そとに いきなさい！",
+            "Don't look this way!\nGo outside, now!");
+        Add("bed_line4", "…いま いそがしいの。\nあとで ね…。",
+            "...We're busy right now.\nMaybe later...");
+        Add("bed_line5", "ノックぐらい しなさい！\n…もう、しょうがない子ね。",
+            "At least knock first!\n...Good grief, what a handful.");
+
         // Melodias Queen battle
         Add("battle_melodias_charge", "<color=#FF69B4><size=130%>メロディアス女王が 魅惑の力を 溜めている…！</size></color>\n<color=#FFAA00>つぎのターン とっておきが くる！</color>",
             "<color=#FF69B4><size=130%>Queen Melodias is gathering enchanting power...!</size></color>\n<color=#FFAA00>An ultimate attack is coming next turn!</color>");
@@ -1180,6 +1198,65 @@ public static class Localization
             "Let's study today!\nCurrent Wisdom: {0}\nGet 3 correct in a row to level up!");
         Add("juku_wisdom_up_title", "ちえ アップ！", "Wisdom Up!");
         Add("juku_reward_text", "すばらしい！\nちえが 1 あがった！", "Wonderful!\nWisdom increased by 1!");
+
+        // 塾の生徒NPC
+        Add("juku_student_name_0", "あかね", "Akane");
+        Add("juku_student_name_1", "そうた", "Sota");
+        Add("juku_student_name_2", "みどり", "Midori");
+        Add("juku_student_name_3", "ゆうき", "Yuki");
+        Add("juku_student_name_4", "れいな", "Reina");
+
+        Add("juku_student_line_0_0", "きょうの テスト むずかしかった〜！\nでも がんばったよ！", "Today's test was so hard!\nBut I did my best!");
+        Add("juku_student_line_0_1", "せんせいの クイズ、ぜんもん せいかい\nしたこと ある？", "Have you ever gotten all the\nteacher's quiz questions right?");
+        Add("juku_student_line_0_2", "あたし、おおきくなったら\nせんせいに なりたいな！", "When I grow up,\nI want to be a teacher!");
+
+        Add("juku_student_line_1_0", "うーん、この もんだい わかんない…\nきみは わかる？", "Hmm, I don't get this problem...\nDo you know the answer?");
+        Add("juku_student_line_1_1", "おべんきょう すると ちえが あがるんだ！\nすごいよね！", "Studying raises your wisdom!\nIsn't that cool?");
+        Add("juku_student_line_1_2", "ぼく、さんすうは とくい だけど\nこくごは にがて なんだ…", "I'm good at math,\nbut bad at language arts...");
+
+        Add("juku_student_line_2_0", "しずかに！ いま しゅうちゅう してるの！\n…なんて ね、うそうそ。", "Be quiet! I'm concentrating!\n...Just kidding, hehe.");
+        Add("juku_student_line_2_1", "この じゅく、おともだち いっぱい できて\nたのしいよ！", "I've made lots of friends\nat this cram school!");
+        Add("juku_student_line_2_2", "きのう おそとで おっきい おともだちに\nあったよ！ つよかった〜！", "Yesterday I met a big friend\noutside! They were so strong!");
+
+        Add("juku_student_line_3_0", "ぼくは しょうらい ゆうしゃに\nなるんだ！ …たぶん。", "I'm gonna be a hero\nsomeday! ...Probably.");
+        Add("juku_student_line_3_1", "せんせいの クイズ、3もん れんぞくで\nあてると ちえが あがるよ！", "If you get 3 quiz questions\nright in a row, wisdom goes up!");
+        Add("juku_student_line_3_2", "ねむい… きのう おそくまで\nおべんきょう してたんだ…", "Sleepy... I was up late\nstudying last night...");
+
+        Add("juku_student_line_4_0", "このまえ おみせで すごい そうびを\nみつけたの！ ほしい〜！", "I found amazing equipment\nat the shop! I want it!");
+        Add("juku_student_line_4_1", "じゅくの あとは おそとで あそぶの！\nそれが いちばん たのしい！", "After cram school, I play outside!\nThat's the most fun!");
+        Add("juku_student_line_4_2", "あたし、クイズ ぜんもん せいかい\nしたこと あるよ！ えへへ。", "I've gotten all the quiz\nquestions right before! Hehe.");
+
+        // お手伝いさんNPC
+        Add("maid_name_0", "さくら", "Sakura");
+        Add("maid_name_1", "ひなた", "Hinata");
+        Add("maid_name_2", "つばき", "Tsubaki");
+        Add("maid_name_3", "すみれ", "Sumire");
+        Add("maid_name_4", "かえで", "Kaede");
+        Add("maid_name_5", "あおい", "Aoi");
+
+        Add("maid_line_0_0", "おかえりなさいませ、おぼっちゃま！\nきょうも げんきいっぱいですね。", "Welcome home, young master!\nYou're full of energy today.");
+        Add("maid_line_0_1", "おへやの おそうじ、\nかんぺきに しておきましたよ！", "I've cleaned your room\nperfectly!");
+        Add("maid_line_0_2", "なにか おこまりごとが ありましたら\nいつでも おもうしつけ くださいね。", "If there's anything you need,\nplease don't hesitate to ask.");
+
+        Add("maid_line_1_0", "おやつの じかんに なったら\nおよび しますね！", "I'll call you when it's\nsnack time!");
+        Add("maid_line_1_1", "きょうの おゆうはんは とくべつよ！\nたのしみに していてね。", "Tonight's dinner is special!\nLook forward to it.");
+        Add("maid_line_1_2", "おにわの おはなが きれいに\nさきましたよ！ みにいきますか？", "The garden flowers bloomed\nbeautifully! Want to see?");
+
+        Add("maid_line_2_0", "おようふくに しわが ついていますよ。\nアイロンを かけましょうか？", "Your clothes have wrinkles.\nShall I iron them?");
+        Add("maid_line_2_1", "このおやしきは ひろいですから\nまいにちの おそうじが たいへんです。", "This mansion is so big,\ncleaning every day is tough.");
+        Add("maid_line_2_2", "おぼっちゃまの おへやには\nいつも おはなを かざっていますの。", "I always decorate your room\nwith fresh flowers.");
+
+        Add("maid_line_3_0", "おかえりなさいませ！ おつかれさまです。\nおちゃを おいれしましょうか？", "Welcome back! You must be tired.\nShall I make you some tea?");
+        Add("maid_line_3_1", "だんなさまと おくさまは\nとても なかよしですよ。", "The master and mistress\nget along very well.");
+        Add("maid_line_3_2", "わたくし、このおやしきで\nはたらけて しあわせです！", "I'm so happy to work\nin this mansion!");
+
+        Add("maid_line_4_0", "おにわの おていれを\nしておきましたわ。", "I've taken care of\nthe garden.");
+        Add("maid_line_4_1", "おぼっちゃまは おそとで あそぶのが\nおすきですね。わかります！", "You like playing outside,\ndon't you? I understand!");
+        Add("maid_line_4_2", "きょうも いいおてんきですね。\nおせんたくびより ですわ！", "It's nice weather today.\nPerfect for laundry!");
+
+        Add("maid_line_5_0", "としょしつの ほんを\nきれいに ならべておきましたよ。", "I've neatly organized the books\nin the study.");
+        Add("maid_line_5_1", "おぼっちゃま、おべんきょうも\nだいじですよ？", "Young master, studying is\nimportant too, you know?");
+        Add("maid_line_5_2", "このおやしきの れきしは\nとても ふるいんですって。", "They say this mansion has\na very long history.");
 
         // ===== Cutscene (after profile creation) =====
         Add("cutscene_line1",

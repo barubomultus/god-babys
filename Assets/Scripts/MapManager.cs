@@ -129,11 +129,21 @@ public class MapManager : MonoBehaviour
     int motherNpcY = 5;
     bool motherDialogueActive = false;
 
-    // 父親の家NPC（家の中にいる設定）
+    // 実家NPC（父親・母親）
     GameObject fatherNpcObj;
     int fatherNpcX = 3;
     int fatherNpcY = 32;
     bool fatherDialogueActive = false;
+    GameObject homeMotherNpcObj;
+    int homeMotherNpcX = 2;
+    int homeMotherNpcY = 3;
+    bool parentsInBed = false;
+
+    // お手伝いさんNPC（6人）
+    GameObject[] maidNpcObjs = new GameObject[6];
+    int[] maidNpcX = { 2, 13, 2, 13, 2, 13 };
+    int[] maidNpcY = { 3, 3, 7, 7, 11, 11 };
+    bool maidDialogueActive = false;
 
     // 武器屋の商人NPC
     GameObject merchantNpcObj;
@@ -143,9 +153,15 @@ public class MapManager : MonoBehaviour
 
     // 塾の先生NPC
     GameObject jukuTeacherObj;
-    int jukuTeacherX = 4;
-    int jukuTeacherY = 6;
+    int jukuTeacherX = 6;
+    int jukuTeacherY = 10;
     bool jukuQuizActive = false;
+
+    // 塾の生徒NPC（5人）
+    GameObject[] jukuStudentObjs = new GameObject[5];
+    int[] jukuStudentX = { 3, 7, 3, 7, 9 };
+    int[] jukuStudentY = { 5, 5, 8, 8, 5 };
+    bool jukuStudentDialogueActive = false;
 
     // SE
     AudioSource seSource;
@@ -205,7 +221,17 @@ public class MapManager : MonoBehaviour
             mapWidth = 24;
             mapHeight = 40;
         }
-        else if (area == 5 || area == 6 || area == 7)
+        else if (area == 5)
+        {
+            mapWidth = 16;
+            mapHeight = 18;
+        }
+        else if (area == 7)
+        {
+            mapWidth = 12;
+            mapHeight = 14;
+        }
+        else if (area == 6)
         {
             mapWidth = 8;
             mapHeight = 10;
@@ -228,6 +254,10 @@ public class MapManager : MonoBehaviour
         seQuizCorrect = Resources.Load<AudioClip>("SE/クイズ正解1");
         seQuizWrong = Resources.Load<AudioClip>("SE/クイズ不正解1");
         seFootstep = Resources.Load<AudioClip>("SE/可愛い足音");
+
+        // 実家ベッド判定はマップ生成前に決定
+        if (area == 5)
+            parentsInBed = Random.Range(0, 10) == 0;
 
         if (area == 7)
             GenerateJukuMapData();
@@ -254,6 +284,7 @@ public class MapManager : MonoBehaviour
         {
             // 塾内部: ランダムエンカウントなし
             CreateJukuTeacherNPC();
+            CreateJukuStudentNPCs();
         }
         else if (area == 6)
         {
@@ -262,10 +293,36 @@ public class MapManager : MonoBehaviour
         }
         else if (area == 5)
         {
-            // 父親の家: ランダムエンカウントなし
-            fatherNpcX = 4;
-            fatherNpcY = 7;
-            CreateFatherInteriorNPC();
+            // 実家（宮殿）: ランダムエンカウントなし
+            if (parentsInBed)
+            {
+                fatherNpcX = 12;
+                fatherNpcY = 15;
+                CreateFatherInteriorNPC();
+            }
+            else
+            {
+                fatherNpcX = 7;
+                fatherNpcY = 6;
+                CreateFatherInteriorNPC();
+            }
+            // 母親がアイテムを渡した後は実家にいる
+            bool motherHome = DataCarrier.Instance != null && DataCarrier.Instance.motherGaveItem;
+            if (motherHome)
+            {
+                if (parentsInBed)
+                {
+                    homeMotherNpcX = 13;
+                    homeMotherNpcY = 15;
+                }
+                else
+                {
+                    homeMotherNpcX = 5;
+                    homeMotherNpcY = 14;
+                }
+                CreateHomeMotherNPC();
+            }
+            CreateMaidNPCs();
         }
         else if (area == 4)
         {
@@ -1070,72 +1127,162 @@ public class MapManager : MonoBehaviour
 
     void GenerateFatherHouseMapData()
     {
+        // 16x18 の宮殿
         mapData = new int[mapWidth, mapHeight];
         walkable = new bool[mapWidth, mapHeight];
 
         // 全て壁で埋める
         for (int x = 0; x < mapWidth; x++)
-        {
             for (int y = 0; y < mapHeight; y++)
             {
                 mapData[x, y] = TILE_FATHER_WALL;
                 walkable[x, y] = false;
             }
-        }
 
-        // 床エリア (x=1〜6, y=2〜8)
-        for (int x = 1; x <= 6; x++)
-        {
-            for (int y = 2; y <= 8; y++)
+        // メインフロア (x=1〜14, y=1〜16)
+        for (int x = 1; x <= 14; x++)
+            for (int y = 1; y <= 16; y++)
             {
                 mapData[x, y] = TILE_FATHER_FLOOR;
                 walkable[x, y] = true;
             }
+
+        // 出口 (7,0)(8,0)
+        mapData[7, 0] = TILE_FATHER_EXIT;
+        walkable[7, 0] = false;
+        mapData[8, 0] = TILE_FATHER_EXIT;
+        walkable[8, 0] = false;
+
+        // ===== お手伝いさんNPC位置 (歩行可能) =====
+        // (2,3)(13,3)(2,7)(13,7)(2,11)(13,11)
+
+        // ===== 仕切り壁 (y=12, 寝室とリビングの間) =====
+        for (int x = 1; x <= 6; x++)
+        {
+            walkable[x, 12] = false;
+        }
+        // 通路 x=7,8 は歩行可能のまま
+        for (int x = 9; x <= 14; x++)
+        {
+            walkable[x, 12] = false;
         }
 
-        // 出口 (3,1)(4,1)
-        mapData[3, 1] = TILE_FATHER_EXIT;
-        walkable[3, 1] = false;
-        mapData[4, 1] = TILE_FATHER_EXIT;
-        walkable[4, 1] = false;
+        // ===== 寝室エリア (x=9-14, y=13-16) =====
+        // ベッド (12-13, 15-16) — 通行不可
+        walkable[12, 16] = false;
+        walkable[13, 16] = false;
+        walkable[12, 15] = false;
+        walkable[13, 15] = false;
+        if (parentsInBed)
+        {
+            // ベッドの上はNPC位置なので歩行可能
+            walkable[12, 15] = true;
+            walkable[13, 15] = true;
+        }
 
-        // 父親NPC位置 (4, 7) — 歩行可能（NPC上に乗って会話トリガー）
-        // walkable[4, 7] は true のまま
+        // ===== 書斎エリア (x=1-6, y=13-16) =====
+        // 本棚 (1,16)(2,16)(3,16)
+        walkable[1, 16] = false;
+        walkable[2, 16] = false;
+        walkable[3, 16] = false;
+        // 机 (3,14)(4,14)
+        walkable[3, 14] = false;
+        walkable[4, 14] = false;
 
-        // 家具: テーブル (2,5)(3,5)
-        walkable[2, 5] = false;
-        walkable[3, 5] = false;
-        // 棚 (6, 8)
-        walkable[6, 8] = false;
-        // 暖炉 (1, 7)(1, 8)
-        walkable[1, 7] = false;
-        walkable[1, 8] = false;
+        // ===== 大広間の家具 =====
+        // ソファ (6,9)(7,9)(8,9)(9,9)
+        walkable[6, 9] = false;
+        walkable[7, 9] = false;
+        walkable[8, 9] = false;
+        walkable[9, 9] = false;
+        // テーブル (7,8)(8,8)
+        walkable[7, 8] = false;
+        walkable[8, 8] = false;
     }
 
     void CreateFatherHouseFurniture()
     {
         if (tilesContainer == null) return;
 
-        // ラグ (3-4, 3-4) — 淡い赤のカーペット
-        CreateFurnitureOverlay(3.5f, 3.5f, DISPLAY_TILE * 2.2f, DISPLAY_TILE * 2.2f,
-            new Color(0.6f, 0.3f, 0.25f, 0.5f));
+        Color gold = new Color(0.85f, 0.70f, 0.35f);
+        Color darkGold = new Color(0.65f, 0.50f, 0.20f);
+        Color marble = new Color(0.92f, 0.90f, 0.88f);
+        Color carpet = new Color(0.6f, 0.15f, 0.15f, 0.45f);
+        Color woodDark = new Color(0.35f, 0.22f, 0.12f);
 
-        // テーブル (2,5)(3,5)
-        CreateFurnitureOverlay(2.5f, 5f, DISPLAY_TILE * 2f, DISPLAY_TILE * 0.8f,
-            new Color(0.5f, 0.35f, 0.2f));
+        // ===== レッドカーペット（エントランス→大広間 中央通路） =====
+        for (int y = 1; y <= 11; y++)
+            CreateFurnitureOverlay(7.5f, y, DISPLAY_TILE * 2.2f, DISPLAY_TILE * 1.05f, carpet);
+        // 寝室への通路カーペット
+        for (int y = 12; y <= 14; y++)
+            CreateFurnitureOverlay(7.5f, y, DISPLAY_TILE * 2.2f, DISPLAY_TILE * 1.05f, carpet);
 
-        // 棚 (6, 8)
-        CreateFurnitureOverlay(6f, 8f, DISPLAY_TILE * 0.8f, DISPLAY_TILE * 0.9f,
-            new Color(0.4f, 0.28f, 0.15f));
+        // (お手伝いさんNPCは別途作成)
 
-        // 暖炉 (1, 7-8) — 赤みのある茶色
-        CreateFurnitureOverlay(1f, 7.5f, DISPLAY_TILE * 0.9f, DISPLAY_TILE * 1.8f,
-            new Color(0.45f, 0.18f, 0.1f));
-        // 暖炉の炎マーク
-        CreateFurnitureLabel(1f, 7.5f, "\U0001F525", 22, new Color(1f, 0.5f, 0.2f));
+        // ===== 仕切り壁の装飾 =====
+        // 左側 (x=1-6, y=12)
+        CreateFurnitureOverlay(3.5f, 12f, DISPLAY_TILE * 6.2f, DISPLAY_TILE * 0.7f, darkGold);
+        // 右側 (x=9-14, y=12)
+        CreateFurnitureOverlay(11.5f, 12f, DISPLAY_TILE * 6.2f, DISPLAY_TILE * 0.7f, darkGold);
 
-        // 出口マーク (3,1)(4,1) — ▽矢印
-        CreateFurnitureLabel(3.5f, 1f, "▽ 出口", 16, new Color(0.8f, 0.9f, 1f));
+        // ===== シャンデリア（大広間中央） =====
+        CreateFurnitureLabel(7.5f, 6f, "✨", 28, gold);
+
+        // ===== 大広間ソファ (6-9, 9) =====
+        CreateFurnitureOverlay(7.5f, 9f, DISPLAY_TILE * 4.2f, DISPLAY_TILE * 0.85f,
+            new Color(0.55f, 0.20f, 0.25f));
+
+        // ===== 大広間テーブル (7-8, 8) =====
+        CreateFurnitureOverlay(7.5f, 8f, DISPLAY_TILE * 2.2f, DISPLAY_TILE * 0.75f, woodDark);
+
+        // ===== 寝室エリア (右上) =====
+        // 寝室ラグ
+        CreateFurnitureOverlay(11.5f, 14.5f, DISPLAY_TILE * 5.5f, DISPLAY_TILE * 3.5f,
+            new Color(0.5f, 0.18f, 0.22f, 0.35f));
+
+        // ベッド (12-13, 15-16) — スプライト表示
+        Sprite bedSprite = Resources.Load<Sprite>("Map/Parents_Bed");
+        if (bedSprite != null)
+        {
+            CreateFurnitureSprite(12.5f, 15.5f, DISPLAY_TILE * 2.6f, DISPLAY_TILE * 2.6f, bedSprite);
+        }
+        else
+        {
+            CreateFurnitureOverlay(12.5f, 15.5f, DISPLAY_TILE * 2.3f, DISPLAY_TILE * 2.3f, woodDark);
+            CreateFurnitureOverlay(12.5f, 15.5f, DISPLAY_TILE * 2f, DISPLAY_TILE * 2f,
+                new Color(1f, 0.718f, 0.773f, 0.7f));
+        }
+        if (parentsInBed)
+            CreateFurnitureLabel(12.5f, 16.5f, "💤", 24, Color.white);
+
+        // サイドテーブル
+        CreateFurnitureOverlay(10f, 15.5f, DISPLAY_TILE * 0.6f, DISPLAY_TILE * 0.6f, woodDark);
+        CreateFurnitureLabel(10f, 15.5f, "🕯", 14, gold);
+
+        // ===== 書斎エリア (左上) =====
+        // 本棚 (1-3, 16)
+        CreateFurnitureOverlay(2f, 16f, DISPLAY_TILE * 3.2f, DISPLAY_TILE * 0.9f,
+            new Color(0.30f, 0.18f, 0.08f));
+        CreateFurnitureLabel(2f, 16f, "📚", 18, new Color(0.8f, 0.6f, 0.3f));
+        // 机 (3-4, 14)
+        CreateFurnitureOverlay(3.5f, 14f, DISPLAY_TILE * 2.2f, DISPLAY_TILE * 0.8f, woodDark);
+        CreateFurnitureLabel(3.5f, 14f, "📝", 14, gold);
+        // 書斎ラグ
+        CreateFurnitureOverlay(3.5f, 14.5f, DISPLAY_TILE * 4.5f, DISPLAY_TILE * 3.5f,
+            new Color(0.15f, 0.20f, 0.45f, 0.25f));
+
+        // ===== 壁の絵画（装飾ラベル） =====
+        CreateFurnitureLabel(1f, 5f, "🖼", 20, gold);
+        CreateFurnitureLabel(14f, 5f, "🖼", 20, gold);
+        CreateFurnitureLabel(1f, 10f, "🎭", 18, gold);
+        CreateFurnitureLabel(14f, 10f, "🎭", 18, gold);
+
+        // ===== 花瓶 =====
+        CreateFurnitureLabel(1f, 1f, "🏺", 16, darkGold);
+        CreateFurnitureLabel(14f, 1f, "🏺", 16, darkGold);
+
+        // ===== 出口マーク =====
+        CreateFurnitureLabel(7.5f, 0f, "▽ 出口", 16, new Color(0.8f, 0.9f, 1f));
     }
 
     void CreateFurnitureOverlay(float tileX, float tileY, float width, float height, Color color)
@@ -1150,6 +1297,22 @@ public class MapManager : MonoBehaviour
         rect.sizeDelta = new Vector2(width, height);
         var img = obj.AddComponent<Image>();
         img.color = color;
+        img.raycastTarget = false;
+    }
+
+    void CreateFurnitureSprite(float tileX, float tileY, float width, float height, Sprite sprite)
+    {
+        float posX = (tileX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (tileY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+
+        var obj = new GameObject("FurnitureSprite");
+        obj.transform.SetParent(tilesContainer.transform, false);
+        var rect = obj.AddComponent<RectTransform>();
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(width, height);
+        var img = obj.AddComponent<Image>();
+        img.sprite = sprite;
+        img.preserveAspect = true;
         img.raycastTarget = false;
     }
 
@@ -1218,80 +1381,103 @@ public class MapManager : MonoBehaviour
 
     void GenerateJukuMapData()
     {
+        // 12x14 の教室
         mapData = new int[mapWidth, mapHeight];
         walkable = new bool[mapWidth, mapHeight];
 
-        // 全て白壁で埋める
         for (int x = 0; x < mapWidth; x++)
-        {
             for (int y = 0; y < mapHeight; y++)
             {
                 mapData[x, y] = TILE_JUKU_WALL;
                 walkable[x, y] = false;
             }
-        }
 
-        // 明るいベージュの床エリア (x=1〜6, y=2〜8)
-        for (int x = 1; x <= 6; x++)
-        {
-            for (int y = 2; y <= 8; y++)
+        // 床エリア (x=1〜10, y=1〜12)
+        for (int x = 1; x <= 10; x++)
+            for (int y = 1; y <= 12; y++)
             {
                 mapData[x, y] = TILE_JUKU_FLOOR;
                 walkable[x, y] = true;
             }
-        }
 
-        // 出口 (3,1)(4,1)
-        mapData[3, 1] = TILE_FATHER_EXIT;
-        walkable[3, 1] = false;
-        mapData[4, 1] = TILE_FATHER_EXIT;
-        walkable[4, 1] = false;
+        // 出口 (5,0)(6,0)
+        mapData[5, 0] = TILE_FATHER_EXIT;
+        walkable[5, 0] = false;
+        mapData[6, 0] = TILE_FATHER_EXIT;
+        walkable[6, 0] = false;
 
-        // 机 (2,4)(3,4)(4,4)(5,4) — 生徒用
-        walkable[2, 4] = false;
-        walkable[3, 4] = false;
-        walkable[4, 4] = false;
-        walkable[5, 4] = false;
+        // ===== 黒板 (4-7, 12) =====
+        walkable[4, 12] = false;
+        walkable[5, 12] = false;
+        walkable[6, 12] = false;
+        walkable[7, 12] = false;
 
-        // 黒板 (3,8)(4,8)
-        walkable[3, 8] = false;
-        walkable[4, 8] = false;
-        // 本棚 (1, 7)(1, 8)
-        walkable[1, 7] = false;
-        walkable[1, 8] = false;
-        // 教卓 (3, 6) — (4, 6)は先生NPCがいるので歩行可能のまま
+        // ===== 教卓 (5, 10) =====
+        walkable[5, 10] = false;
+        // 先生NPC (6, 10) — 歩行可能
+
+        // ===== 生徒用の机（各生徒の前 = y+1） =====
+        // 後列 (y=5の生徒 → 机はy=6)
         walkable[3, 6] = false;
+        walkable[7, 6] = false;
+        walkable[9, 6] = false;
+        // 前列 (y=8の生徒 → 机はy=9)
+        walkable[3, 9] = false;
+        walkable[7, 9] = false;
+
+        // ===== 本棚 (1, 11)(1, 12)(10, 11)(10, 12) =====
+        walkable[1, 11] = false;
+        walkable[1, 12] = false;
+        walkable[10, 11] = false;
+        walkable[10, 12] = false;
+
+        // ===== ロッカー (10, 1)(10, 2) =====
+        walkable[10, 1] = false;
+        walkable[10, 2] = false;
     }
 
     void CreateJukuFurniture()
     {
         if (tilesContainer == null) return;
 
-        // 机 (2〜5, 4) — 横4マス分（生徒用）
-        CreateFurnitureOverlay(3.5f, 4f, DISPLAY_TILE * 4f, DISPLAY_TILE * 0.7f,
-            new Color(0.6f, 0.45f, 0.3f));
+        Color deskBrown = new Color(0.6f, 0.45f, 0.3f);
+        Color darkWood = new Color(0.45f, 0.30f, 0.18f);
 
-        // 黒板 (3〜4, 8) — 横2マス分（濃い緑）
-        CreateFurnitureOverlay(3.5f, 8f, DISPLAY_TILE * 2.2f, DISPLAY_TILE * 0.9f,
-            new Color(0.1f, 0.3f, 0.12f));
-        // 黒板のチョーク文字
-        CreateFurnitureLabel(3.5f, 8f, "ABC", 14, new Color(0.9f, 0.9f, 0.85f));
+        // ===== 黒板 (4-7, 12) =====
+        CreateFurnitureOverlay(5.5f, 12f, DISPLAY_TILE * 4.2f, DISPLAY_TILE * 0.95f,
+            new Color(0.08f, 0.28f, 0.10f));
+        CreateFurnitureLabel(5.5f, 12f, "きょうの もんだい", 12, new Color(0.9f, 0.9f, 0.85f));
 
-        // 教卓 (3, 6) — 黒板の手前（(4,6)は先生NPCの位置）
-        CreateFurnitureOverlay(3f, 6f, DISPLAY_TILE * 1f, DISPLAY_TILE * 0.7f,
-            new Color(0.45f, 0.30f, 0.18f));
+        // ===== 教卓 (5, 10) =====
+        CreateFurnitureOverlay(5f, 10f, DISPLAY_TILE * 1.2f, DISPLAY_TILE * 0.75f, darkWood);
 
-        // 本棚 (1, 7-8) — 壁際に茶色の棚
-        CreateFurnitureOverlay(1f, 7.5f, DISPLAY_TILE * 0.8f, DISPLAY_TILE * 1.8f,
+        // ===== 生徒の机 =====
+        // 後列 (y=6): x=3, 7, 9
+        CreateFurnitureOverlay(3f, 6f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
+        CreateFurnitureOverlay(7f, 6f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
+        CreateFurnitureOverlay(9f, 6f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
+        // 前列 (y=9): x=3, 7
+        CreateFurnitureOverlay(3f, 9f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
+        CreateFurnitureOverlay(7f, 9f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
+
+        // ===== 本棚（左右壁際） =====
+        CreateFurnitureOverlay(1f, 11.5f, DISPLAY_TILE * 0.85f, DISPLAY_TILE * 1.8f,
             new Color(0.5f, 0.32f, 0.18f));
-        // 本棚のアイコン
-        CreateFurnitureLabel(1f, 7.5f, "\U0001F4DA", 18, new Color(0.3f, 0.5f, 0.3f));
+        CreateFurnitureLabel(1f, 11.5f, "📚", 18, new Color(0.3f, 0.5f, 0.3f));
+        CreateFurnitureOverlay(10f, 11.5f, DISPLAY_TILE * 0.85f, DISPLAY_TILE * 1.8f,
+            new Color(0.5f, 0.32f, 0.18f));
+        CreateFurnitureLabel(10f, 11.5f, "📚", 18, new Color(0.3f, 0.5f, 0.3f));
 
-        // 時計 — 壁上部
-        CreateFurnitureLabel(6f, 8f, "\U0001F552", 22, new Color(0.3f, 0.3f, 0.3f));
+        // ===== ロッカー (10, 1-2) =====
+        CreateFurnitureOverlay(10f, 1.5f, DISPLAY_TILE * 0.85f, DISPLAY_TILE * 1.8f,
+            new Color(0.6f, 0.62f, 0.65f));
+        CreateFurnitureLabel(10f, 1.5f, "🎒", 16, new Color(0.4f, 0.4f, 0.4f));
 
-        // 出口マーク (3.5, 1) — ▽矢印
-        CreateFurnitureLabel(3.5f, 1f, "▽ 出口", 18, new Color(0.3f, 0.6f, 0.3f));
+        // ===== 時計 =====
+        CreateFurnitureLabel(9f, 12f, "🕐", 22, new Color(0.3f, 0.3f, 0.3f));
+
+        // ===== 出口マーク =====
+        CreateFurnitureLabel(5.5f, 0f, "▽ 出口", 16, new Color(0.3f, 0.6f, 0.3f));
     }
 
     void CreateWeaponShopFurniture()
@@ -2476,9 +2662,9 @@ public class MapManager : MonoBehaviour
             case TILE_MANSION_EXIT: return new Color(0.1f, 0.3f, 0.3f);
             case TILE_AREA_EXIT: return new Color(0.6f, 0.5f, 0.3f);
             case TILE_FATHER_HOUSE: return new Color(0.55f, 0.38f, 0.22f);
-            case TILE_FATHER_FLOOR: return new Color(0.45f, 0.32f, 0.2f);
-            case TILE_FATHER_WALL: return new Color(0.35f, 0.25f, 0.15f);
-            case TILE_FATHER_EXIT: return new Color(0.1f, 0.3f, 0.3f);
+            case TILE_FATHER_FLOOR: return new Color(0.93f, 0.90f, 0.85f); // 大理石の白い床
+            case TILE_FATHER_WALL: return new Color(0.72f, 0.58f, 0.32f);  // 金色の壁
+            case TILE_FATHER_EXIT: return new Color(0.55f, 0.45f, 0.25f);  // 金色の出口
             case TILE_WEAPON_SHOP: return new Color(0.25f, 0.12f, 0.3f);
             case TILE_JUKU: return new Color(0.2f, 0.45f, 0.25f);
             case TILE_SHOP_FLOOR: return new Color(0.30f, 0.22f, 0.35f);
@@ -3153,11 +3339,20 @@ public class MapManager : MonoBehaviour
             // 父親NPC判定
             CheckFatherNPC();
 
+            // 実家の母親NPC判定
+            CheckHomeMotherNPC();
+
+            // お手伝いさんNPC判定
+            CheckMaidNPCs();
+
             // 商人NPC判定
             CheckMerchantNPC();
 
             // 塾の先生NPC判定
             CheckJukuTeacher();
+
+            // 塾の生徒NPC判定
+            CheckJukuStudents();
         }
     }
 
@@ -3664,8 +3859,8 @@ public class MapManager : MonoBehaviour
         if (DataCarrier.Instance != null)
         {
             DataCarrier.Instance.currentArea = 5;
-            DataCarrier.Instance.mapPlayerX = 4;
-            DataCarrier.Instance.mapPlayerY = 2;
+            DataCarrier.Instance.mapPlayerX = 8;
+            DataCarrier.Instance.mapPlayerY = 1;
             DataCarrier.Instance.SaveData();
         }
         SceneManager.LoadScene("MapScene");
@@ -3738,8 +3933,8 @@ public class MapManager : MonoBehaviour
         if (DataCarrier.Instance != null)
         {
             DataCarrier.Instance.currentArea = 7;
-            DataCarrier.Instance.mapPlayerX = 4;
-            DataCarrier.Instance.mapPlayerY = 2;
+            DataCarrier.Instance.mapPlayerX = 6;
+            DataCarrier.Instance.mapPlayerY = 1;
             DataCarrier.Instance.SaveData();
         }
         SceneManager.LoadScene("MapScene");
@@ -4725,119 +4920,12 @@ public class MapManager : MonoBehaviour
         motherDialogueActive = false;
         menuOpen = false;
 
-        // アイテムをくれたら装備チュートリアル → 母親は家に帰る
-        if (giveItem)
+        // アイテムをくれたら母親は実家に帰る
+        if (giveItem && motherNpcObj != null)
         {
-            yield return StartCoroutine(ShowEquipmentTutorial(itemName));
-
-            if (motherNpcObj != null)
-            {
-                Destroy(motherNpcObj);
-                motherNpcObj = null;
-            }
+            Destroy(motherNpcObj);
+            motherNpcObj = null;
         }
-    }
-
-    IEnumerator ShowEquipmentTutorial(string itemName)
-    {
-        menuOpen = true;
-        SetTouchControlsVisible(false);
-
-        // チュートリアルオーバーレイ
-        var tutOverlay = UIHelper.CreateOverlay();
-        tutOverlay.style.backgroundColor = new Color(0, 0, 0, 0);
-        tutOverlay.style.justifyContent = UIE.Justify.Center;
-        tutOverlay.style.alignItems = UIE.Align.Center;
-
-        // フェードイン
-        float fadeDur = 0.3f;
-        float elapsed = 0f;
-        while (elapsed < fadeDur)
-        {
-            elapsed += Time.deltaTime;
-            tutOverlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0, 0.6f, elapsed / fadeDur));
-            yield return null;
-        }
-        tutOverlay.style.backgroundColor = new Color(0, 0, 0, 0.6f);
-
-        // チュートリアルカード
-        var card = new UIE.VisualElement();
-        card.style.width = 900;
-        card.style.borderTopLeftRadius = 48;
-        card.style.borderTopRightRadius = 48;
-        card.style.borderBottomLeftRadius = 48;
-        card.style.borderBottomRightRadius = 48;
-        card.style.backgroundColor = new Color(1, 1, 1, 1);
-        card.style.paddingTop = 40;
-        card.style.paddingBottom = 36;
-        card.style.paddingLeft = 40;
-        card.style.paddingRight = 40;
-        card.style.alignItems = UIE.Align.Center;
-        card.style.opacity = 0;
-        tutOverlay.Add(card);
-
-        // タイトル
-        var titleLabel = UIHelper.CreateLabel("そうびを てにいれた！");
-        UIHelper.ApplyFontBold(titleLabel);
-        titleLabel.style.fontSize = 40;
-        titleLabel.style.color = new Color(0.051f, 0.051f, 0.078f);
-        titleLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-        titleLabel.style.marginBottom = 24;
-        card.Add(titleLabel);
-
-        // 説明テキスト
-        var descLabel = UIHelper.CreateLabel(
-            "メニューの「そうび」から\nそうびの つけはずし ができるよ！\n\nそうびすると おあそびで つよくなるよ！");
-        UIHelper.ApplyFont(descLabel);
-        descLabel.style.fontSize = 30;
-        descLabel.style.color = new Color(0.051f, 0.051f, 0.078f, 0.7f);
-        descLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-        descLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
-        descLabel.style.width = new UIE.StyleLength(new UIE.Length(100, UIE.LengthUnit.Percent));
-        descLabel.style.marginBottom = 32;
-        card.Add(descLabel);
-
-        // 「そうびを みる」ボタン
-        var openBtn = UIHelper.CreatePillButton("そうびを みる");
-        openBtn.style.width = 500;
-        openBtn.style.height = 100;
-        openBtn.style.borderTopLeftRadius = 50;
-        openBtn.style.borderTopRightRadius = 50;
-        openBtn.style.borderBottomLeftRadius = 50;
-        openBtn.style.borderBottomRightRadius = 50;
-        openBtn.style.backgroundColor = new Color(1f, 0.718f, 0.773f); // #FFB7C5
-        UIHelper.ApplyFontBold(openBtn);
-        openBtn.style.fontSize = 34;
-        openBtn.style.color = Color.white;
-        card.Add(openBtn);
-
-        // カードフェードイン
-        elapsed = 0f;
-        float cardFade = 0.3f;
-        while (elapsed < cardFade)
-        {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / cardFade);
-            card.style.opacity = t;
-            card.style.translate = new UIE.StyleTranslate(
-                new UIE.Translate(0, 30 * (1f - t)));
-            yield return null;
-        }
-        card.style.opacity = 1;
-        card.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 0));
-
-        // ボタンタップ待ち
-        bool btnTapped = false;
-        openBtn.clicked += () => btnTapped = true;
-        while (!btnTapped) yield return null;
-
-        // チュートリアルオーバーレイ除去
-        tutOverlay.RemoveFromHierarchy();
-        menuOpen = false;
-        SetTouchControlsVisible(true);
-
-        // 装備パネルを自動で開く
-        OpenEquipmentPanel();
     }
 
     // ===== 父親の家（家の中にいる） =====
@@ -4861,7 +4949,8 @@ public class MapManager : MonoBehaviour
         btn.transition = Selectable.Transition.None;
         btn.onClick.AddListener(() => OnFatherTapped());
 
-        DrawFatherNPC(fatherNpcObj.transform, 0.8f);
+        if (!parentsInBed)
+            DrawFatherNPC(fatherNpcObj.transform, 0.8f);
         fatherNpcObj.transform.SetAsLastSibling();
     }
 
@@ -4914,7 +5003,11 @@ public class MapManager : MonoBehaviour
         if (fatherDialogueActive) return;
         if (menuOpen) return;
 
-        StartCoroutine(ShowFatherDialogue());
+        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+        if (area == 5 && parentsInBed)
+            StartCoroutine(ShowParentsInBedDialogue());
+        else
+            StartCoroutine(ShowFatherDialogue());
     }
 
     IEnumerator ShowFatherDialogue()
@@ -5007,6 +5100,366 @@ public class MapManager : MonoBehaviour
 
         overlay.RemoveFromHierarchy();
         fatherDialogueActive = false;
+        menuOpen = false;
+    }
+
+    // ===== 実家の母親NPC =====
+
+    void CreateHomeMotherNPC()
+    {
+        if (tilesContainer == null) return;
+
+        homeMotherNpcObj = new GameObject("HomeMotherNPC");
+        homeMotherNpcObj.transform.SetParent(tilesContainer.transform, false);
+
+        var rect = homeMotherNpcObj.AddComponent<RectTransform>();
+        float posX = (homeMotherNpcX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (homeMotherNpcY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(DISPLAY_TILE, DISPLAY_TILE);
+
+        var btnImg = homeMotherNpcObj.AddComponent<Image>();
+        btnImg.color = new Color(0, 0, 0, 0);
+        var btn = homeMotherNpcObj.AddComponent<Button>();
+        btn.transition = Selectable.Transition.None;
+        btn.onClick.AddListener(() => OnHomeMotherTapped());
+
+        if (!parentsInBed)
+            DrawMotherNPC(homeMotherNpcObj.transform, 0.8f);
+        homeMotherNpcObj.transform.SetAsLastSibling();
+    }
+
+    void CheckHomeMotherNPC()
+    {
+        if (homeMotherNpcObj == null) return;
+        if (playerTileX == homeMotherNpcX && playerTileY == homeMotherNpcY)
+            OnHomeMotherTapped();
+    }
+
+    void OnHomeMotherTapped()
+    {
+        if (motherDialogueActive) return;
+        if (menuOpen) return;
+
+        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+        if (area == 5 && parentsInBed)
+            StartCoroutine(ShowParentsInBedDialogue());
+        else
+            StartCoroutine(ShowHomeMotherDialogue());
+    }
+
+    IEnumerator ShowHomeMotherDialogue()
+    {
+        motherDialogueActive = true;
+        menuOpen = true;
+
+        string motherJaName = DataCarrier.Instance != null ? DataCarrier.Instance.motherName : "";
+
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlay.style.alignItems = UIE.Align.FlexEnd;
+        overlay.style.justifyContent = UIE.Justify.FlexEnd;
+        overlayRoot.Add(overlay);
+
+        float fadeIn = 0.3f;
+        float fadeElapsed = 0f;
+        while (fadeElapsed < fadeIn)
+        {
+            fadeElapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0, 0.5f, fadeElapsed / fadeIn));
+            yield return null;
+        }
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+
+        string imgKey = GetParentImageNameForMap(motherJaName);
+        Sprite portrait = Resources.Load<Sprite>("Parents/" + imgKey);
+        var portraitEl = new UIE.VisualElement();
+        portraitEl.AddToClassList("milk-dialog-portrait");
+        if (portrait != null)
+            portraitEl.style.backgroundImage = new UIE.StyleBackground(portrait);
+        overlay.Add(portraitEl);
+
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
+
+        var nameLabel = UIHelper.CreateLabel(motherJaName, "milk-dialog-name");
+        dialogBox.Add(nameLabel);
+
+        var textLabel = UIHelper.CreateLabel("", "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        var tapHint = UIHelper.CreateLabel("▼ タップで閉じる", "milk-dialog-hint");
+        dialogBox.Add(tapHint);
+
+        string babyName = DataCarrier.Instance != null ? DataCarrier.Instance.babyName : "";
+        string[] msgs = new[] {
+            Localization.Get("home_mother_msg1", babyName),
+            Localization.Get("home_mother_msg2"),
+        };
+
+        for (int i = 0; i < msgs.Length; i++)
+        {
+            textLabel.text = msgs[i];
+            tapHint.text = (i < msgs.Length - 1) ? "▼ タップで続く" : "▼ タップで閉じる";
+            yield return new WaitForSeconds(0.3f);
+            bool tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+        }
+
+        float fadeOut = 0.3f;
+        fadeElapsed = 0f;
+        while (fadeElapsed < fadeOut)
+        {
+            fadeElapsed += Time.deltaTime;
+            float fadeT = fadeElapsed / fadeOut;
+            overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0.5f, 0, fadeT));
+            dialogBox.style.opacity = 1f - fadeT;
+            portraitEl.style.opacity = 1f - fadeT;
+            yield return null;
+        }
+
+        overlay.RemoveFromHierarchy();
+        motherDialogueActive = false;
+        menuOpen = false;
+    }
+
+    // ===== ベッドにいる時の親対話 =====
+
+    IEnumerator ShowParentsInBedDialogue()
+    {
+        fatherDialogueActive = true;
+        menuOpen = true;
+
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlay.style.alignItems = UIE.Align.FlexEnd;
+        overlay.style.justifyContent = UIE.Justify.FlexEnd;
+        overlayRoot.Add(overlay);
+
+        float fadeIn = 0.3f;
+        float fadeElapsed = 0f;
+        while (fadeElapsed < fadeIn)
+        {
+            fadeElapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0, 0.5f, fadeElapsed / fadeIn));
+            yield return null;
+        }
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+
+        // ポートレートなし（ベッドで寝てる）
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
+
+        var nameLabel = UIHelper.CreateLabel("？？？", "milk-dialog-name");
+        dialogBox.Add(nameLabel);
+
+        var textLabel = UIHelper.CreateLabel("", "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        var tapHint = UIHelper.CreateLabel("▼ タップで閉じる", "milk-dialog-hint");
+        dialogBox.Add(tapHint);
+
+        // ランダムでベッド時のセリフを選択
+        string[] bedLines = new[] {
+            "bed_line1", "bed_line2", "bed_line3", "bed_line4", "bed_line5"
+        };
+        string key = bedLines[Random.Range(0, bedLines.Length)];
+        string[] msgs = new[] { Localization.Get(key) };
+
+        for (int i = 0; i < msgs.Length; i++)
+        {
+            textLabel.text = msgs[i];
+            yield return new WaitForSeconds(0.3f);
+            bool tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+        }
+
+        float fadeOut = 0.3f;
+        fadeElapsed = 0f;
+        while (fadeElapsed < fadeOut)
+        {
+            fadeElapsed += Time.deltaTime;
+            float fadeT = fadeElapsed / fadeOut;
+            overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0.5f, 0, fadeT));
+            dialogBox.style.opacity = 1f - fadeT;
+            yield return null;
+        }
+
+        overlay.RemoveFromHierarchy();
+        fatherDialogueActive = false;
+        menuOpen = false;
+    }
+
+    // ===== お手伝いさんNPC =====
+
+    static readonly Color[] MaidDressColors = {
+        new Color(0.55f, 0.35f, 0.65f),  // 紫
+        new Color(0.35f, 0.55f, 0.75f),  // 青
+        new Color(0.75f, 0.40f, 0.45f),  // 赤
+        new Color(0.40f, 0.65f, 0.50f),  // 緑
+        new Color(0.80f, 0.60f, 0.35f),  // オレンジ
+        new Color(0.65f, 0.45f, 0.55f),  // ピンク
+    };
+
+    static readonly Color[] MaidHairColors = {
+        new Color(0.20f, 0.12f, 0.08f),
+        new Color(0.10f, 0.08f, 0.06f),
+        new Color(0.35f, 0.22f, 0.12f),
+        new Color(0.25f, 0.18f, 0.10f),
+        new Color(0.15f, 0.10f, 0.08f),
+        new Color(0.30f, 0.20f, 0.15f),
+    };
+
+    void CreateMaidNPCs()
+    {
+        if (tilesContainer == null) return;
+        for (int i = 0; i < 6; i++)
+        {
+            var obj = new GameObject("MaidNPC" + i);
+            obj.transform.SetParent(tilesContainer.transform, false);
+
+            var rect = obj.AddComponent<RectTransform>();
+            float posX = (maidNpcX[i] - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+            float posY = (maidNpcY[i] - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+            rect.anchoredPosition = new Vector2(posX, posY);
+            rect.sizeDelta = new Vector2(DISPLAY_TILE, DISPLAY_TILE);
+
+            var btnImg = obj.AddComponent<Image>();
+            btnImg.color = new Color(0, 0, 0, 0);
+            var btn = obj.AddComponent<Button>();
+            btn.transition = Selectable.Transition.None;
+            int idx = i;
+            btn.onClick.AddListener(() => OnMaidTapped(idx));
+
+            DrawMaidNPC(obj.transform, 0.75f, i);
+            obj.transform.SetAsLastSibling();
+            maidNpcObjs[i] = obj;
+        }
+    }
+
+    void DrawMaidNPC(Transform parent, float scale, int index)
+    {
+        float s = scale;
+        Color skin = new Color(0.95f, 0.85f, 0.75f);
+        Color dress = MaidDressColors[index % MaidDressColors.Length];
+        Color hair = MaidHairColors[index % MaidHairColors.Length];
+        Color apron = new Color(1f, 1f, 1f);
+
+        // 影
+        FacePart("Shadow", parent, new Vector2(0, -34 * s), new Vector2(32 * s, 8 * s))
+            .AddComponent<Image>().color = new Color(0, 0, 0, 0.2f);
+        // ドレス
+        FacePart("Body", parent, new Vector2(0, -14 * s), new Vector2(24 * s, 28 * s))
+            .AddComponent<Image>().color = dress;
+        // エプロン
+        FacePart("Apron", parent, new Vector2(0, -10 * s), new Vector2(16 * s, 20 * s))
+            .AddComponent<Image>().color = apron;
+        // 頭
+        FacePart("Head", parent, new Vector2(0, 14 * s), new Vector2(26 * s, 26 * s))
+            .AddComponent<Image>().color = skin;
+        // 髪
+        FacePart("Hair", parent, new Vector2(0, 25 * s), new Vector2(30 * s, 12 * s))
+            .AddComponent<Image>().color = hair;
+        // ヘッドバンド（メイドらしさ）
+        FacePart("Band", parent, new Vector2(0, 30 * s), new Vector2(20 * s, 5 * s))
+            .AddComponent<Image>().color = apron;
+        // 目
+        FacePart("EyeL", parent, new Vector2(-5 * s, 14 * s), new Vector2(3 * s, 3 * s))
+            .AddComponent<Image>().color = new Color(0.15f, 0.12f, 0.10f);
+        FacePart("EyeR", parent, new Vector2(5 * s, 14 * s), new Vector2(3 * s, 3 * s))
+            .AddComponent<Image>().color = new Color(0.15f, 0.12f, 0.10f);
+    }
+
+    void CheckMaidNPCs()
+    {
+        if (DataCarrier.Instance == null || DataCarrier.Instance.currentArea != 5) return;
+        for (int i = 0; i < maidNpcObjs.Length; i++)
+        {
+            if (maidNpcObjs[i] == null) continue;
+            if (playerTileX == maidNpcX[i] && playerTileY == maidNpcY[i])
+            {
+                OnMaidTapped(i);
+                return;
+            }
+        }
+    }
+
+    void OnMaidTapped(int index)
+    {
+        if (maidDialogueActive) return;
+        if (menuOpen) return;
+        StartCoroutine(ShowMaidDialogue(index));
+    }
+
+    IEnumerator ShowMaidDialogue(int index)
+    {
+        maidDialogueActive = true;
+        menuOpen = true;
+
+        string maidName = Localization.Get("maid_name_" + index);
+
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlay.style.alignItems = UIE.Align.FlexEnd;
+        overlay.style.justifyContent = UIE.Justify.FlexEnd;
+        overlayRoot.Add(overlay);
+
+        float fadeIn = 0.3f;
+        float fadeElapsed = 0f;
+        while (fadeElapsed < fadeIn)
+        {
+            fadeElapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0, 0.5f, fadeElapsed / fadeIn));
+            yield return null;
+        }
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
+
+        var nameLabel = UIHelper.CreateLabel(maidName, "milk-dialog-name");
+        dialogBox.Add(nameLabel);
+
+        var textLabel = UIHelper.CreateLabel("", "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        var tapHint = UIHelper.CreateLabel("▼ タップで閉じる", "milk-dialog-hint");
+        dialogBox.Add(tapHint);
+
+        string[] keys = new[] {
+            "maid_line_" + index + "_0",
+            "maid_line_" + index + "_1",
+            "maid_line_" + index + "_2",
+        };
+        string msg = Localization.Get(keys[Random.Range(0, keys.Length)]);
+        textLabel.text = msg;
+
+        yield return new WaitForSeconds(0.3f);
+        bool tapped = false;
+        overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+        while (!tapped) yield return null;
+
+        float fadeOut = 0.3f;
+        fadeElapsed = 0f;
+        while (fadeElapsed < fadeOut)
+        {
+            fadeElapsed += Time.deltaTime;
+            float fadeT = fadeElapsed / fadeOut;
+            overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0.5f, 0, fadeT));
+            dialogBox.style.opacity = 1f - fadeT;
+            yield return null;
+        }
+
+        overlay.RemoveFromHierarchy();
+        maidDialogueActive = false;
         menuOpen = false;
     }
 
@@ -5279,6 +5732,159 @@ public class MapManager : MonoBehaviour
         if (jukuTeacherObj == null) return;
         if (playerTileX == jukuTeacherX && playerTileY == jukuTeacherY)
             OnJukuTeacherTapped();
+    }
+
+    // ===== 塾の生徒NPC =====
+
+    static readonly Color[] StudentColors = {
+        new Color(1f, 0.45f, 0.45f),   // 赤
+        new Color(0.45f, 0.65f, 1f),   // 青
+        new Color(0.45f, 0.85f, 0.50f), // 緑
+        new Color(1f, 0.75f, 0.30f),   // オレンジ
+        new Color(0.80f, 0.50f, 0.90f), // 紫
+    };
+
+    static readonly Color[] StudentHairColors = {
+        new Color(0.2f, 0.12f, 0.08f),
+        new Color(0.35f, 0.25f, 0.15f),
+        new Color(0.15f, 0.10f, 0.10f),
+        new Color(0.40f, 0.30f, 0.10f),
+        new Color(0.10f, 0.08f, 0.15f),
+    };
+
+    void CreateJukuStudentNPCs()
+    {
+        if (tilesContainer == null) return;
+        for (int i = 0; i < 5; i++)
+        {
+            var obj = new GameObject("JukuStudent" + i);
+            obj.transform.SetParent(tilesContainer.transform, false);
+
+            var rect = obj.AddComponent<RectTransform>();
+            float posX = (jukuStudentX[i] - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+            float posY = (jukuStudentY[i] - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+            rect.anchoredPosition = new Vector2(posX, posY);
+            rect.sizeDelta = new Vector2(DISPLAY_TILE, DISPLAY_TILE);
+
+            var btnImg = obj.AddComponent<Image>();
+            btnImg.color = new Color(0, 0, 0, 0);
+            var btn = obj.AddComponent<Button>();
+            btn.transition = Selectable.Transition.None;
+            int idx = i;
+            btn.onClick.AddListener(() => OnJukuStudentTapped(idx));
+
+            DrawJukuStudentNPC(obj.transform, 0.75f, i);
+            obj.transform.SetAsLastSibling();
+            jukuStudentObjs[i] = obj;
+        }
+    }
+
+    void DrawJukuStudentNPC(Transform parent, float scale, int index)
+    {
+        float s = scale;
+        Color skin = new Color(0.95f, 0.85f, 0.75f);
+        Color clothes = StudentColors[index % StudentColors.Length];
+        Color hair = StudentHairColors[index % StudentHairColors.Length];
+
+        FacePart("Shadow", parent, new Vector2(0, -34 * s), new Vector2(32 * s, 8 * s))
+            .AddComponent<Image>().color = new Color(0, 0, 0, 0.2f);
+        FacePart("Body", parent, new Vector2(0, -14 * s), new Vector2(24 * s, 28 * s))
+            .AddComponent<Image>().color = clothes;
+        FacePart("Head", parent, new Vector2(0, 14 * s), new Vector2(26 * s, 26 * s))
+            .AddComponent<Image>().color = skin;
+        FacePart("Hair", parent, new Vector2(0, 25 * s), new Vector2(30 * s, 12 * s))
+            .AddComponent<Image>().color = hair;
+        FacePart("EyeL", parent, new Vector2(-5 * s, 14 * s), new Vector2(3 * s, 3 * s))
+            .AddComponent<Image>().color = new Color(0.15f, 0.12f, 0.10f);
+        FacePart("EyeR", parent, new Vector2(5 * s, 14 * s), new Vector2(3 * s, 3 * s))
+            .AddComponent<Image>().color = new Color(0.15f, 0.12f, 0.10f);
+    }
+
+    void CheckJukuStudents()
+    {
+        for (int i = 0; i < jukuStudentObjs.Length; i++)
+        {
+            if (jukuStudentObjs[i] == null) continue;
+            if (playerTileX == jukuStudentX[i] && playerTileY == jukuStudentY[i])
+            {
+                OnJukuStudentTapped(i);
+                return;
+            }
+        }
+    }
+
+    void OnJukuStudentTapped(int index)
+    {
+        if (jukuStudentDialogueActive) return;
+        if (menuOpen) return;
+        StartCoroutine(ShowJukuStudentDialogue(index));
+    }
+
+    IEnumerator ShowJukuStudentDialogue(int index)
+    {
+        jukuStudentDialogueActive = true;
+        menuOpen = true;
+
+        string studentName = Localization.Get("juku_student_name_" + index);
+
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlay.style.alignItems = UIE.Align.FlexEnd;
+        overlay.style.justifyContent = UIE.Justify.FlexEnd;
+        overlayRoot.Add(overlay);
+
+        float fadeIn = 0.3f;
+        float fadeElapsed = 0f;
+        while (fadeElapsed < fadeIn)
+        {
+            fadeElapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0, 0.5f, fadeElapsed / fadeIn));
+            yield return null;
+        }
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
+
+        var nameLabel = UIHelper.CreateLabel(studentName, "milk-dialog-name");
+        dialogBox.Add(nameLabel);
+
+        var textLabel = UIHelper.CreateLabel("", "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        var tapHint = UIHelper.CreateLabel("▼ タップで閉じる", "milk-dialog-hint");
+        dialogBox.Add(tapHint);
+
+        // 各生徒ごとに複数セリフからランダム
+        string[] keys = new[] {
+            "juku_student_line_" + index + "_0",
+            "juku_student_line_" + index + "_1",
+            "juku_student_line_" + index + "_2",
+        };
+        string msg = Localization.Get(keys[Random.Range(0, keys.Length)]);
+        textLabel.text = msg;
+
+        yield return new WaitForSeconds(0.3f);
+        bool tapped = false;
+        overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+        while (!tapped) yield return null;
+
+        float fadeOut = 0.3f;
+        fadeElapsed = 0f;
+        while (fadeElapsed < fadeOut)
+        {
+            fadeElapsed += Time.deltaTime;
+            float fadeT = fadeElapsed / fadeOut;
+            overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0.5f, 0, fadeT));
+            dialogBox.style.opacity = 1f - fadeT;
+            yield return null;
+        }
+
+        overlay.RemoveFromHierarchy();
+        jukuStudentDialogueActive = false;
+        menuOpen = false;
     }
 
     void OnJukuTeacherTapped()

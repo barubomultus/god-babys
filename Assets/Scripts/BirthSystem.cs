@@ -77,6 +77,7 @@ public class BirthSystem : MonoBehaviour
     AudioClip seKirakira;
     AudioClip seLevelUp;
     AudioClip sePeta; // 名前テープ貼り付けSE
+    AudioClip seKirakira4; // アコーディオン展開SE
 
     // 名前テープ演出
     UIE.VisualElement nameTapeEl;
@@ -88,9 +89,19 @@ public class BirthSystem : MonoBehaviour
     TextMeshProUGUI introText;
     GameObject introPanel;
 
-    // 親情報パネル
-    UIE.Button parentInfoButton;
-    UIE.VisualElement parentBioOverlayEl;
+    // 親ステータスアコーディオン
+    UIE.Button statusCheckButton;
+    UIE.VisualElement accordionContainer;
+    bool isAccordionOpen;
+    Coroutine accordionAnimCoroutine;
+    ParentData currentAccordionParent;
+    UIE.VisualElement currentAccordionTargetCard;
+
+    // カードフリップ（Bio表示）
+    UIE.VisualElement cardBackFace;
+    bool isCardFlipped;
+    Coroutine flipAnimCoroutine;
+    AudioClip seCardFlip;
 
     // 画像アップロードボタン
     UIE.Button uploadImageBtn;
@@ -446,6 +457,8 @@ public class BirthSystem : MonoBehaviour
         seKirakira = Resources.Load<AudioClip>("SE/きらきら輝く6");
         seLevelUp = Resources.Load<AudioClip>("SE/レベルアップ");
         sePeta = Resources.Load<AudioClip>("SE/tap-effect");
+        seKirakira4 = Resources.Load<AudioClip>("SE/きらきら輝く4");
+        seCardFlip = Resources.Load<AudioClip>("SE/SE_Tap");
         //CreateCharacterListUI();
 
         // UI Toolkit overlay (menu, name input, save confirm, parent bio, parent cards, story)
@@ -1122,13 +1135,13 @@ public class BirthSystem : MonoBehaviour
         }
         // 「愛する女性を探す」ボタンで待機
         yield return new WaitForSeconds(0.5f);
-        CreateParentInfoButton(father.name, fatherCard);
+        CreateStatusCheckButton(father, fatherCard);
         SetNextButtonText(Localization.Get("birth_find_mother"));
         if (nextButtonEl != null) nextButtonEl.style.display = UIE.DisplayStyle.Flex;
         waitingForNext = true;
         while (waitingForNext) yield return null;
         if (nextButtonEl != null) nextButtonEl.style.display = UIE.DisplayStyle.None;
-        DestroyParentInfoButton();
+        DestroyStatusCheckButton();
         SetNextButtonText(Localization.Get("birth_next"));
 
         // ── フェーズ3: 「惹かれ合う、もう一つの魂」カットイン → 母親ルーレット ──
@@ -1166,13 +1179,13 @@ public class BirthSystem : MonoBehaviour
         }
         // 「恋の始まり」ボタンで待機
         yield return new WaitForSeconds(0.5f);
-        CreateParentInfoButton(mother.name, motherCard);
+        CreateStatusCheckButton(mother, motherCard);
         SetNextButtonText(Localization.Get("birth_love_begin"));
         if (nextButtonEl != null) nextButtonEl.style.display = UIE.DisplayStyle.Flex;
         waitingForNext = true;
         while (waitingForNext) yield return null;
         if (nextButtonEl != null) nextButtonEl.style.display = UIE.DisplayStyle.None;
-        DestroyParentInfoButton();
+        DestroyStatusCheckButton();
         SetNextButtonText(Localization.Get("birth_next"));
 
         // ── フェーズ4: 性別をランダム決定 ──
@@ -2393,78 +2406,457 @@ public class BirthSystem : MonoBehaviour
         waitingForNext = false;
     }
 
-    void CreateParentInfoButton(string parentName, UIE.VisualElement targetCard)
+    // ===== 親ステータスアコーディオン =====
+
+    void CreateStatusCheckButton(ParentData parent, UIE.VisualElement targetCard)
     {
         if (targetCard == null) return;
-        DestroyParentInfoButton();
+        DestroyStatusCheckButton();
 
-        parentInfoButton = new UIE.Button();
-        parentInfoButton.AddToClassList("birth-parent-info-btn");
-        UIHelper.ApplyFont(parentInfoButton);
-        parentInfoButton.text = "i";
-        string bioName = parentName;
-        parentInfoButton.clicked += () => ShowParentBioPanel(bioName);
-        targetCard.Add(parentInfoButton);
+        statusCheckButton = new UIE.Button();
+        statusCheckButton.AddToClassList("birth-status-check-btn");
+        UIHelper.ApplyFontBold(statusCheckButton);
+        statusCheckButton.text = "\u2728 \u30b9\u30c6\u30fc\u30bf\u30b9\u3092\u78ba\u8a8d \u2728";
+
+        currentAccordionParent = parent;
+        currentAccordionTargetCard = targetCard;
+        statusCheckButton.clicked += () => ToggleAccordion(currentAccordionParent, currentAccordionTargetCard);
+        targetCard.Add(statusCheckButton);
     }
 
-    void DestroyParentInfoButton()
+    void DestroyStatusCheckButton()
     {
-        if (parentInfoButton != null)
+        // フリップ状態のクリーンアップ
+        if (flipAnimCoroutine != null)
         {
-            parentInfoButton.RemoveFromHierarchy();
-            parentInfoButton = null;
+            StopCoroutine(flipAnimCoroutine);
+            flipAnimCoroutine = null;
+        }
+        if (cardBackFace != null)
+        {
+            cardBackFace.RemoveFromHierarchy();
+            cardBackFace = null;
+        }
+        if (isCardFlipped && currentAccordionTargetCard != null)
+        {
+            // scaleリセット＋front子要素復元
+            currentAccordionTargetCard.style.scale = new UIE.StyleScale(new UIE.Scale(Vector2.one));
+            SetFrontChildrenVisibility(currentAccordionTargetCard, true);
+        }
+        isCardFlipped = false;
+
+        // アコーディオンのクリーンアップ
+        if (accordionAnimCoroutine != null)
+        {
+            StopCoroutine(accordionAnimCoroutine);
+            accordionAnimCoroutine = null;
+        }
+        if (accordionContainer != null)
+        {
+            accordionContainer.RemoveFromHierarchy();
+            accordionContainer = null;
+        }
+        isAccordionOpen = false;
+        if (statusCheckButton != null)
+        {
+            statusCheckButton.RemoveFromHierarchy();
+            statusCheckButton = null;
         }
     }
 
-    void ShowParentBioPanel(string parentName)
+    void ToggleAccordion(ParentData parent, UIE.VisualElement targetCard)
     {
-        if (parentBioOverlayEl != null) return;
-
-        parentBioOverlayEl = UIHelper.CreateOverlay();
-        parentBioOverlayEl.RegisterCallback<UIE.ClickEvent>(evt =>
+        // フリップ中なら先に戻す
+        if (isCardFlipped)
         {
-            if (evt.target == parentBioOverlayEl) CloseParentBioPanel();
-        });
+            FlipCardToFront(targetCard);
+            return;
+        }
 
-        var card = new UIE.VisualElement();
-        card.AddToClassList("birth-bio-card");
+        if (accordionAnimCoroutine != null)
+        {
+            StopCoroutine(accordionAnimCoroutine);
+            accordionAnimCoroutine = null;
+        }
 
-        // Close button
-        var closeBtn = new UIE.Button();
-        closeBtn.AddToClassList("birth-bio-close");
-        UIHelper.ApplyFont(closeBtn);
-        closeBtn.text = "\u00d7";
-        closeBtn.clicked += CloseParentBioPanel;
-        card.Add(closeBtn);
+        if (isAccordionOpen)
+        {
+            // 閉じる
+            if (accordionContainer != null)
+            {
+                statusCheckButton.text = "\u2728 \u30b9\u30c6\u30fc\u30bf\u30b9\u3092\u78ba\u8a8d \u2728";
+                accordionAnimCoroutine = StartCoroutine(AnimateAccordionClose(accordionContainer, () =>
+                {
+                    accordionContainer = null;
+                    isAccordionOpen = false;
+                }));
+            }
+            else
+            {
+                isAccordionOpen = false;
+            }
+        }
+        else
+        {
+            // 開く — SE再生
+            if (seSource != null && seKirakira4 != null)
+                seSource.PlayOneShot(seKirakira4, 0.8f);
 
-        // Name
-        var nameLabel = UIHelper.CreateLabel(Localization.GetParent(parentName), "birth-bio-name");
-        card.Add(nameLabel);
+            string role = targetCard.ClassListContains("birth-parent-card-father") ? "father" : "mother";
+            accordionContainer = BuildAccordionContent(parent, role);
+            targetCard.Add(accordionContainer);
+            isAccordionOpen = true;
+            statusCheckButton.text = "\u25b2 \u30b9\u30c6\u30fc\u30bf\u30b9\u3092\u3068\u3058\u308b";
 
-        // Separator
+            accordionAnimCoroutine = StartCoroutine(AnimateAccordionOpen(accordionContainer));
+        }
+    }
+
+    UIE.VisualElement BuildAccordionContent(ParentData parent, string role)
+    {
+        var container = new UIE.VisualElement();
+        container.AddToClassList("birth-accordion");
+
+        var inner = new UIE.VisualElement();
+        inner.AddToClassList("birth-accordion-inner");
+        container.Add(inner);
+
+        // キャッチコピー
+        string intro = Localization.GetParentIntro(parent.name);
+        if (string.IsNullOrEmpty(intro)) intro = parent.intro;
+        intro = intro.Replace(" / ", "\n");
+        var catchphrase = UIHelper.CreateLabel(intro, "birth-accordion-catchphrase");
+        UIHelper.ApplyFontBold(catchphrase);
+        inner.Add(catchphrase);
+
+        // 区切り線
         var sep = new UIE.VisualElement();
-        sep.AddToClassList("birth-bio-separator");
-        card.Add(sep);
+        sep.AddToClassList("birth-accordion-separator");
+        inner.Add(sep);
 
-        // Bio text
-        string bio = Localization.GetParentBio(parentName);
-        if (!string.IsNullOrEmpty(bio))
-        {
-            var bioLabel = UIHelper.CreateLabel(bio, "birth-bio-text");
-            card.Add(bioLabel);
-        }
+        // ステータスバー
+        var statsContainer = new UIE.VisualElement();
+        statsContainer.style.width = new UIE.StyleLength(new UIE.Length(100, UIE.LengthUnit.Percent));
+        statsContainer.style.alignItems = UIE.Align.Center;
+        inner.Add(statsContainer);
 
-        parentBioOverlayEl.Add(card);
-        overlayRoot.Add(parentBioOverlayEl);
+        string fillClass = "birth-stat-bar-fill-" + role;
+        AddStatRow(statsContainer, "\u306c\u304f\u3082\u308a", parent.atk, 100, fillClass);
+        AddStatRow(statsContainer, "\u304a\u3061\u3064\u304d", parent.def, 100, fillClass);
+        AddStatRow(statsContainer, "\u3054\u304d\u3052\u3093", parent.hp, 200, fillClass);
+        AddStatRow(statsContainer, "\u3061\u3048", parent.intelligence, 150, fillClass);
+        AddStatRow(statsContainer, "\u3046\u3093\u3069\u3046", parent.athletic, 100, fillClass);
+        AddStatRow(statsContainer, "\u3046\u3093", parent.luck, 100, fillClass);
+        AddStatRow(statsContainer, "\u3056\u3044\u3055\u3093", parent.fortune, 100, fillClass);
+
+        // Bio を見るボタン
+        var bioBtn = new UIE.Button();
+        bioBtn.AddToClassList("birth-bio-view-btn");
+        UIHelper.ApplyFontBold(bioBtn);
+        bioBtn.text = "Bio\uff08\u7d39\u4ecb\u6587\uff09\u3092\u898b\u308b \u2728";
+        ParentData capturedParent = parent;
+        bioBtn.clicked += () => FlipCardToBio(capturedParent, currentAccordionTargetCard);
+        inner.Add(bioBtn);
+
+        return container;
     }
 
-    void CloseParentBioPanel()
+    void AddStatRow(UIE.VisualElement parent, string label, int value, int maxValue, string fillClass)
     {
-        if (parentBioOverlayEl != null)
+        var row = new UIE.VisualElement();
+        row.AddToClassList("birth-stat-row");
+
+        var lbl = UIHelper.CreateLabel(label, "birth-stat-label");
+        UIHelper.ApplyFont(lbl);
+        row.Add(lbl);
+
+        var barBg = new UIE.VisualElement();
+        barBg.AddToClassList("birth-stat-bar-bg");
+
+        var barFill = new UIE.VisualElement();
+        barFill.AddToClassList("birth-stat-bar-fill");
+        barFill.AddToClassList(fillClass);
+        barFill.style.width = new UIE.StyleLength(new UIE.Length(0, UIE.LengthUnit.Percent));
+        barBg.Add(barFill);
+        row.Add(barBg);
+
+        var val = UIHelper.CreateLabel(value.ToString(), "birth-stat-value");
+        UIHelper.ApplyFont(val);
+        row.Add(val);
+
+        parent.Add(row);
+    }
+
+    IEnumerator AnimateAccordionOpen(UIE.VisualElement accordion)
+    {
+        accordion.style.opacity = 0f;
+        accordion.style.maxHeight = 0;
+        accordion.style.overflow = UIE.Overflow.Hidden;
+
+        yield return null; // 1フレーム待ってレイアウト確定
+
+        float targetHeight = 800f;
+        float duration = 0.35f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
         {
-            parentBioOverlayEl.RemoveFromHierarchy();
-            parentBioOverlayEl = null;
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
+            accordion.style.maxHeight = targetHeight * t;
+            accordion.style.opacity = t;
+            yield return null;
         }
+
+        accordion.style.maxHeight = UIE.StyleKeyword.None;
+        accordion.style.overflow = UIE.Overflow.Visible;
+
+        // ステータスバーのフィルアニメーション
+        StartCoroutine(AnimateStatBars(accordion));
+        // スパークルパーティクル
+        StartCoroutine(SpawnAccordionSparkles(accordion));
+    }
+
+    IEnumerator AnimateAccordionClose(UIE.VisualElement accordion, System.Action onComplete)
+    {
+        float startHeight = accordion.resolvedStyle.height;
+        if (startHeight <= 0) startHeight = 800f;
+        accordion.style.overflow = UIE.Overflow.Hidden;
+
+        float duration = 0.25f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            accordion.style.maxHeight = Mathf.Lerp(startHeight, 0, t);
+            accordion.style.opacity = 1f - t;
+            yield return null;
+        }
+
+        accordion.RemoveFromHierarchy();
+        onComplete?.Invoke();
+    }
+
+    IEnumerator AnimateStatBars(UIE.VisualElement accordion)
+    {
+        if (accordion == null) yield break;
+
+        var rows = UIE.UQueryExtensions.Query(accordion, className: "birth-stat-bar-fill").ToList();
+        for (int i = 0; i < rows.Count; i++)
+        {
+            var fill = rows[i];
+            // statRowからvalue情報を取得: 親のstatContainerのAddStatRow順に対応
+            var row = fill.parent?.parent; // fill → barBg → row
+            if (row == null) continue;
+            var valLabel = UIE.UQueryExtensions.Q(row, className: "birth-stat-value") as UIE.Label;
+            int value = 0;
+            int maxValue = 100;
+            if (valLabel != null) int.TryParse(valLabel.text, out value);
+
+            // 対応するmaxValueを推定（行インデックスから）
+            switch (i)
+            {
+                case 2: maxValue = 200; break; // ごきげん
+                case 3: maxValue = 150; break; // ちえ
+                default: maxValue = 100; break;
+            }
+
+            float targetPercent = Mathf.Clamp01((float)value / maxValue) * 100f;
+
+            // スタガー付きアニメーション
+            yield return new WaitForSeconds(0.06f);
+            float barDuration = 0.4f;
+            float barElapsed = 0f;
+            while (barElapsed < barDuration)
+            {
+                if (fill.parent == null) yield break;
+                barElapsed += Time.deltaTime;
+                float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(barElapsed / barDuration));
+                fill.style.width = new UIE.StyleLength(new UIE.Length(targetPercent * t, UIE.LengthUnit.Percent));
+                yield return null;
+            }
+            fill.style.width = new UIE.StyleLength(new UIE.Length(targetPercent, UIE.LengthUnit.Percent));
+        }
+    }
+
+    IEnumerator SpawnAccordionSparkles(UIE.VisualElement container)
+    {
+        if (container == null) yield break;
+
+        string[] sparkleChars = { "\u2726", "\u2727", "\u2b50", "*", "\u2728" };
+        Color[] sparkleColors = {
+            new Color(1f, 0.84f, 0f),
+            new Color(1f, 0.72f, 0.77f),
+            new Color(0.67f, 0.94f, 0.82f),
+            Color.white
+        };
+
+        for (int i = 0; i < 10; i++)
+        {
+            if (container.parent == null) yield break;
+            var sparkle = UIHelper.CreateLabel(sparkleChars[Random.Range(0, sparkleChars.Length)]);
+            UIHelper.ApplyFont(sparkle);
+            sparkle.style.position = UIE.Position.Absolute;
+            sparkle.style.left = new UIE.StyleLength(
+                new UIE.Length(Random.Range(5f, 95f), UIE.LengthUnit.Percent));
+            sparkle.style.top = new UIE.StyleLength(
+                new UIE.Length(Random.Range(-10f, 110f), UIE.LengthUnit.Percent));
+            sparkle.style.fontSize = Random.Range(16, 28);
+            sparkle.style.color = sparkleColors[Random.Range(0, sparkleColors.Length)];
+            sparkle.style.opacity = 1f;
+            container.Add(sparkle);
+            StartCoroutine(FadeOutSparkle(sparkle));
+            yield return new WaitForSeconds(0.05f);
+        }
+    }
+
+    // ===== カードフリップ（Bio表示） =====
+
+    void FlipCardToBio(ParentData parent, UIE.VisualElement card)
+    {
+        if (isCardFlipped || card == null) return;
+        if (flipAnimCoroutine != null)
+        {
+            StopCoroutine(flipAnimCoroutine);
+            flipAnimCoroutine = null;
+        }
+
+        string role = card.ClassListContains("birth-parent-card-father") ? "father" : "mother";
+        cardBackFace = BuildCardBackFace(parent, role);
+        cardBackFace.style.display = UIE.DisplayStyle.None;
+        card.Add(cardBackFace);
+
+        PlayCardFlipSE();
+        isCardFlipped = true;
+        flipAnimCoroutine = StartCoroutine(AnimateCardFlip(card, true));
+    }
+
+    void FlipCardToFront(UIE.VisualElement card)
+    {
+        if (!isCardFlipped || card == null) return;
+        if (flipAnimCoroutine != null)
+        {
+            StopCoroutine(flipAnimCoroutine);
+            flipAnimCoroutine = null;
+        }
+
+        PlayCardFlipSE();
+        flipAnimCoroutine = StartCoroutine(AnimateCardFlip(card, false));
+    }
+
+    IEnumerator AnimateCardFlip(UIE.VisualElement card, bool toBack)
+    {
+        // Phase 1: scaleX 1 → 0 (ease-in)
+        float duration = 0.2f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float scaleX = Mathf.Lerp(1f, 0f, t * t); // ease-in (quadratic)
+            card.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(scaleX, 1f)));
+            yield return null;
+        }
+        card.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(0f, 1f)));
+
+        // 中間切替
+        if (toBack)
+        {
+            // front子要素を非表示
+            SetFrontChildrenVisibility(card, false);
+            if (cardBackFace != null)
+                cardBackFace.style.display = UIE.DisplayStyle.Flex;
+        }
+        else
+        {
+            // back非表示、front復元
+            if (cardBackFace != null)
+                cardBackFace.style.display = UIE.DisplayStyle.None;
+            SetFrontChildrenVisibility(card, true);
+        }
+
+        // Phase 2: scaleX 0 → 1 (ease-out)
+        elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float easeOut = 1f - (1f - t) * (1f - t); // ease-out (quadratic)
+            float scaleX = Mathf.Lerp(0f, 1f, easeOut);
+            card.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(scaleX, 1f)));
+            yield return null;
+        }
+        card.style.scale = new UIE.StyleScale(new UIE.Scale(Vector2.one));
+
+        // 戻りの場合、裏面を破棄
+        if (!toBack)
+        {
+            if (cardBackFace != null)
+            {
+                cardBackFace.RemoveFromHierarchy();
+                cardBackFace = null;
+            }
+            isCardFlipped = false;
+        }
+    }
+
+    void SetFrontChildrenVisibility(UIE.VisualElement card, bool visible)
+    {
+        var vis = visible ? UIE.Visibility.Visible : UIE.Visibility.Hidden;
+        for (int i = 0; i < card.childCount; i++)
+        {
+            var child = card[i];
+            if (child == cardBackFace) continue; // 裏面はスキップ
+            child.style.visibility = vis;
+        }
+    }
+
+    UIE.VisualElement BuildCardBackFace(ParentData parent, string role)
+    {
+        var back = new UIE.VisualElement();
+        back.AddToClassList("birth-card-back");
+
+        // タイトル
+        var title = UIHelper.CreateLabel("\ud83d\udcdc Bio", "birth-card-back-title");
+        UIHelper.ApplyFontBold(title);
+        back.Add(title);
+
+        // 親名
+        var nameLabel = UIHelper.CreateLabel(Localization.GetParent(parent.name), "birth-card-back-name");
+        UIHelper.ApplyFontBold(nameLabel);
+        back.Add(nameLabel);
+
+        // 区切り線
+        var sep = new UIE.VisualElement();
+        sep.AddToClassList("birth-card-back-separator");
+        back.Add(sep);
+
+        // Bio本文
+        string bio = Localization.GetParentBio(parent.name);
+        if (string.IsNullOrEmpty(bio))
+            bio = parent.intro;
+        var bioLabel = UIHelper.CreateLabel(bio, "birth-card-back-bio");
+        UIHelper.ApplyFont(bioLabel);
+        back.Add(bioLabel);
+
+        // 戻るボタン
+        var returnBtn = new UIE.Button();
+        returnBtn.AddToClassList("birth-card-back-btn");
+        UIHelper.ApplyFontBold(returnBtn);
+        returnBtn.text = "\u25bc \u8868\u306b\u623b\u3059";
+        UIE.VisualElement capturedCard = currentAccordionTargetCard;
+        returnBtn.clicked += () => FlipCardToFront(capturedCard);
+        back.Add(returnBtn);
+
+        return back;
+    }
+
+    void PlayCardFlipSE()
+    {
+        if (seSource != null && seCardFlip != null)
+            seSource.PlayOneShot(seCardFlip, 0.9f);
     }
 
     void CreateParentCard(UIE.VisualElement parent, out UIE.VisualElement cardObj, out UIE.VisualElement faceImage,
@@ -2649,8 +3041,7 @@ public class BirthSystem : MonoBehaviour
             babySynthesizer.Cleanup();
 
         // 情報パネル系をクリーンアップ
-        DestroyParentInfoButton();
-        CloseParentBioPanel();
+        DestroyStatusCheckButton();
 
         // カードを元のサイズに戻す
         ResetCardToFullSize(fatherCard, fatherFaceImage);

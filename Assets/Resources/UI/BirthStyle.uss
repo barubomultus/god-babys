@@ -202,29 +202,210 @@
     flex-shrink: 0;
 }
 
-.birth-parent-info-btn {
-    position: absolute;
-    right: 30px;
-    top: 6px;
-    width: 64px;
-    height: 64px;
-    border-radius: 32px;
-    background-color: rgba(255, 255, 255, 0.9);
-    align-items: center;
-    justify-content: center;
+/* --- ステータス確認ボタン（アコーディオン展開） --- */
+.birth-status-check-btn {
+    align-self: center;
+    width: 80%;
+    max-width: 700px;
+    height: 72px;
+    border-radius: 36px;
+    background-color: rgba(255, 255, 255, 0.92);
     border-width: 0;
     padding: 0;
-    font-size: 38px;
-    -unity-font-style: bold-and-italic;
+    font-size: 30px;
+    -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: rgb(51, 77, 140);
-    transition-property: scale;
+    color: var(--color-sub);
+    flex-shrink: 0;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    transition-property: scale, background-color;
     transition-duration: 0.08s;
 }
 
-.birth-parent-info-btn:active {
+.birth-status-check-btn:active {
     scale: 0.95 0.95;
-    background-color: rgb(217, 217, 230);
+    background-color: rgba(255, 230, 240, 0.95);
+}
+
+/* --- アコーディオン（ステータス詳細） --- */
+.birth-accordion {
+    width: 96%;
+    align-self: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.birth-accordion-inner {
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 20px 16px;
+    align-items: center;
+}
+
+.birth-accordion-catchphrase {
+    font-size: 32px;
+    -unity-font-style: bold;
+    color: rgb(255, 230, 128);
+    -unity-text-align: middle-center;
+    white-space: normal;
+    margin-bottom: 16px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.birth-accordion-separator {
+    width: 90%;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.2);
+    align-self: center;
+    margin-bottom: 12px;
+}
+
+.birth-stat-row {
+    flex-direction: row;
+    align-items: center;
+    width: 94%;
+    margin-bottom: 8px;
+}
+
+.birth-stat-label {
+    width: 120px;
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: rgba(255, 255, 255, 0.85);
+    flex-shrink: 0;
+}
+
+.birth-stat-bar-bg {
+    flex-grow: 1;
+    height: 22px;
+    border-radius: 11px;
+    background-color: rgba(255, 255, 255, 0.15);
+    margin-left: 8px;
+    margin-right: 8px;
+    overflow: hidden;
+}
+
+.birth-stat-bar-fill {
+    height: 100%;
+    border-radius: 11px;
+    width: 0%;
+}
+
+.birth-stat-bar-fill-father {
+    background-color: rgba(170, 210, 255, 0.9);
+}
+
+.birth-stat-bar-fill-mother {
+    background-color: rgba(255, 183, 197, 0.9);
+}
+
+.birth-stat-value {
+    width: 60px;
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: white;
+    -unity-text-align: middle-right;
+    flex-shrink: 0;
+}
+
+/* --- Bio を見るボタン（アコーディオン内） --- */
+.birth-bio-view-btn {
+    align-self: center;
+    width: 80%;
+    max-width: 600px;
+    height: 64px;
+    border-radius: 32px;
+    background-color: rgba(255, 230, 200, 0.9);
+    border-width: 0;
+    padding: 0;
+    font-size: 26px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(120, 80, 40);
+    margin-top: 16px;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.birth-bio-view-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgba(255, 210, 170, 0.95);
+}
+
+/* --- カード裏面（Bio / 紹介文） --- */
+.birth-card-back {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 48px;
+    background-color: rgba(245, 228, 200, 0.95);
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 24px;
+    overflow: hidden;
+}
+
+.birth-card-back-title {
+    font-size: 36px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(120, 80, 40);
+    margin-bottom: 8px;
+}
+
+.birth-card-back-name {
+    font-size: 44px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(80, 60, 40);
+    margin-bottom: 16px;
+}
+
+.birth-card-back-separator {
+    width: 80%;
+    height: 2px;
+    background-color: rgba(160, 120, 80, 0.4);
+    align-self: center;
+    margin-bottom: 20px;
+}
+
+.birth-card-back-bio {
+    font-size: 30px;
+    color: rgb(80, 60, 40);
+    white-space: normal;
+    -unity-text-align: upper-left;
+    padding-left: 16px;
+    padding-right: 16px;
+    flex-grow: 1;
+}
+
+.birth-card-back-btn {
+    align-self: center;
+    width: 70%;
+    max-width: 500px;
+    height: 64px;
+    border-radius: 32px;
+    background-color: rgba(200, 170, 130, 0.9);
+    border-width: 0;
+    padding: 0;
+    font-size: 26px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(80, 60, 40);
+    margin-top: 12px;
+    flex-shrink: 0;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.birth-card-back-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgba(180, 150, 110, 0.95);
 }
 
 .birth-next-btn-wrapper {
@@ -402,66 +583,6 @@
 }
 
 /* --- Parent bio panel --- */
-.birth-bio-card {
-    width: 940px;
-    background-color: rgba(26, 36, 71, 0.98);
-    border-radius: 40px;
-    border-color: rgba(64, 89, 153, 0.95);
-    border-width: 6px;
-    align-items: center;
-    padding-top: 30px;
-    padding-bottom: 20px;
-}
-
-.birth-bio-name {
-    font-size: 40px;
-    -unity-font-style: bold;
-    color: rgb(255, 230, 128);
-    -unity-text-align: middle-center;
-    margin-bottom: 10px;
-}
-
-.birth-bio-separator {
-    width: 90%;
-    height: 2px;
-    background-color: rgba(102, 128, 191, 0.5);
-    align-self: center;
-    margin-bottom: 15px;
-}
-
-.birth-bio-text {
-    font-size: 32px;
-    color: white;
-    -unity-text-align: upper-left;
-    white-space: normal;
-    padding-left: 36px;
-    padding-right: 36px;
-    margin-bottom: 15px;
-    -unity-line-height: 120%;
-}
-
-.birth-bio-close {
-    position: absolute;
-    right: 24px;
-    top: 24px;
-    width: 52px;
-    height: 52px;
-    border-radius: 26px;
-    background-color: rgba(255, 255, 255, 0.15);
-    align-items: center;
-    justify-content: center;
-    border-width: 0;
-    padding: 0;
-    font-size: 36px;
-    color: white;
-    transition-property: background-color;
-    transition-duration: 0.08s;
-}
-
-.birth-bio-close:active {
-    background-color: rgba(255, 255, 255, 0.3);
-}
-
 /* --- 邂逅の記憶: アルバム風全画面パネル --- */
 .birth-story-panel {
     flex-grow: 1;
