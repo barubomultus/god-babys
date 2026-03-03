@@ -71,13 +71,21 @@ public class DataCarrier : MonoBehaviour
     // 現在のセーブスロット
     public int currentSlot = -1;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void OnBeforeSceneLoad()
+    {
+        Debug.Log("[STARTUP] ★ RuntimeInitialize BeforeSceneLoad — C# scripts initialized");
+    }
+
     void Awake()
     {
+        Debug.Log("[STARTUP] DataCarrier.Awake() called");
         if (Instance == null)
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
             LoadProfile();
+            Debug.Log("[STARTUP] DataCarrier initialized, profile loaded");
         }
         else
         {

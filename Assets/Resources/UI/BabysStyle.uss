@@ -2,60 +2,70 @@
 /* BabysStyle.uss — BabysScene              */
 /* ======================================== */
 
-/* --- Header --- */
-.babys-header {
-    flex-direction: row;
-    width: 100%;
-    align-items: center;
-    padding-left: 20px;
-    padding-right: 20px;
-}
-
-.babys-title {
-    font-size: 44px;
-    -unity-font-style: bold;
-    -unity-text-align: middle-center;
-    color: rgb(38, 38, 46);
-    flex-grow: 1;
-}
-
-.babys-subtitle {
-    font-size: 24px;
-    -unity-text-align: middle-center;
-    color: rgb(140, 140, 153);
-    margin-bottom: 10px;
-}
-
-/* --- Info button (circle) --- */
-.info-btn {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background-color: white;
+/* --- Header area --- */
+.babys-header-area {
+    flex-shrink: 0;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    width: 100%;
+}
+
+/* --- Back button (round pastel circle, top-left) --- */
+.babys-back-btn {
+    position: absolute;
+    left: 40px;
+    top: 12px;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background-color: rgba(255, 183, 197, 0.25);
     border-width: 0;
     padding: 0;
-    font-size: 28px;
-    -unity-font-style: bold-and-italic;
-    color: rgb(115, 115, 128);
-    transition-property: scale;
+    align-items: center;
+    justify-content: center;
+    font-size: 38px;
+    color: white;
+    transition-property: scale, background-color;
     transition-duration: 0.08s;
 }
 
-.info-btn:active {
-    scale: 0.95 0.95;
+.babys-back-btn:active {
+    scale: 0.90 0.90;
+    background-color: rgba(255, 183, 197, 0.45);
 }
 
-/* --- Slot card --- */
+/* --- Title / Subtitle (center-aligned) --- */
+.babys-title {
+    font-size: 40px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(93, 64, 55);
+    letter-spacing: 2px;
+    align-self: center;
+}
+
+.babys-subtitle {
+    font-size: 26px;
+    -unity-text-align: middle-center;
+    color: rgb(130, 110, 90);
+    margin-top: 4px;
+    margin-bottom: 16px;
+    align-self: center;
+}
+
+/* --- Slot card (auto height, generous padding) --- */
 .slot-card {
     width: 980px;
-    border-radius: 40px;
-    background-color: white;
+    border-radius: 48px;
+    background-color: rgba(255, 253, 249, 0.92);
     align-self: center;
     margin-bottom: 24px;
     flex-direction: row;
-    padding: 20px;
+    align-items: center;
+    padding: 28px 32px;
+    border-width: 2px;
+    border-color: rgba(255, 183, 197, 0.25);
     transition-property: scale;
     transition-duration: 0.08s;
 }
@@ -67,7 +77,7 @@
 .slot-card-empty {
     width: 980px;
     height: 80px;
-    border-radius: 40px;
+    border-radius: 48px;
     background-color: rgb(240, 240, 243);
     align-self: center;
     margin-bottom: 24px;
@@ -88,7 +98,7 @@
     border-radius: 50%;
     align-items: center;
     justify-content: center;
-    margin-right: 20px;
+    margin-right: 24px;
     flex-shrink: 0;
 }
 
@@ -129,16 +139,18 @@
     -unity-text-align: middle-center;
 }
 
-/* --- Info section (right side) --- */
+/* --- Info section (center, flex-grow) --- */
 .slot-info-section {
     flex-grow: 1;
+    flex-direction: column;
     justify-content: center;
 }
 
 .baby-name-text {
-    font-size: 36px;
+    font-size: 40px;
     -unity-font-style: bold;
-    color: rgb(38, 38, 46);
+    color: rgb(93, 64, 55);
+    letter-spacing: 2px;
     -unity-text-align: middle-left;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -150,24 +162,27 @@
     -unity-text-align: middle-left;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-top: 4px;
+    margin-top: 8px;
 }
 
-/* --- Stats row --- */
+/* --- Stats + story row --- */
 .stats-row {
     flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
     margin-top: 12px;
 }
 
 .stat-pill {
     border-radius: 17px;
-    height: 34px;
-    background-color: rgb(243, 243, 248);
+    height: 36px;
+    background-color: rgba(247, 231, 206, 0.6);
     padding-left: 10px;
     padding-right: 10px;
     align-items: center;
     justify-content: center;
     margin-right: 8px;
+    margin-bottom: 4px;
 }
 
 .stat-text {
@@ -176,11 +191,34 @@
     color: rgb(77, 77, 89);
 }
 
+/* --- Omoide (story) pill inside stats row --- */
+.omoide-btn {
+    border-radius: 17px;
+    height: 36px;
+    background-color: rgba(255, 183, 197, 0.20);
+    padding-left: 10px;
+    padding-right: 10px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+    border-width: 0;
+    font-size: 16px;
+    color: rgb(160, 110, 120);
+    -unity-text-align: middle-center;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.omoide-btn:active {
+    scale: 0.93 0.93;
+    background-color: rgba(255, 183, 197, 0.40);
+}
+
 /* --- Badges --- */
 .now-badge {
     position: absolute;
-    right: 20px;
-    top: 16px;
+    right: 24px;
+    top: 20px;
     border-radius: 16px;
     height: 32px;
     padding-left: 12px;
@@ -192,66 +230,34 @@
 
 .god-badge {
     position: absolute;
-    right: 20px;
-    top: 16px;
-    border-radius: 16px;
-    height: 32px;
-    padding-left: 12px;
-    padding-right: 12px;
-    background-color: rgb(217, 166, 33);
+    right: 24px;
+    top: 20px;
+    border-radius: 20px;
+    height: 40px;
+    padding-left: 14px;
+    padding-right: 14px;
+    background-color: rgb(212, 175, 55);
+    border-width: 2px;
+    border-color: rgba(180, 140, 20, 0.5);
     align-items: center;
     justify-content: center;
+}
+
+.god-badge-shadow {
+    position: absolute;
+    right: 22px;
+    top: 24px;
+    width: 92px;
+    height: 40px;
+    border-radius: 20px;
+    background-color: rgba(180, 140, 20, 0.15);
 }
 
 .badge-text {
-    font-size: 16px;
+    font-size: 18px;
     -unity-font-style: bold;
     color: white;
     -unity-text-align: middle-center;
-}
-
-/* --- Story select panel --- */
-.story-select-card {
-    width: 860px;
-    background-color: white;
-    border-radius: 40px;
-    align-items: center;
-    padding-top: 30px;
-    padding-bottom: 20px;
-}
-
-.story-select-title {
-    font-size: 34px;
-    -unity-font-style: bold;
-    -unity-text-align: middle-center;
-    color: rgb(38, 38, 46);
-    margin-bottom: 20px;
-}
-
-.story-slot-btn {
-    width: 740px;
-    height: 100px;
-    border-radius: 40px;
-    background-color: rgb(245, 245, 250);
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 16px;
-    border-width: 0;
-    padding: 0;
-    transition-property: scale;
-    transition-duration: 0.08s;
-}
-
-.story-slot-btn:active {
-    scale: 0.97 0.97;
-    background-color: rgb(230, 230, 240);
-}
-
-.story-slot-text {
-    font-size: 30px;
-    -unity-text-align: middle-center;
-    color: rgb(38, 38, 46);
-    white-space: normal;
 }
 
 /* --- Story detail panel --- */

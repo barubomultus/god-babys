@@ -18,8 +18,15 @@ public class TitleManager : MonoBehaviour
     private UIE.Button langEnBtn;
     private bool hasProfile;
 
+    void Awake()
+    {
+        Debug.Log("[STARTUP] TitleManager.Awake() called");
+    }
+
     void Start()
     {
+        Debug.Log("[STARTUP] TitleManager.Start() called");
+
         // デフォルト言語を設定（未設定の場合）
         if (!Localization.HasLanguageSet())
             Localization.SetLanguage("ja");

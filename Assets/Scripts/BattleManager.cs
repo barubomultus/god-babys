@@ -490,7 +490,7 @@ public class BattleManager : MonoBehaviour
                 new object[]{ "うずうずベイビー",       "EnemyBabys/common-yantya",       75, 22, 12, 30, 0, 99 },
                 new object[]{ "ぷんぷんベイビー",       "EnemyBabys/first-enemy",         85, 28, 18, 25, 0, 99 },
                 new object[]{ "いやだいやだベイビー",   "EnemyBabys/common-wagamama",    100, 32, 22, 28, 0, 99 },
-                new object[]{ "どたばたベイビー",       "EnemyBabys/common-abarennbou",  120, 40, 25, 35, 0, 99 },
+                new object[]{ "どたばたベイビー",       "EnemyBabys/common-abarennbou",  105, 34, 22, 32, 0, 99 },
             };
         }
 
@@ -606,6 +606,11 @@ public class BattleManager : MonoBehaviour
         vsTextEl = UIHelper.CreateLabel("VS", "battle-vs");
         centerAreaEl.Add(vsTextEl);
 
+        var logGlow = new UIE.VisualElement();
+        logGlow.AddToClassList("battle-log-glow");
+        logGlow.pickingMode = UIE.PickingMode.Ignore;
+        centerAreaEl.Add(logGlow);
+
         battleLogEl = new UIE.VisualElement();
         battleLogEl.AddToClassList("battle-log");
         centerAreaEl.Add(battleLogEl);
@@ -628,7 +633,7 @@ public class BattleManager : MonoBehaviour
         var runBtn = new UIE.Button();
         runBtn.AddToClassList("battle-run-pill");
         UIHelper.ApplyFont(runBtn);
-        runBtn.text = "にげる";
+        runBtn.text = "バイバイ \U0001F44B";
         runBtn.clicked += OnRun;
         bottomBar.Add(runBtn);
 
@@ -636,7 +641,7 @@ public class BattleManager : MonoBehaviour
         autoBattleBtn.AddToClassList("battle-auto-pill");
         autoBattleBtn.AddToClassList("battle-auto-off");
         UIHelper.ApplyFont(autoBattleBtn);
-        autoBattleBtn.text = "AUTO \u25B6\u25B6";
+        autoBattleBtn.text = "自動 \u25B6\u25B6";
         autoBattleBtn.clicked += ToggleAutoBattle;
         bottomBar.Add(autoBattleBtn);
 
@@ -651,10 +656,10 @@ public class BattleManager : MonoBehaviour
         commandRow.AddToClassList("battle-cmd-row");
         actionPanelEl.Add(commandRow);
 
-        BuildCmdButton(commandRow, "こうげき", OnAttack);
-        BuildCmdButton(commandRow, "スキル", ShowSkillSubmenu);
-        BuildCmdButton(commandRow, "どうぐ", ShowItemSubmenu);
-        BuildCmdButton(commandRow, "ぼうぎょ", OnDefend);
+        BuildCmdButton(commandRow, "あそぶ \u2728", OnAttack, 0);
+        BuildCmdButton(commandRow, "とくぎ \U0001FA84", ShowSkillSubmenu, 1);
+        BuildCmdButton(commandRow, "おもちゃ \U0001F9F8", ShowItemSubmenu, 2);
+        BuildCmdButton(commandRow, "みまもる \U0001F6E1\uFE0F", OnDefend, 3);
 
         // サブメニュー（初期非表示）
         submenuEl = new UIE.VisualElement();
@@ -689,13 +694,12 @@ public class BattleManager : MonoBehaviour
     {
         var panel = new UIE.VisualElement();
         panel.AddToClassList("battle-char-panel");
-        if (isPlayer) panel.AddToClassList("battle-char-card");
         area.Add(panel);
 
         // 情報カラム（名前+年齢, HPバー, HPテキスト）
         var infoCol = new UIE.VisualElement();
         infoCol.AddToClassList("battle-info-col");
-        if (!isPlayer) infoCol.AddToClassList("battle-info-col-enemy");
+        infoCol.AddToClassList("battle-info-col-enemy");
 
         var nameAgeRow = new UIE.VisualElement();
         nameAgeRow.AddToClassList("battle-name-age-row");
@@ -725,10 +729,9 @@ public class BattleManager : MonoBehaviour
         infoCol.Add(hpLabel);
         if (isPlayer) playerHpLabel = hpLabel; else enemyHpLabel = hpLabel;
 
-        // 顔マスク
+        // 顔マスク — プレイヤーも敵と同じ透明丸形スタイル
         var faceMask = new UIE.VisualElement();
-        faceMask.AddToClassList("battle-face-mask");
-        if (!isPlayer) faceMask.AddToClassList("battle-face-mask-enemy");
+        faceMask.AddToClassList("battle-face-mask-enemy");
         if (isPlayer) playerFaceMask = faceMask; else enemyFaceMask = faceMask;
 
         var faceEl = new UIE.VisualElement();
@@ -782,12 +785,27 @@ public class BattleManager : MonoBehaviour
         return btn;
     }
 
-    void BuildCmdButton(UIE.VisualElement parent, string label, System.Action onClick)
+    void BuildCmdButton(UIE.VisualElement parent, string label, System.Action onClick, int index = 0)
     {
         var btn = new UIE.Button();
         btn.AddToClassList("battle-cmd-btn");
         UIHelper.ApplyFont(btn);
         btn.text = label;
+
+        // アーチ配置: 中央が高く、両端が低い
+        float[] archOffsets = { 12f, -4f, -4f, 12f };
+        btn.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, archOffsets[index]));
+
+        // 中央2ボタンを少し大きくする
+        if (index == 1 || index == 2)
+            btn.AddToClassList("battle-cmd-btn-center");
+
+        // インナーハイライト（ぷっくり3D感）
+        var highlight = new UIE.VisualElement();
+        highlight.AddToClassList("battle-cmd-highlight");
+        highlight.pickingMode = UIE.PickingMode.Ignore;
+        btn.Add(highlight);
+
         btn.clicked += () =>
         {
             if (seSource != null && seTap != null)
@@ -795,9 +813,174 @@ public class BattleManager : MonoBehaviour
                 seSource.pitch = Random.Range(0.96f, 1.08f);
                 seSource.PlayOneShot(seTap, 0.7f);
             }
+            // ぷにっとバウンス + キラキラ
+            StartCoroutine(PuniBounceEffect(btn));
+            StartCoroutine(ButtonSparkleEffect(btn));
             onClick();
         };
         parent.Add(btn);
+    }
+
+    IEnumerator PuniBounceEffect(UIE.VisualElement btn)
+    {
+        if (btn == null) yield break;
+        // ぷにっと縮む
+        float shrinkDur = 0.06f;
+        float elapsed = 0f;
+        while (elapsed < shrinkDur)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / shrinkDur);
+            float s = Mathf.Lerp(1f, 0.88f, t);
+            btn.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(s, s)));
+            yield return null;
+        }
+        // 弾んで戻る
+        float bounceDur = 0.15f;
+        elapsed = 0f;
+        while (elapsed < bounceDur)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / bounceDur);
+            // overshoot: 0.88 → 1.08 → 1.0
+            float s;
+            if (t < 0.5f)
+                s = Mathf.Lerp(0.88f, 1.08f, t * 2f);
+            else
+                s = Mathf.Lerp(1.08f, 1f, (t - 0.5f) * 2f);
+            btn.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(s, s)));
+            yield return null;
+        }
+        btn.style.scale = new UIE.StyleScale(new UIE.Scale(Vector2.one));
+    }
+
+    IEnumerator ButtonSparkleEffect(UIE.VisualElement btn)
+    {
+        if (btn == null) yield break;
+        var parent = btn.parent;
+        if (parent == null) yield break;
+
+        var layout = btn.layout;
+        float cx = layout.x + layout.width * 0.5f;
+        float cy = layout.y + layout.height * 0.5f;
+
+        var container = new UIE.VisualElement();
+        container.pickingMode = UIE.PickingMode.Ignore;
+        container.style.position = UIE.Position.Absolute;
+        container.style.left = 0; container.style.top = 0;
+        container.style.right = 0; container.style.bottom = 0;
+        container.style.overflow = UIE.Overflow.Visible;
+        parent.Add(container);
+
+        int count = 5;
+        var sparkles = new List<(UIE.Label el, float vx, float vy)>();
+        for (int i = 0; i < count; i++)
+        {
+            var sp = new UIE.Label();
+            sp.pickingMode = UIE.PickingMode.Ignore;
+            sp.text = "\u2728";
+            sp.style.position = UIE.Position.Absolute;
+            sp.style.fontSize = Random.Range(14, 24);
+            sp.style.left = cx + Random.Range(-30f, 30f);
+            sp.style.top = cy;
+            container.Add(sp);
+
+            float vx = Random.Range(-60f, 60f);
+            float vy = Random.Range(-180f, -80f);
+            sparkles.Add((sp, vx, vy));
+        }
+
+        float duration = 0.6f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            for (int i = 0; i < sparkles.Count; i++)
+            {
+                var (el, vx, vy) = sparkles[i];
+                el.style.left = cx + Random.Range(-30f, 30f) + vx * t;
+                el.style.top = cy + vy * t;
+                el.style.opacity = 1f - t;
+            }
+            yield return null;
+        }
+        container.RemoveFromHierarchy();
+    }
+
+    IEnumerator ResultSparkleEffect(UIE.VisualElement card)
+    {
+        if (card == null) yield break;
+        var parent = card.parent;
+        if (parent == null) yield break;
+
+        var layout = card.layout;
+        float cx = layout.x + layout.width * 0.5f;
+        float cy = layout.y + layout.height * 0.5f;
+
+        var container = new UIE.VisualElement();
+        container.pickingMode = UIE.PickingMode.Ignore;
+        container.style.position = UIE.Position.Absolute;
+        container.style.left = 0; container.style.top = 0;
+        container.style.right = 0; container.style.bottom = 0;
+        container.style.overflow = UIE.Overflow.Visible;
+        parent.Add(container);
+
+        string[] symbols = { "\u2728", "\U0001F497", "\u2728", "\U0001F496", "\u2728", "\U0001F497", "\u2728", "\U0001F496" };
+        int count = 8;
+        var particles = new List<(UIE.Label el, float vx, float vy)>();
+        for (int i = 0; i < count; i++)
+        {
+            var p = new UIE.Label();
+            p.pickingMode = UIE.PickingMode.Ignore;
+            p.text = symbols[i];
+            p.style.position = UIE.Position.Absolute;
+            p.style.fontSize = Random.Range(18, 30);
+            p.style.left = cx + Random.Range(-40f, 40f);
+            p.style.top = cy + Random.Range(-20f, 20f);
+            container.Add(p);
+
+            float angle = (360f / count * i + Random.Range(-20f, 20f)) * Mathf.Deg2Rad;
+            float speed = Random.Range(120f, 260f);
+            particles.Add((p, Mathf.Cos(angle) * speed, -Mathf.Sin(angle) * speed));
+        }
+
+        float duration = 0.7f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            for (int i = 0; i < particles.Count; i++)
+            {
+                var (el, vx, vy) = particles[i];
+                float eased = 1f - Mathf.Pow(1f - t, 2f);
+                el.style.left = cx + Random.Range(-40f, 40f) + vx * eased;
+                el.style.top = cy + Random.Range(-20f, 20f) + vy * eased;
+                el.style.opacity = 1f - t;
+            }
+            yield return null;
+        }
+        container.RemoveFromHierarchy();
+    }
+
+    IEnumerator HappyBounceLoop(UIE.VisualElement el)
+    {
+        if (el == null) yield break;
+        float cycle = 1.6f;
+        while (el.parent != null)
+        {
+            float elapsed = 0f;
+            while (elapsed < cycle && el.parent != null)
+            {
+                elapsed += Time.deltaTime;
+                float t = (elapsed / cycle) * Mathf.PI * 2f;
+                float sx = 1f + Mathf.Sin(t) * 0.04f;
+                float sy = 1f + Mathf.Cos(t) * 0.03f;
+                el.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(sx, sy)));
+                yield return null;
+            }
+        }
     }
 
     void ShowSkillSubmenu()
@@ -881,7 +1064,7 @@ public class BattleManager : MonoBehaviour
         {
             autoBattleBtn.RemoveFromClassList("battle-auto-off");
             autoBattleBtn.AddToClassList("battle-auto-on");
-            autoBattleBtn.text = "AUTO：ON";
+            autoBattleBtn.text = "自動：ON";
             // 現在ターン中なら即座に攻撃
             if (waitingForAction) OnAttack();
         }
@@ -889,7 +1072,7 @@ public class BattleManager : MonoBehaviour
         {
             autoBattleBtn.RemoveFromClassList("battle-auto-on");
             autoBattleBtn.AddToClassList("battle-auto-off");
-            autoBattleBtn.text = "AUTO \u25B6\u25B6";
+            autoBattleBtn.text = "自動 \u25B6\u25B6";
         }
     }
 
@@ -979,7 +1162,7 @@ public class BattleManager : MonoBehaviour
 
         if (playerAgeEl != null)
             playerAgeEl.text = Localization.GetAge(babyAge);
-        playerHpLabel.text = $"HP:{playerHp}/{playerMaxHp}";
+        playerHpLabel.text = $"ごきげん:{playerHp}/{playerMaxHp}";
 
         float hpRatio = (float)playerHp / playerMaxHp;
         playerHpFill.style.width = new UIE.Length(hpRatio * 100f, UIE.LengthUnit.Percent);
@@ -1638,21 +1821,145 @@ public class BattleManager : MonoBehaviour
         flashOverlay.style.opacity = 0f;
     }
 
-    IEnumerator IntroFlashEffect()
+    IEnumerator IntroHeartBurstEffect()
     {
-        if (flashOverlay == null) yield break;
-        flashOverlay.style.backgroundColor = Color.white;
-        flashOverlay.style.opacity = 1f;
-        yield return null;
-        float duration = 0.4f;
+        if (overlayRoot == null) yield break;
+
+        var container = new UIE.VisualElement();
+        container.pickingMode = UIE.PickingMode.Ignore;
+        container.style.position = UIE.Position.Absolute;
+        container.style.left = 0; container.style.top = 0;
+        container.style.right = 0; container.style.bottom = 0;
+        container.style.overflow = UIE.Overflow.Visible;
+        overlayRoot.Add(container);
+
+        string[] symbols = { "\u2665", "\U0001F497", "\U0001F496", "\u2665", "\U0001F497" };
+        Color[] colors = {
+            new Color(1f, 0.72f, 0.77f),
+            new Color(1f, 0.44f, 0.56f),
+            new Color(1f, 0.84f, 0.88f),
+            new Color(0.67f, 0.94f, 0.82f),
+            new Color(1f, 0.92f, 0.81f),
+        };
+
+        int count = 12;
+        float centerX = 540f;
+        float centerY = 960f;
+        var hearts = new List<(UIE.Label el, float vx, float vy)>();
+
+        for (int i = 0; i < count; i++)
+        {
+            var h = new UIE.Label();
+            h.pickingMode = UIE.PickingMode.Ignore;
+            h.text = symbols[i % symbols.Length];
+            h.style.position = UIE.Position.Absolute;
+            h.style.fontSize = Random.Range(24, 48);
+            h.style.color = colors[i % colors.Length];
+            h.style.left = centerX;
+            h.style.top = centerY;
+            h.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+            h.style.opacity = 0f;
+            container.Add(h);
+
+            float angle = (360f / count * i + Random.Range(-15f, 15f)) * Mathf.Deg2Rad;
+            float speed = Random.Range(300f, 500f);
+            hearts.Add((h, Mathf.Cos(angle) * speed, -Mathf.Sin(angle) * speed));
+        }
+
+        float duration = 0.8f;
         float elapsed = 0f;
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            flashOverlay.style.opacity = Mathf.Lerp(1f, 0f, elapsed / duration);
+            float t = Mathf.Clamp01(elapsed / duration);
+            float fadeIn = Mathf.Clamp01(t * 4f);
+            float fadeOut = t > 0.5f ? 1f - (t - 0.5f) * 2f : 1f;
+
+            for (int i = 0; i < hearts.Count; i++)
+            {
+                var (el, vx, vy) = hearts[i];
+                float eased = 1f - Mathf.Pow(1f - t, 2f);
+                el.style.left = centerX + vx * eased;
+                el.style.top = centerY + vy * eased;
+                el.style.opacity = fadeIn * Mathf.Max(0f, fadeOut);
+                float s = Mathf.Lerp(0.3f, 1.2f, eased);
+                el.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(s, s)));
+            }
             yield return null;
         }
-        flashOverlay.style.opacity = 0f;
+
+        container.RemoveFromHierarchy();
+    }
+
+    IEnumerator EncounterSparkleEffect(UIE.VisualElement parent)
+    {
+        if (parent == null) yield break;
+
+        var container = new UIE.VisualElement();
+        container.pickingMode = UIE.PickingMode.Ignore;
+        container.style.position = UIE.Position.Absolute;
+        container.style.left = 0; container.style.top = 0;
+        container.style.right = 0; container.style.bottom = 0;
+        container.style.overflow = UIE.Overflow.Visible;
+        parent.Add(container);
+
+        string[] symbols = { "✨", "💗", "⭐", "💖", "✨", "💗" };
+        Color[] colors = {
+            new Color(1f, 0.72f, 0.77f),
+            new Color(1f, 0.84f, 0.88f),
+            new Color(1f, 0.92f, 0.81f),
+            new Color(0.67f, 0.94f, 0.82f),
+            new Color(1f, 0.60f, 0.70f),
+            new Color(1f, 0.80f, 0.65f),
+        };
+
+        int count = 10;
+        float centerX = 540f;
+        float centerY = 960f;
+        var particles = new List<(UIE.Label el, float vx, float vy)>();
+
+        for (int i = 0; i < count; i++)
+        {
+            var p = new UIE.Label();
+            p.pickingMode = UIE.PickingMode.Ignore;
+            p.text = symbols[i % symbols.Length];
+            p.style.position = UIE.Position.Absolute;
+            p.style.fontSize = Random.Range(20, 40);
+            p.style.color = colors[i % colors.Length];
+            p.style.left = centerX;
+            p.style.top = centerY;
+            p.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+            p.style.opacity = 0f;
+            container.Add(p);
+
+            float angle = (360f / count * i + Random.Range(-20f, 20f)) * Mathf.Deg2Rad;
+            float speed = Random.Range(250f, 450f);
+            particles.Add((p, Mathf.Cos(angle) * speed, -Mathf.Sin(angle) * speed));
+        }
+
+        float duration = 0.9f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float fadeIn = Mathf.Clamp01(t * 5f);
+            float fadeOut = t > 0.4f ? 1f - (t - 0.4f) / 0.6f : 1f;
+
+            for (int i = 0; i < particles.Count; i++)
+            {
+                var (el, vx, vy) = particles[i];
+                float eased = 1f - Mathf.Pow(1f - t, 2f);
+                el.style.left = centerX + vx * eased;
+                el.style.top = centerY + vy * eased;
+                el.style.opacity = fadeIn * Mathf.Max(0f, fadeOut);
+                float s = Mathf.Lerp(0.4f, 1.0f, eased);
+                el.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(s, s)));
+            }
+            yield return null;
+        }
+
+        container.RemoveFromHierarchy();
     }
 
     IEnumerator FadeOutBGM(float duration = 1.5f)
@@ -1758,28 +2065,28 @@ public class BattleManager : MonoBehaviour
     {
         if (attacker == null || target == null) yield break;
 
-        // Determine lunge direction: player (left) lunges right, enemy (right) lunges left
-        float direction = (attacker == playerPanel) ? 100f : -100f;
+        // ぽんっとアタッカーが跳ねる
+        float direction = (attacker == playerPanel) ? 60f : -60f;
 
-        // Lunge forward
-        float lungeDuration = 0.1f;
+        // 軽くジャンプ前進
+        float lungeDuration = 0.12f;
         float elapsed = 0f;
         while (elapsed < lungeDuration)
         {
             elapsed += Time.deltaTime;
             float t = elapsed / lungeDuration;
-            attacker.style.translate = new UIE.StyleTranslate(new UIE.Translate(direction * t, 0));
+            float bounce = Mathf.Sin(t * Mathf.PI) * -20f;
+            attacker.style.translate = new UIE.StyleTranslate(new UIE.Translate(direction * t, bounce));
             yield return null;
         }
 
-        // Hit flash + shake
-        Color flashColor = isSpecial ? new Color(1f, 0.8f, 0f) : Color.white;
-        float shakeMagnitude = isSpecial ? 20f : 10f;
-        float shakeDuration = isSpecial ? 0.4f : 0.25f;
-        StartCoroutine(FlashEffect(flashColor, isSpecial ? 0.4f : 0.2f));
-        StartCoroutine(ShakeEffect(target, shakeDuration, shakeMagnitude));
+        // ヒット時: ハートぽんっ + ターゲットバウンス
+        StartCoroutine(HeartPopEffect(target, isSpecial));
+        StartCoroutine(BounceTargetEffect(target, isSpecial));
+        if (isSpecial)
+            StartCoroutine(FlashEffect(new Color(1f, 0.72f, 0.77f), 0.3f)); // ピンクフラッシュ
 
-        // Return
+        // 戻り
         elapsed = 0f;
         while (elapsed < lungeDuration)
         {
@@ -1790,30 +2097,153 @@ public class BattleManager : MonoBehaviour
         }
         attacker.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 0));
 
-        yield return new WaitForSeconds(shakeDuration);
+        yield return new WaitForSeconds(isSpecial ? 0.4f : 0.25f);
+    }
+
+    IEnumerator HeartPopEffect(UIE.VisualElement target, bool isSpecial)
+    {
+        if (target == null) yield break;
+        var parent = target.parent;
+        if (parent == null) yield break;
+
+        var layout = target.layout;
+        float cx = layout.x + layout.width * 0.5f;
+        float cy = layout.y + layout.height * 0.3f;
+
+        int count = isSpecial ? 8 : 4;
+        string symbol = isSpecial ? "\U0001F496" : "\U0001F497";
+        Color[] colors = {
+            new Color(1f, 0.72f, 0.77f),
+            new Color(1f, 0.44f, 0.56f),
+            new Color(1f, 0.84f, 0.88f),
+            new Color(0.67f, 0.94f, 0.82f),
+        };
+
+        var container = new UIE.VisualElement();
+        container.pickingMode = UIE.PickingMode.Ignore;
+        container.style.position = UIE.Position.Absolute;
+        container.style.left = 0; container.style.top = 0;
+        container.style.right = 0; container.style.bottom = 0;
+        container.style.overflow = UIE.Overflow.Visible;
+        parent.Add(container);
+
+        var hearts = new List<(UIE.Label el, float vx, float vy)>();
+        for (int i = 0; i < count; i++)
+        {
+            var h = new UIE.Label();
+            h.pickingMode = UIE.PickingMode.Ignore;
+            h.text = symbol;
+            h.style.position = UIE.Position.Absolute;
+            h.style.fontSize = isSpecial ? Random.Range(28, 42) : Random.Range(20, 32);
+            h.style.color = colors[i % colors.Length];
+            h.style.left = cx;
+            h.style.top = cy;
+            h.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+            container.Add(h);
+
+            float angle = (360f / count * i + Random.Range(-20f, 20f)) * Mathf.Deg2Rad;
+            float speed = Random.Range(150f, 300f);
+            hearts.Add((h, Mathf.Cos(angle) * speed, -Mathf.Sin(angle) * speed));
+        }
+
+        // キラキラ追加（必殺技のみ）
+        if (isSpecial)
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                var sparkle = new UIE.Label();
+                sparkle.pickingMode = UIE.PickingMode.Ignore;
+                sparkle.text = "\u2728";
+                sparkle.style.position = UIE.Position.Absolute;
+                sparkle.style.fontSize = Random.Range(16, 28);
+                sparkle.style.left = cx;
+                sparkle.style.top = cy;
+                container.Add(sparkle);
+
+                float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+                float speed = Random.Range(100f, 250f);
+                hearts.Add((sparkle, Mathf.Cos(angle) * speed, -Mathf.Sin(angle) * speed));
+            }
+        }
+
+        float duration = 0.5f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            for (int i = 0; i < hearts.Count; i++)
+            {
+                var (el, vx, vy) = hearts[i];
+                float eased = 1f - Mathf.Pow(1f - t, 2f);
+                el.style.left = cx + vx * eased;
+                el.style.top = cy + vy * eased;
+                el.style.opacity = 1f - t;
+            }
+            yield return null;
+        }
+        container.RemoveFromHierarchy();
+    }
+
+    IEnumerator BounceTargetEffect(UIE.VisualElement target, bool isSpecial)
+    {
+        if (target == null) yield break;
+        float bounceDuration = isSpecial ? 0.35f : 0.25f;
+        float elapsed = 0f;
+        while (elapsed < bounceDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / bounceDuration);
+            // ぷるんとバウンス: scaleY 0.85→1.12→1.0
+            float sy, sx;
+            if (t < 0.3f)
+            {
+                float p = t / 0.3f;
+                sy = Mathf.Lerp(1f, 0.85f, p);
+                sx = Mathf.Lerp(1f, 1.1f, p);
+            }
+            else if (t < 0.6f)
+            {
+                float p = (t - 0.3f) / 0.3f;
+                sy = Mathf.Lerp(0.85f, 1.12f, p);
+                sx = Mathf.Lerp(1.1f, 0.95f, p);
+            }
+            else
+            {
+                float p = (t - 0.6f) / 0.4f;
+                sy = Mathf.Lerp(1.12f, 1f, p);
+                sx = Mathf.Lerp(0.95f, 1f, p);
+            }
+            target.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(sx, sy, 1f)));
+            yield return null;
+        }
+        target.style.scale = new UIE.StyleScale(new UIE.Scale(Vector3.one));
     }
 
     IEnumerator DamageEffect(UIE.VisualElement faceEl, UIE.VisualElement panel, bool isHeavy = false)
     {
         if (faceEl == null) yield break;
 
-        // 画面フラッシュ（赤）
-        float flashOpacity = isHeavy ? 0.5f : 0.3f;
+        // ピンクフラッシュ（軽め）
+        float flashOpacity = isHeavy ? 0.35f : 0.2f;
         if (flashOverlay != null)
         {
-            flashOverlay.style.backgroundColor = new Color(1f, 0.1f, 0.1f);
+            flashOverlay.style.backgroundColor = new Color(1f, 0.72f, 0.77f);
             flashOverlay.style.opacity = flashOpacity;
         }
 
-        // パネルシェイク
+        // ぷるぷる震え（小刻み、かわいい揺れ）
         if (panel != null)
-            StartCoroutine(ShakeEffect(panel, isHeavy ? 0.3f : 0.2f, isHeavy ? 15f : 8f));
+        {
+            float wobbleDur = isHeavy ? 0.35f : 0.2f;
+            StartCoroutine(WobbleEffect(panel, wobbleDur, isHeavy ? 4f : 2.5f));
+        }
 
-        // スプライト赤点滅（tintColor + opacity フリッカー）
+        // スプライト: ピンク点滅（痛くない表現）
         for (int i = 0; i < 3; i++)
         {
-            faceEl.style.unityBackgroundImageTintColor = new Color(1f, 0.3f, 0.3f);
-            faceEl.style.opacity = 0.4f;
+            faceEl.style.unityBackgroundImageTintColor = new Color(1f, 0.75f, 0.8f);
+            faceEl.style.opacity = 0.6f;
             yield return new WaitForSeconds(0.08f);
             faceEl.style.unityBackgroundImageTintColor = Color.white;
             faceEl.style.opacity = 1f;
@@ -1833,6 +2263,21 @@ public class BattleManager : MonoBehaviour
             }
             flashOverlay.style.opacity = 0f;
         }
+    }
+
+    IEnumerator WobbleEffect(UIE.VisualElement target, float duration, float magnitude)
+    {
+        if (target == null) yield break;
+        float elapsed = 0f;
+        float speed = 30f;
+        while (elapsed < duration)
+        {
+            float x = Mathf.Sin(elapsed * speed) * magnitude * (1f - elapsed / duration);
+            target.style.translate = new UIE.StyleTranslate(new UIE.Translate(x, 0));
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        target.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 0));
     }
 
     // ===== カード粉砕演出 =====
@@ -1983,139 +2428,81 @@ public class BattleManager : MonoBehaviour
         whiteOverlay.RemoveFromHierarchy();
     }
 
-    IEnumerator ShatterCardEffect(UIE.VisualElement panel)
+    IEnumerator SleepyDefeatEffect(UIE.VisualElement panel)
     {
         if (panel == null) yield break;
 
-        // --- Phase 1: ひび割れ (0.6s) ---
-        var crackOverlay = new UIE.VisualElement();
-        crackOverlay.style.position = UIE.Position.Absolute;
-        crackOverlay.style.left = 0; crackOverlay.style.top = 0;
-        crackOverlay.style.right = 0; crackOverlay.style.bottom = 0;
-        crackOverlay.style.overflow = UIE.Overflow.Hidden;
-        crackOverlay.pickingMode = UIE.PickingMode.Ignore;
-        panel.Add(crackOverlay);
-
-        // ひび割れ線を生成
-        var crackLines = new (float cx, float cy, float angle, float len)[] {
-            (0.5f, 0.3f, -30f,  0.7f),
-            (0.4f, 0.5f,  45f,  0.6f),
-            (0.6f, 0.4f, -60f,  0.5f),
-            (0.3f, 0.6f,  20f,  0.8f),
-            (0.7f, 0.7f, -45f,  0.5f),
-            (0.5f, 0.5f,  70f,  0.6f),
-            (0.2f, 0.3f,  10f,  0.4f),
-            (0.8f, 0.5f, -20f,  0.4f),
-        };
-
-        float crackDuration = 0.6f;
-        float perCrack = crackDuration / crackLines.Length;
-
-        for (int i = 0; i < crackLines.Length; i++)
-        {
-            var (cx, cy, angle, len) = crackLines[i];
-            var line = new UIE.VisualElement();
-            line.pickingMode = UIE.PickingMode.Ignore;
-            line.style.position = UIE.Position.Absolute;
-            line.style.width = new UIE.Length(len * 100f, UIE.LengthUnit.Percent);
-            line.style.height = 3;
-            line.style.left = new UIE.Length(cx * 100f, UIE.LengthUnit.Percent);
-            line.style.top = new UIE.Length(cy * 100f, UIE.LengthUnit.Percent);
-            line.style.backgroundColor = new Color(0.1f, 0.1f, 0.1f, 0.8f);
-            line.style.rotate = new UIE.StyleRotate(new UIE.Rotate(new UIE.Angle(angle, UIE.AngleUnit.Degree)));
-            line.style.transformOrigin = new UIE.StyleTransformOrigin(
-                new UIE.TransformOrigin(new UIE.Length(0), new UIE.Length(50, UIE.LengthUnit.Percent)));
-            crackOverlay.Add(line);
-
-            // 小さな揺れ
-            StartCoroutine(ShakeEffect(panel, perCrack * 0.7f, 3f + i));
-            yield return new WaitForSeconds(perCrack);
-        }
-
-        // 最後の大きな揺れ
-        yield return StartCoroutine(ShakeEffect(panel, 0.15f, 15f));
-
-        // --- Phase 2: 粉砕 (0.7s) ---
-        crackOverlay.RemoveFromHierarchy();
-
-        // カードの親要素を取得
         var parent = panel.parent;
         if (parent == null) yield break;
 
-        // 破片を生成 (4x5 グリッド)
-        int cols = 4, rows2 = 5;
-        float panelW = 450f, panelH = 650f;
-        float fragW = panelW / cols;
-        float fragH = panelH / rows2;
+        var layout = panel.layout;
+        float panelCenterX = layout.x + layout.width * 0.5f;
+        float panelCenterY = layout.y;
 
-        // カードの位置を取得
-        var panelLayout = panel.layout;
-        float baseX = panelLayout.x;
-        float baseY = panelLayout.y;
+        // 💤 を浮かべるコンテナ
+        var zzContainer = new UIE.VisualElement();
+        zzContainer.pickingMode = UIE.PickingMode.Ignore;
+        zzContainer.style.position = UIE.Position.Absolute;
+        zzContainer.style.left = 0; zzContainer.style.top = 0;
+        zzContainer.style.right = 0; zzContainer.style.bottom = 0;
+        zzContainer.style.overflow = UIE.Overflow.Visible;
+        parent.Add(zzContainer);
 
-        // 元のカードを非表示
-        panel.style.visibility = UIE.Visibility.Hidden;
-
-        var fragments = new List<UIE.VisualElement>();
-        var velocities = new List<Vector2>();
-        var rotations = new List<float>();
-
-        for (int r = 0; r < rows2; r++)
-        {
-            for (int c = 0; c < cols; c++)
-            {
-                var frag = new UIE.VisualElement();
-                frag.pickingMode = UIE.PickingMode.Ignore;
-                frag.style.position = UIE.Position.Absolute;
-                frag.style.width = fragW;
-                frag.style.height = fragH;
-                frag.style.left = baseX + c * fragW;
-                frag.style.top = baseY + r * fragH;
-                frag.style.backgroundColor = new Color(
-                    Random.Range(0.15f, 0.35f),
-                    Random.Range(0.15f, 0.30f),
-                    Random.Range(0.25f, 0.45f),
-                    0.9f);
-                frag.style.borderTopLeftRadius = 2;
-                frag.style.borderTopRightRadius = 2;
-                frag.style.borderBottomLeftRadius = 2;
-                frag.style.borderBottomRightRadius = 2;
-                parent.Add(frag);
-                fragments.Add(frag);
-
-                // 中心からの方向 + ランダム
-                float dirX = (c - cols / 2f + 0.5f) * 200f + Random.Range(-80f, 80f);
-                float dirY = (r - rows2 / 2f + 0.5f) * 200f + Random.Range(-60f, -200f);
-                velocities.Add(new Vector2(dirX, dirY));
-                rotations.Add(Random.Range(-360f, 360f));
-            }
-        }
-
-        // アニメーション
-        float shatterDur = 0.7f;
+        // Phase 1: ゆらゆら揺れ (0.6s)
+        float wobbleDur = 0.6f;
         float elapsed = 0f;
-        while (elapsed < shatterDur)
+        while (elapsed < wobbleDur)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / shatterDur;
-            float ease = t * t; // ease-in
-
-            for (int i = 0; i < fragments.Count; i++)
-            {
-                var f = fragments[i];
-                float dx = velocities[i].x * ease;
-                float dy = velocities[i].y * ease + 400f * ease * ease; // 重力
-                f.style.translate = new UIE.StyleTranslate(new UIE.Translate(dx, dy));
-                f.style.rotate = new UIE.StyleRotate(new UIE.Rotate(new UIE.Angle(rotations[i] * ease, UIE.AngleUnit.Degree)));
-                f.style.opacity = 1f - t;
-                f.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(1f - ease * 0.5f, 1f - ease * 0.5f)));
-            }
+            float t = elapsed / wobbleDur;
+            float wobble = Mathf.Sin(t * Mathf.PI * 4f) * 5f * (1f - t);
+            panel.style.translate = new UIE.StyleTranslate(new UIE.Translate(wobble, 0));
             yield return null;
         }
 
-        // 破片を削除
-        foreach (var f in fragments)
-            f.RemoveFromHierarchy();
+        // Phase 2: 💤 を3つ順番に浮かべる
+        for (int i = 0; i < 3; i++)
+        {
+            var zz = new UIE.Label();
+            zz.pickingMode = UIE.PickingMode.Ignore;
+            zz.text = "\U0001F4A4";
+            zz.style.position = UIE.Position.Absolute;
+            zz.style.fontSize = 28 + i * 6;
+            zz.style.left = panelCenterX + (i - 1) * 30f;
+            zz.style.top = panelCenterY;
+            zz.style.opacity = 0f;
+            zzContainer.Add(zz);
+
+            float zzDur = 0.4f;
+            float zzElapsed = 0f;
+            while (zzElapsed < zzDur)
+            {
+                zzElapsed += Time.deltaTime;
+                float zt = Mathf.Clamp01(zzElapsed / zzDur);
+                zz.style.top = panelCenterY - 60f * zt;
+                zz.style.opacity = Mathf.Sin(zt * Mathf.PI);
+                yield return null;
+            }
+        }
+
+        // Phase 3: ゆっくり傾いてフェードアウト (1.0s)
+        float fallDur = 1.0f;
+        elapsed = 0f;
+        while (elapsed < fallDur)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / fallDur);
+            float ease = t * t;
+            float angle = ease * 15f;
+            panel.style.rotate = new UIE.StyleRotate(new UIE.Rotate(new UIE.Angle(angle, UIE.AngleUnit.Degree)));
+            panel.style.opacity = 1f - ease;
+            panel.style.translate = new UIE.StyleTranslate(new UIE.Translate(ease * 30f, ease * 20f));
+            yield return null;
+        }
+
+        panel.style.opacity = 0f;
+        panel.style.visibility = UIE.Visibility.Hidden;
+        zzContainer.RemoveFromHierarchy();
     }
 
     // ===== バトルフロー =====
@@ -2144,22 +2531,30 @@ public class BattleManager : MonoBehaviour
         }
         encounterOverlay.Add(encounterImg);
 
-        // テキスト
+        // テキスト（クラウドプレートで包む）
+        var encounterPlate = new UIE.VisualElement();
+        encounterPlate.AddToClassList("battle-encounter-plate");
+        encounterPlate.pickingMode = UIE.PickingMode.Ignore;
         var encounterText = new UIE.Label();
         encounterText.AddToClassList("battle-encounter-text");
-        encounterText.text = Localization.GetEnemy(enemyName) + " が あそびにきた！";
-        encounterOverlay.Add(encounterText);
+        UIHelper.ApplyFontBold(encounterText);
+        encounterText.text = Localization.GetEnemy(enemyName) + " が あそびにきたよ！ ✨";
+        encounterPlate.Add(encounterText);
+        encounterOverlay.Add(encounterPlate);
 
         overlayRoot.Add(encounterOverlay);
+
+        // ハート・キラキラパーティクル放射（エンカウント開始時）
+        StartCoroutine(EncounterSparkleEffect(encounterOverlay));
 
         // バウンス登場アニメーション
         yield return null;
         yield return StartCoroutine(BounceInEffect(encounterImg));
 
-        // テキストフェードイン
-        encounterText.AddToClassList("battle-encounter-text-visible");
+        // プレートフェードイン
+        encounterPlate.AddToClassList("battle-encounter-plate-visible");
 
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(0.8f);
 
         // フェードアウト
         encounterOverlay.AddToClassList("battle-encounter-overlay-hide");
@@ -2183,10 +2578,8 @@ public class BattleManager : MonoBehaviour
         playerAreaEl.style.opacity = 1;
         centerAreaEl.style.opacity = 1;
 
-        // バトルイントロ演出: 白フラッシュ + 画面シェイク
-        StartCoroutine(IntroFlashEffect());
-        StartCoroutine(ShakeEffect(root, 0.5f, 20f));
-        yield return new WaitForSeconds(0.5f);
+        // バトルイントロ演出: ハート放射
+        yield return StartCoroutine(IntroHeartBurstEffect());
 
         // BGM再生
         if (bgmSource != null && bgmSource.clip != null)
@@ -2455,15 +2848,13 @@ public class BattleManager : MonoBehaviour
         battleLogLabel.text = Localization.Get("battle_shiba_ultimate_announce");
         yield return new WaitForSeconds(1.0f);
 
-        StartCoroutine(FlashEffect(new Color(1f, 0.2f, 0.1f), 0.5f));
+        StartCoroutine(FlashEffect(new Color(1f, 0.72f, 0.77f), 0.5f));
         yield return new WaitForSeconds(0.3f);
 
         battleLogLabel.text = Localization.Get("battle_shiba_ultimate_name");
         yield return new WaitForSeconds(0.5f);
 
         yield return StartCoroutine(AttackAnimation(enemyPanel, playerPanel, true));
-        StartCoroutine(FlashEffect(new Color(0.8f, 0f, 0f), 0.6f));
-        StartCoroutine(ShakeEffect(playerPanel, 0.5f, 25f));
 
         int ultimatePower = 200;
         int damage = CalculateDamage(ultimatePower, playerDef, playerDefending);
@@ -2531,15 +2922,13 @@ public class BattleManager : MonoBehaviour
         battleLogLabel.text = Localization.Get("battle_devil_lady_ultimate");
         yield return new WaitForSeconds(1.0f);
 
-        StartCoroutine(FlashEffect(new Color(0.6f, 0.0f, 0.8f), 0.5f));
+        StartCoroutine(FlashEffect(new Color(1f, 0.72f, 0.77f), 0.5f));
         yield return new WaitForSeconds(0.3f);
 
         battleLogLabel.text = Localization.Get("battle_devil_lady_ultimate_name");
         yield return new WaitForSeconds(0.5f);
 
         yield return StartCoroutine(AttackAnimation(enemyPanel, playerPanel, true));
-        StartCoroutine(FlashEffect(new Color(0.5f, 0f, 0.6f), 0.6f));
-        StartCoroutine(ShakeEffect(playerPanel, 0.5f, 25f));
 
         int ultimatePower = 200;
         int damage = CalculateDamage(ultimatePower, playerDef, playerDefending);
@@ -2571,15 +2960,13 @@ public class BattleManager : MonoBehaviour
         battleLogLabel.text = Localization.Get("battle_melodias_ultimate");
         yield return new WaitForSeconds(1.0f);
 
-        StartCoroutine(FlashEffect(new Color(1.0f, 0.4f, 0.7f), 0.5f));
+        StartCoroutine(FlashEffect(new Color(1f, 0.72f, 0.77f), 0.5f));
         yield return new WaitForSeconds(0.3f);
 
         battleLogLabel.text = Localization.Get("battle_melodias_ultimate_name");
         yield return new WaitForSeconds(0.5f);
 
         yield return StartCoroutine(AttackAnimation(enemyPanel, playerPanel, true));
-        StartCoroutine(FlashEffect(new Color(1.0f, 0.84f, 0.0f), 0.6f));
-        StartCoroutine(ShakeEffect(playerPanel, 0.5f, 25f));
 
         int ultimatePower = 180;
         int damage = CalculateDamage(ultimatePower, playerDef, playerDefending);
@@ -2967,6 +3354,11 @@ public class BattleManager : MonoBehaviour
         var overlay = new UIE.VisualElement();
         overlay.AddToClassList("battle-result-overlay");
 
+        // お祝いタイトル（ぷるん揺れアニメーション付き）
+        var happyTitle = UIHelper.CreateLabel("\U0001F38A HAPPY! \U0001F38A", "battle-result-happy");
+        UIHelper.ApplyFontBold(happyTitle);
+        overlay.Add(happyTitle);
+
         var title = UIHelper.CreateLabel(Localization.Get("battle_enemy_defeated", Localization.GetEnemy(enemyName)), "battle-result-title");
         overlay.Add(title);
 
@@ -2975,45 +3367,79 @@ public class BattleManager : MonoBehaviour
         card.AddToClassList("battle-result-card");
         overlay.Add(card);
 
-        // EXP行
+        // EXP行（アイコン付き）
         var expRow = new UIE.VisualElement();
         expRow.AddToClassList("battle-result-row");
-        var expLabel = UIHelper.CreateLabel(Localization.Get("battle_result_exp"), "battle-result-row-label");
-        var expValue = UIHelper.CreateLabel($"+{expGained}", "battle-result-row-value");
+        var expLabel = UIHelper.CreateLabel("\u2728 " + Localization.Get("battle_result_exp"), "battle-result-row-label");
+        var expValue = UIHelper.CreateLabel("+0", "battle-result-row-value");
         expValue.AddToClassList("battle-result-value-accent");
         expRow.Add(expLabel);
         expRow.Add(expValue);
         card.Add(expRow);
 
-        // ミルク行
+        // ミルク行（アイコン付き）
         var milkRow = new UIE.VisualElement();
         milkRow.AddToClassList("battle-result-row");
-        var milkLabel = UIHelper.CreateLabel(Localization.Get("battle_result_milk"), "battle-result-row-label");
-        var milkValue = UIHelper.CreateLabel($"+{milkGained}", "battle-result-row-value");
+        var milkLabel = UIHelper.CreateLabel("\U0001F37C " + Localization.Get("battle_result_milk"), "battle-result-row-label");
+        var milkValue = UIHelper.CreateLabel("+0", "battle-result-row-value");
         milkValue.AddToClassList("battle-result-value-sub");
         milkRow.Add(milkLabel);
         milkRow.Add(milkValue);
         card.Add(milkRow);
 
-        // EXPバー
+        // EXPバー or レベルアップ表示
+        UIE.VisualElement barFill = null;
+        float targetRatio = 0f;
         if (!willLevelUp)
         {
-            var barLabel = UIHelper.CreateLabel($"EXP  {currentExp} / {needed}", "battle-result-bar-label");
+            var barLabel = UIHelper.CreateLabel($"\u2728 おもいで  {currentExp} / {needed}", "battle-result-bar-label");
             card.Add(barLabel);
 
             var barBg = new UIE.VisualElement();
             barBg.AddToClassList("battle-result-bar-bg");
-            var barFill = new UIE.VisualElement();
+            barFill = new UIE.VisualElement();
             barFill.AddToClassList("battle-result-bar-fill");
             barFill.style.width = new UIE.Length(0, UIE.LengthUnit.Percent);
             barBg.Add(barFill);
             card.Add(barBg);
+            targetRatio = Mathf.Clamp01((float)currentExp / needed);
+        }
+        else
+        {
+            var lvUpLabel = UIHelper.CreateLabel(Localization.Get("battle_age_up", currentAge + 1), "battle-result-levelup");
+            card.Add(lvUpLabel);
+        }
 
-            overlayRoot.Add(overlay);
+        // overlay表示
+        overlayRoot.Add(overlay);
+        yield return null;
 
-            // バーアニメーション
+        // HAPPY! ぷるん揺れアニメーション
+        StartCoroutine(HappyBounceLoop(happyTitle));
+
+        // カウントアップアニメーション (0.6s)
+        float countDur = 0.6f;
+        float countElapsed = 0f;
+        while (countElapsed < countDur)
+        {
+            countElapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(countElapsed / countDur);
+            float eased = 1f - Mathf.Pow(1f - t, 3f);
+            int dispExp = Mathf.RoundToInt(eased * expGained);
+            int dispMilk = Mathf.RoundToInt(eased * milkGained);
+            expValue.text = $"+{dispExp}";
+            milkValue.text = $"+{dispMilk}";
             yield return null;
-            float targetRatio = Mathf.Clamp01((float)currentExp / needed);
+        }
+        expValue.text = $"+{expGained}";
+        milkValue.text = $"+{milkGained}";
+
+        // カウントアップ完了時キラキラ
+        StartCoroutine(ResultSparkleEffect(card));
+
+        // EXPバーアニメーション
+        if (barFill != null)
+        {
             float animDuration = 0.8f;
             float animElapsed = 0f;
             while (animElapsed < animDuration)
@@ -3025,22 +3451,32 @@ public class BattleManager : MonoBehaviour
             }
             barFill.style.width = new UIE.Length(targetRatio * 100, UIE.LengthUnit.Percent);
         }
-        else
-        {
-            var lvUpLabel = UIHelper.CreateLabel(Localization.Get("battle_age_up", currentAge + 1), "battle-result-levelup");
-            card.Add(lvUpLabel);
-            overlayRoot.Add(overlay);
-        }
 
-        // OKボタン
+        // OKボタン（ぷっくり質感）
         bool dismissed = false;
-        var okBtn = UIHelper.CreatePillButton("OK", "battle-growth-ok-btn");
-        okBtn.style.marginTop = 40;
+        var okBtn = new UIE.Button();
+        okBtn.AddToClassList("battle-result-ok-btn");
+        UIHelper.ApplyFontBold(okBtn);
+        okBtn.text = "OK";
         okBtn.style.opacity = 0f;
-        okBtn.clicked += () => dismissed = true;
+        okBtn.clicked += () =>
+        {
+            if (seSource != null && seTap != null)
+            {
+                seSource.pitch = Random.Range(0.96f, 1.08f);
+                seSource.PlayOneShot(seTap, 0.7f);
+            }
+            StartCoroutine(PuniBounceEffect(okBtn));
+            dismissed = true;
+        };
+        // インナーハイライト
+        var okHighlight = new UIE.VisualElement();
+        okHighlight.AddToClassList("battle-cmd-highlight");
+        okHighlight.pickingMode = UIE.PickingMode.Ignore;
+        okBtn.Add(okHighlight);
         overlay.Add(okBtn);
 
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(0.3f);
         float okElapsed = 0f;
         while (okElapsed < 0.2f)
         {
@@ -3210,9 +3646,6 @@ public class BattleManager : MonoBehaviour
             while (!dismissed) yield return null;
 
         overlay.RemoveFromHierarchy();
-
-        battleLogLabel.text = Localization.Get("battle_hp_full_heal");
-        yield return new WaitForSeconds(1.0f);
     }
 
     IEnumerator BattleLose()
@@ -3220,8 +3653,8 @@ public class BattleManager : MonoBehaviour
         isBattleActive = false;
         StartCoroutine(FadeOutBGM(1.5f));
 
-        // プレイヤーカード粉砕演出
-        yield return StartCoroutine(ShatterCardEffect(playerPanel));
+        // おやすみなさい演出（💤フェードアウト）
+        yield return StartCoroutine(SleepyDefeatEffect(playerPanel));
         yield return new WaitForSeconds(0.3f);
 
         string babyName = DataCarrier.Instance != null && !string.IsNullOrEmpty(DataCarrier.Instance.babyName)

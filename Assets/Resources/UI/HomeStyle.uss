@@ -8,14 +8,37 @@
     flex-direction: column;
 }
 
-/* --- 背景（柔らかいピーチピンク） --- */
+/* --- 背景（オフホワイト #FFFDF9） --- */
 .home-bg {
     position: absolute;
     left: 0;
     top: 0;
     right: 0;
     bottom: 0;
-    background-color: rgb(255, 237, 230);
+    background-color: rgb(255, 253, 249);
+}
+
+/* --- ビネット（四隅→中央へごく薄いピンク） --- */
+.home-vignette-1 {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    border-width: 180px;
+    border-color: rgba(255, 210, 220, 0.06);
+    border-radius: 0;
+}
+.home-vignette-2 {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    border-width: 100px;
+    border-color: rgba(255, 200, 210, 0.04);
+    border-radius: 0;
+}
+.home-vignette-3 {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    border-width: 40px;
+    border-color: rgba(255, 200, 210, 0.03);
+    border-radius: 0;
 }
 
 /* --- 上部プロフィールエリア --- */
@@ -25,12 +48,26 @@
     align-items: center;
 }
 
-/* --- Player icon area --- */
+/* --- Player icon area（ダブルゴールドリング） --- */
 .home-icon-border {
-    width: 176px;
-    height: 176px;
+    width: 192px;
+    height: 192px;
     border-radius: 50%;
-    background-color: rgb(255, 183, 197);
+    background-color: rgba(255, 250, 240, 0.9);
+    border-width: 3px;
+    border-color: rgba(200, 168, 80, 0.6);
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.home-icon-inner-ring {
+    width: 174px;
+    height: 174px;
+    border-radius: 50%;
+    border-width: 2px;
+    border-color: rgba(200, 168, 80, 0.4);
+    background-color: transparent;
     flex-direction: column;
     justify-content: center;
     align-items: center;
@@ -60,10 +97,11 @@
 
 .home-player-name {
     flex-shrink: 0;
-    font-size: 40px;
+    font-size: 38px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: rgb(60, 40, 50);
+    color: rgb(93, 64, 55);
+    letter-spacing: 4px;
     margin-top: 15px;
 }
 
@@ -71,7 +109,7 @@
 .home-separator {
     height: 2px;
     width: 700px;
-    background-color: rgba(255, 183, 197, 0.5);
+    background-color: rgba(200, 168, 80, 0.3);
     margin-top: 20px;
 }
 
@@ -87,7 +125,7 @@
     flex-shrink: 0;
     font-size: 30px;
     -unity-text-align: middle-center;
-    color: rgb(100, 75, 85);
+    color: rgb(93, 64, 55);
     margin-top: 10px;
 }
 
@@ -152,4 +190,3 @@
     scale: 0.95 0.95;
     background-color: rgb(220, 60, 110);
 }
-

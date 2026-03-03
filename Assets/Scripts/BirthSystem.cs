@@ -103,6 +103,28 @@ public class BirthSystem : MonoBehaviour
     Coroutine flipAnimCoroutine;
     AudioClip seCardFlip;
 
+    // 魔法陣 (宿命を定めるボタン)
+    UIE.VisualElement magicCircleEl;
+    Coroutine magicCircleRotateCoroutine;
+
+    // ストーリーポップアップ (絵本風モーダル)
+    UIE.VisualElement storyPopupOverlay;
+    Coroutine storyPopupTypewriterCoroutine;
+    bool isStoryPopupOpen;
+
+    // キャラクター背景パーティクル
+    Coroutine fatherParticleCoroutine;
+    Coroutine motherParticleCoroutine;
+
+    // ステータスチェックボタンのパルスアニメーション
+    Coroutine statusCheckPulseCoroutine;
+
+    // ジャイロパララックス
+    Vector2 smoothAccel;
+    const float PARALLAX_FACE_AMOUNT = 8f;   // 顔画像の移動量(px)
+    const float PARALLAX_PARTICLE_AMOUNT = 15f; // パーティクルの移動量(px)
+    const float PARALLAX_SMOOTH = 5f;         // スムージング係数
+
     // 画像アップロードボタン
     UIE.Button uploadImageBtn;
     UIE.VisualElement customBabyImageEl;
@@ -116,13 +138,39 @@ public class BirthSystem : MonoBehaviour
     // 顔調整オーバーレイ
     UIE.VisualElement faceAdjustOverlayEl;
     UIE.VisualElement facePreviewImage;
+    float facePreviewCenterX, facePreviewCenterY; // プレビュー内の顔中心座標(px)
     float faceAdjOffsetX, faceAdjOffsetY, faceAdjScale = 1f;
     bool isDraggingFace;
     Vector2 dragStartPos;
     float dragStartOffsetX, dragStartOffsetY;
     Texture2D pendingFaceTexture;
+    Texture2D originalFaceTexture; // フィルター前の元画像（非破壊保持）
+    int originalFaceW, originalFaceH; // 元画像サイズ（クロップ補正用）
     Texture2D hollowWearTexture;
+    UIE.VisualElement filterLoadingOverlayEl;
+
+    // 目タップ関連
+    UIE.VisualElement eyeMarkOverlayEl;
+    UIE.VisualElement eyeMarkPreview;
+    Vector2 eyePos1 = new Vector2(-1, -1); // 左目（正規化座標 0-1）
+    Vector2 eyePos2 = new Vector2(-1, -1); // 右目
+    int eyeTapCount;
+    float eyeMarkSavedOffsetX, eyeMarkSavedOffsetY, eyeMarkSavedScale;
+    FaceLandmarkResult? detectedFaceLandmarks; // ネイティブ顔検出結果
     SynthesizeParams lastSynthParams;
+
+    // ぷにぷにインタラクション
+    bool puniInteractionEnabled;
+    UIE.VisualElement faceInteractionClip; // 顔穴位置のクリップコンテナ（overflow:hidden+楕円）
+    UIE.VisualElement leftPupilEl;
+    UIE.VisualElement rightPupilEl;
+    Vector2 leftPupilBasePos;  // 左目瞳の基準位置（faceInteractionClipローカル座標）
+    Vector2 rightPupilBasePos; // 右目瞳の基準位置
+    Vector2 leftPupilOffset;   // 現在の左瞳オフセット
+    Vector2 rightPupilOffset;  // 現在の右瞳オフセット
+    Coroutine puniSquishCoroutine;
+    UIE.VisualElement diagnosisOverlayEl;
+    Coroutine diagnosisTypewriterCoroutine;
 
     // DrawFace と同じ定数からプレビューサイズを計算（BabySynthesizerの検出値を使用）
     float GetFacePreviewUniform()
@@ -369,6 +417,8 @@ public class BirthSystem : MonoBehaviour
     UIE.VisualElement storyFatherFace, storyMotherFace;
     UIE.Label storyFatherName, storyMotherName;
     UIE.Label storyFatherIntro, storyMotherIntro;
+    UIE.VisualElement storyAlbumContent; // ハートパーティクル発射先
+    UIE.VisualElement activeStoryTooltip; // 表示中のふきだし
 
     void Start()
     {
@@ -475,12 +525,123 @@ public class BirthSystem : MonoBehaviour
         CreateMenuBar();
         CreateNameInputUI();
         CreateSaveConfirmUI();
+
+        // デバッグ用: 赤ちゃん画面スキップボタン（UI Toolkit）
+        CreateDebugSkipButton();
     }
 
     void OnDestroy()
     {
         if (overlayPanelSettings != null)
             Destroy(overlayPanelSettings);
+    }
+
+    // ===== デバッグ用: 赤ちゃん画面スキップ =====
+
+    UIE.VisualElement debugSkipBtnContainer;
+    void CreateDebugSkipButton()
+    {
+        if (overlayRoot == null) return;
+
+        // 画面下部に固定配置するコンテナ
+        debugSkipBtnContainer = new UIE.VisualElement();
+        debugSkipBtnContainer.style.position = UIE.Position.Absolute;
+        debugSkipBtnContainer.style.bottom = 340;
+        debugSkipBtnContainer.style.left = 0;
+        debugSkipBtnContainer.style.right = 0;
+        debugSkipBtnContainer.style.alignItems = UIE.Align.Center;
+        debugSkipBtnContainer.pickingMode = UIE.PickingMode.Ignore;
+
+        var btn = new UIE.Button();
+        btn.AddToClassList("pill-button");
+        UIHelper.ApplyFont(btn);
+        btn.text = "赤ちゃんよう(dev)";
+        btn.style.width = 500;
+        btn.style.height = 80;
+        btn.style.fontSize = 28;
+        btn.style.backgroundColor = new Color(0.67f, 0.94f, 0.82f); // #AAF0D1
+        btn.style.borderTopLeftRadius = 40;
+        btn.style.borderTopRightRadius = 40;
+        btn.style.borderBottomLeftRadius = 40;
+        btn.style.borderBottomRightRadius = 40;
+        btn.clicked += () => StartCoroutine(DebugSkipToBabyResult());
+        debugSkipBtnContainer.Add(btn);
+        overlayRoot.Add(debugSkipBtnContainer);
+    }
+
+    IEnumerator DebugSkipToBabyResult()
+    {
+        Debug.Log("[BirthSystem] DEBUG: Skipping to baby result");
+        if (isAnimating) yield break;
+        isAnimating = true;
+
+        // ダミーデータ
+        selectedGender = "女の子";
+        ParentData father = NewFathers[0];
+        ParentData mother = NewMothers[0];
+        int c_fortune = 80;
+
+        // ボタン・イントロを非表示
+        if (generateLifeButton != null) generateLifeButton.SetActive(false);
+        if (introPanel != null) introPanel.SetActive(false);
+        if (debugSkipBtnContainer != null) debugSkipBtnContainer.style.display = UIE.DisplayStyle.None;
+
+        // 背景を青空に切り替え
+        if (mainBgImg != null)
+        {
+            var aozoraSprite = Resources.Load<Sprite>("BackGrounds/aozora-background");
+            if (aozoraSprite != null)
+            {
+                mainBgImg.sprite = aozoraSprite;
+                mainBgImg.type = Image.Type.Simple;
+                mainBgImg.preserveAspect = false;
+                mainBgImg.color = Color.white;
+            }
+        }
+
+        // レイアウト切り替え
+        var rank = BabySynthesizer.DetermineRank(c_fortune);
+        SwitchToBirthResultLayout(rank);
+        yield return null;
+
+        // 合成
+        if (babyFace != null) babyFace.gameObject.SetActive(false);
+        var synthParams = new SynthesizeParams
+        {
+            fortune = c_fortune,
+            isGodBaby = false,
+            fatherImageName = father.imageName,
+            motherImageName = mother.imageName,
+            genderKey = "female",
+            father = father,
+            mother = mother,
+            babyAtk = 50, babyDef = 50, babyHp = 150,
+            babyIntelligence = 50, babyAthletic = 50, babyLuck = 50,
+            customImagePath = DataCarrier.Instance != null ? DataCarrier.Instance.customBabyImagePath : "",
+            fatherItemPath = GetParentItemPath(father.imageName, true),
+            motherItemPath = GetParentItemPath(mother.imageName, false),
+        };
+        lastSynthParams = synthParams;
+        Sprite synthSprite = babySynthesizer.Synthesize(synthParams);
+        if (synthSprite != null)
+        {
+            DisplaySynthesizedBaby(synthSprite);
+        }
+
+        // 結果コンテナを表示
+        var resultContainer = UIE.UQueryExtensions.Q(overlayRoot, className: "birth-result-container");
+        if (resultContainer != null) resultContainer.style.opacity = 1;
+
+        // アップロードボタン
+        if (birthResultCard != null) CreateUploadButton();
+        if (birthResultCard != null) CreateScreenshotButton();
+
+        // 名前ラベル表示
+        if (babyNameLabel != null)
+            babyNameLabel.text = "<color=#ff99cc>女の子</color>";
+
+        isAnimating = false;
+        Debug.Log("[BirthSystem] DEBUG: Baby result displayed");
     }
 
     // ===== ボタンから呼ばれるメソッド =====
@@ -505,18 +666,17 @@ public class BirthSystem : MonoBehaviour
     {
         isAnimating = true;
 
-        // ボタンのエフェクトを停止、PUSHロゴ非表示
+        // ボタンのエフェクトを停止
         if (generateLifeButton != null)
         {
             var effect = generateLifeButton.GetComponent<PachinkoButtonEffect>();
             if (effect != null) effect.enabled = false;
         }
 
-
-        // ── フェーズ1: ボタンが震える（3秒） ──
-        float shakeDuration = 3f;
+        // ── フェーズ1: ボタンがやさしく震える + 光が集まる（2.5秒） ──
+        float shakeDuration = 2.5f;
         float elapsed = 0f;
-        float shakeIntensity = 3f;
+        float shakeIntensity = 2f;
         Vector3 originalPos = Vector3.zero;
         RectTransform btnRect = null;
 
@@ -526,19 +686,25 @@ public class BirthSystem : MonoBehaviour
             if (btnRect != null) originalPos = btnRect.anchoredPosition;
         }
 
-        // 震えが徐々に激しくなる
+        // やさしい振動（徐々に強くなるがマイルドに）
         while (elapsed < shakeDuration)
         {
             elapsed += Time.deltaTime;
             float progress = elapsed / shakeDuration;
-            // 強度は時間とともに増す（最初は微振動、最後は激しく）
-            float currentIntensity = Mathf.Lerp(shakeIntensity, shakeIntensity * 8f, progress * progress);
+            float currentIntensity = Mathf.Lerp(shakeIntensity, shakeIntensity * 3f, progress * progress);
             if (btnRect != null)
             {
                 float offX = Random.Range(-currentIntensity, currentIntensity);
                 float offY = Random.Range(-currentIntensity, currentIntensity);
                 btnRect.anchoredPosition = new Vector2(originalPos.x + offX, originalPos.y + offY);
             }
+
+            // 振動中にスターダストを散らす（0.3秒ごと）
+            if (progress > 0.2f && Time.frameCount % 18 == 0)
+            {
+                SpawnCelestialParticle();
+            }
+
             yield return null;
         }
 
@@ -546,72 +712,49 @@ public class BirthSystem : MonoBehaviour
         if (btnRect != null)
             btnRect.anchoredPosition = new Vector2(originalPos.x, originalPos.y);
 
-        // ── フェーズ2: 雷演出 + フラッシュ ──
-        if (seSource != null && seThunder != null)
-            seSource.PlayOneShot(seThunder, 1f);
-        if (lightningContainer != null) lightningContainer.SetActive(true);
-
-        for (int i = 0; i < 4; i++)
+        // ── フェーズ2: ハート＆星が舞い上がる + ソフトフラッシュ ──
+        // 一斉に多数のパーティクルを放出
+        for (int i = 0; i < 12; i++)
         {
-            var bolt = CreateLightningBolt();
-
-            if (flashOverlay != null)
-            {
-                flashOverlay.gameObject.SetActive(true);
-                flashOverlay.color = new Color(1f, 1f, 0.8f, 0.6f);
-            }
-
-            // 画面全体も震わせる
-            if (canvas != null)
-            {
-                var cRect = canvas.GetComponent<RectTransform>();
-                if (cRect != null)
-                {
-                    cRect.anchoredPosition = new Vector2(
-                        Random.Range(-12f, 12f), Random.Range(-12f, 12f));
-                }
-            }
-
-            yield return new WaitForSeconds(0.08f);
-
-            if (flashOverlay != null)
-            {
-                flashOverlay.color = new Color(1f, 1f, 1f, 0f);
-                flashOverlay.gameObject.SetActive(false);
-            }
-
-            yield return new WaitForSeconds(0.06f);
-            if (bolt != null) Destroy(bolt);
-            yield return new WaitForSeconds(Random.Range(0.05f, 0.12f));
+            SpawnCelestialParticle();
         }
 
-        // 最後の大フラッシュ（白）
+        // ソフトなフラッシュ（ピンクがかった白）
         if (flashOverlay != null)
         {
             flashOverlay.gameObject.SetActive(true);
-            flashOverlay.color = new Color(1f, 1f, 1f, 0.95f);
+            flashOverlay.color = new Color(1f, 0.95f, 0.96f, 0.4f);
         }
+        yield return new WaitForSeconds(0.2f);
 
-        yield return new WaitForSeconds(0.15f);
+        if (flashOverlay != null)
+            flashOverlay.color = new Color(1f, 1f, 1f, 0f);
 
-        // Canvas位置リセット
-        if (canvas != null)
+        // もう一波
+        for (int i = 0; i < 8; i++)
         {
-            var cRect = canvas.GetComponent<RectTransform>();
-            if (cRect != null) cRect.anchoredPosition = Vector2.zero;
+            SpawnCelestialParticle();
         }
+        yield return new WaitForSeconds(0.3f);
 
-        if (lightningContainer != null) lightningContainer.SetActive(false);
-
-        // フラッシュフェードアウト
+        // 最後のやさしいホワイトアウト
         if (flashOverlay != null)
         {
-            float fadeDur = 0.5f;
+            flashOverlay.gameObject.SetActive(true);
+            flashOverlay.color = new Color(1f, 1f, 1f, 0.85f);
+        }
+
+        yield return new WaitForSeconds(0.2f);
+
+        // フラッシュフェードアウト（やわらかく）
+        if (flashOverlay != null)
+        {
+            float fadeDur = 0.6f;
             float fadeElapsed = 0f;
             while (fadeElapsed < fadeDur)
             {
                 fadeElapsed += Time.deltaTime;
-                float a = Mathf.Lerp(0.95f, 0f, fadeElapsed / fadeDur);
+                float a = Mathf.Lerp(0.85f, 0f, fadeElapsed / fadeDur);
                 flashOverlay.color = new Color(1f, 1f, 1f, a);
                 yield return null;
             }
@@ -649,6 +792,74 @@ public class BirthSystem : MonoBehaviour
         // ── フェーズ4: ルーレットへ遷移 ──
         isAnimating = false;
         StartCoroutine(SpinRouletteAnimation());
+    }
+
+    // ── 天界パーティクル（ハート・星がふわっと舞い上がる） ──
+    static readonly string[] celestialSymbols = { "\u2665", "\u2606", "\u2726", "\u2727", "\u2764" };
+    static readonly Color[] celestialColors = {
+        new Color(1f, 0.72f, 0.77f, 1f),   // ピンク
+        new Color(0.97f, 0.91f, 0.81f, 1f), // メイン
+        new Color(0.67f, 0.94f, 0.82f, 1f), // ミント
+        new Color(1f, 0.85f, 0.65f, 1f),    // ゴールド
+        new Color(1f, 1f, 1f, 1f),           // ホワイト
+    };
+
+    void SpawnCelestialParticle()
+    {
+        if (canvas == null) return;
+        var particleObj = new GameObject("CelestialParticle");
+        particleObj.transform.SetParent(canvas.transform, false);
+        var rect = particleObj.AddComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        // ボタン周辺から発生（ボタン位置 y=-400 付近）
+        float startX = Random.Range(-200f, 200f);
+        float startY = -400f + Random.Range(-80f, 80f);
+        rect.anchoredPosition = new Vector2(startX, startY);
+        rect.sizeDelta = new Vector2(60, 60);
+
+        var tmp = particleObj.AddComponent<TextMeshProUGUI>();
+        tmp.text = celestialSymbols[Random.Range(0, celestialSymbols.Length)];
+        tmp.fontSize = Random.Range(24, 44);
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = celestialColors[Random.Range(0, celestialColors.Length)];
+        tmp.raycastTarget = false;
+
+        StartCoroutine(AnimateCelestialParticle(rect, tmp));
+    }
+
+    IEnumerator AnimateCelestialParticle(RectTransform rect, TextMeshProUGUI tmp)
+    {
+        if (rect == null || tmp == null) yield break;
+        float duration = Random.Range(1.2f, 2.0f);
+        float elapsed = 0f;
+        Vector2 startPos = rect.anchoredPosition;
+        float driftX = Random.Range(-60f, 60f);
+        float riseY = Random.Range(300f, 600f);
+        float startScale = Random.Range(0.5f, 1.0f);
+        Color startColor = tmp.color;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            float eased = 1f - (1f - t) * (1f - t); // ease-out quadratic
+
+            if (rect == null) yield break;
+            rect.anchoredPosition = new Vector2(
+                startPos.x + driftX * eased + 8f * Mathf.Sin(t * Mathf.PI * 3f),
+                startPos.y + riseY * eased
+            );
+            float s = startScale * (1f + 0.3f * Mathf.Sin(t * Mathf.PI));
+            rect.localScale = new Vector3(s, s, 1f);
+
+            if (tmp != null)
+                tmp.color = new Color(startColor.r, startColor.g, startColor.b, 1f - t * t);
+
+            yield return null;
+        }
+
+        if (rect != null) Destroy(rect.gameObject);
     }
 
     public void ResetParents()
@@ -872,6 +1083,14 @@ public class BirthSystem : MonoBehaviour
         shareBtn.clicked += OnShareButtonClicked;
         shareBtnWrapper.Add(shareBtn);
 
+        // しんだんボタン
+        var diagnosisBtn = new UIE.Button();
+        diagnosisBtn.AddToClassList("birth-diagnosis-btn");
+        UIHelper.ApplyFont(diagnosisBtn);
+        diagnosisBtn.text = Localization.Get("diagnosis_btn");
+        diagnosisBtn.clicked += () => ShowDiagnosisModal();
+        shareBtnWrapper.Add(diagnosisBtn);
+
         // バトルへ進むボタン
         var battleBtn = new UIE.Button();
         battleBtn.AddToClassList("birth-share-battle-btn");
@@ -881,6 +1100,17 @@ public class BirthSystem : MonoBehaviour
         shareBtnWrapper.Add(battleBtn);
 
         overlayRoot.Add(shareBtnWrapper);
+
+        // シェアモードでは photoBtn のアップロード機能を無効化（ぷにぷに優先）
+        if (uploadImageBtn != null)
+        {
+            uploadImageBtn.clicked -= PickImageFromGallery;
+            uploadImageBtn.pickingMode = UIE.PickingMode.Ignore;
+            Debug.Log("[BirthSystem] Disabled photoBtn click for share mode");
+        }
+
+        // ぷにぷにインタラクション セットアップ
+        SetupBabyFaceInteractions();
 
         // フェードイン
         float fadeIn = 0.4f;
@@ -1127,26 +1357,29 @@ public class BirthSystem : MonoBehaviour
         PlayBabyVoiceSE(true);
         // カットイン演出
         yield return StartCoroutine(ShowParentCutin(father.name));
-        // 紹介文表示
+        // 紹介文表示（0.5秒遅延のふわっとフェードアップ）
         if (fatherIntroText != null)
         {
             fatherIntroText.text = Localization.GetParentIntro(father.name).Replace(" / ", "\n");
-            fatherIntroText.style.visibility = UIE.Visibility.Visible;
+            StartCoroutine(FadeUpIntroText(fatherIntroText));
         }
+        // キャラクター背景パーティクル開始
+        fatherParticleCoroutine = StartCoroutine(SpawnCharacterParticles(fatherFaceImage, father));
         // 「愛する女性を探す」ボタンで待機
         yield return new WaitForSeconds(0.5f);
-        CreateStatusCheckButton(father, fatherCard);
+        CreateStatusCheckButton(father, fatherCard, true);
         SetNextButtonText(Localization.Get("birth_find_mother"));
-        if (nextButtonEl != null) nextButtonEl.style.display = UIE.DisplayStyle.Flex;
+        ShowNextButton();
         waitingForNext = true;
         while (waitingForNext) yield return null;
-        if (nextButtonEl != null) nextButtonEl.style.display = UIE.DisplayStyle.None;
+        HideNextButton();
         DestroyStatusCheckButton();
         SetNextButtonText(Localization.Get("birth_next"));
 
         // ── フェーズ3: 「惹かれ合う、もう一つの魂」カットイン → 母親ルーレット ──
         yield return StartCoroutine(ShowMotherCutinText(Localization.Get("cutin_who_mother")));
 
+        StopCharacterParticles();
         if (fatherCard != null) fatherCard.style.display = UIE.DisplayStyle.None;
         if (motherCard != null) motherCard.style.display = UIE.DisplayStyle.Flex;
         // 高速シャッフル（15回×0.06秒）
@@ -1171,20 +1404,22 @@ public class BirthSystem : MonoBehaviour
         PlayBabyVoiceSE(false);
         // カットイン演出
         yield return StartCoroutine(ShowParentCutin(mother.name));
-        // 紹介文表示
+        // 紹介文表示（0.5秒遅延のふわっとフェードアップ）
         if (motherIntroText != null)
         {
             motherIntroText.text = Localization.GetParentIntro(mother.name).Replace(" / ", "\n");
-            motherIntroText.style.visibility = UIE.Visibility.Visible;
+            StartCoroutine(FadeUpIntroText(motherIntroText));
         }
+        // キャラクター背景パーティクル開始
+        motherParticleCoroutine = StartCoroutine(SpawnCharacterParticles(motherFaceImage, mother));
         // 「恋の始まり」ボタンで待機
         yield return new WaitForSeconds(0.5f);
-        CreateStatusCheckButton(mother, motherCard);
+        CreateStatusCheckButton(mother, motherCard, true);
         SetNextButtonText(Localization.Get("birth_love_begin"));
-        if (nextButtonEl != null) nextButtonEl.style.display = UIE.DisplayStyle.Flex;
+        ShowNextButton();
         waitingForNext = true;
         while (waitingForNext) yield return null;
-        if (nextButtonEl != null) nextButtonEl.style.display = UIE.DisplayStyle.None;
+        HideNextButton();
         DestroyStatusCheckButton();
         SetNextButtonText(Localization.Get("birth_next"));
 
@@ -1192,7 +1427,8 @@ public class BirthSystem : MonoBehaviour
         selectedGender = Random.Range(0, 2) == 0 ? "男の子" : "女の子";
         Debug.Log($"[BirthSystem] Gender random: {selectedGender}");
 
-        // 両親カード非表示
+        // パーティクル停止 + 両親カード非表示
+        StopCharacterParticles();
         if (fatherCard != null) fatherCard.style.display = UIE.DisplayStyle.None;
         if (motherCard != null) motherCard.style.display = UIE.DisplayStyle.None;
 
@@ -2381,13 +2617,44 @@ public class BirthSystem : MonoBehaviour
         CreateParentCard(parentPanel, out fatherCard, out fatherFaceImage, out fatherNameText, out fatherIntroText, "father");
         CreateParentCard(parentPanel, out motherCard, out motherFaceImage, out motherNameText, out motherIntroText, "mother");
 
-        // ── 「次へ」ボタン ──
+        // ── 「次へ」ボタン（シャンパンゴールド + 魔法陣） ──
         var nextWrapper = new UIE.VisualElement();
         nextWrapper.AddToClassList("birth-next-btn-wrapper");
 
         var shadow = new UIE.VisualElement();
         shadow.AddToClassList("shadow-layer");
         nextWrapper.Add(shadow);
+
+        // 魔法陣（ボタンの背後にゆっくり回転するリング）
+        magicCircleEl = new UIE.VisualElement();
+        magicCircleEl.AddToClassList("birth-magic-circle");
+        magicCircleEl.pickingMode = UIE.PickingMode.Ignore;
+        var ringOuter = new UIE.VisualElement();
+        ringOuter.AddToClassList("birth-magic-ring-outer");
+        ringOuter.pickingMode = UIE.PickingMode.Ignore;
+        magicCircleEl.Add(ringOuter);
+        var ringInner = new UIE.VisualElement();
+        ringInner.AddToClassList("birth-magic-ring-inner");
+        ringInner.pickingMode = UIE.PickingMode.Ignore;
+        magicCircleEl.Add(ringInner);
+        // 8シンボルを45度間隔で配置
+        string[] magicSymbols = { "\u2726", "\u2606", "\u2727", "\u2661", "\u25c7", "\u2726", "\u2606", "\u2727" };
+        for (int i = 0; i < 8; i++)
+        {
+            var sym = UIHelper.CreateLabel(magicSymbols[i]);
+            sym.AddToClassList("birth-magic-symbol");
+            sym.pickingMode = UIE.PickingMode.Ignore;
+            float angle = i * 45f * Mathf.Deg2Rad;
+            float radius = 46f; // パーセント (50% - 4%)
+            float cx = 50f + radius * Mathf.Cos(angle);
+            float cy = 50f - radius * Mathf.Sin(angle);
+            sym.style.left = new UIE.StyleLength(new UIE.Length(cx, UIE.LengthUnit.Percent));
+            sym.style.top = new UIE.StyleLength(new UIE.Length(cy, UIE.LengthUnit.Percent));
+            sym.style.translate = new UIE.StyleTranslate(
+                new UIE.Translate(new UIE.Length(-50, UIE.LengthUnit.Percent), new UIE.Length(-50, UIE.LengthUnit.Percent)));
+            magicCircleEl.Add(sym);
+        }
+        nextWrapper.Add(magicCircleEl);
 
         var nextBtn = new UIE.Button();
         nextBtn.AddToClassList("birth-next-btn");
@@ -2403,12 +2670,169 @@ public class BirthSystem : MonoBehaviour
 
     void OnNextPressed()
     {
+        StartCoroutine(WhiteoutThenProceed());
+    }
+
+    // ── 魔法陣回転アニメーション ──
+    IEnumerator AnimateMagicCircle()
+    {
+        float angle = 0f;
+        while (magicCircleEl != null && magicCircleEl.parent != null)
+        {
+            angle += Time.deltaTime * 8f;
+            magicCircleEl.style.rotate = new UIE.StyleRotate(
+                new UIE.Rotate(new UIE.Angle(angle, UIE.AngleUnit.Degree)));
+            yield return null;
+        }
+    }
+
+    void ShowNextButton()
+    {
+        if (nextButtonEl != null)
+        {
+            nextButtonEl.style.display = UIE.DisplayStyle.Flex;
+            if (magicCircleRotateCoroutine != null) StopCoroutine(magicCircleRotateCoroutine);
+            magicCircleRotateCoroutine = StartCoroutine(AnimateMagicCircle());
+        }
+    }
+
+    void HideNextButton()
+    {
+        if (nextButtonEl != null)
+        {
+            nextButtonEl.style.display = UIE.DisplayStyle.None;
+            if (magicCircleRotateCoroutine != null)
+            {
+                StopCoroutine(magicCircleRotateCoroutine);
+                magicCircleRotateCoroutine = null;
+            }
+        }
+    }
+
+    // ── ホワイトアウト遷移 ──
+    IEnumerator WhiteoutThenProceed()
+    {
+        // 二重タップ防止
+        var btn = UIE.UQueryExtensions.Q<UIE.Button>(nextButtonEl);
+        if (btn != null) btn.SetEnabled(false);
+
+        // ゴールドリップル（ボタン中心から放射状に拡がる金の波紋）
+        if (nextButtonEl != null)
+            StartCoroutine(SpawnGoldRipple(nextButtonEl));
+
+        // フラッシュイン（warm white）
+        if (flashOverlay != null)
+        {
+            flashOverlay.gameObject.SetActive(true);
+            float fadeInDur = 0.3f;
+            float elapsed = 0f;
+            while (elapsed < fadeInDur)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / fadeInDur);
+                float easeT = t * t;
+                flashOverlay.color = new Color(1f, 0.98f, 0.95f, 0.85f * easeT);
+                yield return null;
+            }
+        }
+
+        yield return new WaitForSeconds(0.15f);
+
+        // メインコルーチンに進行許可
         waitingForNext = false;
+
+        // フラッシュアウト
+        if (flashOverlay != null)
+        {
+            float fadeOutDur = 0.5f;
+            float elapsed2 = 0f;
+            while (elapsed2 < fadeOutDur)
+            {
+                elapsed2 += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed2 / fadeOutDur);
+                flashOverlay.color = new Color(1f, 0.98f, 0.95f, 0.85f * (1f - t));
+                yield return null;
+            }
+            flashOverlay.gameObject.SetActive(false);
+        }
+
+        if (btn != null) btn.SetEnabled(true);
+    }
+
+    // ── ゴールドリップル（宿命を定めるボタン押下時） ──
+    IEnumerator SpawnGoldRipple(UIE.VisualElement parent)
+    {
+        // 2本の波紋を少しずらして発射
+        for (int r = 0; r < 2; r++)
+        {
+            var ripple = new UIE.VisualElement();
+            ripple.style.position = UIE.Position.Absolute;
+            ripple.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+            ripple.style.top = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+            float startSize = 30f;
+            ripple.style.width = startSize;
+            ripple.style.height = startSize;
+            ripple.style.translate = new UIE.StyleTranslate(
+                new UIE.Translate(-startSize / 2, -startSize / 2));
+            SetAllRadius(ripple, startSize / 2);
+            ripple.style.backgroundColor = new Color(0, 0, 0, 0);
+            float bw = r == 0 ? 3f : 2f;
+            ripple.style.borderTopWidth = bw;
+            ripple.style.borderBottomWidth = bw;
+            ripple.style.borderLeftWidth = bw;
+            ripple.style.borderRightWidth = bw;
+            Color goldColor = new Color(0.776f, 0.627f, 0.314f, 0.7f); // rgb(198,160,80)
+            ripple.style.borderTopColor = goldColor;
+            ripple.style.borderBottomColor = goldColor;
+            ripple.style.borderLeftColor = goldColor;
+            ripple.style.borderRightColor = goldColor;
+            parent.Add(ripple);
+
+            StartCoroutine(AnimateGoldRipple(ripple, r == 0 ? 800f : 1200f, r == 0 ? 0.8f : 1.0f));
+            yield return new WaitForSeconds(0.1f);
+        }
+    }
+
+    IEnumerator AnimateGoldRipple(UIE.VisualElement ripple, float maxSize, float duration)
+    {
+        float startSize = 30f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float easeT = 1f - (1f - t) * (1f - t); // ease-out
+            float s = Mathf.Lerp(startSize, maxSize, easeT);
+            ripple.style.width = s;
+            ripple.style.height = s;
+            ripple.style.translate = new UIE.StyleTranslate(
+                new UIE.Translate(-s / 2, -s / 2));
+            SetAllRadius(ripple, s / 2);
+
+            float alpha = 0.7f * (1f - t);
+            Color c = new Color(0.776f, 0.627f, 0.314f, alpha);
+            ripple.style.borderTopColor = c;
+            ripple.style.borderBottomColor = c;
+            ripple.style.borderLeftColor = c;
+            ripple.style.borderRightColor = c;
+            yield return null;
+        }
+        if (ripple.parent != null)
+            ripple.RemoveFromHierarchy();
     }
 
     // ===== 親ステータスアコーディオン =====
 
-    void CreateStatusCheckButton(ParentData parent, UIE.VisualElement targetCard)
+    string GetStatusCheckButtonText(UIE.VisualElement targetCard)
+    {
+        if (targetCard != null && targetCard.ClassListContains("birth-parent-card-father"))
+            return "どんなパパなの？ ✨";
+        if (targetCard != null && targetCard.ClassListContains("birth-parent-card-mother"))
+            return "どんなママなの？ ✨";
+        return "どんな親なの？ ✨";
+    }
+
+    void CreateStatusCheckButton(ParentData parent, UIE.VisualElement targetCard, bool isFirstMeet = false)
     {
         if (targetCard == null) return;
         DestroyStatusCheckButton();
@@ -2416,16 +2840,70 @@ public class BirthSystem : MonoBehaviour
         statusCheckButton = new UIE.Button();
         statusCheckButton.AddToClassList("birth-status-check-btn");
         UIHelper.ApplyFontBold(statusCheckButton);
-        statusCheckButton.text = "\u2728 \u30b9\u30c6\u30fc\u30bf\u30b9\u3092\u78ba\u8a8d \u2728";
+        // 親の role に応じてボタンテキストを動的に設定
+        statusCheckButton.text = GetStatusCheckButtonText(targetCard);
 
         currentAccordionParent = parent;
         currentAccordionTargetCard = targetCard;
-        statusCheckButton.clicked += () => ToggleAccordion(currentAccordionParent, currentAccordionTargetCard);
+        statusCheckButton.clicked += () =>
+        {
+            // パルスを止めてからアコーディオン（ストーリーポップアップ）を開く
+            StopStatusCheckPulse();
+            ToggleAccordion(currentAccordionParent, currentAccordionTargetCard);
+        };
         targetCard.Add(statusCheckButton);
+
+        // 初回遭遇キャラならパルスアニメーションで注意を引く
+        if (isFirstMeet && !HasMetParent(parent.name))
+        {
+            statusCheckPulseCoroutine = StartCoroutine(PulseStatusCheckButton(statusCheckButton));
+        }
+    }
+
+    bool HasMetParent(string parentName)
+    {
+        return PlayerPrefs.GetInt("met_parent_" + parentName, 0) == 1;
+    }
+
+    void MarkParentAsMet(string parentName)
+    {
+        PlayerPrefs.SetInt("met_parent_" + parentName, 1);
+    }
+
+    void StopStatusCheckPulse()
+    {
+        if (statusCheckPulseCoroutine != null)
+        {
+            StopCoroutine(statusCheckPulseCoroutine);
+            statusCheckPulseCoroutine = null;
+        }
+        // スケールをリセット
+        if (statusCheckButton != null)
+            statusCheckButton.style.scale = new UIE.StyleScale(new UIE.Scale(Vector2.one));
+    }
+
+    IEnumerator PulseStatusCheckButton(UIE.Button btn)
+    {
+        float elapsed = 0f;
+        while (btn != null && btn.parent != null)
+        {
+            elapsed += Time.deltaTime;
+            // ゆっくりしたパルス (周期1.2秒)
+            float t = Mathf.Sin(elapsed * Mathf.PI * 2f / 1.2f);
+            float s = 1f + 0.04f * t;
+            btn.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(s, s)));
+            yield return null;
+        }
     }
 
     void DestroyStatusCheckButton()
     {
+        // パルスアニメーション停止
+        StopStatusCheckPulse();
+
+        // ストーリーポップアップが開いていたら閉じる
+        CloseStoryPopup();
+
         // フリップ状態のクリーンアップ
         if (flipAnimCoroutine != null)
         {
@@ -2473,43 +2951,134 @@ public class BirthSystem : MonoBehaviour
             return;
         }
 
-        if (accordionAnimCoroutine != null)
+        if (isStoryPopupOpen)
         {
-            StopCoroutine(accordionAnimCoroutine);
-            accordionAnimCoroutine = null;
-        }
-
-        if (isAccordionOpen)
-        {
-            // 閉じる
-            if (accordionContainer != null)
-            {
-                statusCheckButton.text = "\u2728 \u30b9\u30c6\u30fc\u30bf\u30b9\u3092\u78ba\u8a8d \u2728";
-                accordionAnimCoroutine = StartCoroutine(AnimateAccordionClose(accordionContainer, () =>
-                {
-                    accordionContainer = null;
-                    isAccordionOpen = false;
-                }));
-            }
-            else
-            {
-                isAccordionOpen = false;
-            }
+            CloseStoryPopup();
         }
         else
         {
-            // 開く — SE再生
+            // SE再生
             if (seSource != null && seKirakira4 != null)
                 seSource.PlayOneShot(seKirakira4, 0.8f);
-
-            string role = targetCard.ClassListContains("birth-parent-card-father") ? "father" : "mother";
-            accordionContainer = BuildAccordionContent(parent, role);
-            targetCard.Add(accordionContainer);
-            isAccordionOpen = true;
-            statusCheckButton.text = "\u25b2 \u30b9\u30c6\u30fc\u30bf\u30b9\u3092\u3068\u3058\u308b";
-
-            accordionAnimCoroutine = StartCoroutine(AnimateAccordionOpen(accordionContainer));
+            ShowStoryPopup(parent, targetCard);
         }
+    }
+
+    // ===== 絵本風ストーリーポップアップ =====
+
+    void ShowStoryPopup(ParentData parent, UIE.VisualElement targetCard)
+    {
+        if (overlayRoot == null) return;
+
+        isStoryPopupOpen = true;
+        // 初回閲覧を記録（次回以降パルスしない）
+        MarkParentAsMet(parent.name);
+        if (statusCheckButton != null)
+            statusCheckButton.text = "\u25b2 \u3068\u3058\u308b";
+
+        // オーバーレイ
+        storyPopupOverlay = new UIE.VisualElement();
+        storyPopupOverlay.AddToClassList("birth-story-popup-overlay");
+        storyPopupOverlay.RegisterCallback<UIE.ClickEvent>(evt =>
+        {
+            if (evt.target == storyPopupOverlay)
+                CloseStoryPopup();
+        });
+
+        // 羊皮紙カード
+        var card = new UIE.VisualElement();
+        card.AddToClassList("birth-story-popup-card");
+
+        // テクスチャレイヤー
+        var texture = new UIE.VisualElement();
+        texture.AddToClassList("birth-story-popup-texture");
+        texture.pickingMode = UIE.PickingMode.Ignore;
+        card.Add(texture);
+
+        // 内側装飾ボーダー
+        var innerBorder = new UIE.VisualElement();
+        innerBorder.AddToClassList("birth-story-popup-inner-border");
+        innerBorder.pickingMode = UIE.PickingMode.Ignore;
+        card.Add(innerBorder);
+
+        // キャッチコピー
+        string intro = Localization.GetParentIntro(parent.name);
+        if (string.IsNullOrEmpty(intro)) intro = parent.intro;
+        intro = intro.Replace(" / ", "\n");
+        var catchphrase = UIHelper.CreateLabel(intro, "birth-story-popup-catchphrase");
+        UIHelper.ApplyFontBold(catchphrase);
+        card.Add(catchphrase);
+
+        // 区切り線
+        var sep = new UIE.VisualElement();
+        sep.AddToClassList("birth-story-popup-separator");
+        card.Add(sep);
+
+        // Bio本文（タイプライターで表示）
+        string bio = Localization.GetParentBio(parent.name);
+        var bioLabel = UIHelper.CreateLabel("", "birth-story-popup-bio");
+        UIHelper.ApplyFont(bioLabel);
+        card.Add(bioLabel);
+
+        // ステータス確認ボタン
+        var statusBtn = new UIE.Button();
+        statusBtn.AddToClassList("birth-story-popup-status-btn");
+        UIHelper.ApplyFontBold(statusBtn);
+        statusBtn.text = "\u3068\u304f\u3061\u3087\u3046\uff08\u30b9\u30c6\u30fc\u30bf\u30b9\uff09\u3092\u78ba\u8a8d \ud83d\udcca";
+        ParentData capturedParent = parent;
+        statusBtn.clicked += () =>
+        {
+            CloseStoryPopup();
+            FlipCardToStatus(capturedParent, currentAccordionTargetCard);
+        };
+        card.Add(statusBtn);
+
+        // とじるボタン
+        var closeBtn = new UIE.Button();
+        closeBtn.AddToClassList("birth-story-popup-close-btn");
+        UIHelper.ApplyFontBold(closeBtn);
+        closeBtn.text = "\u3068\u3058\u308b";
+        closeBtn.clicked += () => CloseStoryPopup();
+        card.Add(closeBtn);
+
+        storyPopupOverlay.Add(card);
+        overlayRoot.Add(storyPopupOverlay);
+
+        // タイプライター開始
+        if (!string.IsNullOrEmpty(bio))
+        {
+            storyPopupTypewriterCoroutine = StartCoroutine(TypewriterPopupBio(bioLabel, bio));
+        }
+    }
+
+    IEnumerator TypewriterPopupBio(UIE.Label label, string fullText)
+    {
+        label.text = "";
+        foreach (char c in fullText)
+        {
+            if (!isStoryPopupOpen) break;
+            label.text += c;
+            yield return new WaitForSeconds(0.04f);
+        }
+        label.text = fullText;
+    }
+
+    void CloseStoryPopup()
+    {
+        if (storyPopupTypewriterCoroutine != null)
+        {
+            StopCoroutine(storyPopupTypewriterCoroutine);
+            storyPopupTypewriterCoroutine = null;
+        }
+        isStoryPopupOpen = false;
+
+        if (storyPopupOverlay != null && storyPopupOverlay.parent != null)
+            storyPopupOverlay.RemoveFromHierarchy();
+        storyPopupOverlay = null;
+
+        // ボタンテキスト復元
+        if (statusCheckButton != null && currentAccordionTargetCard != null)
+            statusCheckButton.text = GetStatusCheckButtonText(currentAccordionTargetCard);
     }
 
     UIE.VisualElement BuildAccordionContent(ParentData parent, string role)
@@ -2521,7 +3090,7 @@ public class BirthSystem : MonoBehaviour
         inner.AddToClassList("birth-accordion-inner");
         container.Add(inner);
 
-        // キャッチコピー
+        // キャッチコピー（大きく表示）
         string intro = Localization.GetParentIntro(parent.name);
         if (string.IsNullOrEmpty(intro)) intro = parent.intro;
         intro = intro.Replace(" / ", "\n");
@@ -2534,31 +3103,172 @@ public class BirthSystem : MonoBehaviour
         sep.AddToClassList("birth-accordion-separator");
         inner.Add(sep);
 
-        // ステータスバー
-        var statsContainer = new UIE.VisualElement();
-        statsContainer.style.width = new UIE.StyleLength(new UIE.Length(100, UIE.LengthUnit.Percent));
-        statsContainer.style.alignItems = UIE.Align.Center;
-        inner.Add(statsContainer);
+        // Bio本文
+        string bio = Localization.GetParentBio(parent.name);
+        if (!string.IsNullOrEmpty(bio))
+        {
+            var bioLabel = UIHelper.CreateLabel(bio, "birth-accordion-bio");
+            UIHelper.ApplyFont(bioLabel);
+            inner.Add(bioLabel);
+        }
 
-        string fillClass = "birth-stat-bar-fill-" + role;
-        AddStatRow(statsContainer, "\u306c\u304f\u3082\u308a", parent.atk, 100, fillClass);
-        AddStatRow(statsContainer, "\u304a\u3061\u3064\u304d", parent.def, 100, fillClass);
-        AddStatRow(statsContainer, "\u3054\u304d\u3052\u3093", parent.hp, 200, fillClass);
-        AddStatRow(statsContainer, "\u3061\u3048", parent.intelligence, 150, fillClass);
-        AddStatRow(statsContainer, "\u3046\u3093\u3069\u3046", parent.athletic, 100, fillClass);
-        AddStatRow(statsContainer, "\u3046\u3093", parent.luck, 100, fillClass);
-        AddStatRow(statsContainer, "\u3056\u3044\u3055\u3093", parent.fortune, 100, fillClass);
-
-        // Bio を見るボタン
-        var bioBtn = new UIE.Button();
-        bioBtn.AddToClassList("birth-bio-view-btn");
-        UIHelper.ApplyFontBold(bioBtn);
-        bioBtn.text = "Bio\uff08\u7d39\u4ecb\u6587\uff09\u3092\u898b\u308b \u2728";
+        // ステータス確認ボタン
+        var statusBtn = new UIE.Button();
+        statusBtn.AddToClassList("birth-bio-view-btn");
+        UIHelper.ApplyFontBold(statusBtn);
+        statusBtn.text = "\u3068\u304f\u3061\u3087\u3046\uff08\u30b9\u30c6\u30fc\u30bf\u30b9\uff09\u3092\u78ba\u8a8d \ud83d\udcca";
         ParentData capturedParent = parent;
-        bioBtn.clicked += () => FlipCardToBio(capturedParent, currentAccordionTargetCard);
-        inner.Add(bioBtn);
+        statusBtn.clicked += () => FlipCardToStatus(capturedParent, currentAccordionTargetCard);
+        inner.Add(statusBtn);
 
         return container;
+    }
+
+    // ===== キャラクター背景パーティクル =====
+
+    void GetCharacterParticleConfig(ParentData parent, out string[] symbols, out Color[] colors)
+    {
+        if (parent.fortune >= 80)
+        {
+            symbols = new[] { "\u2726", "\u2727", "\u2b50", "\u2728", "\ud83d\udcb0" };
+            colors = new[] {
+                new Color(1f, 0.84f, 0f),
+                new Color(1f, 0.9f, 0.5f),
+                new Color(0.8f, 0.65f, 0.2f),
+                Color.white
+            };
+            return;
+        }
+        if (parent.intelligence >= 80)
+        {
+            symbols = new[] { "\u2726", "\u2727", "\u2728", "\ud83d\udca1", "\u2b50" };
+            colors = new[] {
+                new Color(0.6f, 0.8f, 1f),
+                new Color(0.67f, 0.94f, 0.82f),
+                new Color(0.8f, 0.9f, 1f),
+                Color.white
+            };
+            return;
+        }
+        if (parent.atk >= 70)
+        {
+            symbols = new[] { "\u2726", "\ud83d\udd25", "\u2728", "\u26a1", "\u2b50" };
+            colors = new[] {
+                new Color(1f, 0.5f, 0.4f),
+                new Color(1f, 0.7f, 0.3f),
+                new Color(1f, 0.85f, 0.5f),
+                Color.white
+            };
+            return;
+        }
+        symbols = new[] { "\u2726", "\u2727", "\u2b50", "\u2728", "\u2661" };
+        colors = new[] {
+            new Color(1f, 0.72f, 0.77f),
+            new Color(0.97f, 0.91f, 0.81f),
+            new Color(0.67f, 0.94f, 0.82f),
+            Color.white
+        };
+    }
+
+    IEnumerator SpawnCharacterParticles(UIE.VisualElement faceContainer, ParentData parent)
+    {
+        GetCharacterParticleConfig(parent, out string[] symbols, out Color[] colors);
+
+        while (faceContainer != null && faceContainer.parent != null)
+        {
+            var particle = UIHelper.CreateLabel(symbols[Random.Range(0, symbols.Length)]);
+            UIHelper.ApplyFont(particle);
+            particle.AddToClassList("birth-char-particle");
+            particle.pickingMode = UIE.PickingMode.Ignore;
+            particle.style.left = new UIE.StyleLength(
+                new UIE.Length(Random.Range(5f, 95f), UIE.LengthUnit.Percent));
+            particle.style.top = new UIE.StyleLength(
+                new UIE.Length(Random.Range(60f, 95f), UIE.LengthUnit.Percent));
+            particle.style.fontSize = Random.Range(16, 32);
+            particle.style.color = colors[Random.Range(0, colors.Length)];
+            particle.style.opacity = 0.8f;
+            faceContainer.Add(particle);
+            StartCoroutine(AnimateCharacterParticle(particle));
+            yield return new WaitForSeconds(Random.Range(0.3f, 0.6f));
+        }
+    }
+
+    IEnumerator AnimateCharacterParticle(UIE.Label particle)
+    {
+        float duration = Random.Range(1.2f, 2.0f);
+        float elapsed = 0f;
+        float startTop = particle.resolvedStyle.top;
+        float startLeft = particle.resolvedStyle.left;
+        float riseSpeed = Random.Range(40f, 100f);
+        float driftX = Random.Range(-20f, 20f);
+
+        while (elapsed < duration && particle != null && particle.parent != null)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            float newTop = startTop - riseSpeed * t;
+            particle.style.top = newTop;
+
+            // パーティクル独自のパララックスドリフト（顔より大きく動く）
+            float extraX = smoothAccel.x * PARALLAX_PARTICLE_AMOUNT + driftX * t;
+            particle.style.left = startLeft + extraX;
+
+            particle.style.opacity = 0.8f * (1f - t * t);
+
+            float s = 1f + 0.2f * Mathf.Sin(t * Mathf.PI);
+            particle.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(s, s)));
+
+            yield return null;
+        }
+
+        if (particle != null && particle.parent != null)
+            particle.RemoveFromHierarchy();
+    }
+
+    void StopCharacterParticles()
+    {
+        if (fatherParticleCoroutine != null)
+        {
+            StopCoroutine(fatherParticleCoroutine);
+            fatherParticleCoroutine = null;
+        }
+        if (motherParticleCoroutine != null)
+        {
+            StopCoroutine(motherParticleCoroutine);
+            motherParticleCoroutine = null;
+        }
+    }
+
+    // ── 紹介文フェードアップ演出（0.5秒遅延 → ふわっと上昇） ──
+    IEnumerator FadeUpIntroText(UIE.Label introLabel)
+    {
+        if (introLabel == null) yield break;
+
+        // 初期状態: 透明 + 少し下にオフセット
+        introLabel.style.visibility = UIE.Visibility.Visible;
+        introLabel.style.opacity = 0f;
+        introLabel.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 20));
+
+        // 0.5秒の遅延
+        yield return new WaitForSeconds(0.5f);
+
+        // 0.4秒かけてフェードアップ
+        float dur = 0.4f;
+        float elapsed = 0f;
+        while (elapsed < dur)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / dur);
+            // ease-out
+            float easeT = 1f - (1f - t) * (1f - t);
+            introLabel.style.opacity = easeT;
+            float y = Mathf.Lerp(20f, 0f, easeT);
+            introLabel.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, y));
+            yield return null;
+        }
+        introLabel.style.opacity = 1f;
+        introLabel.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 0));
     }
 
     void AddStatRow(UIE.VisualElement parent, string label, int value, int maxValue, string fillClass)
@@ -2611,8 +3321,6 @@ public class BirthSystem : MonoBehaviour
         accordion.style.maxHeight = UIE.StyleKeyword.None;
         accordion.style.overflow = UIE.Overflow.Visible;
 
-        // ステータスバーのフィルアニメーション
-        StartCoroutine(AnimateStatBars(accordion));
         // スパークルパーティクル
         StartCoroutine(SpawnAccordionSparkles(accordion));
     }
@@ -2714,7 +3422,7 @@ public class BirthSystem : MonoBehaviour
 
     // ===== カードフリップ（Bio表示） =====
 
-    void FlipCardToBio(ParentData parent, UIE.VisualElement card)
+    void FlipCardToStatus(ParentData parent, UIE.VisualElement card)
     {
         if (isCardFlipped || card == null) return;
         if (flipAnimCoroutine != null)
@@ -2790,9 +3498,15 @@ public class BirthSystem : MonoBehaviour
         }
         card.style.scale = new UIE.StyleScale(new UIE.Scale(Vector2.one));
 
-        // 戻りの場合、裏面を破棄
-        if (!toBack)
+        if (toBack)
         {
+            // ステータス面に切り替え後、バーフィルアニメーション
+            if (cardBackFace != null)
+                StartCoroutine(AnimateStatBars(cardBackFace));
+        }
+        else
+        {
+            // 戻りの場合、裏面を破棄
             if (cardBackFace != null)
             {
                 cardBackFace.RemoveFromHierarchy();
@@ -2819,7 +3533,7 @@ public class BirthSystem : MonoBehaviour
         back.AddToClassList("birth-card-back");
 
         // タイトル
-        var title = UIHelper.CreateLabel("\ud83d\udcdc Bio", "birth-card-back-title");
+        var title = UIHelper.CreateLabel("\u2694 \u30b9\u30c6\u30fc\u30bf\u30b9", "birth-card-back-title");
         UIHelper.ApplyFontBold(title);
         back.Add(title);
 
@@ -2833,13 +3547,21 @@ public class BirthSystem : MonoBehaviour
         sep.AddToClassList("birth-card-back-separator");
         back.Add(sep);
 
-        // Bio本文
-        string bio = Localization.GetParentBio(parent.name);
-        if (string.IsNullOrEmpty(bio))
-            bio = parent.intro;
-        var bioLabel = UIHelper.CreateLabel(bio, "birth-card-back-bio");
-        UIHelper.ApplyFont(bioLabel);
-        back.Add(bioLabel);
+        // ステータスバー
+        var statsContainer = new UIE.VisualElement();
+        statsContainer.style.width = new UIE.StyleLength(new UIE.Length(100, UIE.LengthUnit.Percent));
+        statsContainer.style.alignItems = UIE.Align.Center;
+        statsContainer.style.flexGrow = 1;
+        back.Add(statsContainer);
+
+        string fillClass = "birth-stat-bar-fill-" + role;
+        AddStatRow(statsContainer, "\u306c\u304f\u3082\u308a", parent.atk, 100, fillClass);
+        AddStatRow(statsContainer, "\u304a\u3061\u3064\u304d", parent.def, 100, fillClass);
+        AddStatRow(statsContainer, "\u3054\u304d\u3052\u3093", parent.hp, 200, fillClass);
+        AddStatRow(statsContainer, "\u3061\u3048", parent.intelligence, 150, fillClass);
+        AddStatRow(statsContainer, "\u3046\u3093\u3069\u3046", parent.athletic, 100, fillClass);
+        AddStatRow(statsContainer, "\u3046\u3093", parent.luck, 100, fillClass);
+        AddStatRow(statsContainer, "\u3056\u3044\u3055\u3093", parent.fortune, 100, fillClass);
 
         // 戻るボタン
         var returnBtn = new UIE.Button();
@@ -3205,11 +3927,48 @@ public class BirthSystem : MonoBehaviour
         Debug.Log("[BirthSystem] PickImageFromGallery called");
 
 #if UNITY_EDITOR
-        // Editorではファイルダイアログを直接使用（PNG/JPGのみ対応）
-        string path = UnityEditor.EditorUtility.OpenFilePanel("赤ちゃんの画像を選択", "", "png,jpg,jpeg");
+        // Editorではファイルダイアログを直接使用（HEIC含む）
+        string path = UnityEditor.EditorUtility.OpenFilePanel("赤ちゃんの画像を選択", "", "png,jpg,jpeg,heic,heif");
         Debug.Log($"[BirthSystem] Editor file dialog returned: '{path}'");
         if (!string.IsNullOrEmpty(path))
+        {
+            string ext = Path.GetExtension(path).ToLowerInvariant();
+            if (ext == ".heic" || ext == ".heif")
+            {
+                // macOS の sips コマンドで HEIC → PNG 変換
+                string tmpPath = Path.Combine(Application.temporaryCachePath, "heic_converted.png");
+                try
+                {
+                    var psi = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "/usr/bin/sips",
+                        Arguments = $"-s format png \"{path}\" --out \"{tmpPath}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    };
+                    var proc = System.Diagnostics.Process.Start(psi);
+                    proc.WaitForExit(5000);
+                    if (File.Exists(tmpPath))
+                    {
+                        Debug.Log($"[BirthSystem] HEIC → PNG converted: {tmpPath}");
+                        path = tmpPath;
+                    }
+                    else
+                    {
+                        Debug.LogError("[BirthSystem] HEIC conversion failed");
+                        return;
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"[BirthSystem] HEIC conversion error: {e.Message}");
+                    return;
+                }
+            }
             LoadAndApplyImage(path);
+        }
         else
             Debug.Log("[BirthSystem] Editor file dialog cancelled or empty path");
 #else
@@ -3253,16 +4012,33 @@ public class BirthSystem : MonoBehaviour
             }
             Debug.Log($"[BirthSystem] Texture loaded: {tex.width}x{tex.height}");
 
-            // PNG に変換して保存（以降の読み込みで形式問題が起きないように）
-            string fileName = "baby_custom.png";
-            string savePath = Path.Combine(Application.persistentDataPath, fileName);
-            byte[] pngData = tex.EncodeToPNG();
-            File.WriteAllBytes(savePath, pngData);
+#if UNITY_EDITOR
+            // Editor ではネイティブの EXIF 回転処理が行われないため C# で補正
+            tex = CorrectExifOrientation(tex, path);
+#endif
 
-            if (DataCarrier.Instance != null)
-                DataCarrier.Instance.customBabyImagePath = fileName;
+            // 元画像を非破壊保存
+            string origFileName = "baby_custom_original.png";
+            File.WriteAllBytes(Path.Combine(Application.persistentDataPath, origFileName), tex.EncodeToPNG());
 
-            Debug.Log($"[BirthSystem] Texture loaded, showing face adjustment overlay");
+            if (originalFaceTexture != null) Destroy(originalFaceTexture);
+            originalFaceTexture = tex;
+            originalFaceW = tex.width;
+            originalFaceH = tex.height;
+
+            // 顔ランドマーク検出（iOS Vision / Android MLKit / Editor=null）
+            detectedFaceLandmarks = FaceLandmarkBridge.DetectFace(tex);
+            if (detectedFaceLandmarks.HasValue)
+            {
+                var lm = detectedFaceLandmarks.Value;
+                Debug.Log($"[BirthSystem] Face detected! Eyes: L({lm.leftEyeCenter.x:F2},{lm.leftEyeCenter.y:F2}) R({lm.rightEyeCenter.x:F2},{lm.rightEyeCenter.y:F2}) Nose:({lm.noseCenter.x:F2},{lm.noseCenter.y:F2})");
+            }
+            else
+            {
+                Debug.Log("[BirthSystem] No face detected — manual eye tap will be used");
+            }
+
+            // Step1: まず元画像で顔位置調整
             pendingFaceTexture = tex;
             ShowFaceAdjustmentOverlay();
         }
@@ -3270,6 +4046,440 @@ public class BirthSystem : MonoBehaviour
         {
             Debug.LogError($"[BirthSystem] Gallery image load failed: {e.Message}\n{e.StackTrace}");
         }
+    }
+
+    // ===== フィルターローディングオーバーレイ =====
+
+    void ShowFilterLoadingOverlay()
+    {
+        if (overlayRoot == null) return;
+        if (filterLoadingOverlayEl != null) filterLoadingOverlayEl.RemoveFromHierarchy();
+
+        filterLoadingOverlayEl = new UIE.VisualElement();
+        filterLoadingOverlayEl.AddToClassList("filter-loading-overlay");
+        overlayRoot.Add(filterLoadingOverlayEl);
+
+        var card = new UIE.VisualElement();
+        card.AddToClassList("filter-loading-card");
+        filterLoadingOverlayEl.Add(card);
+
+        // キラキラ演出テキスト
+        var sparkle = new UIE.Label("\u2726");
+        sparkle.AddToClassList("filter-loading-sparkle");
+        card.Add(sparkle);
+
+        var label = new UIE.Label("魔法をかけています...");
+        label.AddToClassList("filter-loading-text");
+        UIHelper.ApplyFont(label);
+        card.Add(label);
+
+        // SE（キラキラ音があれば）
+        if (seKirakira != null && seSource != null)
+            seSource.PlayOneShot(seKirakira, 0.5f);
+    }
+
+    void HideFilterLoadingOverlay()
+    {
+        if (filterLoadingOverlayEl != null)
+        {
+            filterLoadingOverlayEl.RemoveFromHierarchy();
+            filterLoadingOverlayEl = null;
+        }
+    }
+
+    // ===== 目の位置タップオーバーレイ =====
+
+    void ShowEyeMarkOverlay()
+    {
+        if (originalFaceTexture == null || overlayRoot == null) return;
+
+        eyeTapCount = 0;
+        eyePos1 = new Vector2(-1, -1);
+        eyePos2 = new Vector2(-1, -1);
+
+        if (eyeMarkOverlayEl != null) eyeMarkOverlayEl.RemoveFromHierarchy();
+
+        eyeMarkOverlayEl = new UIE.VisualElement();
+        eyeMarkOverlayEl.style.position = UIE.Position.Absolute;
+        eyeMarkOverlayEl.style.left = 0; eyeMarkOverlayEl.style.top = 0;
+        eyeMarkOverlayEl.style.right = 0; eyeMarkOverlayEl.style.bottom = 0;
+        eyeMarkOverlayEl.style.backgroundColor = new Color(0, 0, 0, 0.75f);
+        eyeMarkOverlayEl.style.alignItems = UIE.Align.Center;
+        eyeMarkOverlayEl.style.justifyContent = UIE.Justify.Center;
+        overlayRoot.Add(eyeMarkOverlayEl);
+
+        var card = new UIE.VisualElement();
+        card.AddToClassList("face-adjust-card");
+        eyeMarkOverlayEl.Add(card);
+
+        // タイトル
+        var title = new UIE.Label("目の位置をタップ");
+        title.AddToClassList("face-adjust-title");
+        UIHelper.ApplyFont(title);
+        card.Add(title);
+
+        var subtitle = new UIE.Label("左目 \u2192 右目 の順にタップ");
+        subtitle.style.fontSize = 26;
+        subtitle.style.color = new Color(0.5f, 0.5f, 0.55f);
+        subtitle.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        subtitle.style.marginBottom = 16;
+        UIHelper.ApplyFont(subtitle);
+        card.Add(subtitle);
+
+        // プレビュー（元画像を表示）
+        eyeMarkPreview = new UIE.VisualElement();
+        eyeMarkPreview.style.width = 600;
+        eyeMarkPreview.style.height = 600;
+        eyeMarkPreview.style.backgroundImage = new UIE.StyleBackground(originalFaceTexture);
+        eyeMarkPreview.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+        eyeMarkPreview.style.alignSelf = UIE.Align.Center;
+        eyeMarkPreview.style.position = UIE.Position.Relative;
+        card.Add(eyeMarkPreview);
+
+        // タップイベント
+        eyeMarkPreview.RegisterCallback<UIE.PointerDownEvent>(OnEyeMarkTap);
+
+        // ボタン行
+        var btnRow = new UIE.VisualElement();
+        btnRow.AddToClassList("face-adjust-btn-row");
+        btnRow.style.marginTop = 16;
+        card.Add(btnRow);
+
+        var applyBtn = new UIE.Button(() => OnEyeMarkConfirm());
+        applyBtn.AddToClassList("face-adjust-confirm-btn");
+        applyBtn.text = "\u2726 魔法をかける";
+        UIHelper.ApplyFont(applyBtn);
+        btnRow.Add(applyBtn);
+
+        var skipBtn = new UIE.Button(() => OnEyeMarkSkip());
+        skipBtn.AddToClassList("face-adjust-cancel-btn");
+        skipBtn.text = "スキップ";
+        UIHelper.ApplyFont(skipBtn);
+        btnRow.Add(skipBtn);
+
+        // dev用: デッサン風フィルター
+        var dessinBtn = new UIE.Button(() => OnEyeMarkConfirmDessin());
+        dessinBtn.style.height = 60;
+        dessinBtn.style.paddingLeft = 16;
+        dessinBtn.style.paddingRight = 16;
+        dessinBtn.style.marginTop = 8;
+        dessinBtn.style.backgroundColor = new UIE.StyleColor(new Color(0.85f, 0.85f, 0.85f));
+        dessinBtn.style.color = new UIE.StyleColor(Color.black);
+        dessinBtn.style.fontSize = 24;
+        dessinBtn.style.borderTopLeftRadius = 30;
+        dessinBtn.style.borderTopRightRadius = 30;
+        dessinBtn.style.borderBottomLeftRadius = 30;
+        dessinBtn.style.borderBottomRightRadius = 30;
+        dessinBtn.text = "[DEV] デッサン風";
+        UIHelper.ApplyFont(dessinBtn);
+        card.Add(dessinBtn);
+    }
+
+    void OnEyeMarkTap(UIE.PointerDownEvent evt)
+    {
+        if (eyeMarkPreview == null) return;
+
+        // タップ位置をプレビュー内の正規化座標に変換
+        Vector2 local = evt.localPosition;
+        float previewW = eyeMarkPreview.resolvedStyle.width;
+        float previewH = eyeMarkPreview.resolvedStyle.height;
+        if (previewW <= 0 || previewH <= 0) return;
+
+        // ScaleToFitの実際の描画領域を計算
+        float texAspect = (float)originalFaceTexture.width / originalFaceTexture.height;
+        float previewAspect = previewW / previewH;
+        float drawW, drawH, drawX, drawY;
+        if (texAspect > previewAspect)
+        {
+            drawW = previewW;
+            drawH = previewW / texAspect;
+            drawX = 0;
+            drawY = (previewH - drawH) * 0.5f;
+        }
+        else
+        {
+            drawH = previewH;
+            drawW = previewH * texAspect;
+            drawX = (previewW - drawW) * 0.5f;
+            drawY = 0;
+        }
+
+        float nx = (local.x - drawX) / drawW;
+        float ny = (local.y - drawY) / drawH;
+        if (nx < 0 || nx > 1 || ny < 0 || ny > 1) return;
+
+        eyeTapCount++;
+        if (eyeTapCount == 1)
+        {
+            eyePos1 = new Vector2(nx, ny);
+            AddEyeMarker(local.x, local.y, "L");
+            Debug.Log($"[BirthSystem] Left eye marked: ({nx:F2}, {ny:F2})");
+        }
+        else if (eyeTapCount == 2)
+        {
+            eyePos2 = new Vector2(nx, ny);
+            AddEyeMarker(local.x, local.y, "R");
+            Debug.Log($"[BirthSystem] Right eye marked: ({nx:F2}, {ny:F2})");
+        }
+        // 3回以上はリセット
+        else
+        {
+            eyeTapCount = 1;
+            eyePos1 = new Vector2(nx, ny);
+            eyePos2 = new Vector2(-1, -1);
+            // マーカー全削除して新しく追加
+            var markers = UIE.UQueryExtensions.Query(eyeMarkPreview, className: "eye-marker-dot").ToList();
+            foreach (var m in markers) m.RemoveFromHierarchy();
+            AddEyeMarker(local.x, local.y, "L");
+        }
+    }
+
+    void AddEyeMarker(float x, float y, string label)
+    {
+        var marker = new UIE.VisualElement();
+        marker.AddToClassList("eye-marker-dot");
+        marker.style.position = UIE.Position.Absolute;
+        marker.style.left = x - 20;
+        marker.style.top = y - 20;
+        marker.style.width = 40;
+        marker.style.height = 40;
+        marker.style.borderTopLeftRadius = 20;
+        marker.style.borderTopRightRadius = 20;
+        marker.style.borderBottomLeftRadius = 20;
+        marker.style.borderBottomRightRadius = 20;
+        marker.style.backgroundColor = new Color(1f, 0.72f, 0.77f, 0.7f);
+        marker.style.borderTopWidth = 3;
+        marker.style.borderBottomWidth = 3;
+        marker.style.borderLeftWidth = 3;
+        marker.style.borderRightWidth = 3;
+        marker.style.borderTopColor = Color.white;
+        marker.style.borderBottomColor = Color.white;
+        marker.style.borderLeftColor = Color.white;
+        marker.style.borderRightColor = Color.white;
+        marker.style.alignItems = UIE.Align.Center;
+        marker.style.justifyContent = UIE.Justify.Center;
+        marker.pickingMode = UIE.PickingMode.Ignore;
+
+        var text = new UIE.Label(label);
+        text.style.fontSize = 18;
+        text.style.color = Color.white;
+        text.style.unityFontStyleAndWeight = UnityEngine.FontStyle.Bold;
+        text.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        text.pickingMode = UIE.PickingMode.Ignore;
+        marker.Add(text);
+
+        eyeMarkPreview.Add(marker);
+    }
+
+    void OnEyeMarkConfirm()
+    {
+        // 目の位置が2つマークされていなくてもフィルター自体は適用する
+        Vector2 leftEye = eyePos1.x >= 0 ? eyePos1 : new Vector2(0.35f, 0.38f);
+        Vector2 rightEye = eyePos2.x >= 0 ? eyePos2 : new Vector2(0.65f, 0.38f);
+
+        // 目タップ座標からランドマークを構築（morph用）
+        // 座標空間: 元画像空間 (0-1, top-left原点) = ネイティブランドマークと同じ
+        if (eyePos1.x >= 0 && eyePos2.x >= 0)
+        {
+            Vector2 eyeMid = (leftEye + rightEye) * 0.5f;
+            float eyeDist = Vector2.Distance(leftEye, rightEye);
+            detectedFaceLandmarks = new FaceLandmarkResult
+            {
+                faceBounds = new Rect(
+                    eyeMid.x - eyeDist, eyeMid.y - eyeDist * 0.5f,
+                    eyeDist * 2f, eyeDist * 2.5f),
+                leftEyeCenter = leftEye,
+                rightEyeCenter = rightEye,
+                mouthCenter = new Vector2(eyeMid.x, eyeMid.y + eyeDist * 1.0f),
+                noseCenter = new Vector2(eyeMid.x, eyeMid.y + eyeDist * 0.5f),
+                leftCheek = new Vector2(leftEye.x - eyeDist * 0.3f, eyeMid.y + eyeDist * 0.4f),
+                rightCheek = new Vector2(rightEye.x + eyeDist * 0.3f, eyeMid.y + eyeDist * 0.4f),
+                jawlinePoints = new Vector2[0],
+            };
+            Debug.Log($"[BirthSystem] Eye-tap → landmarks: L({leftEye.x:F2},{leftEye.y:F2}) R({rightEye.x:F2},{rightEye.y:F2}) Mouth({detectedFaceLandmarks.Value.mouthCenter.x:F2},{detectedFaceLandmarks.Value.mouthCenter.y:F2})");
+        }
+
+        if (eyeMarkOverlayEl != null)
+        {
+            eyeMarkOverlayEl.RemoveFromHierarchy();
+            eyeMarkOverlayEl = null;
+        }
+        eyeMarkPreview = null;
+
+        // フィルター適用 → 合成
+        StartCoroutine(ApplyFilterAndComposite(leftEye, rightEye));
+    }
+
+    void OnEyeMarkConfirmDessin()
+    {
+        Vector2 leftEye = eyePos1.x >= 0 ? eyePos1 : new Vector2(0.35f, 0.38f);
+        Vector2 rightEye = eyePos2.x >= 0 ? eyePos2 : new Vector2(0.65f, 0.38f);
+
+        if (eyePos1.x >= 0 && eyePos2.x >= 0)
+        {
+            Vector2 eyeMid = (leftEye + rightEye) * 0.5f;
+            float eyeDist = Vector2.Distance(leftEye, rightEye);
+            detectedFaceLandmarks = new FaceLandmarkResult
+            {
+                faceBounds = new Rect(
+                    eyeMid.x - eyeDist, eyeMid.y - eyeDist * 0.5f,
+                    eyeDist * 2f, eyeDist * 2.5f),
+                leftEyeCenter = leftEye,
+                rightEyeCenter = rightEye,
+                mouthCenter = new Vector2(eyeMid.x, eyeMid.y + eyeDist * 1.0f),
+                noseCenter = new Vector2(eyeMid.x, eyeMid.y + eyeDist * 0.5f),
+                leftCheek = new Vector2(leftEye.x - eyeDist * 0.3f, eyeMid.y + eyeDist * 0.4f),
+                rightCheek = new Vector2(rightEye.x + eyeDist * 0.3f, eyeMid.y + eyeDist * 0.4f),
+                jawlinePoints = new Vector2[0],
+            };
+        }
+
+        if (eyeMarkOverlayEl != null)
+        {
+            eyeMarkOverlayEl.RemoveFromHierarchy();
+            eyeMarkOverlayEl = null;
+        }
+        eyeMarkPreview = null;
+
+        StartCoroutine(ApplyFilterAndComposite(leftEye, rightEye, useDessin: true));
+    }
+
+    void OnEyeMarkSkip()
+    {
+        if (eyeMarkOverlayEl != null)
+        {
+            eyeMarkOverlayEl.RemoveFromHierarchy();
+            eyeMarkOverlayEl = null;
+        }
+        eyeMarkPreview = null;
+
+        // 目拡大なし（-1,-1 で無効化）→ 色調+光漏れのみ
+        StartCoroutine(ApplyFilterAndComposite(
+            new Vector2(-1, -1), new Vector2(-1, -1)));
+    }
+
+    IEnumerator ApplyFilterAndComposite(Vector2 leftEye, Vector2 rightEye, bool useDessin = false)
+    {
+        ShowFilterLoadingOverlay();
+        yield return null;
+
+        // フィルター適用
+        Texture2D filtered;
+        if (useDessin)
+        {
+            filtered = BabySynthesizer.CreateDessinFilteredTexture(
+                originalFaceTexture, leftEye, rightEye,
+                detectedFaceLandmarks.HasValue ? detectedFaceLandmarks.Value : (FaceLandmarkResult?)null);
+        }
+        else if (detectedFaceLandmarks.HasValue)
+        {
+            filtered = BabySynthesizer.CreateBabyFilteredTexture(
+                originalFaceTexture, leftEye, rightEye, detectedFaceLandmarks.Value);
+        }
+        else
+        {
+            filtered = BabySynthesizer.CreateBabyFilteredTexture(
+                originalFaceTexture, leftEye, rightEye);
+        }
+        if (filtered == null)
+        {
+            HideFilterLoadingOverlay();
+            yield break;
+        }
+
+        // 保存
+        string fileName = "baby_custom.png";
+        File.WriteAllBytes(Path.Combine(Application.persistentDataPath, fileName), filtered.EncodeToPNG());
+        if (DataCarrier.Instance != null)
+            DataCarrier.Instance.customBabyImagePath = fileName;
+
+        // ★ BabyMorph パラメータを先に設定（Synthesize内で自動適用される）
+        {
+            float holeCX = babySynthesizer.GetFaceHoleCX();
+            float holeCY = babySynthesizer.GetFaceHoleCY();
+            float holeRX = babySynthesizer.GetFaceHoleRX();
+            float holeRY = babySynthesizer.GetFaceHoleRY();
+
+            Debug.Log($"[CoordTransform] ═══ 座標変換パイプライン開始 ═══\n" +
+                $"  元画像サイズ: {originalFaceW}x{originalFaceH} (aspect={((float)originalFaceW / Mathf.Max(originalFaceH, 1)):F3})\n" +
+                $"  クロップ方式: Center Crop (cropSize={Mathf.Min(originalFaceW, originalFaceH)})\n" +
+                $"  顔穴パラメータ: center=({holeCX:F3},{holeCY:F3}) radius=({holeRX:F3},{holeRY:F3})\n" +
+                $"  ユーザー調整: scale={eyeMarkSavedScale:F2} offset=({eyeMarkSavedOffsetX:F3},{eyeMarkSavedOffsetY:F3})\n" +
+                $"  ランドマーク有無: {detectedFaceLandmarks.HasValue}");
+
+            // ★ 目は顔中心より上 → bottom-origin では holeCY + offset
+            Vector2 morphLeftEye = new Vector2(holeCX - holeRX * 0.50f, holeCY + holeRY * 0.35f);
+            Vector2 morphRightEye = new Vector2(holeCX + holeRX * 0.50f, holeCY + holeRY * 0.35f);
+            // ★ 口は顔中心より下 → bottom-origin では holeCY - offset
+            Vector2 morphMouth = new Vector2(holeCX, holeCY - holeRY * 0.55f);
+            if (detectedFaceLandmarks.HasValue)
+            {
+                var lm = detectedFaceLandmarks.Value;
+                Debug.Log($"[CoordTransform] ランドマーク入力(top-left): " +
+                    $"leftEye=({lm.leftEyeCenter.x:F3},{lm.leftEyeCenter.y:F3}) " +
+                    $"rightEye=({lm.rightEyeCenter.x:F3},{lm.rightEyeCenter.y:F3}) " +
+                    $"mouth=({lm.mouthCenter.x:F3},{lm.mouthCenter.y:F3})");
+                var lmLeft = FaceLandmarkToComposite(lm.leftEyeCenter);
+                var lmRight = FaceLandmarkToComposite(lm.rightEyeCenter);
+                var lmMouth = FaceLandmarkToComposite(lm.mouthCenter);
+
+                // 顔穴内に収まるか検証
+                bool inBounds = lmLeft.x > holeCX - holeRX && lmLeft.x < holeCX + holeRX &&
+                    lmLeft.y > holeCY - holeRY && lmLeft.y < holeCY + holeRY;
+                Debug.Log($"[CoordTransform] 変換結果: " +
+                    $"leftEye=({lmLeft.x:F3},{lmLeft.y:F3}) " +
+                    $"rightEye=({lmRight.x:F3},{lmRight.y:F3}) " +
+                    $"mouth=({lmMouth.x:F3},{lmMouth.y:F3}) " +
+                    $"顔穴内={inBounds} [bounds: x({holeCX - holeRX:F3}~{holeCX + holeRX:F3}) y({holeCY - holeRY:F3}~{holeCY + holeRY:F3})]");
+
+                if (inBounds)
+                {
+                    morphLeftEye = lmLeft;
+                    morphRightEye = lmRight;
+                    morphMouth = lmMouth;
+                    Debug.Log($"[BirthSystem] ★ ランドマーク座標を採用");
+                }
+                else
+                {
+                    Debug.LogWarning($"[BirthSystem] ★ ランドマークが顔穴外 → ジオメトリフォールバック使用");
+                }
+            }
+            Debug.Log($"[BirthSystem] EnableBabyMorph 最終値: L({morphLeftEye.x:F3},{morphLeftEye.y:F3}) R({morphRightEye.x:F3},{morphRightEye.y:F3}) Mouth({morphMouth.x:F3},{morphMouth.y:F3})");
+            babySynthesizer.EnableBabyMorph(morphLeftEye, morphRightEye, morphMouth, detectedFaceLandmarks);
+        }
+
+        // 合成（顔位置調整で保存したパラメータを使用）
+        float synthOffX = BabySynthesizer.IsDebugFixedFace ? 0f : eyeMarkSavedOffsetX;
+        float synthOffY = BabySynthesizer.IsDebugFixedFace ? 0f : eyeMarkSavedOffsetY;
+        float synthScale = BabySynthesizer.IsDebugFixedFace ? 1f : eyeMarkSavedScale;
+        babySynthesizer.SetCustomFaceTexture(
+            filtered, synthOffX, synthOffY, synthScale);
+
+        // ★ モーフを合成画像に直接適用（多眼バグ修正: アルファブレンド不要に）
+        Sprite updatedSprite = babySynthesizer.ApplyMorphToCompositeIfEnabled();
+
+        HideFilterLoadingOverlay();
+
+        if (updatedSprite != null)
+            DisplaySynthesizedBaby(updatedSprite);
+
+        if (babyFace != null)
+            babyFace.gameObject.SetActive(false);
+
+        SaveSynthBabyImage();
+
+        if (seKirakira != null && seSource != null)
+            seSource.PlayOneShot(seKirakira, 1f);
+
+        SwitchToNamingMode();
+        if (gotoBattleButton != null)
+        {
+            gotoBattleButton.SetActive(true);
+            StartCoroutine(NamingButtonBounceAnimation());
+        }
+
+        Destroy(filtered);
+        Debug.Log($"[BirthSystem] Filter applied with eyes: L({leftEye.x:F2},{leftEye.y:F2}) R({rightEye.x:F2},{rightEye.y:F2})");
     }
 
     void UpdateBabyFaceWithCustomImage(Sprite spr)
@@ -3300,15 +4510,22 @@ public class BirthSystem : MonoBehaviour
     {
         if (babySynthesizer == null) return;
 
-        // 背景あり版（ポラロイド/スクリーンショット用）
-        var tex = babySynthesizer.CaptureToTexture2D();
-        if (tex == null) return;
+        // ★ モーフは ApplyFilterAndComposite で既に composite に直接適用済み
+        // アルファブレンド合成は不要（多眼バグの原因だったため削除）
+
         string fileName = "synth_baby.png";
         string savePath = Path.Combine(Application.persistentDataPath, fileName);
-        File.WriteAllBytes(savePath, tex.EncodeToPNG());
-        Destroy(tex);
 
-        // 透過版（バトル/マップ用）
+        // 背景あり版（モーフ適用済み composite をそのまま保存）
+        var bgTex = babySynthesizer.CaptureToTexture2D();
+        if (bgTex != null)
+        {
+            File.WriteAllBytes(savePath, bgTex.EncodeToPNG());
+            Destroy(bgTex);
+            Debug.Log("[BirthSystem] synth_baby.png saved (morph applied in composite)");
+        }
+
+        // 透過版（バトル/マップ用: 背景なし + モーフ適用）
         var transTex = babySynthesizer.CaptureTransparentTexture2D();
         if (transTex != null)
         {
@@ -3370,9 +4587,11 @@ public class BirthSystem : MonoBehaviour
         preview.style.overflow = UIE.Overflow.Hidden;
         card.Add(preview);
 
-        // 顔画像の基準位置（ピクセル）— translate上書き問題を回避
-        float faceCenterX = 700f / 2f;
+        // 顔画像の基準位置（ピクセル）— BabySynthesizerの検出値に基づく
+        float faceCenterX = 700f * (babySynthesizer != null ? babySynthesizer.GetFaceHoleCX() : 0.50f);
         float faceCenterY = 700f * GetFaceHoleTopPct() / 100f;
+        facePreviewCenterX = faceCenterX;
+        facePreviewCenterY = faceCenterY;
         float facePreviewSize = GetFacePreviewUniform();
         float halfFace = facePreviewSize / 2f;
 
@@ -3385,6 +4604,8 @@ public class BirthSystem : MonoBehaviour
         facePreviewImage.style.width = facePreviewSize;
         facePreviewImage.style.height = facePreviewSize;
         facePreviewImage.style.backgroundImage = new UIE.StyleBackground(pendingFaceTexture);
+        // ★ DrawFace の正方形中央クロップと同じ表示にする（StretchToFill だと非正方形画像で歪む）
+        facePreviewImage.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
         facePreviewImage.pickingMode = UIE.PickingMode.Ignore;
         preview.Add(facePreviewImage);
 
@@ -3433,6 +4654,27 @@ public class BirthSystem : MonoBehaviour
             UpdateFacePreviewTransform();
         });
         sliderRow.Add(slider);
+
+        // 回転ボタン行
+        var rotateRow = new UIE.VisualElement();
+        rotateRow.style.flexDirection = UIE.FlexDirection.Row;
+        rotateRow.style.justifyContent = UIE.Justify.Center;
+        rotateRow.style.marginTop = 8;
+        rotateRow.style.marginBottom = 8;
+        card.Add(rotateRow);
+
+        var rotateBtn = new UIE.Button(() => RotateFaceTexture90CW());
+        rotateBtn.style.width = 200;
+        rotateBtn.style.height = 60;
+        rotateBtn.style.fontSize = 26;
+        rotateBtn.style.borderTopLeftRadius = 30;
+        rotateBtn.style.borderTopRightRadius = 30;
+        rotateBtn.style.borderBottomLeftRadius = 30;
+        rotateBtn.style.borderBottomRightRadius = 30;
+        rotateBtn.style.backgroundColor = new Color(0.97f, 0.91f, 0.81f);
+        rotateBtn.text = "回転";
+        UIHelper.ApplyFont(rotateBtn);
+        rotateRow.Add(rotateBtn);
 
         // ボタン行
         var btnRow = new UIE.VisualElement();
@@ -3485,47 +4727,70 @@ public class BirthSystem : MonoBehaviour
     void UpdateFacePreviewTransform()
     {
         if (facePreviewImage == null) return;
-        facePreviewImage.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(faceAdjScale, faceAdjScale)));
-        // DrawFaceのuniformR*2に対応するプレビューサイズ
+
         float uniformSize = GetFacePreviewUniform();
-        float tx = faceAdjOffsetX * uniformSize * faceAdjScale;
-        float ty = -faceAdjOffsetY * uniformSize * faceAdjScale;
-        facePreviewImage.style.translate = new UIE.StyleTranslate(new UIE.Translate(tx, ty));
+        float scaledSize = uniformSize * faceAdjScale;
+
+        // CSS scale ではなく要素サイズを直接変更
+        // （UIToolkit の style.scale は overflow:hidden のクリップに反映されないため）
+        facePreviewImage.style.width = scaledSize;
+        facePreviewImage.style.height = scaledSize;
+
+        // オフセットをスクリーンピクセルに変換
+        float txPx = faceAdjOffsetX * scaledSize;
+        float tyPx = -faceAdjOffsetY * scaledSize;
+
+        // 顔中心を基準に配置（overflow:hidden で顔穴外は自動クリップ）
+        facePreviewImage.style.left = facePreviewCenterX - scaledSize / 2f + txPx;
+        facePreviewImage.style.top = facePreviewCenterY - scaledSize / 2f + tyPx;
+
+        // CSS transform をリセット（以前の値が残っている場合）
+        facePreviewImage.style.scale = new UIE.StyleScale(new UIE.Scale(Vector2.one));
+        facePreviewImage.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 0));
+    }
+
+    void RotateFaceTexture90CW()
+    {
+        if (pendingFaceTexture == null) return;
+
+        int w = pendingFaceTexture.width;
+        int h = pendingFaceTexture.height;
+        Color[] srcPx = pendingFaceTexture.GetPixels();
+
+        // 90° CW: dst(y, w-1-x) = src(x, y)  → dst is h×w
+        Texture2D rotated = new Texture2D(h, w, TextureFormat.RGBA32, false);
+        Color[] dstPx = new Color[w * h];
+        for (int y = 0; y < w; y++)
+            for (int x = 0; x < h; x++)
+                dstPx[y * h + x] = srcPx[x * w + (w - 1 - y)];
+        rotated.SetPixels(dstPx);
+        rotated.Apply();
+
+        Destroy(pendingFaceTexture);
+        pendingFaceTexture = rotated;
+        originalFaceTexture = rotated;
+        originalFaceW = rotated.width;
+        originalFaceH = rotated.height;
+
+        // プレビュー更新
+        if (facePreviewImage != null)
+            facePreviewImage.style.backgroundImage = new UIE.StyleBackground(rotated);
+
+        // ズーム/オフセットリセット
+        faceAdjOffsetX = 0f;
+        faceAdjOffsetY = 0f;
+        faceAdjScale = 1f;
+        UpdateFacePreviewTransform();
+
+        Debug.Log($"[BirthSystem] Face rotated 90° CW: {w}x{h} → {rotated.width}x{rotated.height}");
     }
 
     void CloseFaceAdjustOverlay(bool confirmed)
     {
-        if (confirmed && pendingFaceTexture != null && babySynthesizer != null)
-        {
-            Sprite updatedSprite = babySynthesizer.SetCustomFaceTexture(
-                pendingFaceTexture, faceAdjOffsetX, faceAdjOffsetY, faceAdjScale);
-            if (updatedSprite != null)
-                DisplaySynthesizedBaby(updatedSprite);
-
-            if (babyFace != null)
-                babyFace.gameObject.SetActive(false);
-
-            // 合成画像を保存（バトルシーン等で使用）
-            SaveSynthBabyImage();
-
-            // キラキラSE（画像がはまった演出）
-            if (seKirakira != null)
-                seSource.PlayOneShot(seKirakira, 1f);
-
-            // 「名前をつける」モードに切り替え（バウンスアニメーション付き）
-            SwitchToNamingMode();
-            if (gotoBattleButton != null)
-            {
-                gotoBattleButton.SetActive(true);
-                StartCoroutine(NamingButtonBounceAnimation());
-            }
-
-            Debug.Log($"[BirthSystem] Face adjustment confirmed: offset=({faceAdjOffsetX},{faceAdjOffsetY}), scale={faceAdjScale}");
-        }
-        else
-        {
-            Debug.Log("[BirthSystem] Face adjustment cancelled");
-        }
+        // 位置パラメータを保存
+        eyeMarkSavedOffsetX = faceAdjOffsetX;
+        eyeMarkSavedOffsetY = faceAdjOffsetY;
+        eyeMarkSavedScale = faceAdjScale;
 
         pendingFaceTexture = null;
 
@@ -3540,6 +4805,26 @@ public class BirthSystem : MonoBehaviour
         {
             Destroy(hollowWearTexture);
             hollowWearTexture = null;
+        }
+
+        if (confirmed && originalFaceTexture != null && babySynthesizer != null)
+        {
+            if (detectedFaceLandmarks.HasValue)
+            {
+                // 顔検出成功 → 目タップスキップ、検出座標で直接フィルター適用
+                var lm = detectedFaceLandmarks.Value;
+                Debug.Log("[BirthSystem] Face landmarks available — skipping eye mark step");
+                StartCoroutine(ApplyFilterAndComposite(lm.leftEyeCenter, lm.rightEyeCenter));
+            }
+            else
+            {
+                // 顔検出失敗 → 従来の手動目タップ
+                ShowEyeMarkOverlay();
+            }
+        }
+        else
+        {
+            Debug.Log("[BirthSystem] Face adjustment cancelled");
         }
     }
 
@@ -3615,10 +4900,17 @@ public class BirthSystem : MonoBehaviour
 
         synthBabyImageEl = new UIE.VisualElement();
         synthBabyImageEl.name = "synth-baby-image";
-        synthBabyImageEl.pickingMode = UIE.PickingMode.Ignore; // タップをphotoBtnに透過
+        synthBabyImageEl.pickingMode = UIE.PickingMode.Ignore;
         synthBabyImageEl.AddToClassList("birth-polaroid-image");
         synthBabyImageEl.style.backgroundImage = new UIE.StyleBackground(synthSprite);
         photoBtn.Add(synthBabyImageEl);
+
+        // Light Leak オーバーレイ（虹色の光漏れをUI層で重ねる）
+        var lightLeak = new UIE.VisualElement();
+        lightLeak.name = "light-leak-overlay";
+        lightLeak.pickingMode = UIE.PickingMode.Ignore;
+        lightLeak.AddToClassList("birth-light-leak-overlay");
+        photoBtn.Add(lightLeak);
 
         // バウンド・アニメーション（SE同期）
         birthResultCard.style.scale = new UIE.StyleScale(
@@ -3884,40 +5176,39 @@ public class BirthSystem : MonoBehaviour
                 // アンチエイリアス
                 float aa = Mathf.Clamp01((outerR - dist) * 2f);
 
-                // メタリックリム（外周 92%-100%）
+                // ゴールドメタリックリム（外周 92%-100%）
                 if (normDist > 0.92f)
                 {
                     float rimT = (normDist - 0.92f) / 0.08f;
-                    // クロームリム: 光の角度によるグラデーション
-                    float rimAngle = (dy / dist + 1f) * 0.5f; // 0(下)〜1(上)
+                    float rimAngle = (dy / dist + 1f) * 0.5f;
                     float rimLight = 0.3f + 0.5f * rimAngle + 0.15f * Mathf.Pow(rimAngle, 4f);
-                    Color rimColor = new Color(rimLight * 0.85f, rimLight * 0.8f, rimLight * 0.75f, aa);
+                    Color rimColor = new Color(rimLight * 0.95f, rimLight * 0.78f, rimLight * 0.45f, aa);
                     pixels[y * size + x] = rimColor;
                     continue;
                 }
 
-                // メタリック溝（88%-92%: 暗い線）
+                // ゴールド溝（88%-92%）
                 if (normDist > 0.88f)
                 {
                     float grooveT = (normDist - 0.88f) / 0.04f;
                     float grooveV = 0.15f + 0.05f * Mathf.Sin(grooveT * Mathf.PI);
-                    pixels[y * size + x] = new Color(grooveV, grooveV * 0.05f, grooveV * 0.05f, aa);
+                    pixels[y * size + x] = new Color(grooveV * 0.8f, grooveV * 0.6f, grooveV * 0.3f, aa);
                     continue;
                 }
 
-                // 赤いドーム本体（0%-88%）
+                // パステルピンクドーム本体（0%-88%）
                 float bodyNorm = normDist / 0.88f;
 
                 // 3Dドーム：中央が明るく、端が暗い（放物線的）
                 float dome = 1f - bodyNorm * bodyNorm;
 
                 // 上方向からの照明（yが上ほど明るい）
-                float lightDir = (dy / (outerR * 0.88f) + 1f) * 0.5f; // 0(下)〜1(上)
+                float lightDir = (dy / (outerR * 0.88f) + 1f) * 0.5f;
 
-                // ベース赤色にドーム陰影と方向照明を合成
-                float baseR = 0.65f + 0.35f * dome * (0.6f + 0.4f * lightDir);
-                float baseG = 0.02f + 0.12f * dome * lightDir;
-                float baseB = 0.02f + 0.08f * dome * lightDir;
+                // ベースパステルピンク（#FFB7C5）にドーム陰影と方向照明を合成
+                float baseR = 0.82f + 0.18f * dome * (0.6f + 0.4f * lightDir);
+                float baseG = 0.50f + 0.22f * dome * (0.6f + 0.4f * lightDir);
+                float baseB = 0.55f + 0.22f * dome * (0.6f + 0.4f * lightDir);
 
                 // 上半分のスペキュラーハイライト（鏡面反射）
                 float specX = dx / (outerR * 0.88f);
@@ -3969,7 +5260,7 @@ public class BirthSystem : MonoBehaviour
         for (int i = button.transform.childCount - 1; i >= 0; i--)
             Destroy(button.transform.GetChild(i).gameObject);
 
-        // ── 外側のグローオーラ ──
+        // ── 外側のグローオーラ（ソフトピンク） ──
         var glowObj = new GameObject("Glow");
         glowObj.transform.SetParent(button.transform, false);
         glowObj.transform.SetAsFirstSibling();
@@ -3979,7 +5270,7 @@ public class BirthSystem : MonoBehaviour
         glowRect.sizeDelta = new Vector2(size + 100, size + 100);
         var glowImg = glowObj.AddComponent<Image>();
         glowImg.sprite = GetCircleSprite(128);
-        glowImg.color = new Color(1f, 0.2f, 0.1f, 0.35f);
+        glowImg.color = new Color(1f, 0.72f, 0.78f, 0.30f);
         glowImg.raycastTarget = false;
 
         // ── 回転する光線（放射状） ──
@@ -4001,7 +5292,7 @@ public class BirthSystem : MonoBehaviour
             rayRect.sizeDelta = new Vector2(12, size + 160);
             rayRect.localRotation = Quaternion.Euler(0, 0, i * 30f);
             var rayImg = rayObj.AddComponent<Image>();
-            rayImg.color = new Color(1f, 0.85f, 0.3f, 0.1f);
+            rayImg.color = new Color(1f, 0.85f, 0.65f, 0.08f);
             rayImg.raycastTarget = false;
         }
 
@@ -4015,7 +5306,7 @@ public class BirthSystem : MonoBehaviour
         baseRect.anchoredPosition = new Vector2(0, -6);
         var baseImg = baseObj.AddComponent<Image>();
         baseImg.sprite = GetCircleSprite(128);
-        baseImg.color = new Color(0.12f, 0.02f, 0.02f, 0.7f);
+        baseImg.color = new Color(0.55f, 0.38f, 0.25f, 0.45f);
         baseImg.raycastTarget = false;
 
         // ── 3Dドームボタン本体（プロシージャル生成） ──
@@ -4049,7 +5340,13 @@ public class BirthSystem : MonoBehaviour
             logoImg.raycastTarget = false;
         }
 
-        // ── きらめきパーティクル（4つの小さな星） ──
+        // ── きらめきパーティクル（4つの小さな星、パステルカラー） ──
+        Color[] sparkleColors = {
+            new Color(1f, 0.72f, 0.77f, 0.8f),   // パステルピンク (#FFB7C5)
+            new Color(0.67f, 0.94f, 0.82f, 0.8f), // ミント (#AAF0D1)
+            new Color(0.97f, 0.91f, 0.81f, 0.8f), // メイン (#F7E7CE)
+            new Color(1f, 1f, 1f, 0.8f),           // ホワイト
+        };
         for (int i = 0; i < 4; i++)
         {
             var sparkObj = new GameObject($"Sparkle{i}");
@@ -4063,7 +5360,7 @@ public class BirthSystem : MonoBehaviour
             spRect.anchoredPosition = new Vector2(Mathf.Cos(angle) * dist, Mathf.Sin(angle) * dist);
             var spImg = sparkObj.AddComponent<Image>();
             spImg.sprite = GetCircleSprite(128);
-            spImg.color = new Color(1f, 1f, 0.7f, 0.8f);
+            spImg.color = sparkleColors[i];
             spImg.raycastTarget = false;
         }
 
@@ -4349,6 +5646,7 @@ public class BirthSystem : MonoBehaviour
         // アルバムコンテンツ（2カラム: 父ポラロイド | 母ポラロイド）
         var albumContent = new UIE.VisualElement();
         albumContent.AddToClassList("birth-story-album-content");
+        storyAlbumContent = albumContent;
 
         // 左: 父親ポラロイド
         CreateStoryParentCard(albumContent, true,
@@ -4365,10 +5663,13 @@ public class BirthSystem : MonoBehaviour
         divider.AddToClassList("birth-story-album-divider");
         storyPanel.Add(divider);
 
-        // ストーリーテキスト
+        // ストーリーテキスト（不透明背景コンテナでZ重なり解消）
+        var storyTextContainer = new UIE.VisualElement();
+        storyTextContainer.AddToClassList("birth-story-text-container");
         storyText = UIHelper.CreateLabel("");
         storyText.AddToClassList("birth-story-text");
-        storyPanel.Add(storyText);
+        storyTextContainer.Add(storyText);
+        storyPanel.Add(storyTextContainer);
 
         // 「愛を育む」ボタン行
         var loveBtnRow = new UIE.VisualElement();
@@ -4379,6 +5680,20 @@ public class BirthSystem : MonoBehaviour
         UIHelper.ApplyFont(loveBtn);
         loveBtn.text = Localization.Get("birth_nurture_love");
         loveBtn.clicked += OnStoryTap;
+
+        // ピンクグラデーションオーバーレイ（下半分に微かなピンク）
+        var gradientOverlay = new UIE.VisualElement();
+        gradientOverlay.style.position = UIE.Position.Absolute;
+        gradientOverlay.style.left = 0;
+        gradientOverlay.style.right = 0;
+        gradientOverlay.style.top = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+        gradientOverlay.style.bottom = 0;
+        gradientOverlay.style.backgroundColor = new Color(1f, 0.718f, 0.773f, 0.15f);
+        gradientOverlay.style.borderBottomLeftRadius = 50;
+        gradientOverlay.style.borderBottomRightRadius = 50;
+        gradientOverlay.pickingMode = UIE.PickingMode.Ignore;
+        loveBtn.Add(gradientOverlay);
+
         loveBtnRow.Add(loveBtn);
 
         storyPanel.Add(loveBtnRow);
@@ -4389,7 +5704,48 @@ public class BirthSystem : MonoBehaviour
 
     void OnStoryTap()
     {
+        StartCoroutine(StoryWhiteoutThenProceed());
+    }
+
+    IEnumerator StoryWhiteoutThenProceed()
+    {
+        // フェードイン（warm white）
+        if (flashOverlay != null)
+        {
+            flashOverlay.gameObject.SetActive(true);
+            float fadeInDur = 0.4f;
+            float elapsed = 0f;
+            while (elapsed < fadeInDur)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / fadeInDur);
+                float easeT = t * t;
+                flashOverlay.color = new Color(1f, 0.99f, 0.97f, easeT);
+                yield return null;
+            }
+            flashOverlay.color = new Color(1f, 0.99f, 0.97f, 1f);
+        }
+
+        // ホワイト中にストーリーパネルを閉じる
         waitingForStoryConfirm = false;
+
+        // ホールド
+        yield return new WaitForSeconds(0.2f);
+
+        // フェードアウト
+        if (flashOverlay != null)
+        {
+            float fadeOutDur = 0.5f;
+            float elapsed2 = 0f;
+            while (elapsed2 < fadeOutDur)
+            {
+                elapsed2 += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed2 / fadeOutDur);
+                flashOverlay.color = new Color(1f, 0.99f, 0.97f, 1f - t);
+                yield return null;
+            }
+            flashOverlay.gameObject.SetActive(false);
+        }
     }
 
     void CreateStoryParentCard(UIE.VisualElement parent, bool isFather,
@@ -4397,9 +5753,16 @@ public class BirthSystem : MonoBehaviour
     {
         var card = new UIE.VisualElement();
         card.AddToClassList("birth-story-album-card");
+        card.AddToClassList(isFather ? "birth-story-album-card-father" : "birth-story-album-card-mother");
 
-        // ポラロイドフレーム（父は左傾き、母は右傾き）
-        var polaroidFrame = new UIE.VisualElement();
+        // ドロップシャドウ（立体感）
+        var shadow = new UIE.VisualElement();
+        shadow.AddToClassList("birth-story-polaroid-shadow");
+        shadow.pickingMode = UIE.PickingMode.Ignore;
+        card.Add(shadow);
+
+        // ポラロイドフレーム（父は左傾き、母は右傾き）— ボタンに変更（タップでツールチップ表示）
+        var polaroidFrame = new UIE.Button();
         polaroidFrame.AddToClassList("birth-story-polaroid-frame");
         float rotation = isFather ? -3f : 3f;
         polaroidFrame.style.rotate = new UIE.StyleRotate(
@@ -4428,10 +5791,19 @@ public class BirthSystem : MonoBehaviour
         AddStoryCornerSeal(card, 16f, 85f);  // bottom-left
         AddStoryCornerSeal(card, 77f, 85f);  // bottom-right
 
-        // 紹介文テキスト（ポラロイドの下）
+        // 肩書き（短いタイトルのみ、"/" の前の部分）
         introLabel = UIHelper.CreateLabel("");
         introLabel.AddToClassList("birth-story-card-intro");
         card.Add(introLabel);
+
+        // 写真タップでふきだしツールチップ表示
+        var introRef = introLabel; // outパラメータはラムダ内で使えないためローカル変数にコピー
+        polaroidFrame.clicked += () =>
+        {
+            string fullIntro = introRef.userData as string;
+            if (!string.IsNullOrEmpty(fullIntro))
+                ShowStoryTooltip(card, fullIntro, isFather);
+        };
 
         parent.Add(card);
     }
@@ -4445,6 +5817,64 @@ public class BirthSystem : MonoBehaviour
         seal.style.rotate = new UIE.StyleRotate(
             new UIE.Rotate(new UIE.Angle(45f, UIE.AngleUnit.Degree)));
         parent.Add(seal);
+    }
+
+    void ShowStoryTooltip(UIE.VisualElement anchorCard, string text, bool isFather)
+    {
+        // 既存のツールチップがあれば消す
+        if (activeStoryTooltip != null)
+        {
+            activeStoryTooltip.RemoveFromHierarchy();
+            activeStoryTooltip = null;
+            return; // トグル: 同じ写真を再タップで閉じる
+        }
+
+        if (storyPanel == null) return;
+
+        // ふきだしコンテナ（storyPanel上にabsolute配置）
+        var tooltip = new UIE.VisualElement();
+        tooltip.AddToClassList("birth-story-tooltip");
+        // 父は左寄り、母は右寄り
+        if (isFather)
+            tooltip.AddToClassList("birth-story-tooltip-left");
+        else
+            tooltip.AddToClassList("birth-story-tooltip-right");
+
+        var tooltipText = UIHelper.CreateLabel(text);
+        tooltipText.AddToClassList("birth-story-tooltip-text");
+        UIHelper.ApplyFont(tooltipText);
+        tooltip.Add(tooltipText);
+
+        // タップで閉じるボタン
+        var closeBtn = new UIE.Button();
+        closeBtn.AddToClassList("birth-story-tooltip-close");
+        UIHelper.ApplyFont(closeBtn);
+        closeBtn.text = "✕";
+        closeBtn.clicked += () =>
+        {
+            if (activeStoryTooltip != null)
+            {
+                activeStoryTooltip.RemoveFromHierarchy();
+                activeStoryTooltip = null;
+            }
+        };
+        tooltip.Add(closeBtn);
+
+        storyPanel.Add(tooltip);
+        activeStoryTooltip = tooltip;
+
+        // 2秒後に自動で消える
+        StartCoroutine(AutoDismissTooltip(tooltip, 3f));
+    }
+
+    IEnumerator AutoDismissTooltip(UIE.VisualElement tooltip, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (activeStoryTooltip == tooltip && tooltip.parent != null)
+        {
+            tooltip.RemoveFromHierarchy();
+            activeStoryTooltip = null;
+        }
     }
 
     IEnumerator ShowParentCutin(string parentName)
@@ -4932,6 +6362,15 @@ public class BirthSystem : MonoBehaviour
         el.style.borderBottomRightRadius = r;
     }
 
+    void ApplyParallaxOffset(UIE.VisualElement el, Vector2 accel, float amount)
+    {
+        if (el == null || el.resolvedStyle.display == UIE.DisplayStyle.None) return;
+        if (el.parent == null) return;
+        float x = accel.x * amount;
+        float y = -accel.y * amount; // Y軸反転（上に傾けると上に移動）
+        el.style.translate = new UIE.StyleTranslate(new UIE.Translate(x, y));
+    }
+
     UIE.VisualElement CreateSkipButton(UIE.VisualElement parent)
     {
         skipRequested = false;
@@ -5182,7 +6621,13 @@ public class BirthSystem : MonoBehaviour
                 }
             }
             if (storyFatherName != null) storyFatherName.text = Localization.GetParent(father.name);
-            if (storyFatherIntro != null) storyFatherIntro.text = Localization.GetParentIntro(father.name).Replace(" / ", "\n");
+            if (storyFatherIntro != null)
+            {
+                string fullIntro = Localization.GetParentIntro(father.name);
+                string shortTitle = fullIntro.Contains(" / ") ? fullIntro.Split(new[] { " / " }, System.StringSplitOptions.None)[0] : fullIntro;
+                storyFatherIntro.text = shortTitle;
+                storyFatherIntro.userData = fullIntro.Replace(" / ", "\n"); // フルテキストをツールチップ用に保存
+            }
 
             // 母親カードを設定
             if (storyMotherFace != null)
@@ -5200,23 +6645,36 @@ public class BirthSystem : MonoBehaviour
                 }
             }
             if (storyMotherName != null) storyMotherName.text = Localization.GetParent(mother.name);
-            if (storyMotherIntro != null) storyMotherIntro.text = Localization.GetParentIntro(mother.name).Replace(" / ", "\n");
+            if (storyMotherIntro != null)
+            {
+                string fullIntro = Localization.GetParentIntro(mother.name);
+                string shortTitle = fullIntro.Contains(" / ") ? fullIntro.Split(new[] { " / " }, System.StringSplitOptions.None)[0] : fullIntro;
+                storyMotherIntro.text = shortTitle;
+                storyMotherIntro.userData = fullIntro.Replace(" / ", "\n");
+            }
 
             storyText.text = "";
+            storyText.style.opacity = 0f;
             storyPanel.style.display = UIE.DisplayStyle.Flex;
 
             // スキップボタン（テキスト全表示のみ、ページ送りはしない）
             var skipBtn = CreateSkipButton(storyPanel);
 
-            // ストーリーを1文字ずつ表示（タイプライター効果）
+            // ストーリーを1文字ずつ表示（フェードイン + タイプライター効果）
+            int charCount = 0;
             foreach (char c in story)
             {
                 if (skipRequested) break;
                 storyText.text += c;
+                charCount++;
+                // 最初の10文字でフェードイン（0→1）
+                if (charCount <= 10)
+                    storyText.style.opacity = Mathf.Clamp01(charCount / 10f);
                 yield return new WaitForSeconds(0.05f);
             }
 
             // スキップ時は全文を即表示
+            storyText.style.opacity = 1f;
             if (skipRequested)
             {
                 storyText.text = story;
@@ -5225,12 +6683,23 @@ public class BirthSystem : MonoBehaviour
 
             skipBtn.RemoveFromHierarchy();
 
+            // ストーリー完了時にハートパーティクル発射
+            if (storyAlbumContent != null)
+                StartCoroutine(SpawnStoryHeartParticles(storyAlbumContent));
+
             // タップ待ち（タップするまで進まない）
             waitingForStoryConfirm = true;
             while (waitingForStoryConfirm)
             {
                 yield return null;
             }
+            // ツールチップが残っていたら閉じる
+            if (activeStoryTooltip != null)
+            {
+                activeStoryTooltip.RemoveFromHierarchy();
+                activeStoryTooltip = null;
+            }
+
             storyPanel.style.display = UIE.DisplayStyle.None;
 
             // Canvas背景を復元
@@ -5241,7 +6710,51 @@ public class BirthSystem : MonoBehaviour
         }
 
         if (!skipRequested)
-            yield return new WaitForSeconds(0.6f);
+            yield return new WaitForSeconds(0.1f); // ホワイトアウトが間を持たせるため短縮
+    }
+
+    // ── ストーリー完了時のハートパーティクル ──
+    IEnumerator SpawnStoryHeartParticles(UIE.VisualElement container)
+    {
+        string[] hearts = { "\u2665", "\u2764", "\u2661" };
+        for (int i = 0; i < 12; i++)
+        {
+            var heart = UIHelper.CreateLabel(hearts[Random.Range(0, hearts.Length)]);
+            UIHelper.ApplyFont(heart);
+            heart.pickingMode = UIE.PickingMode.Ignore;
+            heart.style.position = UIE.Position.Absolute;
+            heart.style.fontSize = Random.Range(24, 44);
+            heart.style.color = new Color(1f, 0.718f, 0.773f, 1f); // #FFB7C5
+            float xPct = Random.Range(20f, 80f);
+            float yPct = Random.Range(10f, 90f);
+            heart.style.left = new UIE.StyleLength(new UIE.Length(xPct, UIE.LengthUnit.Percent));
+            heart.style.top = new UIE.StyleLength(new UIE.Length(yPct, UIE.LengthUnit.Percent));
+            heart.style.opacity = 1f;
+            container.Add(heart);
+            StartCoroutine(FadeOutHeart(heart));
+            yield return new WaitForSeconds(0.08f);
+        }
+    }
+
+    IEnumerator FadeOutHeart(UIE.Label heart)
+    {
+        float duration = 1.2f;
+        float elapsed = 0f;
+        float driftY = Random.Range(-100f, -40f);
+
+        while (elapsed < duration && heart != null && heart.parent != null)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            heart.style.top = new UIE.StyleLength(
+                heart.resolvedStyle.top + driftY * Time.deltaTime);
+            heart.style.opacity = 1f - t;
+            float s = 1f + 0.4f * Mathf.Sin(t * Mathf.PI);
+            heart.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector2(s, s)));
+            yield return null;
+        }
+        if (heart != null && heart.parent != null)
+            heart.RemoveFromHierarchy();
     }
 
     IEnumerator ShowFailureSequence(string locPrefix, Color lineColor)
@@ -5354,16 +6867,12 @@ public class BirthSystem : MonoBehaviour
     {
         var (safeTop, _, _, _) = UIHelper.GetSafeMargins();
 
-        // Menu button (top-right)
+        // Menu button (top-right, star icon)
         var menuBtn = new UIE.Button();
         menuBtn.AddToClassList("birth-menu-btn");
         menuBtn.style.top = 24 + safeTop;
-        for (int i = 0; i < 3; i++)
-        {
-            var line = new UIE.VisualElement();
-            line.AddToClassList("birth-menu-line");
-            menuBtn.Add(line);
-        }
+        var starLabel = UIHelper.CreateLabel("\u2606", "birth-menu-star");
+        menuBtn.Add(starLabel);
         menuBtn.clicked += ToggleMenuPanel;
         overlayRoot.Add(menuBtn);
 
@@ -5579,6 +7088,916 @@ public class BirthSystem : MonoBehaviour
             new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
         return _shadowSprite;
     }
+
+    // ── ジャイロパララックス (毎フレーム更新) ──
+    void Update()
+    {
+        Vector3 accel = Input.acceleration;
+        Vector2 targetAccel = new Vector2(
+            Mathf.Clamp(accel.x, -1f, 1f),
+            Mathf.Clamp(accel.y, -1f, 1f));
+        smoothAccel = Vector2.Lerp(smoothAccel, targetAccel, Time.deltaTime * PARALLAX_SMOOTH);
+
+        // 顔画像にパララックス適用
+        ApplyParallaxOffset(fatherFaceImage, smoothAccel, PARALLAX_FACE_AMOUNT);
+        ApplyParallaxOffset(motherFaceImage, smoothAccel, PARALLAX_FACE_AMOUNT);
+    }
+
+    // ================================================================
+    // ぷにぷにインタラクション（ほっぺ変形 + 視線追従 + 診断）
+    // ================================================================
+
+    // ================================================================
+    // 座標変換パイプライン
+    // ================================================================
+    //
+    // ★ 座標空間の定義:
+    //   A) 元画像空間:    0-1, top-left原点 (ランドマーク/目タップの入力)
+    //   B) クロップUV空間: 0-1, bottom-left原点 (DrawFace の u_adj/v_adj と同一)
+    //   C) composite空間:  0-1, bottom-left原点 (pixels[y*w+x] で y=0 が最下部)
+    //
+    // ★ 非正方形画像の処理方式: 中央切り抜き (Center Crop)
+    //   cropSize = min(W, H) の正方形を画像中央から切り出す。
+    //   余白(Padding/Letterbox)は存在しない。
+    //   DrawFace/DrawSwaddleAndFace も同じ cropSize/cropOffset で
+    //   ソースピクセルをサンプリングしている。
+    // ================================================================
+
+    /// <summary>
+    /// 元画像の正規化座標(0-1, top-left原点) → クロップUV(0-1, bottom-left原点)。
+    ///
+    /// DrawFace の逆関数:
+    ///   DrawFace: u_adj → srcX = u_adj * cropSize + cropOffsetX
+    ///   本関数:   srcX → u_adj = (srcX - cropOffsetX) / cropSize
+    ///
+    /// 3ステップで変換:
+    ///   Step1 (Normalization): 入力の正規化座標をそのまま使用 (0-1)
+    ///   Step2 (Aspect Correction): center-crop オフセットを適用
+    ///   Step3 (V-Flip): top-left → bottom-left Y軸反転
+    /// </summary>
+    Vector2 ImageNormToCropUV(Vector2 imageNorm, int imgW, int imgH)
+    {
+        if (imgW <= 0 || imgH <= 0)
+        {
+            Debug.LogWarning($"[CoordTransform] ImageNormToCropUV: invalid image size ({imgW}x{imgH}), fallback Y-flip only");
+            return new Vector2(imageNorm.x, 1f - imageNorm.y);
+        }
+
+        float aspectRatio = (float)imgW / imgH;
+
+        // ── Step1: Normalization ──
+        // 元画像ピクセル座標 (top-left 原点)
+        float pixX_topLeft = imageNorm.x * imgW;
+        float pixY_topLeft = imageNorm.y * imgH;
+
+        // ── Step2: Aspect Correction (中央切り抜き) ──
+        // DrawFace と同じ: cropSize = min(W,H), offset = (dim - cropSize) / 2
+        float cropSize = Mathf.Min(imgW, imgH);
+        float cropOffX = (imgW - cropSize) * 0.5f;
+        float cropOffY = (imgH - cropSize) * 0.5f;
+
+        // top-left原点のままクロップ空間に変換 (top-left)
+        float cropNormX_topLeft = (pixX_topLeft - cropOffX) / cropSize;
+        float cropNormY_topLeft = (pixY_topLeft - cropOffY) / cropSize;
+
+        // ── Step3: V-Flip (top-left → bottom-left) ──
+        // Unity の GetPixels/SetPixels は bottom-left 原点
+        float cropNormX = cropNormX_topLeft;
+        float cropNormY = 1f - cropNormY_topLeft;
+
+        Debug.Log($"[CoordTransform] ImageNormToCropUV: " +
+            $"imgSize=({imgW}x{imgH}) aspect={aspectRatio:F3} " +
+            $"cropSize={cropSize:F0} cropOff=({cropOffX:F0},{cropOffY:F0}) | " +
+            $"input(top-left)=({imageNorm.x:F3},{imageNorm.y:F3}) → " +
+            $"px=({pixX_topLeft:F1},{pixY_topLeft:F1}) → " +
+            $"cropTopLeft=({cropNormX_topLeft:F3},{cropNormY_topLeft:F3}) → " +
+            $"cropUV(bottom-left)=({cropNormX:F3},{cropNormY:F3})");
+
+        return new Vector2(cropNormX, cropNormY);
+    }
+
+    /// <summary>
+    /// 元画像空間のランドマーク座標(A) → composite正規化座標(C)。
+    ///
+    /// DrawFace の逆関数を3ステップで実行:
+    ///   Step1: 元画像座標 → クロップUV (ImageNormToCropUV)
+    ///   Step2: ユーザーの位置調整 (zoom/pan) を適用 — DrawFace の u_adj→u の逆
+    ///   Step3: 顔穴パラメータで composite 空間にマッピング — DrawFace の px→u の逆
+    ///
+    /// 検証方法: DrawFace で composite pixel (px, py) からサンプリングされる
+    ///           ソースピクセルが、この関数の入力ランドマークと一致すること。
+    /// </summary>
+    Vector2 FaceLandmarkToComposite(Vector2 imageNorm)
+    {
+        // ── Step1: 元画像座標 → クロップUV ──
+        // ImageNormToCropUV: top-left→bottom-left Y反転 + center-crop アスペクト比補正
+        Vector2 cropUV = ImageNormToCropUV(imageNorm, originalFaceW, originalFaceH);
+
+        // ── Step2: ユーザーの位置調整 (zoom/pan) を適用 ──
+        // DrawFace の逆: u_adj = (u - 0.5) / faceScale + 0.5 - faceOffsetX
+        //             → u = (u_adj - 0.5 + faceOffsetX) * faceScale + 0.5
+        float faceScale = eyeMarkSavedScale > 0.01f ? eyeMarkSavedScale : 1f;
+        float faceOffsetX = eyeMarkSavedOffsetX;
+        float faceOffsetY = eyeMarkSavedOffsetY;
+        float u = (cropUV.x - 0.5f + faceOffsetX) * faceScale + 0.5f;
+        float v = (cropUV.y - 0.5f + faceOffsetY) * faceScale + 0.5f;
+
+        // ── Step3: 顔穴パラメータで composite 空間にマッピング ──
+        // DrawFace の逆: u = (px - cx) / (uniformR * 2) + 0.5
+        //             → px = (u - 0.5) * uniformR * 2 + cx
+        //             → composite_norm = px / TEX_SIZE
+        //               = (u - 0.5) * (uniformR_px * 2 / TEX_SIZE) + cx / TEX_SIZE
+        //               = (u - 0.5) * (max(RX, RY) * 1.05 * 2) + CX
+        float cx = babySynthesizer != null ? babySynthesizer.GetFaceHoleCX() : 0.50f;
+        float cy = babySynthesizer != null ? babySynthesizer.GetFaceHoleCY() : 0.68f;
+        float rx = babySynthesizer != null ? babySynthesizer.GetFaceHoleRX() : 0.13f;
+        float ry = babySynthesizer != null ? babySynthesizer.GetFaceHoleRY() : 0.12f;
+        float uniformR = Mathf.Max(rx, ry) * 1.05f;
+
+        Vector2 result = new Vector2(
+            cx + (u - 0.5f) * uniformR * 2f,
+            cy + (v - 0.5f) * uniformR * 2f);
+
+        Debug.Log($"[CoordTransform] FaceLandmarkToComposite: " +
+            $"input=({imageNorm.x:F3},{imageNorm.y:F3}) → " +
+            $"cropUV=({cropUV.x:F3},{cropUV.y:F3}) → " +
+            $"adjusted(u,v)=({u:F3},{v:F3}) [scale={faceScale:F2} off=({faceOffsetX:F3},{faceOffsetY:F3})] → " +
+            $"composite=({result.x:F3},{result.y:F3}) " +
+            $"[hole=({cx:F2},{cy:F2}) r=({rx:F3},{ry:F3}) uniformR={uniformR:F4}]");
+
+        // ── 検証: DrawFace の順方向計算で同じソースピクセルを得るか確認 ──
+        {
+            float TEX = 1080f;
+            float cx_px = cx * TEX;
+            float cy_px = cy * TEX;
+            float uniformR_px = uniformR * TEX;
+            float px = result.x * TEX;
+            float py = result.y * TEX;
+            float u_chk = (px - cx_px) / (uniformR_px * 2f) + 0.5f;
+            float v_chk = (py - cy_px) / (uniformR_px * 2f) + 0.5f;
+            float uAdj_chk = (u_chk - 0.5f) / faceScale + 0.5f - faceOffsetX;
+            float vAdj_chk = (v_chk - 0.5f) / faceScale + 0.5f - faceOffsetY;
+            float cropSize = Mathf.Min(originalFaceW, originalFaceH);
+            float cropOffX = (originalFaceW - cropSize) * 0.5f;
+            float cropOffY = (originalFaceH - cropSize) * 0.5f;
+            float srcX = uAdj_chk * cropSize + cropOffX;
+            float srcY = vAdj_chk * cropSize + cropOffY;
+            // bottom-left → top-left
+            float srcY_topLeft = originalFaceH > 0 ? originalFaceH - srcY : srcY;
+            float srcNormX = originalFaceW > 0 ? srcX / originalFaceW : 0;
+            float srcNormY = originalFaceH > 0 ? srcY_topLeft / originalFaceH : 0;
+            Debug.Log($"[CoordTransform] ★検証(DrawFace順方向): " +
+                $"composite({result.x:F3},{result.y:F3}) → " +
+                $"DrawFace u_adj=({uAdj_chk:F3},{vAdj_chk:F3}) → " +
+                $"srcPx=({srcX:F1},{srcY:F1}) → " +
+                $"srcNorm(top-left)=({srcNormX:F3},{srcNormY:F3}) " +
+                $"[期待値=({imageNorm.x:F3},{imageNorm.y:F3}) " +
+                $"差=({Mathf.Abs(srcNormX - imageNorm.x):F4},{Mathf.Abs(srcNormY - imageNorm.y):F4})]");
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 合成画像の正規化座標 → faceInteractionClip 内のローカルpx座標に変換
+    /// </summary>
+    Vector2 CompositeToClipLocal(Vector2 compositeNorm, float clipL, float clipT, float imgW, float imgH)
+    {
+        float px = compositeNorm.x * imgW - clipL;
+        float py = compositeNorm.y * imgH - clipT;
+        return new Vector2(px, py);
+    }
+
+    /// <summary>
+    /// synthBabyImageEl のローカルpx座標 → 合成画像の正規化座標
+    /// </summary>
+    Vector2 ImageLocalToComposite(Vector2 localPos)
+    {
+        if (synthBabyImageEl == null) return Vector2.zero;
+        float w = synthBabyImageEl.resolvedStyle.width;
+        float h = synthBabyImageEl.resolvedStyle.height;
+        if (w <= 0 || h <= 0) return Vector2.zero;
+        return new Vector2(localPos.x / w, localPos.y / h);
+    }
+
+    /// <summary>
+    /// シェアモードでのインタラクション一括セットアップ
+    /// </summary>
+    void SetupBabyFaceInteractions()
+    {
+        if (synthBabyImageEl == null) return;
+
+        // タップイベントを受け付ける（synthBabyImageEl全体で受信 → 座標で判定）
+        synthBabyImageEl.pickingMode = UIE.PickingMode.Position;
+        synthBabyImageEl.RegisterCallback<UIE.PointerDownEvent>(OnBabyFaceTap);
+        synthBabyImageEl.RegisterCallback<UIE.PointerMoveEvent>(OnGazePointerMove);
+        synthBabyImageEl.RegisterCallback<UIE.PointerLeaveEvent>(OnGazePointerLeave);
+
+        // レイアウト確定後に顔クリップ＋瞳を配置
+        synthBabyImageEl.schedule.Execute(() => SetupFaceClipAndPupils());
+
+        puniInteractionEnabled = true;
+        Debug.Log("[BirthSystem] Baby face interactions enabled");
+    }
+
+    /// <summary>
+    /// 顔穴位置にクリップコンテナを作成し、瞳オーバーレイを配置
+    /// </summary>
+    void SetupFaceClipAndPupils()
+    {
+        if (synthBabyImageEl == null) return;
+
+        float imgW = synthBabyImageEl.resolvedStyle.width;
+        float imgH = synthBabyImageEl.resolvedStyle.height;
+        if (imgW <= 0 || imgH <= 0) return;
+
+        float cx = babySynthesizer != null ? babySynthesizer.GetFaceHoleCX() : 0.50f;
+        float cy = babySynthesizer != null ? babySynthesizer.GetFaceHoleCY() : 0.68f;
+        float rx = babySynthesizer != null ? babySynthesizer.GetFaceHoleRX() : 0.13f;
+        float ry = babySynthesizer != null ? babySynthesizer.GetFaceHoleRY() : 0.12f;
+
+        // 顔穴の表示ピクセル位置
+        float clipW = rx * 2f * imgW;
+        float clipH = ry * 2f * imgH;
+        float clipL = (cx - rx) * imgW;
+        float clipT = (cy - ry) * imgH;
+
+        // 顔クリップコンテナ（楕円、overflow:hidden）
+        faceInteractionClip = new UIE.VisualElement();
+        faceInteractionClip.name = "face-interaction-clip";
+        faceInteractionClip.pickingMode = UIE.PickingMode.Ignore;
+        faceInteractionClip.style.position = UIE.Position.Absolute;
+        faceInteractionClip.style.left = clipL;
+        faceInteractionClip.style.top = clipT;
+        faceInteractionClip.style.width = clipW;
+        faceInteractionClip.style.height = clipH;
+        faceInteractionClip.style.overflow = UIE.Overflow.Hidden;
+        faceInteractionClip.style.borderTopLeftRadius = new UIE.Length(50, UIE.LengthUnit.Percent);
+        faceInteractionClip.style.borderTopRightRadius = new UIE.Length(50, UIE.LengthUnit.Percent);
+        faceInteractionClip.style.borderBottomLeftRadius = new UIE.Length(50, UIE.LengthUnit.Percent);
+        faceInteractionClip.style.borderBottomRightRadius = new UIE.Length(50, UIE.LengthUnit.Percent);
+        synthBabyImageEl.Add(faceInteractionClip);
+
+        Debug.Log($"[BirthSystem] Face clip created: L={clipL:F1} T={clipT:F1} W={clipW:F1} H={clipH:F1} (image={imgW:F0}x{imgH:F0})");
+        Debug.Log($"[BirthSystem] Face hole: cx={cx:F2} cy={cy:F2} rx={rx:F2} ry={ry:F2}");
+        Debug.Log($"[BirthSystem] Face adjust: offsetX={eyeMarkSavedOffsetX:F3} offsetY={eyeMarkSavedOffsetY:F3} scale={eyeMarkSavedScale:F3}");
+
+        // 瞳オーバーレイ配置（ランドマーク検出時のみ）
+        if (detectedFaceLandmarks.HasValue)
+        {
+            var lm = detectedFaceLandmarks.Value;
+
+            // 顔テクスチャ空間 → 合成画像空間 → クリップローカル座標
+            Vector2 leftEyeComp = FaceLandmarkToComposite(lm.leftEyeCenter);
+            Vector2 rightEyeComp = FaceLandmarkToComposite(lm.rightEyeCenter);
+
+            Vector2 leftEyeLocal = CompositeToClipLocal(leftEyeComp, clipL, clipT, imgW, imgH);
+            Vector2 rightEyeLocal = CompositeToClipLocal(rightEyeComp, clipL, clipT, imgW, imgH);
+
+            // 瞳サイズ（クリップ領域の幅の7%程度）
+            float pupilSize = clipW * 0.07f;
+            pupilSize = Mathf.Clamp(pupilSize, 4f, 30f);
+
+            leftPupilBasePos = leftEyeLocal;
+            leftPupilEl = CreatePupilOverlay(leftEyeLocal, pupilSize);
+
+            rightPupilBasePos = rightEyeLocal;
+            rightPupilEl = CreatePupilOverlay(rightEyeLocal, pupilSize);
+
+            Debug.Log($"[BirthSystem] Landmark (face-tex): leftEye=({lm.leftEyeCenter.x:F2},{lm.leftEyeCenter.y:F2}) rightEye=({lm.rightEyeCenter.x:F2},{lm.rightEyeCenter.y:F2})");
+            Debug.Log($"[BirthSystem] Landmark (composite): leftEye=({leftEyeComp.x:F3},{leftEyeComp.y:F3}) rightEye=({rightEyeComp.x:F3},{rightEyeComp.y:F3})");
+            Debug.Log($"[BirthSystem] Pupil (clip-local): leftEye=({leftEyeLocal.x:F1},{leftEyeLocal.y:F1}) rightEye=({rightEyeLocal.x:F1},{rightEyeLocal.y:F1}) size={pupilSize:F1}");
+
+            // ほっぺ位置もログ出力
+            Vector2 leftCheekComp = FaceLandmarkToComposite(lm.leftCheek);
+            Vector2 rightCheekComp = FaceLandmarkToComposite(lm.rightCheek);
+            Debug.Log($"[BirthSystem] Cheek (composite): L=({leftCheekComp.x:F3},{leftCheekComp.y:F3}) R=({rightCheekComp.x:F3},{rightCheekComp.y:F3})");
+        }
+        else
+        {
+            Debug.Log("[BirthSystem] No landmarks — pupil overlay skipped");
+        }
+    }
+
+    // --- 機能1: ほっぺ「ぷにぷに」変形 ---
+
+    void OnBabyFaceTap(UIE.PointerDownEvent evt)
+    {
+        if (!puniInteractionEnabled || synthBabyImageEl == null) return;
+
+        // 親の photoBtn にイベントが伝搬しないようにする
+        evt.StopPropagation();
+
+        // タップ位置を合成画像の正規化座標に変換
+        Vector2 localPos = evt.localPosition;
+        Vector2 compositeNorm = ImageLocalToComposite(localPos);
+
+        // ほっぺの基準位置を合成画像空間で計算
+        Vector2 leftCheekComp, rightCheekComp;
+        float cheekThreshold;
+
+        if (detectedFaceLandmarks.HasValue)
+        {
+            var lm = detectedFaceLandmarks.Value;
+            leftCheekComp = FaceLandmarkToComposite(lm.leftCheek);
+            rightCheekComp = FaceLandmarkToComposite(lm.rightCheek);
+            // 閾値: 目間距離の合成画像空間での半分程度
+            Vector2 leftEyeComp = FaceLandmarkToComposite(lm.leftEyeCenter);
+            Vector2 rightEyeComp = FaceLandmarkToComposite(lm.rightEyeCenter);
+            cheekThreshold = Vector2.Distance(leftEyeComp, rightEyeComp) * 0.5f;
+        }
+        else
+        {
+            // ランドマーク未検出時: 顔穴中心基準で疑似ほっぺ位置
+            float cx = babySynthesizer != null ? babySynthesizer.GetFaceHoleCX() : 0.50f;
+            float cy = babySynthesizer != null ? babySynthesizer.GetFaceHoleCY() : 0.68f;
+            float rx = babySynthesizer != null ? babySynthesizer.GetFaceHoleRX() : 0.13f;
+            leftCheekComp = new Vector2(cx - rx * 0.5f, cy + rx * 0.3f);
+            rightCheekComp = new Vector2(cx + rx * 0.5f, cy + rx * 0.3f);
+            cheekThreshold = rx * 0.6f;
+        }
+
+        // ほっぺとの距離判定
+        float distLeft = Vector2.Distance(compositeNorm, leftCheekComp);
+        float distRight = Vector2.Distance(compositeNorm, rightCheekComp);
+
+        Debug.Log($"[BirthSystem] Tap at composite=({compositeNorm.x:F3},{compositeNorm.y:F3}) " +
+                  $"distL={distLeft:F3} distR={distRight:F3} threshold={cheekThreshold:F3}");
+
+        if (distLeft < cheekThreshold)
+        {
+            Debug.Log("[BirthSystem] Puni tap: left cheek");
+            if (puniSquishCoroutine != null) StopCoroutine(puniSquishCoroutine);
+            puniSquishCoroutine = StartCoroutine(PuniSquishAnimation(true));
+            SpawnPuniRipple(localPos);
+        }
+        else if (distRight < cheekThreshold)
+        {
+            Debug.Log("[BirthSystem] Puni tap: right cheek");
+            if (puniSquishCoroutine != null) StopCoroutine(puniSquishCoroutine);
+            puniSquishCoroutine = StartCoroutine(PuniSquishAnimation(false));
+            SpawnPuniRipple(localPos);
+        }
+    }
+
+    IEnumerator PuniSquishAnimation(bool isLeft)
+    {
+        if (synthBabyImageEl == null) yield break;
+
+        // SE再生（タップ音を高ピッチで「ぷに」感）
+        if (seSource != null && seCardFlip != null)
+        {
+            seSource.pitch = 1.4f;
+            seSource.PlayOneShot(seCardFlip, 0.4f);
+            seSource.pitch = 1f;
+        }
+
+        float translateDir = isLeft ? 8f : -8f;
+
+        // Phase 1: ぷにっとつぶれ（0 → 80ms）
+        float phase1 = 0.08f;
+        float elapsed = 0f;
+        while (elapsed < phase1)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / phase1);
+            float scaleX = Mathf.Lerp(1f, 0.94f, t);
+            float scaleY = Mathf.Lerp(1f, 1.06f, t);
+            float tx = Mathf.Lerp(0f, translateDir, t);
+            synthBabyImageEl.style.scale = new UIE.StyleScale(
+                new UIE.Scale(new Vector3(scaleX, scaleY, 1f)));
+            synthBabyImageEl.style.translate = new UIE.StyleTranslate(
+                new UIE.Translate(tx, 0));
+            yield return null;
+        }
+
+        // Phase 2: オーバーシュート戻り（80ms → 200ms）
+        float phase2 = 0.12f;
+        elapsed = 0f;
+        while (elapsed < phase2)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / phase2);
+            float ease = t * t * (3f - 2f * t);
+            float scaleX = Mathf.Lerp(0.94f, 1.02f, ease);
+            float scaleY = Mathf.Lerp(1.06f, 0.98f, ease);
+            float tx = Mathf.Lerp(translateDir, 0f, ease);
+            synthBabyImageEl.style.scale = new UIE.StyleScale(
+                new UIE.Scale(new Vector3(scaleX, scaleY, 1f)));
+            synthBabyImageEl.style.translate = new UIE.StyleTranslate(
+                new UIE.Translate(tx, 0));
+            yield return null;
+        }
+
+        // Phase 3: 定位置に戻る（200ms → 300ms）
+        float phase3 = 0.1f;
+        elapsed = 0f;
+        while (elapsed < phase3)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / phase3);
+            float ease = t * t * (3f - 2f * t);
+            float scaleX = Mathf.Lerp(1.02f, 1f, ease);
+            float scaleY = Mathf.Lerp(0.98f, 1f, ease);
+            synthBabyImageEl.style.scale = new UIE.StyleScale(
+                new UIE.Scale(new Vector3(scaleX, scaleY, 1f)));
+            yield return null;
+        }
+
+        // リセット
+        synthBabyImageEl.style.scale = new UIE.StyleScale(
+            new UIE.Scale(Vector3.one));
+        synthBabyImageEl.style.translate = new UIE.StyleTranslate(
+            new UIE.Translate(0, 0));
+        puniSquishCoroutine = null;
+    }
+
+    /// <summary>
+    /// ぷにぷにリップル波紋（顔クリップ内に生成）
+    /// </summary>
+    void SpawnPuniRipple(Vector2 imageLocalPos)
+    {
+        // クリップコンテナ内にリップルを配置（はみ出し部分は自動クリップ）
+        UIE.VisualElement parent = faceInteractionClip != null ? faceInteractionClip : synthBabyImageEl;
+        if (parent == null) return;
+
+        // imageLocalPos → parent内のローカル座標に変換
+        float rippleX = imageLocalPos.x;
+        float rippleY = imageLocalPos.y;
+        if (faceInteractionClip != null)
+        {
+            rippleX -= faceInteractionClip.resolvedStyle.left;
+            rippleY -= faceInteractionClip.resolvedStyle.top;
+        }
+
+        var ripple = new UIE.VisualElement();
+        ripple.AddToClassList("puni-ripple");
+        ripple.pickingMode = UIE.PickingMode.Ignore;
+        ripple.style.left = rippleX - 30f;
+        ripple.style.top = rippleY - 30f;
+        ripple.style.opacity = 0.6f;
+        ripple.style.scale = new UIE.StyleScale(
+            new UIE.Scale(new Vector3(0.3f, 0.3f, 1f)));
+        parent.Add(ripple);
+
+        StartCoroutine(PuniRippleAnimation(ripple));
+    }
+
+    IEnumerator PuniRippleAnimation(UIE.VisualElement ripple)
+    {
+        float duration = 0.35f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float ease = 1f - (1f - t) * (1f - t);
+            float s = Mathf.Lerp(0.3f, 1.2f, ease);
+            float a = Mathf.Lerp(0.6f, 0f, ease);
+            ripple.style.scale = new UIE.StyleScale(
+                new UIE.Scale(new Vector3(s, s, 1f)));
+            ripple.style.opacity = a;
+            yield return null;
+        }
+        ripple.RemoveFromHierarchy();
+    }
+
+    // --- 機能2: 視線追従 ---
+
+    UIE.VisualElement CreatePupilOverlay(Vector2 centerPos, float size)
+    {
+        if (faceInteractionClip == null) return null;
+
+        var pupil = new UIE.VisualElement();
+        pupil.AddToClassList("baby-pupil-overlay");
+        pupil.pickingMode = UIE.PickingMode.Ignore;
+        pupil.style.width = size;
+        pupil.style.height = size;
+        pupil.style.left = centerPos.x - size / 2f;
+        pupil.style.top = centerPos.y - size / 2f;
+        faceInteractionClip.Add(pupil); // クリップコンテナ内に配置
+        return pupil;
+    }
+
+    void OnGazePointerMove(UIE.PointerMoveEvent evt)
+    {
+        if (leftPupilEl == null || rightPupilEl == null || faceInteractionClip == null) return;
+
+        // ポインタ位置をクリップコンテナのローカル座標に変換
+        Vector2 pointerLocal = evt.localPosition;
+        float clipL = faceInteractionClip.resolvedStyle.left;
+        float clipT = faceInteractionClip.resolvedStyle.top;
+        Vector2 pointerInClip = new Vector2(pointerLocal.x - clipL, pointerLocal.y - clipT);
+
+        float clipW = faceInteractionClip.resolvedStyle.width;
+        float maxOffset = clipW * 0.04f;
+        maxOffset = Mathf.Clamp(maxOffset, 2f, 8f);
+
+        UpdatePupilPosition(leftPupilEl, leftPupilBasePos, pointerInClip, maxOffset, true);
+        UpdatePupilPosition(rightPupilEl, rightPupilBasePos, pointerInClip, maxOffset, false);
+    }
+
+    void UpdatePupilPosition(UIE.VisualElement pupil, Vector2 basePos, Vector2 pointerPos, float maxOffset, bool isLeft)
+    {
+        Vector2 dir = pointerPos - basePos;
+        float dist = dir.magnitude;
+        Vector2 off = Vector2.zero;
+        if (dist > 0.01f)
+        {
+            dir /= dist;
+            float o = Mathf.Min(dist * 0.1f, maxOffset);
+            off = new Vector2(dir.x * o, dir.y * o);
+        }
+        if (isLeft) leftPupilOffset = off; else rightPupilOffset = off;
+        pupil.style.translate = new UIE.StyleTranslate(
+            new UIE.Translate(off.x, off.y));
+    }
+
+    void OnGazePointerLeave(UIE.PointerLeaveEvent evt)
+    {
+        StartCoroutine(ReturnPupilsToCenter());
+    }
+
+    IEnumerator ReturnPupilsToCenter()
+    {
+        if (leftPupilEl == null && rightPupilEl == null) yield break;
+
+        float lx = leftPupilOffset.x, ly = leftPupilOffset.y;
+        float rx = rightPupilOffset.x, ry = rightPupilOffset.y;
+
+        float duration = 0.2f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float ease = t * t * (3f - 2f * t);
+
+            if (leftPupilEl != null)
+                leftPupilEl.style.translate = new UIE.StyleTranslate(
+                    new UIE.Translate(
+                        Mathf.Lerp(lx, 0f, ease),
+                        Mathf.Lerp(ly, 0f, ease)));
+            if (rightPupilEl != null)
+                rightPupilEl.style.translate = new UIE.StyleTranslate(
+                    new UIE.Translate(
+                        Mathf.Lerp(rx, 0f, ease),
+                        Mathf.Lerp(ry, 0f, ease)));
+
+            yield return null;
+        }
+
+        if (leftPupilEl != null)
+            leftPupilEl.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 0));
+        if (rightPupilEl != null)
+            rightPupilEl.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 0));
+        leftPupilOffset = Vector2.zero;
+        rightPupilOffset = Vector2.zero;
+    }
+
+    // --- 機能3: 診断スコア生成 ---
+
+    static readonly string[] diagnosisCategoryKeys = {
+        "diagnosis_oil_king",
+        "diagnosis_idol",
+        "diagnosis_scientist",
+        "diagnosis_adventurer",
+        "diagnosis_angel",
+        "diagnosis_ruler",
+        "diagnosis_artist",
+        "diagnosis_lucky"
+    };
+
+    string CalculateDiagnosis()
+    {
+        var dc = DataCarrier.Instance;
+        var lm = detectedFaceLandmarks;
+
+        // ランドマーク比率の計算（検出あり時のみボーナス）
+        float faceWidthRatio = lm.HasValue ? lm.Value.faceBounds.width : 0.5f;
+        float eyeDistRatio = lm.HasValue ? lm.Value.EyeDistance : 0.1f;
+        float foreheadRatio = lm.HasValue && lm.Value.faceBounds.height > 0 ?
+            (lm.Value.leftEyeCenter.y - lm.Value.faceBounds.y) / lm.Value.faceBounds.height : 0.3f;
+        float faceSizeRatio = lm.HasValue ?
+            lm.Value.faceBounds.width * lm.Value.faceBounds.height : 0.1f;
+
+        // 各カテゴリのスコア計算
+        float[] scores = new float[8];
+        scores[0] = dc.babyFortune * 2f + faceWidthRatio * 100f;          // 石油王
+        scores[1] = dc.babyLuck * 2f + eyeDistRatio * 500f;               // アイドル
+        scores[2] = dc.babyIntelligence * 2f + foreheadRatio * 200f;      // 天才科学者
+        scores[3] = dc.babyAtk + dc.babyAthletic * 1.5f;                  // ぼうけんか
+        scores[4] = dc.babyDef * 1.5f + dc.babyHp;                        // いやしの天使
+        scores[5] = dc.babyAtk * 2f + faceSizeRatio * 500f;               // 覇王
+        scores[6] = dc.babyIntelligence + dc.babyLuck * 1.5f;             // アーティスト
+        scores[7] = dc.babyLuck + dc.babyFortune * 1.5f;                  // ラッキースター
+
+        // 最大スコアのカテゴリを選択
+        int maxIdx = 0;
+        for (int i = 1; i < 8; i++)
+            if (scores[i] > scores[maxIdx]) maxIdx = i;
+
+        Debug.Log($"[BirthSystem] Diagnosis: {diagnosisCategoryKeys[maxIdx]} (score={scores[maxIdx]:F1})");
+        return diagnosisCategoryKeys[maxIdx];
+    }
+
+    void ShowDiagnosisModal()
+    {
+        if (overlayRoot == null || diagnosisOverlayEl != null) return;
+
+        string categoryKey = CalculateDiagnosis();
+
+        // SE再生
+        if (seSource != null && seKirakira != null)
+            seSource.PlayOneShot(seKirakira, 0.5f);
+
+        // 半透明黒背景
+        diagnosisOverlayEl = new UIE.VisualElement();
+        diagnosisOverlayEl.AddToClassList("birth-diagnosis-overlay");
+        diagnosisOverlayEl.pickingMode = UIE.PickingMode.Position; // イベントをブロック（背面操作防止）
+        diagnosisOverlayEl.style.opacity = 0f;
+
+        // モーダルカード
+        var card = new UIE.VisualElement();
+        card.AddToClassList("birth-diagnosis-card");
+
+        // タイトル
+        var titleLabel = new UIE.Label();
+        titleLabel.AddToClassList("birth-diagnosis-title");
+        UIHelper.ApplyFontBold(titleLabel);
+        titleLabel.text = Localization.Get("diagnosis_title");
+        card.Add(titleLabel);
+
+        // 前置きテキスト
+        var prefixLabel = new UIE.Label();
+        prefixLabel.AddToClassList("birth-diagnosis-prefix");
+        UIHelper.ApplyFontBold(prefixLabel);
+        prefixLabel.text = "";
+        card.Add(prefixLabel);
+
+        // 結果テキスト
+        var resultLabel = new UIE.Label();
+        resultLabel.AddToClassList("birth-diagnosis-result");
+        UIHelper.ApplyFontBold(resultLabel);
+        resultLabel.text = "";
+        resultLabel.style.opacity = 0f;
+        card.Add(resultLabel);
+
+        // 閉じるボタン
+        var closeBtn = new UIE.Button();
+        closeBtn.AddToClassList("birth-diagnosis-close-btn");
+        UIHelper.ApplyFont(closeBtn);
+        closeBtn.text = Localization.Get("ui_close");
+        closeBtn.clicked += CloseDiagnosisModal;
+        card.Add(closeBtn);
+
+        diagnosisOverlayEl.Add(card);
+        overlayRoot.Add(diagnosisOverlayEl);
+
+        // フェードイン + タイプライター演出
+        if (diagnosisTypewriterCoroutine != null)
+            StopCoroutine(diagnosisTypewriterCoroutine);
+        diagnosisTypewriterCoroutine = StartCoroutine(
+            DiagnosisRevealAnimation(prefixLabel, resultLabel, categoryKey));
+    }
+
+    IEnumerator DiagnosisRevealAnimation(UIE.Label prefixLabel, UIE.Label resultLabel, string categoryKey)
+    {
+        // フェードイン
+        float fadeIn = 0.3f;
+        float elapsed = 0f;
+        while (elapsed < fadeIn)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / fadeIn);
+            float ease = 1f - (1f - t) * (1f - t);
+            if (diagnosisOverlayEl != null)
+                diagnosisOverlayEl.style.opacity = ease;
+            yield return null;
+        }
+        if (diagnosisOverlayEl != null)
+            diagnosisOverlayEl.style.opacity = 1f;
+
+        // 前置きテキストのタイプライター
+        string prefix = Localization.Get("diagnosis_prefix");
+        for (int i = 0; i <= prefix.Length; i++)
+        {
+            prefixLabel.text = prefix.Substring(0, i);
+            yield return new WaitForSeconds(0.06f);
+        }
+
+        yield return new WaitForSeconds(0.3f);
+
+        // 結果をドカンと表示
+        string result = Localization.Get(categoryKey);
+        resultLabel.text = result;
+
+        // SE
+        if (seSource != null && seLevelUp != null)
+            seSource.PlayOneShot(seLevelUp, 0.6f);
+
+        // スケールバウンスで登場
+        resultLabel.style.opacity = 1f;
+        resultLabel.style.scale = new UIE.StyleScale(
+            new UIE.Scale(new Vector3(0.3f, 0.3f, 1f)));
+
+        float bounce = 0.4f;
+        elapsed = 0f;
+        while (elapsed < bounce)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / bounce);
+            float p = 0.4f;
+            float s = Mathf.Pow(2f, -10f * t) * Mathf.Sin((t - p / 4f) * (2f * Mathf.PI) / p) + 1f;
+            resultLabel.style.scale = new UIE.StyleScale(
+                new UIE.Scale(new Vector3(s, s, 1f)));
+            yield return null;
+        }
+        resultLabel.style.scale = new UIE.StyleScale(
+            new UIE.Scale(Vector3.one));
+
+        diagnosisTypewriterCoroutine = null;
+    }
+
+    void CloseDiagnosisModal()
+    {
+        if (diagnosisTypewriterCoroutine != null)
+        {
+            StopCoroutine(diagnosisTypewriterCoroutine);
+            diagnosisTypewriterCoroutine = null;
+        }
+
+        if (diagnosisOverlayEl != null)
+        {
+            diagnosisOverlayEl.RemoveFromHierarchy();
+            diagnosisOverlayEl = null;
+        }
+    }
+
+    // ===== EXIF 回転補正（Editor用） =====
+#if UNITY_EDITOR
+    /// <summary>
+    /// JPEG の EXIF Orientation を読み取り、テクスチャのピクセルを回転・反転して補正する。
+    /// iOS/Android ではネイティブ側で処理されるが、Editor では LoadImage が EXIF を無視するため必要。
+    /// </summary>
+    static Texture2D CorrectExifOrientation(Texture2D tex, string path)
+    {
+        int orientation = ReadJpegExifOrientation(path);
+        Debug.Log($"[BirthSystem] EXIF orientation={orientation} for {Path.GetFileName(path)} (tex={tex.width}x{tex.height})");
+        if (orientation <= 1 || orientation > 8) return tex;
+
+        // ★ 二重回転防止: orientation 5-8 は90°/270°回転（W/Hが入れ替わる）
+        // NativeGallery が既に回転を適用している場合、テクスチャが
+        // 回転後の縦横比になっている → スキップ
+        if (orientation >= 5 && tex.width != tex.height)
+        {
+            // 例: orientation=6(90°CW) → 元データ landscape → 表示 portrait
+            // NativeGallery適用済み: portrait (h > w) → 回転スキップ
+            // NativeGallery未適用: landscape (w > h) → 回転必要
+            if (tex.height > tex.width)
+            {
+                Debug.Log($"[BirthSystem] EXIF skip: orientation={orientation} but tex already portrait ({tex.width}x{tex.height}) — likely pre-rotated");
+                return tex;
+            }
+        }
+
+        return ApplyExifRotation(tex, orientation);
+    }
+
+    static int ReadJpegExifOrientation(string path)
+    {
+        try
+        {
+            byte[] data;
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read))
+            {
+                int readLen = (int)Mathf.Min(fs.Length, 65536);
+                data = new byte[readLen];
+                fs.Read(data, 0, readLen);
+            }
+            if (data.Length < 12) return 1;
+            if (data[0] != 0xFF || data[1] != 0xD8) return 1;
+
+            int offset = 2;
+            while (offset < data.Length - 4)
+            {
+                if (data[offset] != 0xFF) break;
+                byte marker = data[offset + 1];
+
+                if (marker == 0xE1) // APP1 (EXIF)
+                {
+                    int exifStart = offset + 4;
+                    if (exifStart + 6 > data.Length) return 1;
+                    if (data[exifStart] != 0x45 || data[exifStart + 1] != 0x78 ||
+                        data[exifStart + 2] != 0x69 || data[exifStart + 3] != 0x66) return 1;
+
+                    int tiffStart = exifStart + 6;
+                    if (tiffStart + 8 > data.Length) return 1;
+                    bool bigEndian = data[tiffStart] == 0x4D;
+
+                    int ifdOffset = ExifReadInt32(data, tiffStart + 4, bigEndian);
+                    int ifdPos = tiffStart + ifdOffset;
+                    if (ifdPos + 2 > data.Length) return 1;
+
+                    int entryCount = ExifReadInt16(data, ifdPos, bigEndian);
+                    ifdPos += 2;
+                    for (int i = 0; i < entryCount; i++)
+                    {
+                        if (ifdPos + 12 > data.Length) break;
+                        int tag = ExifReadInt16(data, ifdPos, bigEndian);
+                        if (tag == 0x0112) return ExifReadInt16(data, ifdPos + 8, bigEndian);
+                        ifdPos += 12;
+                    }
+                    return 1;
+                }
+                else if (marker == 0xDA) break;
+                else
+                {
+                    int segLen = (data[offset + 2] << 8) | data[offset + 3];
+                    offset += 2 + segLen;
+                }
+            }
+        }
+        catch (System.Exception) { }
+        return 1;
+    }
+
+    static int ExifReadInt16(byte[] d, int o, bool big) =>
+        big ? (d[o] << 8) | d[o + 1] : d[o] | (d[o + 1] << 8);
+
+    static int ExifReadInt32(byte[] d, int o, bool big) =>
+        big ? (d[o] << 24) | (d[o + 1] << 16) | (d[o + 2] << 8) | d[o + 3]
+            : d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24);
+
+    static Texture2D ApplyExifRotation(Texture2D src, int orientation)
+    {
+        Color[] srcPx = src.GetPixels();
+        int w = src.width, h = src.height;
+        Texture2D dst;
+        Color[] dstPx;
+
+        switch (orientation)
+        {
+            case 6: // 90° CW（縦撮りで最も一般的）
+                dst = new Texture2D(h, w, TextureFormat.RGBA32, false);
+                dstPx = new Color[w * h];
+                for (int y = 0; y < w; y++)
+                    for (int x = 0; x < h; x++)
+                        dstPx[y * h + x] = srcPx[x * w + (w - 1 - y)];
+                break;
+            case 8: // 90° CCW
+                dst = new Texture2D(h, w, TextureFormat.RGBA32, false);
+                dstPx = new Color[w * h];
+                for (int y = 0; y < w; y++)
+                    for (int x = 0; x < h; x++)
+                        dstPx[y * h + x] = srcPx[(h - 1 - x) * w + y];
+                break;
+            case 3: // 180°
+                dst = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                dstPx = new Color[w * h];
+                for (int y = 0; y < h; y++)
+                    for (int x = 0; x < w; x++)
+                        dstPx[y * w + x] = srcPx[(h - 1 - y) * w + (w - 1 - x)];
+                break;
+            case 2: // 水平反転
+                dst = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                dstPx = new Color[w * h];
+                for (int y = 0; y < h; y++)
+                    for (int x = 0; x < w; x++)
+                        dstPx[y * w + x] = srcPx[y * w + (w - 1 - x)];
+                break;
+            case 4: // 垂直反転
+                dst = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                dstPx = new Color[w * h];
+                for (int y = 0; y < h; y++)
+                    for (int x = 0; x < w; x++)
+                        dstPx[y * w + x] = srcPx[(h - 1 - y) * w + x];
+                break;
+            case 5: // Transpose
+                dst = new Texture2D(h, w, TextureFormat.RGBA32, false);
+                dstPx = new Color[w * h];
+                for (int y = 0; y < w; y++)
+                    for (int x = 0; x < h; x++)
+                        dstPx[y * h + x] = srcPx[x * w + y];
+                break;
+            case 7: // Transverse
+                dst = new Texture2D(h, w, TextureFormat.RGBA32, false);
+                dstPx = new Color[w * h];
+                for (int y = 0; y < w; y++)
+                    for (int x = 0; x < h; x++)
+                        dstPx[y * h + x] = srcPx[(h - 1 - x) * w + (w - 1 - y)];
+                break;
+            default:
+                return src;
+        }
+
+        dst.SetPixels(dstPx);
+        dst.Apply();
+        Debug.Log($"[BirthSystem] EXIF rotation applied: orientation={orientation}, {w}x{h} → {dst.width}x{dst.height}");
+        UnityEngine.Object.Destroy(src);
+        return dst;
+    }
+#endif
 }
 
 public struct ParentData
@@ -5642,45 +8061,55 @@ public class PachinkoButtonEffect : MonoBehaviour
         sparkleImgs = sparkleImgList.ToArray();
     }
 
+    // パステルきらめきカラー（ピンク、ミント、メイン、ホワイト）
+    static readonly Color[] pastelSparkleColors = {
+        new Color(1f, 0.72f, 0.77f, 1f),
+        new Color(0.67f, 0.94f, 0.82f, 1f),
+        new Color(0.97f, 0.91f, 0.81f, 1f),
+        new Color(1f, 1f, 1f, 1f),
+    };
+
     void Update()
     {
         time += Time.deltaTime;
 
-        // グローの脈動（ゆっくり大きくなったり小さくなったり）
+        // グローの脈動（ソフトピンク）
         if (glowTf != null && glowImg != null)
         {
-            float pulse = 1f + 0.12f * Mathf.Sin(time * 2.5f);
+            float pulse = 1f + 0.10f * Mathf.Sin(time * 2f);
             glowTf.localScale = new Vector3(pulse, pulse, 1f);
-            float alpha = 0.3f + 0.15f * Mathf.Sin(time * 2.5f);
-            glowImg.color = new Color(1f, 0.3f, 0.15f, alpha);
+            float alpha = 0.25f + 0.12f * Mathf.Sin(time * 2f);
+            glowImg.color = new Color(1f, 0.72f, 0.78f, alpha);
         }
 
-        // 光線の回転
+        // 光線の回転（ゆっくり）
         if (raysTf != null)
         {
-            raysTf.localRotation = Quaternion.Euler(0, 0, time * 15f);
+            raysTf.localRotation = Quaternion.Euler(0, 0, time * 10f);
         }
 
-        // きらめき：回転 + サイズ脈動 + 点滅
+        // きらめき：回転 + サイズ脈動 + パステルカラー点滅
         if (sparkleTfs != null)
         {
             for (int i = 0; i < sparkleTfs.Length; i++)
             {
-                float offset = i * 1.57f; // π/2ずつずらす
-                float angle = time * 1.2f + offset;
-                float dist = 185f + 10f * Mathf.Sin(time * 3f + offset);
+                float offset = i * 1.57f;
+                float angle = time * 1.0f + offset;
+                float dist = 185f + 10f * Mathf.Sin(time * 2.5f + offset);
                 sparkleTfs[i].GetComponent<RectTransform>().anchoredPosition =
                     new Vector2(Mathf.Cos(angle) * dist, Mathf.Sin(angle) * dist);
 
-                float sparkleScale = 0.8f + 0.5f * Mathf.Sin(time * 5f + offset);
+                float sparkleScale = 0.8f + 0.5f * Mathf.Sin(time * 4f + offset);
                 sparkleTfs[i].localScale = new Vector3(sparkleScale, sparkleScale, 1f);
 
                 if (sparkleImgs != null && i < sparkleImgs.Length)
                 {
-                    float sa = 0.5f + 0.5f * Mathf.Sin(time * 4f + offset);
-                    sparkleImgs[i].color = new Color(1f, 1f, 0.7f, sa);
+                    float sa = 0.5f + 0.5f * Mathf.Sin(time * 3.5f + offset);
+                    var baseColor = pastelSparkleColors[i % pastelSparkleColors.Length];
+                    sparkleImgs[i].color = new Color(baseColor.r, baseColor.g, baseColor.b, sa);
                 }
             }
         }
     }
 }
+

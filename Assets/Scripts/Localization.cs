@@ -90,8 +90,8 @@ public static class Localization
         Add("birth_stat_trait", "<b>特徴:</b>", "<b>Trait:</b>");
 
         // Birth - Love story
-        Add("birth_story_title", "<color=#FF69B4>♥</color> 邂逅（かいこう）の記憶 <color=#FF69B4>♥</color>",
-            "<color=#FF69B4>♥</color> Memories of Encounter <color=#FF69B4>♥</color>");
+        Add("birth_story_title", "\u2661 おもいで帳 \u2661",
+            "\u2661 Memory Book \u2661");
         Add("birth_story_tap", "▼ タップで続ける ▼", "▼ Tap to continue ▼");
         Add("birth_story_default", "運命の出会いから\n愛が芽生えた...", "From a fateful encounter,\nlove blossomed...");
 
@@ -706,8 +706,8 @@ public static class Localization
         Add("battle_default_mother_desc", "ぜんしんで ぎゅっとする きほんのあそび", "A basic full-body charge attack");
 
         // Battle messages
-        Add("battle_enemy_appeared", "<color=#FF0000>{0}</color> が あそびにきた！",
-            "<color=#FF0000>{0}</color> wants to play!");
+        Add("battle_enemy_appeared", "<color=#FFB7C5>{0}</color> が あそびにきた！",
+            "<color=#FFB7C5>{0}</color> wants to play!");
         Add("battle_boy_power", "<color=#66ccff>おとこのこパワー！</color>\nあそびぢから UP！ (ATK:{0})",
             "<color=#66ccff>Boy Power!</color>\nAttack UP! (ATK:{0})");
         Add("battle_girl_power", "<color=#ff99cc>ちいさくて すばしっこい！</color>\nかいひりょく {0}%！",
@@ -720,22 +720,22 @@ public static class Localization
         Add("battle_your_turn", "あなたのばん！ あそびをえらんでね",
             "Your turn! Choose an action");
         Add("battle_enemy_attack", "{0} の おあそび！", "{0} attacks!");
-        Add("battle_enemy_special", "<color=#FF4444>{0} の とくべつあそび！</color>",
-            "<color=#FF4444>{0} uses a special attack!</color>");
-        Add("battle_enemy_special_hit", "<color=#FF4444>{0} の とくべつあそび！</color>\nまんぞく度 {1} アップ！",
-            "<color=#FF4444>{0}'s special play!</color>\nSatisfaction up by {1}!");
+        Add("battle_enemy_special", "<color=#FFB7C5>{0} の とくべつあそび！</color>",
+            "<color=#FFB7C5>{0} uses a special attack!</color>");
+        Add("battle_enemy_special_hit", "<color=#FFB7C5>{0} の とくべつあそび！</color>\nまんぞく度 {1} アップ！",
+            "<color=#FFB7C5>{0}'s special play!</color>\nSatisfaction up by {1}!");
         Add("battle_enemy_defend", "<color=#4488FF>{0} は まもりの たいせいをとった！</color>",
             "<color=#4488FF>{0} takes a guarding stance!</color>");
         Add("battle_enemy_defend_heal", "<color=#4488FF>{0} は おちつきつつ ごきげんが {1} かいふくした！</color>",
             "<color=#4488FF>{0} defends and recovers {1} HP!</color>");
-        Add("battle_shiba_charging", "<color=#FF4444><size=130%>シバが おあそびの ちからを ためている…！</size></color>\n<color=#FFAA00>つぎのターン とっておきが くる！</color>",
-            "<color=#FF4444><size=130%>Shiba is gathering power...!</size></color>\n<color=#FFAA00>An ultimate attack is coming next turn!</color>");
-        Add("battle_shiba_ultimate_announce", "<color=#FF0000><size=150%>シバ「いくぞ！！」</size></color>",
-            "<color=#FF0000><size=150%>Shiba: \"Take this!!\"</size></color>");
-        Add("battle_shiba_ultimate_name", "<color=#FF0000><size=140%>🔥 おうの ほんきあそび 🔥</size></color>",
-            "<color=#FF0000><size=140%>🔥 King's Wrath 🔥</size></color>");
-        Add("battle_shiba_ultimate_hit", "<color=#FF0000>おうの ほんきあそび が きまった！</color>\n<color=#FF4444>まんぞく度 だいアップ！</color>",
-            "<color=#FF0000>King's Wrath explodes!</color>\n<color=#FF4444>{0} massive damage!</color>");
+        Add("battle_shiba_charging", "<color=#FFB7C5><size=130%>シバが おあそびの ちからを ためている…！</size></color>\n<color=#FFAA00>つぎのターン とっておきが くる！</color>",
+            "<color=#FFB7C5><size=130%>Shiba is gathering power...!</size></color>\n<color=#FFAA00>An ultimate attack is coming next turn!</color>");
+        Add("battle_shiba_ultimate_announce", "<color=#FFB7C5><size=150%>シバ「いくぞ！！」</size></color>",
+            "<color=#FFB7C5><size=150%>Shiba: \"Take this!!\"</size></color>");
+        Add("battle_shiba_ultimate_name", "<color=#FFB7C5><size=140%>\U0001F496 おうの ほんきあそび \U0001F496</size></color>",
+            "<color=#FFB7C5><size=140%>\U0001F496 King's Serious Play \U0001F496</size></color>");
+        Add("battle_shiba_ultimate_hit", "<color=#FFB7C5>おうの ほんきあそび が きまった！</color>\n<color=#FFB7C5>まんぞく度 だいアップ！</color>",
+            "<color=#FFB7C5>King's Wrath explodes!</color>\n<color=#FFB7C5>{0} massive damage!</color>");
         Add("battle_shiba_ultimate_blocked", "<color=#4488FF>まもりで こらえた！</color>\nまんぞく度 {0} アップ！",
             "<color=#4488FF>Held on with defense!</color>\n{0} damage!");
         Add("battle_evaded", "<color=#00FFFF>ひらりとかわした！</color>",
@@ -791,12 +791,12 @@ public static class Localization
             "<color=#FFD700>Fighting spirit surges! ATK UP!</color>");
         Add("battle_conqueror_revive", "覇王色の覚醒！ ねむりかけたが めをさました！",
             "Conqueror's Haki awakens! Nearly fell, but revived!");
-        Add("battle_enemy_defeated", "<color=#FFFF00>{0} は まんぞくして スヤスヤ ねんねした！</color>",
-            "<color=#FFFF00>{0} defeated!</color>");
-        Add("battle_victory", "<color=#00FF00><size=130%>おあそび だいせいこう！</size></color>",
-            "<color=#00FF00><size=130%>Victory!</size></color>");
-        Add("battle_defeat", "<color=#FF0000>{0}はおねむの時間になった...</color>",
-            "<color=#FF0000>{0} fell asleep...</color>");
+        Add("battle_enemy_defeated", "<color=#FFB7C5><size=120%>{0} は まんぞくして スヤスヤ ねんねした！</size></color>",
+            "<color=#FFB7C5><size=120%>{0} fell asleep happily!</size></color>");
+        Add("battle_victory", "<color=#AAF0D1><size=130%>おあそび だいせいこう！</size></color>",
+            "<color=#AAF0D1><size=130%>Victory!</size></color>");
+        Add("battle_defeat", "<color=#FFB7C5>{0}はおねむの時間になった...</color>",
+            "<color=#FFB7C5>{0} fell asleep...</color>");
         Add("battle_game_over", "<color=#FF69B4><size=80%>ミルクの時間</size></color>",
             "<color=#FF69B4><size=80%>Milk Time</size></color>");
         Add("battle_exp_gained", "<color=#00FFFF>おもいで {0} をかくとく！</color>",
@@ -861,8 +861,8 @@ public static class Localization
         // Devil Lady's Mansion
         Add("map_mansion_enter", "<color=#AA44FF><size=130%>デヴィル夫人のやかたに\n足を踏み入れた…</size></color>",
             "<color=#AA44FF><size=130%>You entered\nDevil Lady's Mansion...</size></color>");
-        Add("map_mansion_mercenary_block", "<color=#FF4444>おともだちが まちかまえている！</color>",
-            "<color=#FF4444>A friend is waiting to play!</color>");
+        Add("map_mansion_mercenary_block", "<color=#FFB7C5>おともだちが まちかまえている！</color>",
+            "<color=#FFB7C5>A friend is waiting to play!</color>");
         Add("map_mansion_boss_locked", "おともだちと あそばないと すすめない…",
             "Must defeat the mercenaries to proceed...");
         Add("battle_run_fixed", "このおともだちからは にげられない！",
@@ -885,8 +885,8 @@ public static class Localization
             "<color=#AA00FF><size=150%>Devil Lady: \"Bathe in Prickly Champagne!\"</size></color>");
         Add("battle_devil_lady_ultimate_name", "<color=#AA00FF><size=140%>\u2728 トゲトゲ・シャンパン \u2728</size></color>",
             "<color=#AA00FF><size=140%>\u2728 Prickly Champagne \u2728</size></color>");
-        Add("battle_devil_lady_ultimate_hit", "<color=#AA00FF>トゲトゲ・シャンパン が きまった！</color>\n<color=#FF4444>まんぞく度 だいアップ！</color>",
-            "<color=#AA00FF>Prickly Champagne explodes!</color>\n<color=#FF4444>Massive satisfaction up!</color>");
+        Add("battle_devil_lady_ultimate_hit", "<color=#AA00FF>トゲトゲ・シャンパン が きまった！</color>\n<color=#FFB7C5>まんぞく度 だいアップ！</color>",
+            "<color=#AA00FF>Prickly Champagne explodes!</color>\n<color=#FFB7C5>Massive satisfaction up!</color>");
         Add("battle_devil_lady_ultimate_blocked", "<color=#4488FF>まもりで こらえた！</color>\nまんぞく度 {0} アップ！",
             "<color=#4488FF>Held on with defense!</color>\n{0} damage!");
         Add("battle_devil_lady_poisoned", "<color=#AA00FF>トゲトゲ・バブルを たっぷり あびた！ 5ターンの間 まんぞく度アップ！</color>",
@@ -1018,8 +1018,8 @@ public static class Localization
             "<color=#FF69B4><size=150%>Queen Melodias: \"Listen...\"</size></color>");
         Add("battle_melodias_ultimate_name", "<color=#FFD700><size=140%>\u266B 魅惑のメロディ \u266B</size></color>",
             "<color=#FFD700><size=140%>\u266B Enchanting Melody \u266B</size></color>");
-        Add("battle_melodias_ultimate_hit", "<color=#FF69B4>魅惑のメロディ が きまった！</color>\n<color=#FF4444>まんぞく度 だいアップ！</color>",
-            "<color=#FF69B4>Enchanting Melody explodes!</color>\n<color=#FF4444>{0} massive damage!</color>");
+        Add("battle_melodias_ultimate_hit", "<color=#FF69B4>魅惑のメロディ が きまった！</color>\n<color=#FFB7C5>まんぞく度 だいアップ！</color>",
+            "<color=#FF69B4>Enchanting Melody explodes!</color>\n<color=#FFB7C5>{0} massive damage!</color>");
         Add("battle_melodias_ultimate_blocked", "<color=#4488FF>まもりで こらえた！</color>\nまんぞく度 {0} アップ！",
             "<color=#4488FF>Held on with defense!</color>\n{0} damage!");
         Add("battle_melodias_debuffed", "<color=#FF69B4>ふしぎな ちからで あそびぢからが さがった！ 3ターン！</color>",
@@ -1044,11 +1044,13 @@ public static class Localization
         Add("battle_top_button", "トップへ", "Title");
 
         // ===== Map Scene =====
-        Add("map_boss_sign", "<color=#FF4444>ボスのやかた</color>", "<color=#FF4444>Boss Mansion</color>");
+        Add("map_boss_sign", "<color=#FFB7C5>ボスのやかた</color>", "<color=#FFB7C5>Boss Mansion</color>");
         Add("map_help_text", "矢印キー / WASD: 移動　　スペース: 調べる　　ESC: メニュー",
             "Arrow Keys / WASD: Move    Space: Interact    ESC: Menu");
-        Add("map_encounter", "<color=#FF0000>おともだちが あそびにきた！</color>",
-            "<color=#FF0000>An enemy appeared!</color>");
+        Add("map_encounter", "<color=#FFB7C5>おともだちが あそびにきた！</color>",
+            "<color=#FFB7C5>An enemy appeared!</color>");
+        Add("elder_boss_block", "まて まて、ちいさな ぼうけんしゃよ。\nまだ おまえには はやい。\nせめて 5ヶ月は せいちょう してから\nでなおして くるんじゃな。",
+            "Wait, little adventurer.\nIt's too early for you.\nGrow for at least 5 months\nbefore coming back.");
         Add("map_boss_enter", "<color=#FF2222><size=130%>おともだちの おやかたに はいった！</size></color>\n\n<size=80%>つよい てきの けはいがする...</size>",
             "<color=#FF2222><size=130%>Entered the Boss Mansion!</size></color>\n\n<size=80%>A powerful presence lurks...</size>");
 
@@ -1084,6 +1086,7 @@ public static class Localization
         Add("home_gacha_desc", "運命のガチャを引くことができます。", "You can pull the gacha of destiny.");
         Add("home_babys", "旅に出る", "Go on a Journey");
         Add("home_enishi", "縁（えにし）の書", "Book of Bonds");
+        Add("home_polaroid_caption", "じっかの なつまつり", "Summer Festival at Home");
         Add("enishi_title", "縁（えにし）の書", "Book of Bonds");
         Add("enishi_added", "{0}が縁（えにし）の書に追加された。", "{0} was added to the Book of Bonds.");
         Add("enishi_empty", "まだ誰とも縁を結んでいない。", "No bonds have been formed yet.");
@@ -1211,14 +1214,14 @@ public static class Localization
         Add("juku_student_line_0_2", "あたし、おおきくなったら\nせんせいに なりたいな！", "When I grow up,\nI want to be a teacher!");
 
         Add("juku_student_line_1_0", "うーん、この もんだい わかんない…\nきみは わかる？", "Hmm, I don't get this problem...\nDo you know the answer?");
-        Add("juku_student_line_1_1", "おべんきょう すると ちえが あがるんだ！\nすごいよね！", "Studying raises your wisdom!\nIsn't that cool?");
+        Add("juku_student_line_1_1", "ちえが たかいと けいけんちが\nいっぱい もらえるんだって！\nせいちょうが はやくなるよ！", "High wisdom means more EXP!\nYou'll grow faster!");
         Add("juku_student_line_1_2", "ぼく、さんすうは とくい だけど\nこくごは にがて なんだ…", "I'm good at math,\nbut bad at language arts...");
 
         Add("juku_student_line_2_0", "しずかに！ いま しゅうちゅう してるの！\n…なんて ね、うそうそ。", "Be quiet! I'm concentrating!\n...Just kidding, hehe.");
         Add("juku_student_line_2_1", "この じゅく、おともだち いっぱい できて\nたのしいよ！", "I've made lots of friends\nat this cram school!");
-        Add("juku_student_line_2_2", "きのう おそとで おっきい おともだちに\nあったよ！ つよかった〜！", "Yesterday I met a big friend\noutside! They were so strong!");
+        Add("juku_student_line_2_2", "ボスは 3ターンめに すっごく\nつよい こうげき してくるの！\nきをつけてね！", "The boss does a super strong\nattack on turn 3!\nBe careful!");
 
-        Add("juku_student_line_3_0", "ぼくは しょうらい ゆうしゃに\nなるんだ！ …たぶん。", "I'm gonna be a hero\nsomeday! ...Probably.");
+        Add("juku_student_line_3_0", "ボスに かつには 5ヶ月ぐらい\nせいちょう しないと むりだって\nせんせいが いってたよ！", "The teacher said you need to\ngrow about 5 months\nto beat the boss!");
         Add("juku_student_line_3_1", "せんせいの クイズ、3もん れんぞくで\nあてると ちえが あがるよ！", "If you get 3 quiz questions\nright in a row, wisdom goes up!");
         Add("juku_student_line_3_2", "ねむい… きのう おそくまで\nおべんきょう してたんだ…", "Sleepy... I was up late\nstudying last night...");
 
@@ -1257,6 +1260,19 @@ public static class Localization
         Add("maid_line_5_0", "としょしつの ほんを\nきれいに ならべておきましたよ。", "I've neatly organized the books\nin the study.");
         Add("maid_line_5_1", "おぼっちゃま、おべんきょうも\nだいじですよ？", "Young master, studying is\nimportant too, you know?");
         Add("maid_line_5_2", "このおやしきの れきしは\nとても ふるいんですって。", "They say this mansion has\na very long history.");
+
+        // ===== Diagnosis (baby face interaction) =====
+        Add("diagnosis_title", "しんだん けっか", "Diagnosis Result");
+        Add("diagnosis_prefix", "この子は将来…", "In the future...");
+        Add("diagnosis_oil_king", "石油王になりそう！", "Oil Tycoon!");
+        Add("diagnosis_idol", "アイドルになりそう！", "Pop Idol!");
+        Add("diagnosis_scientist", "天才科学者になりそう！", "Genius Scientist!");
+        Add("diagnosis_adventurer", "ぼうけんかになりそう！", "Adventurer!");
+        Add("diagnosis_angel", "いやしの天使になりそう！", "Healing Angel!");
+        Add("diagnosis_ruler", "覇王になりそう！", "Supreme Ruler!");
+        Add("diagnosis_artist", "アーティストになりそう！", "Artist!");
+        Add("diagnosis_lucky", "ラッキースターになりそう！", "Lucky Star!");
+        Add("diagnosis_btn", "しんだん", "Diagnosis");
 
         // ===== Cutscene (after profile creation) =====
         Add("cutscene_line1",

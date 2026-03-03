@@ -85,6 +85,8 @@ public class MapManager : MonoBehaviour
     Texture2D pcTreesTex, pcVegetationTex, pcRocksTex, pcRoofsTex, pcWallsTex;
     // タイル背景テクスチャ
     Texture2D lawnTex, dirtRoadTex, dirtBgTex, lakeBgTex, poisonLakeTex, poisonFenceTex, poisonRoadTex;
+    Texture2D nobilityTileTex;
+    Texture2D leftWallTex, rightWallTex, cornerWallTex;
     Sprite poisonLakeSprite, poisonFenceSprite, poisonRoadSprite;
 
     // UI Toolkit（area==0 DQタイル描画用）
@@ -142,7 +144,7 @@ public class MapManager : MonoBehaviour
     // お手伝いさんNPC（6人）
     GameObject[] maidNpcObjs = new GameObject[6];
     int[] maidNpcX = { 2, 13, 2, 13, 2, 13 };
-    int[] maidNpcY = { 3, 3, 7, 7, 11, 11 };
+    int[] maidNpcY = { 3, 3, 6, 6, 9, 9 };
     bool maidDialogueActive = false;
 
     // 武器屋の商人NPC
@@ -461,6 +463,12 @@ public class MapManager : MonoBehaviour
         if (poisonRoadTex != null)
             poisonRoadSprite = Sprite.Create(poisonRoadTex, new Rect(0, 0, poisonRoadTex.width, poisonRoadTex.height), new Vector2(0.5f, 0.5f));
 
+        // 実家のタイル
+        nobilityTileTex = Resources.Load<Texture2D>("Map/Nobility_Tile");
+        leftWallTex = Resources.Load<Texture2D>("Map/Left_wall");
+        rightWallTex = Resources.Load<Texture2D>("Map/Right_Wall");
+        cornerWallTex = Resources.Load<Texture2D>("Map/Corner_Wall");
+
         // 全エリアで Serene_Village をロード（area!=0 で使用、area==0 でもフォールバック用）
         tilesetTexture = Resources.Load<Texture2D>("Map/Serene_Village_32x32");
         if (tilesetTexture == null)
@@ -600,6 +608,17 @@ public class MapManager : MonoBehaviour
             case TILE_BOSS_MANSION:
             case TILE_BOSS_GATE:
                 ApplyDQDirtStyle(tile, true);
+                break;
+            case TILE_FATHER_FLOOR:
+                if (nobilityTileTex != null)
+                {
+                    tile.style.backgroundImage = new UIE.StyleBackground(nobilityTileTex);
+                    tile.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
+                }
+                else
+                {
+                    tile.style.backgroundColor = GetTileColor(tileType);
+                }
                 break;
             default:
                 Color c = GetTileColor(tileType);
@@ -1181,23 +1200,11 @@ public class MapManager : MonoBehaviour
         }
 
         // ===== 書斎エリア (x=1-6, y=13-16) =====
-        // 本棚 (1,16)(2,16)(3,16)
-        walkable[1, 16] = false;
-        walkable[2, 16] = false;
-        walkable[3, 16] = false;
         // 机 (3,14)(4,14)
         walkable[3, 14] = false;
         walkable[4, 14] = false;
 
-        // ===== 大広間の家具 =====
-        // ソファ (6,9)(7,9)(8,9)(9,9)
-        walkable[6, 9] = false;
-        walkable[7, 9] = false;
-        walkable[8, 9] = false;
-        walkable[9, 9] = false;
-        // テーブル (7,8)(8,8)
-        walkable[7, 8] = false;
-        walkable[8, 8] = false;
+        // ===== 大広間（ソファ・テーブル削除済み） =====
     }
 
     void CreateFatherHouseFurniture()
@@ -1214,31 +1221,45 @@ public class MapManager : MonoBehaviour
         for (int y = 1; y <= 11; y++)
             CreateFurnitureOverlay(7.5f, y, DISPLAY_TILE * 2.2f, DISPLAY_TILE * 1.05f, carpet);
         // 寝室への通路カーペット
-        for (int y = 12; y <= 14; y++)
+        for (int y = 12; y <= 13; y++)
             CreateFurnitureOverlay(7.5f, y, DISPLAY_TILE * 2.2f, DISPLAY_TILE * 1.05f, carpet);
 
-        // (お手伝いさんNPCは別途作成)
+        // お手伝いさんNPCの下にラグを敷く
+        Sprite maidRagSprite = Resources.Load<Sprite>("Map/Maid_Rag");
+        if (maidRagSprite != null)
+        {
+            for (int i = 0; i < maidNpcX.Length; i++)
+                CreateFurnitureSprite(maidNpcX[i], maidNpcY[i], DISPLAY_TILE * 0.75f, DISPLAY_TILE * 0.75f, maidRagSprite);
+        }
 
-        // ===== 仕切り壁の装飾 =====
-        // 左側 (x=1-6, y=12)
-        CreateFurnitureOverlay(3.5f, 12f, DISPLAY_TILE * 6.2f, DISPLAY_TILE * 0.7f, darkGold);
-        // 右側 (x=9-14, y=12)
-        CreateFurnitureOverlay(11.5f, 12f, DISPLAY_TILE * 6.2f, DISPLAY_TILE * 0.7f, darkGold);
+        // ===== 仕切り壁 =====
+        Sprite divideWallSprite = Resources.Load<Sprite>("Map/Divide_Wall");
+        if (divideWallSprite != null)
+        {
+            // 左側 (x=1〜6, 左端から1枚)
+            CreateFurnitureSprite(3.5f, 12f, DISPLAY_TILE * 6f, DISPLAY_TILE, divideWallSprite);
+            // 右側 (x=9〜14, 右端から1枚)
+            CreateFurnitureSprite(11.5f, 12f, DISPLAY_TILE * 6f, DISPLAY_TILE, divideWallSprite);
+            // 通路の隙間 (x=7,8) はレッドカーペットが通るので床タイル不要
+        }
+        else
+        {
+            CreateFurnitureOverlay(3.5f, 12f, DISPLAY_TILE * 6.2f, DISPLAY_TILE * 0.7f, darkGold);
+            CreateFurnitureOverlay(11.5f, 12f, DISPLAY_TILE * 6.2f, DISPLAY_TILE * 0.7f, darkGold);
+        }
 
         // ===== シャンデリア（大広間中央） =====
         CreateFurnitureLabel(7.5f, 6f, "✨", 28, gold);
 
-        // ===== 大広間ソファ (6-9, 9) =====
-        CreateFurnitureOverlay(7.5f, 9f, DISPLAY_TILE * 4.2f, DISPLAY_TILE * 0.85f,
-            new Color(0.55f, 0.20f, 0.25f));
-
-        // ===== 大広間テーブル (7-8, 8) =====
-        CreateFurnitureOverlay(7.5f, 8f, DISPLAY_TILE * 2.2f, DISPLAY_TILE * 0.75f, woodDark);
 
         // ===== 寝室エリア (右上) =====
-        // 寝室ラグ
-        CreateFurnitureOverlay(11.5f, 14.5f, DISPLAY_TILE * 5.5f, DISPLAY_TILE * 3.5f,
-            new Color(0.5f, 0.18f, 0.22f, 0.35f));
+        // 寝室ラグ（半透明で家具が見えるように）
+        Sprite bedCarpetSprite = Resources.Load<Sprite>("Map/Bed_Carpet");
+        if (bedCarpetSprite != null)
+            CreateFurnitureSprite(11.5f, 14.5f, DISPLAY_TILE * 5.5f, DISPLAY_TILE * 3.5f, bedCarpetSprite, 0.45f);
+        else
+            CreateFurnitureOverlay(11.5f, 14.5f, DISPLAY_TILE * 5.5f, DISPLAY_TILE * 3.5f,
+                new Color(0.5f, 0.18f, 0.22f, 0.35f));
 
         // ベッド (12-13, 15-16) — スプライト表示
         Sprite bedSprite = Resources.Load<Sprite>("Map/Parents_Bed");
@@ -1256,20 +1277,32 @@ public class MapManager : MonoBehaviour
             CreateFurnitureLabel(12.5f, 16.5f, "💤", 24, Color.white);
 
         // サイドテーブル
-        CreateFurnitureOverlay(10f, 15.5f, DISPLAY_TILE * 0.6f, DISPLAY_TILE * 0.6f, woodDark);
-        CreateFurnitureLabel(10f, 15.5f, "🕯", 14, gold);
+        Sprite nobilityChairSprite = Resources.Load<Sprite>("Map/Nobility _Chair");
+        if (nobilityChairSprite != null)
+            CreateFurnitureSprite(10f, 15.5f, DISPLAY_TILE * 0.8f, DISPLAY_TILE * 0.8f, nobilityChairSprite);
+        else
+        {
+            CreateFurnitureOverlay(10f, 15.5f, DISPLAY_TILE * 0.6f, DISPLAY_TILE * 0.6f, woodDark);
+            CreateFurnitureLabel(10f, 15.5f, "🕯", 14, gold);
+        }
 
         // ===== 書斎エリア (左上) =====
-        // 本棚 (1-3, 16)
-        CreateFurnitureOverlay(2f, 16f, DISPLAY_TILE * 3.2f, DISPLAY_TILE * 0.9f,
-            new Color(0.30f, 0.18f, 0.08f));
-        CreateFurnitureLabel(2f, 16f, "📚", 18, new Color(0.8f, 0.6f, 0.3f));
-        // 机 (3-4, 14)
-        CreateFurnitureOverlay(3.5f, 14f, DISPLAY_TILE * 2.2f, DISPLAY_TILE * 0.8f, woodDark);
-        CreateFurnitureLabel(3.5f, 14f, "📝", 14, gold);
-        // 書斎ラグ
-        CreateFurnitureOverlay(3.5f, 14.5f, DISPLAY_TILE * 4.5f, DISPLAY_TILE * 3.5f,
-            new Color(0.15f, 0.20f, 0.45f, 0.25f));
+        // 書斎ラグ（半透明で家具が見えるように、先に描画）
+        Sprite studyCarpetSprite = Resources.Load<Sprite>("Map/Bed_Carpet");
+        if (studyCarpetSprite != null)
+            CreateFurnitureSprite(3.5f, 14.5f, DISPLAY_TILE * 4.5f, DISPLAY_TILE * 3.5f, studyCarpetSprite, 0.45f);
+        else
+            CreateFurnitureOverlay(3.5f, 14.5f, DISPLAY_TILE * 4.5f, DISPLAY_TILE * 3.5f,
+                new Color(0.15f, 0.20f, 0.45f, 0.25f));
+        // 机 (3-4, 14)（ラグの上に描画）
+        Sprite nobilityDeskSprite = Resources.Load<Sprite>("Map/Nobility_Desk");
+        if (nobilityDeskSprite != null)
+            CreateFurnitureSprite(3.5f, 14f, DISPLAY_TILE * 1.7f, DISPLAY_TILE * 1.7f, nobilityDeskSprite);
+        else
+        {
+            CreateFurnitureOverlay(3.5f, 14f, DISPLAY_TILE * 2.2f, DISPLAY_TILE * 0.8f, woodDark);
+            CreateFurnitureLabel(3.5f, 14f, "📝", 14, gold);
+        }
 
         // ===== 壁の絵画（装飾ラベル） =====
         CreateFurnitureLabel(1f, 5f, "🖼", 20, gold);
@@ -1281,8 +1314,28 @@ public class MapManager : MonoBehaviour
         CreateFurnitureLabel(1f, 1f, "🏺", 16, darkGold);
         CreateFurnitureLabel(14f, 1f, "🏺", 16, darkGold);
 
+        // ===== 前面コーナー壁（1枚画像で5マス分） =====
+        if (cornerWallTex != null)
+        {
+            Sprite cornerSprite = Sprite.Create(cornerWallTex,
+                new Rect(0, 0, cornerWallTex.width, cornerWallTex.height),
+                new Vector2(0.5f, 0.5f));
+            // 左前コーナー (x=0, y=0〜2)
+            CreateFurnitureSprite(0f, 1f, DISPLAY_TILE, DISPLAY_TILE * 3f, cornerSprite);
+            // 右前コーナー (x=15, y=0〜2)
+            CreateFurnitureSprite(15f, 1f, DISPLAY_TILE, DISPLAY_TILE * 3f, cornerSprite);
+            // 左奥コーナー (x=0, y=15〜17)
+            CreateFurnitureSprite(0f, 16f, DISPLAY_TILE, DISPLAY_TILE * 3f, cornerSprite);
+            // 右奥コーナー (x=15, y=15〜17)
+            CreateFurnitureSprite(15f, 16f, DISPLAY_TILE, DISPLAY_TILE * 3f, cornerSprite);
+        }
+
         // ===== 出口マーク =====
-        CreateFurnitureLabel(7.5f, 0f, "▽ 出口", 16, new Color(0.8f, 0.9f, 1f));
+        Sprite exitSprite = Resources.Load<Sprite>("Map/Exit");
+        if (exitSprite != null)
+            CreateFurnitureSprite(7.5f, 0f, DISPLAY_TILE * 3f, DISPLAY_TILE * 1.5f, exitSprite);
+        else
+            CreateFurnitureLabel(7.5f, 0f, "▽ 出口", 16, new Color(0.8f, 0.9f, 1f));
     }
 
     void CreateFurnitureOverlay(float tileX, float tileY, float width, float height, Color color)
@@ -1300,7 +1353,7 @@ public class MapManager : MonoBehaviour
         img.raycastTarget = false;
     }
 
-    void CreateFurnitureSprite(float tileX, float tileY, float width, float height, Sprite sprite)
+    void CreateFurnitureSprite(float tileX, float tileY, float width, float height, Sprite sprite, float alpha = 1f)
     {
         float posX = (tileX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
         float posY = (tileY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
@@ -1314,6 +1367,7 @@ public class MapManager : MonoBehaviour
         img.sprite = sprite;
         img.preserveAspect = true;
         img.raycastTarget = false;
+        if (alpha < 1f) img.color = new Color(1f, 1f, 1f, alpha);
     }
 
     void CreateFurnitureLabel(float tileX, float tileY, string text, int fontSize, Color color)
@@ -1444,21 +1498,43 @@ public class MapManager : MonoBehaviour
         Color darkWood = new Color(0.45f, 0.30f, 0.18f);
 
         // ===== 黒板 (4-7, 12) =====
-        CreateFurnitureOverlay(5.5f, 12f, DISPLAY_TILE * 4.2f, DISPLAY_TILE * 0.95f,
-            new Color(0.08f, 0.28f, 0.10f));
-        CreateFurnitureLabel(5.5f, 12f, "きょうの もんだい", 12, new Color(0.9f, 0.9f, 0.85f));
+        Sprite kokubanSprite = Resources.Load<Sprite>("Map/Kokuban");
+        if (kokubanSprite != null)
+            CreateFurnitureSprite(5.5f, 12f, DISPLAY_TILE * 4.5f, DISPLAY_TILE * 2.5f, kokubanSprite);
+        else
+            CreateFurnitureOverlay(5.5f, 12f, DISPLAY_TILE * 4.2f, DISPLAY_TILE * 0.95f,
+                new Color(0.08f, 0.28f, 0.10f));
 
         // ===== 教卓 (5, 10) =====
-        CreateFurnitureOverlay(5f, 10f, DISPLAY_TILE * 1.2f, DISPLAY_TILE * 0.75f, darkWood);
+        Sprite kyoudanSprite = Resources.Load<Sprite>("Map/Kyoudan");
+        if (kyoudanSprite != null)
+            CreateFurnitureSprite(5f, 10f, DISPLAY_TILE * 1.6f, DISPLAY_TILE * 1.6f, kyoudanSprite);
+        else
+            CreateFurnitureOverlay(5f, 10f, DISPLAY_TILE * 1.2f, DISPLAY_TILE * 0.75f, darkWood);
 
         // ===== 生徒の机 =====
-        // 後列 (y=6): x=3, 7, 9
-        CreateFurnitureOverlay(3f, 6f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
-        CreateFurnitureOverlay(7f, 6f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
-        CreateFurnitureOverlay(9f, 6f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
-        // 前列 (y=9): x=3, 7
-        CreateFurnitureOverlay(3f, 9f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
-        CreateFurnitureOverlay(7f, 9f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
+        Sprite deskSprite = Resources.Load<Sprite>("Map/Study_Desk");
+        if (deskSprite != null)
+        {
+            float deskW = DISPLAY_TILE * 0.8f;
+            float deskH = DISPLAY_TILE * 0.8f;
+            // 後列 (y=6): x=3, 7, 9
+            CreateFurnitureSprite(3f, 6f, deskW, deskH, deskSprite);
+            CreateFurnitureSprite(7f, 6f, deskW, deskH, deskSprite);
+            CreateFurnitureSprite(9f, 6f, deskW, deskH, deskSprite);
+            // 前列 (y=9): x=3, 7
+            CreateFurnitureSprite(3f, 9f, deskW, deskH, deskSprite);
+            CreateFurnitureSprite(7f, 9f, deskW, deskH, deskSprite);
+        }
+        else
+        {
+            // フォールバック: プロシージャル机
+            CreateFurnitureOverlay(3f, 6f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
+            CreateFurnitureOverlay(7f, 6f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
+            CreateFurnitureOverlay(9f, 6f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
+            CreateFurnitureOverlay(3f, 9f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
+            CreateFurnitureOverlay(7f, 9f, DISPLAY_TILE * 1.1f, DISPLAY_TILE * 0.65f, deskBrown);
+        }
 
         // ===== 本棚（左右壁際） =====
         CreateFurnitureOverlay(1f, 11.5f, DISPLAY_TILE * 0.85f, DISPLAY_TILE * 1.8f,
@@ -2417,6 +2493,57 @@ public class MapManager : MonoBehaviour
             else
                 img.color = new Color(0.80f, 0.75f, 0.65f);
         }
+        else if (tileType == TILE_FATHER_FLOOR && nobilityTileTex != null)
+        {
+            var sprite = Sprite.Create(nobilityTileTex,
+                new Rect(0, 0, nobilityTileTex.width, nobilityTileTex.height),
+                new Vector2(0.5f, 0.5f));
+            img.sprite = sprite;
+            img.color = Color.white;
+        }
+        else if (tileType == TILE_FATHER_WALL && x == 0 && y <= 2 && cornerWallTex != null)
+        {
+            // コーナーは CreateFatherHouseFurniture でスプライト配置するので透明にする
+            img.color = new Color(0, 0, 0, 0);
+        }
+        else if (tileType == TILE_FATHER_WALL && x == mapWidth - 1 && y <= 2 && cornerWallTex != null)
+        {
+            img.color = new Color(0, 0, 0, 0);
+        }
+        else if (tileType == TILE_FATHER_WALL && x == 0 && y >= mapHeight - 3 && cornerWallTex != null)
+        {
+            img.color = new Color(0, 0, 0, 0);
+        }
+        else if (tileType == TILE_FATHER_WALL && x == mapWidth - 1 && y >= mapHeight - 3 && cornerWallTex != null)
+        {
+            img.color = new Color(0, 0, 0, 0);
+        }
+        else if (tileType == TILE_FATHER_WALL && x == 0 && leftWallTex != null)
+        {
+            var sprite = Sprite.Create(leftWallTex,
+                new Rect(0, 0, leftWallTex.width, leftWallTex.height),
+                new Vector2(0.5f, 0.5f));
+            img.sprite = sprite;
+            img.color = Color.white;
+        }
+        else if (tileType == TILE_FATHER_WALL && x == mapWidth - 1 && rightWallTex != null)
+        {
+            var sprite = Sprite.Create(rightWallTex,
+                new Rect(0, 0, rightWallTex.width, rightWallTex.height),
+                new Vector2(0.5f, 0.5f));
+            img.sprite = sprite;
+            img.color = Color.white;
+        }
+        else if (tileType == TILE_FATHER_WALL && leftWallTex != null)
+        {
+            // 上壁・下壁: left_wallを時計回り90度回転
+            var sprite = Sprite.Create(leftWallTex,
+                new Rect(0, 0, leftWallTex.width, leftWallTex.height),
+                new Vector2(0.5f, 0.5f));
+            img.sprite = sprite;
+            img.color = Color.white;
+            rect.localRotation = Quaternion.Euler(0, 0, -90);
+        }
         else
         {
             img.color = GetTileColor(tileType);
@@ -3159,6 +3286,11 @@ public class MapManager : MonoBehaviour
         // ボスの門に歩いて入ろうとした場合
         if (mapData[newX, newY] == TILE_BOSS_GATE)
         {
+            if (IsBabyTooYoungForBoss())
+            {
+                StartCoroutine(ShowElderBossBlockDialogue());
+                return;
+            }
             int areaForGate2 = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
             if (areaForGate2 == 1)
             {
@@ -3172,6 +3304,11 @@ public class MapManager : MonoBehaviour
         // 小悪魔の街: 館に歩いて入ろうとした場合 → 109（area 4）へ
         if (mapData[newX, newY] == TILE_BOSS_MANSION)
         {
+            if (IsBabyTooYoungForBoss())
+            {
+                StartCoroutine(ShowElderBossBlockDialogue());
+                return;
+            }
             int areaForGate = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
             if (areaForGate == 3)
             {
@@ -3737,6 +3874,11 @@ public class MapManager : MonoBehaviour
         // ボスの館の門に隣接している場合
         if (IsAdjacentTo(TILE_BOSS_GATE) || IsAdjacentTo(TILE_BOSS_MANSION))
         {
+            if (IsBabyTooYoungForBoss())
+            {
+                StartCoroutine(ShowElderBossBlockDialogue());
+                return;
+            }
             int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
             if (area == 3)
             {
@@ -5706,7 +5848,7 @@ public class MapManager : MonoBehaviour
         btn.transition = Selectable.Transition.None;
         btn.onClick.AddListener(() => OnJukuTeacherTapped());
 
-        DrawJukuTeacherNPC(jukuTeacherObj.transform, 0.8f);
+        DrawJukuTeacherNPC(jukuTeacherObj.transform, 1.6f);
         jukuTeacherObj.transform.SetAsLastSibling();
     }
 
@@ -6385,6 +6527,82 @@ public class MapManager : MonoBehaviour
         elderDialogueActive = false;
     }
 
+    bool IsBabyTooYoungForBoss()
+    {
+        return DataCarrier.Instance != null && DataCarrier.Instance.babyAge < 5;
+    }
+
+    IEnumerator ShowElderBossBlockDialogue()
+    {
+        elderDialogueActive = true;
+        menuOpen = true;
+
+        bool tapped = false;
+
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.flexDirection = UIE.FlexDirection.Column;
+        overlay.style.justifyContent = UIE.Justify.FlexEnd;
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+        overlayRoot.Add(overlay);
+
+        // フェードイン
+        float elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * (elapsed / 0.3f));
+            yield return null;
+        }
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+
+        // NPC画像
+        var portraitEl = new UIE.VisualElement();
+        portraitEl.AddToClassList("milk-dialog-portrait");
+        var elderSpr = Resources.Load<Sprite>("MapCharacters/Old_Men");
+        if (elderSpr != null)
+            portraitEl.style.backgroundImage = new UIE.StyleBackground(elderSpr);
+        overlay.Add(portraitEl);
+
+        // ダイアログボックス
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
+
+        var nameLabel = UIHelper.CreateLabel("門番の長老", "elder-dialog-name");
+        dialogBox.Add(nameLabel);
+
+        var textLabel = UIHelper.CreateLabel("", "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        var tapHint = UIHelper.CreateLabel("▼ タップで閉じる", "milk-dialog-hint");
+        dialogBox.Add(tapHint);
+
+        textLabel.text = Localization.Get("elder_boss_block");
+
+        yield return new WaitForSeconds(0.3f);
+        tapped = false;
+        while (!tapped) yield return null;
+
+        // フェードアウト
+        elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            float fadeT = 1f - (elapsed / 0.3f);
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * fadeT);
+            portraitEl.style.opacity = fadeT;
+            dialogBox.style.opacity = fadeT;
+            yield return null;
+        }
+
+        overlay.RemoveFromHierarchy();
+        menuOpen = false;
+        elderDialogueActive = false;
+    }
+
     void ApplyPoisonStep()
     {
         if (DataCarrier.Instance == null) return;
@@ -6410,6 +6628,7 @@ public class MapManager : MonoBehaviour
 
     void CheckMilkPoint()
     {
+        if (milkPointObj == null) return;
         // walk-over時もタップと同じ処理
         if (playerTileX == milkPointX && playerTileY == milkPointY)
             OnMilkPointTapped();

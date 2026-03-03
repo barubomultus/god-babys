@@ -2,17 +2,18 @@
 /* BirthStyle.uss — BirthScene              */
 /* ======================================== */
 
-/* --- Menu button (top-right circle) --- */
+/* --- Menu button (top-right, semi-transparent star) --- */
 .birth-menu-btn {
     position: absolute;
     right: 24px;
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background-color: white;
+    background-color: rgba(255, 253, 249, 0.45);
     align-items: center;
     justify-content: center;
-    border-width: 0;
+    border-width: 2px;
+    border-color: rgba(200, 168, 80, 0.3);
     padding: 0;
     transition-property: scale, background-color;
     transition-duration: 0.08s;
@@ -20,15 +21,13 @@
 
 .birth-menu-btn:active {
     scale: 0.95 0.95;
-    background-color: rgb(235, 235, 235);
+    background-color: rgba(255, 253, 249, 0.7);
 }
 
-.birth-menu-line {
-    width: 30px;
-    height: 3.5px;
-    background-color: rgb(115, 115, 128);
-    margin-top: 4px;
-    margin-bottom: 4px;
+.birth-menu-star {
+    font-size: 36px;
+    color: rgba(200, 168, 80, 0.7);
+    -unity-text-align: middle-center;
 }
 
 /* --- Menu overlay (backdrop) --- */
@@ -200,24 +199,28 @@
     color: rgb(255, 230, 128);
     white-space: normal;
     flex-shrink: 0;
+    -unity-text-outline-width: 0.8px;
+    -unity-text-outline-color: rgba(255, 200, 100, 0.4);
+    text-shadow: 0 0 12px rgba(255, 230, 128, 0.6);
 }
 
 /* --- ステータス確認ボタン（アコーディオン展開） --- */
 .birth-status-check-btn {
     align-self: center;
-    width: 80%;
-    max-width: 700px;
-    height: 72px;
-    border-radius: 36px;
-    background-color: rgba(255, 255, 255, 0.92);
-    border-width: 0;
+    width: 85%;
+    max-width: 740px;
+    height: 88px;
+    border-radius: 44px;
+    background-color: rgba(255, 255, 255, 0.95);
+    border-width: 2px;
+    border-color: rgba(255, 183, 197, 0.4);
     padding: 0;
-    font-size: 30px;
+    font-size: 36px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: var(--color-sub);
+    color: rgb(200, 100, 120);
     flex-shrink: 0;
-    margin-top: 8px;
+    margin-top: 12px;
     margin-bottom: 8px;
     transition-property: scale, background-color;
     transition-duration: 0.08s;
@@ -225,7 +228,7 @@
 
 .birth-status-check-btn:active {
     scale: 0.95 0.95;
-    background-color: rgba(255, 230, 240, 0.95);
+    background-color: rgba(255, 230, 240, 0.98);
 }
 
 /* --- アコーディオン（ステータス詳細） --- */
@@ -311,7 +314,18 @@
     flex-shrink: 0;
 }
 
-/* --- Bio を見るボタン（アコーディオン内） --- */
+/* --- アコーディオン内 Bio テキスト --- */
+.birth-accordion-bio {
+    font-size: 28px;
+    color: rgba(255, 255, 255, 0.9);
+    white-space: normal;
+    -unity-text-align: upper-left;
+    padding-left: 12px;
+    padding-right: 12px;
+    margin-bottom: 12px;
+}
+
+/* --- ステータス確認ボタン（アコーディオン内） --- */
 .birth-bio-view-btn {
     align-self: center;
     width: 80%;
@@ -335,7 +349,7 @@
     background-color: rgba(255, 210, 170, 0.95);
 }
 
-/* --- カード裏面（Bio / 紹介文） --- */
+/* --- カード裏面（ステータス / RPG風） --- */
 .birth-card-back {
     position: absolute;
     left: 0;
@@ -343,18 +357,20 @@
     top: 0;
     bottom: 0;
     border-radius: 48px;
-    background-color: rgba(245, 228, 200, 0.95);
+    background-color: rgba(26, 30, 50, 0.96);
     flex-direction: column;
     align-items: center;
     padding: 30px 24px;
     overflow: hidden;
+    border-color: rgba(100, 130, 200, 0.5);
+    border-width: 3px;
 }
 
 .birth-card-back-title {
     font-size: 36px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: rgb(120, 80, 40);
+    color: rgb(200, 220, 255);
     margin-bottom: 8px;
 }
 
@@ -362,26 +378,16 @@
     font-size: 44px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: rgb(80, 60, 40);
+    color: rgb(255, 230, 128);
     margin-bottom: 16px;
 }
 
 .birth-card-back-separator {
     width: 80%;
     height: 2px;
-    background-color: rgba(160, 120, 80, 0.4);
+    background-color: rgba(100, 130, 200, 0.4);
     align-self: center;
     margin-bottom: 20px;
-}
-
-.birth-card-back-bio {
-    font-size: 30px;
-    color: rgb(80, 60, 40);
-    white-space: normal;
-    -unity-text-align: upper-left;
-    padding-left: 16px;
-    padding-right: 16px;
-    flex-grow: 1;
 }
 
 .birth-card-back-btn {
@@ -390,13 +396,13 @@
     max-width: 500px;
     height: 64px;
     border-radius: 32px;
-    background-color: rgba(200, 170, 130, 0.9);
+    background-color: rgba(80, 100, 160, 0.8);
     border-width: 0;
     padding: 0;
     font-size: 26px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: rgb(80, 60, 40);
+    color: rgb(200, 220, 255);
     margin-top: 12px;
     flex-shrink: 0;
     transition-property: scale, background-color;
@@ -405,7 +411,7 @@
 
 .birth-card-back-btn:active {
     scale: 0.95 0.95;
-    background-color: rgba(180, 150, 110, 0.95);
+    background-color: rgba(100, 120, 180, 0.9);
 }
 
 .birth-next-btn-wrapper {
@@ -436,6 +442,43 @@
 .birth-next-btn:active {
     scale: 0.95 0.95;
     background-color: rgb(235, 235, 235);
+}
+
+/* --- Magic circle (rotating behind button) --- */
+.birth-magic-circle {
+    position: absolute;
+    width: 800px;
+    height: 800px;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    align-items: center;
+    justify-content: center;
+}
+
+.birth-magic-ring-outer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border-width: 1px;
+    border-color: rgba(198, 160, 80, 0.25);
+}
+
+.birth-magic-ring-inner {
+    position: absolute;
+    width: 85%;
+    height: 85%;
+    border-radius: 50%;
+    border-width: 1px;
+    border-color: rgba(198, 160, 80, 0.15);
+}
+
+.birth-magic-symbol {
+    position: absolute;
+    font-size: 24px;
+    color: rgba(198, 160, 80, 0.35);
+    -unity-text-align: middle-center;
 }
 
 /* --- Name input dialog --- */
@@ -604,29 +647,48 @@
     flex-shrink: 0;
     padding-top: 64px;
     padding-bottom: 16px;
-    font-size: 52px;
+    font-size: 60px;
     -unity-font-style: bold-and-italic;
     -unity-text-align: middle-center;
     color: rgb(80, 60, 40);
     letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(255, 183, 197, 0.7);
 }
 
-/* --- ポラロイド2枚並び --- */
+/* --- ポラロイド2枚並び（重なり配置） --- */
 .birth-story-album-content {
     flex-shrink: 0;
     flex-direction: row;
     justify-content: center;
+    align-items: flex-start;
     padding-top: 16px;
-    padding-bottom: 8px;
+    padding-bottom: 0;
 }
 
 .birth-story-album-card {
-    width: 460px;
+    width: 420px;
     flex-shrink: 0;
     position: relative;
     align-items: center;
-    margin-left: 10px;
-    margin-right: 10px;
+}
+
+.birth-story-album-card-father {
+    margin-right: -60px;
+}
+
+.birth-story-album-card-mother {
+    margin-left: -60px;
+}
+
+/* --- ポラロイドシャドウ（立体感） --- */
+.birth-story-polaroid-shadow {
+    position: absolute;
+    left: 6px;
+    top: 6px;
+    right: -6px;
+    bottom: -6px;
+    background-color: rgba(0, 0, 0, 0.12);
+    border-radius: 4px;
 }
 
 .birth-story-polaroid-frame {
@@ -637,6 +699,15 @@
     padding-bottom: 44px;
     align-items: center;
     align-self: center;
+    border-width: 1px;
+    border-color: rgba(200, 185, 160, 0.4);
+    border-radius: 2px;
+    transition-property: scale;
+    transition-duration: 0.08s;
+}
+
+.birth-story-polaroid-frame:active {
+    scale: 0.96 0.96;
 }
 
 .birth-story-polaroid-inner {
@@ -670,13 +741,15 @@
 
 .birth-story-card-intro {
     flex-shrink: 0;
-    margin-top: 16px;
-    font-size: 32px;
+    margin-top: 8px;
+    font-size: 24px;
     -unity-text-align: middle-center;
-    -unity-font-style: bold-and-italic;
-    color: rgb(60, 40, 25);
-    white-space: normal;
+    -unity-font-style: bold;
+    color: rgb(140, 110, 80);
+    white-space: nowrap;
     letter-spacing: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* --- 装飾線 --- */
@@ -686,8 +759,20 @@
     height: 2px;
     background-color: rgba(160, 130, 90, 0.5);
     align-self: center;
-    margin-top: 16px;
-    margin-bottom: 8px;
+    margin-top: 24px;
+    margin-bottom: 0;
+}
+
+/* --- ストーリーテキストコンテナ（不透明背景、重なり解消） --- */
+.birth-story-text-container {
+    flex-grow: 1;
+    flex-shrink: 1;
+    background-color: rgba(245, 235, 218, 1);
+    margin-left: 24px;
+    margin-right: 24px;
+    margin-top: 12px;
+    border-radius: 24px;
+    overflow: hidden;
 }
 
 /* --- ストーリーテキスト --- */
@@ -696,15 +781,15 @@
     flex-shrink: 1;
     padding-left: 5%;
     padding-right: 5%;
-    padding-top: 16px;
-    padding-bottom: 16px;
-    font-size: 36px;
-    -unity-font-style: bold-and-italic;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    font-size: 34px;
+    -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: rgb(60, 40, 25);
+    color: rgb(50, 32, 18);
     white-space: normal;
     letter-spacing: 1px;
-    -unity-paragraph-spacing: 12px;
+    -unity-paragraph-spacing: 24px;
 }
 
 /* --- 「愛を育む」ボタン行 --- */
@@ -720,19 +805,71 @@
     width: 600px;
     height: 100px;
     border-radius: 50px;
-    background-color: rgb(198, 160, 80);
+    background-color: rgb(218, 185, 120);
     -unity-text-align: middle-center;
     font-size: 36px;
     -unity-font-style: bold;
     color: white;
-    border-width: 0;
+    border-width: 3px;
+    border-color: rgba(255, 183, 197, 0.6);
     transition-property: scale;
     transition-duration: 0.08s;
     padding: 0;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
 }
 
 .birth-story-love-btn:active {
     scale: 0.95 0.95;
+    background-color: rgb(230, 195, 140);
+}
+
+/* --- ふきだしツールチップ（写真タップ時） --- */
+.birth-story-tooltip {
+    position: absolute;
+    top: 160px;
+    width: 420px;
+    background-color: rgba(255, 253, 249, 0.96);
+    border-radius: 24px;
+    padding: 20px 24px 16px 24px;
+    border-width: 2px;
+    border-color: rgba(200, 185, 160, 0.5);
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.birth-story-tooltip-left {
+    left: 40px;
+}
+
+.birth-story-tooltip-right {
+    right: 40px;
+}
+
+.birth-story-tooltip-text {
+    flex-grow: 1;
+    font-size: 26px;
+    color: rgb(60, 40, 25);
+    white-space: normal;
+    -unity-text-align: upper-left;
+}
+
+.birth-story-tooltip-close {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background-color: rgba(0, 0, 0, 0.08);
+    border-width: 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgb(120, 120, 130);
+    -unity-text-align: middle-center;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.birth-story-tooltip-close:active {
+    background-color: rgba(0, 0, 0, 0.15);
 }
 
 /* --- Birth result centering container --- */
@@ -1049,6 +1186,52 @@
     scale: 0.95 0.95;
 }
 
+/* --- Filter Loading Overlay --- */
+.filter-loading-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.65);
+    align-items: center;
+    justify-content: center;
+}
+
+.filter-loading-card {
+    width: 520px;
+    background-color: rgba(255, 253, 249, 0.95);
+    border-radius: 48px;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 32px;
+}
+
+.filter-loading-sparkle {
+    font-size: 56px;
+    -unity-text-align: middle-center;
+    margin-bottom: 16px;
+}
+
+.filter-loading-text {
+    font-size: 32px;
+    -unity-font-style: bold;
+    color: rgb(93, 64, 55);
+    -unity-text-align: middle-center;
+    letter-spacing: 2px;
+}
+
+/* --- Light Leak Overlay (ポラロイド上の虹色光漏れ) --- */
+.birth-light-leak-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 200, 150, 0.06);
+    border-radius: 0;
+}
+
 /* --- Skip button wrapper (flexboxで右下寄せ) --- */
 .cutin-skip-wrapper {
     flex-grow: 1;
@@ -1158,4 +1341,269 @@
 .birth-share-battle-btn:active {
     scale: 0.95 0.95;
     background-color: rgb(200, 60, 50);
+}
+
+/* --- Character background particle --- */
+.birth-char-particle {
+    position: absolute;
+    -unity-text-align: middle-center;
+}
+
+/* --- Story Popup: parchment overlay --- */
+.birth-story-popup-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- Story Popup: parchment card --- */
+.birth-story-popup-card {
+    width: 900px;
+    border-radius: 48px;
+    padding: 36px 32px 32px 32px;
+    background-color: rgb(252, 245, 230);
+    align-items: center;
+    overflow: hidden;
+}
+
+/* --- Story Popup: texture & decoration layers --- */
+.birth-story-popup-texture {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 48px;
+    background-color: rgba(220, 200, 170, 0.15);
+    border-width: 3px;
+    border-color: rgba(180, 150, 100, 0.25);
+}
+
+.birth-story-popup-inner-border {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    right: 12px;
+    bottom: 12px;
+    border-radius: 40px;
+    border-width: 1px;
+    border-color: rgba(180, 150, 100, 0.3);
+}
+
+/* --- Story Popup: catchphrase --- */
+.birth-story-popup-catchphrase {
+    font-size: 34px;
+    -unity-font-style: bold;
+    color: rgb(120, 80, 40);
+    -unity-text-align: middle-center;
+    white-space: normal;
+    margin-bottom: 20px;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+/* --- Story Popup: separator --- */
+.birth-story-popup-separator {
+    width: 80%;
+    height: 2px;
+    background-color: rgba(180, 150, 100, 0.4);
+    align-self: center;
+    margin-bottom: 20px;
+}
+
+/* --- Story Popup: bio text (typewriter target) --- */
+.birth-story-popup-bio {
+    font-size: 28px;
+    color: rgb(60, 40, 25);
+    white-space: normal;
+    -unity-text-align: upper-left;
+    padding-left: 20px;
+    padding-right: 20px;
+    margin-bottom: 24px;
+    min-height: 120px;
+}
+
+/* --- Story Popup: status button --- */
+.birth-story-popup-status-btn {
+    align-self: center;
+    width: 80%;
+    max-width: 700px;
+    height: 100px;
+    border-radius: 50px;
+    background-color: rgba(198, 160, 80, 0.9);
+    border-width: 0;
+    padding: 0;
+    font-size: 34px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: white;
+    margin-bottom: 16px;
+    transition-property: scale;
+    transition-duration: 0.08s;
+}
+
+.birth-story-popup-status-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgba(180, 140, 60, 0.95);
+}
+
+/* --- Story Popup: close button --- */
+.birth-story-popup-close-btn {
+    align-self: center;
+    width: 80%;
+    max-width: 700px;
+    height: 100px;
+    border-radius: 50px;
+    background-color: rgb(200, 200, 210);
+    border-width: 0;
+    padding: 0;
+    font-size: 34px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(64, 64, 77);
+    transition-property: scale;
+    transition-duration: 0.08s;
+}
+
+.birth-story-popup-close-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(180, 180, 190);
+}
+
+/* ======================================== */
+/* ぷにぷにインタラクション                   */
+/* ======================================== */
+
+/* --- Puni ripple (cheek tap ripple effect) --- */
+.puni-ripple {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border-top-left-radius: 30px;
+    border-top-right-radius: 30px;
+    border-bottom-left-radius: 30px;
+    border-bottom-right-radius: 30px;
+    border-width: 2px;
+    border-color: #FFB7C5;
+    background-color: rgba(255, 183, 197, 0.3);
+}
+
+/* --- Eye gaze pupil overlay --- */
+.baby-pupil-overlay {
+    position: absolute;
+    border-top-left-radius: 50%;
+    border-top-right-radius: 50%;
+    border-bottom-left-radius: 50%;
+    border-bottom-right-radius: 50%;
+    background-color: rgba(30, 30, 30, 0.85);
+    transition-property: translate;
+    transition-duration: 80ms;
+}
+
+/* --- Diagnosis button --- */
+.birth-diagnosis-btn {
+    width: 600px;
+    height: 100px;
+    border-top-left-radius: 50px;
+    border-top-right-radius: 50px;
+    border-bottom-left-radius: 50px;
+    border-bottom-right-radius: 50px;
+    background-color: #AAF0D1;
+    border-width: 0;
+    padding: 0;
+    font-size: 34px;
+    -unity-font-style: bold;
+    color: rgb(40, 80, 60);
+    -unity-text-align: middle-center;
+    margin-bottom: 20px;
+    transition-property: scale, background-color;
+    transition-duration: 0.08s;
+}
+
+.birth-diagnosis-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(140, 220, 180);
+}
+
+/* --- Diagnosis modal overlay --- */
+.birth-diagnosis-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- Diagnosis modal card --- */
+.birth-diagnosis-card {
+    width: 900px;
+    border-top-left-radius: 48px;
+    border-top-right-radius: 48px;
+    border-bottom-left-radius: 48px;
+    border-bottom-right-radius: 48px;
+    padding: 36px 32px 32px 32px;
+    background-color: rgb(252, 245, 230);
+    align-items: center;
+    overflow: hidden;
+}
+
+.birth-diagnosis-title {
+    font-size: 40px;
+    -unity-font-style: bold;
+    color: rgb(120, 80, 40);
+    -unity-text-align: middle-center;
+    margin-bottom: 24px;
+}
+
+.birth-diagnosis-prefix {
+    font-size: 34px;
+    -unity-font-style: bold;
+    color: rgb(80, 60, 40);
+    -unity-text-align: middle-center;
+    margin-bottom: 16px;
+}
+
+.birth-diagnosis-result {
+    font-size: 60px;
+    -unity-font-style: bold;
+    color: #FFB7C5;
+    -unity-text-align: middle-center;
+    margin-bottom: 32px;
+    letter-spacing: 3px;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(255, 100, 130, 0.3);
+    text-shadow: 0 0 16px rgba(255, 183, 197, 0.6);
+}
+
+.birth-diagnosis-close-btn {
+    align-self: center;
+    width: 80%;
+    max-width: 700px;
+    height: 100px;
+    border-top-left-radius: 50px;
+    border-top-right-radius: 50px;
+    border-bottom-left-radius: 50px;
+    border-bottom-right-radius: 50px;
+    background-color: rgb(200, 200, 210);
+    border-width: 0;
+    padding: 0;
+    font-size: 34px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(64, 64, 77);
+    transition-property: scale;
+    transition-duration: 0.08s;
+}
+
+.birth-diagnosis-close-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgb(180, 180, 190);
 }

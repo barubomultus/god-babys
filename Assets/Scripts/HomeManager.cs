@@ -18,6 +18,7 @@ public class HomeManager : MonoBehaviour
 
     void Start()
     {
+        Debug.Log("[STARTUP] HomeManager.Start() called");
         panelSettings = UIHelper.CreatePanelSettings(0f);
         root = UIHelper.SetupUIDocument(gameObject,
             new[] { "UI/CommonStyle", "UI/HomeStyle" }, panelSettings);
@@ -62,6 +63,39 @@ public class HomeManager : MonoBehaviour
         bg.pickingMode = UIE.PickingMode.Ignore;
         root.Add(bg);
 
+        // ビネットレイヤー（四隅→中央へごく薄いピンク）
+        string[] vignetteClasses = { "home-vignette-1", "home-vignette-2", "home-vignette-3" };
+        foreach (var vc in vignetteClasses)
+        {
+            var v = new UIE.VisualElement();
+            v.AddToClassList(vc);
+            v.pickingMode = UIE.PickingMode.Ignore;
+            root.Add(v);
+        }
+
+        // 星の地紋（ゴールド 5%透過度でうっすら散布）
+        var starField = new UIE.VisualElement();
+        starField.pickingMode = UIE.PickingMode.Ignore;
+        starField.style.position = UIE.Position.Absolute;
+        starField.style.left = 0; starField.style.top = 0;
+        starField.style.right = 0; starField.style.bottom = 0;
+        root.Add(starField);
+
+        string[] starSymbols = { "\u2726", "\u22C6", "\u2727" };
+        for (int i = 0; i < 25; i++)
+        {
+            var star = new UIE.Label();
+            star.pickingMode = UIE.PickingMode.Ignore;
+            star.text = starSymbols[i % starSymbols.Length];
+            star.style.position = UIE.Position.Absolute;
+            star.style.left = Random.Range(20f, 1060f);
+            star.style.top = Random.Range(40f, 1880f);
+            star.style.fontSize = Random.Range(12, 22);
+            star.style.color = new Color(0.78f, 0.66f, 0.31f, 0.05f);
+            star.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+            starField.Add(star);
+        }
+
         // フレックスボックスのルートコンテナ
         var homeRoot = new UIE.VisualElement();
         homeRoot.AddToClassList("home-root");
@@ -75,13 +109,14 @@ public class HomeManager : MonoBehaviour
         profile.style.paddingTop = 140 + safeTop;
         homeRoot.Add(profile);
 
-        // Player icon
+        // Player icon（ダブルゴールドリング）
         CreatePlayerIcon(profile);
 
         // Player name
         string pName = dc != null ? dc.playerName : DataCarrier.GetProfileName();
         var nameLabel = UIHelper.CreateLabel(
             string.IsNullOrEmpty(pName) ? "???" : pName, "home-player-name");
+        UIHelper.ApplyFontBold(nameLabel);
         profile.Add(nameLabel);
 
         // Separator
@@ -140,6 +175,9 @@ public class HomeManager : MonoBehaviour
         var border = new UIE.VisualElement();
         border.AddToClassList("home-icon-border");
 
+        var innerRing = new UIE.VisualElement();
+        innerRing.AddToClassList("home-icon-inner-ring");
+
         var maskBtn = new UIE.Button();
         maskBtn.AddToClassList("home-icon-mask");
         maskBtn.clicked += () => SceneManager.LoadScene("ProfileScene");
@@ -149,7 +187,8 @@ public class HomeManager : MonoBehaviour
         ApplyIconSprite(iconImg, selectedIcon);
         maskBtn.Add(iconImg);
 
-        border.Add(maskBtn);
+        innerRing.Add(maskBtn);
+        border.Add(innerRing);
         parent.Add(border);
     }
 
