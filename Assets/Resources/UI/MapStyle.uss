@@ -51,6 +51,7 @@
 
 .map-menu-btn:active {
     scale: 0.93 0.93;
+    -unity-background-image-tint-color: rgb(200, 220, 255);
 }
 
 .map-menu-label {
@@ -463,16 +464,16 @@
 
 /* --- Weapon Shop panel --- */
 .map-shop-panel {
-    width: 700px;
-    max-height: 1100px;
+    width: 900px;
+    max-height: 1200px;
     background-color: rgba(255, 255, 255, 0.97);
-    border-radius: 40px;
-    padding: 30px 24px 24px 24px;
+    border-radius: 48px;
+    padding: 36px 32px 32px 32px;
     align-items: center;
 }
 
 .map-shop-title {
-    font-size: 36px;
+    font-size: 40px;
     color: rgb(60, 60, 60);
     -unity-text-align: middle-center;
     -unity-font-style: bold;
@@ -480,11 +481,84 @@
 }
 
 .map-shop-milk {
-    font-size: 26px;
+    font-size: 30px;
     color: rgb(200, 120, 140);
     -unity-text-align: middle-center;
     -unity-font-style: bold;
     margin-bottom: 20px;
+}
+
+.map-shop-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+}
+
+.map-shop-card {
+    width: 390px;
+    border-radius: 48px;
+    background-color: rgba(245, 240, 250, 1);
+    padding: 16px;
+    margin: 6px;
+    align-items: center;
+}
+
+.map-shop-card-img {
+    width: 200px;
+    height: 200px;
+    border-radius: 24px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.map-shop-card-name {
+    font-size: 30px;
+    -unity-font-style: bold;
+    color: rgb(40, 40, 40);
+    margin-top: 8px;
+    -unity-text-align: middle-center;
+}
+
+.map-shop-detail-panel {
+    width: 900px;
+    border-radius: 48px;
+    background-color: rgba(255, 255, 255, 0.97);
+    padding: 36px 32px;
+    align-items: center;
+}
+
+.map-shop-detail-img {
+    width: 300px;
+    height: 300px;
+    border-radius: 24px;
+    -unity-background-scale-mode: scale-to-fit;
+    margin-bottom: 16px;
+}
+
+.map-shop-detail-name {
+    font-size: 40px;
+    -unity-font-style: bold;
+    color: rgb(40, 40, 40);
+    margin-bottom: 12px;
+    -unity-text-align: middle-center;
+}
+
+.map-shop-detail-effect {
+    font-size: 30px;
+    color: rgb(60, 60, 60);
+    padding: 12px 20px;
+    background-color: rgba(170, 240, 209, 0.3);
+    border-radius: 20px;
+    margin-bottom: 12px;
+    -unity-text-align: middle-center;
+}
+
+.map-shop-detail-price {
+    font-size: 30px;
+    -unity-font-style: bold;
+    color: rgb(200, 120, 140);
+    margin-bottom: 20px;
+    -unity-text-align: middle-center;
 }
 
 .map-shop-row {

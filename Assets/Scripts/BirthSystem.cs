@@ -410,6 +410,7 @@ public class BirthSystem : MonoBehaviour
 
     // ストーリー表示用UI (UI Toolkit)
     UIE.VisualElement storyPanel;
+    UIE.VisualElement storyLoveBtnRow;
     UIE.Label storyText;
     bool waitingForStoryConfirm;
 
@@ -795,7 +796,7 @@ public class BirthSystem : MonoBehaviour
     }
 
     // ── 天界パーティクル（ハート・星がふわっと舞い上がる） ──
-    static readonly string[] celestialSymbols = { "\u2665", "\u2606", "\u2726", "\u2727", "\u2764" };
+    static readonly string[] celestialSymbols = { "*", "+", "o", ".", "*" };
     static readonly Color[] celestialColors = {
         new Color(1f, 0.72f, 0.77f, 1f),   // ピンク
         new Color(0.97f, 0.91f, 0.81f, 1f), // メイン
@@ -1429,6 +1430,7 @@ public class BirthSystem : MonoBehaviour
 
         // パーティクル停止 + 両親カード非表示
         StopCharacterParticles();
+        if (seBabySource != null) seBabySource.pitch = 1f; // ルーレットSEピッチをリセット
         if (fatherCard != null) fatherCard.style.display = UIE.DisplayStyle.None;
         if (motherCard != null) motherCard.style.display = UIE.DisplayStyle.None;
 
@@ -3250,11 +3252,11 @@ public class BirthSystem : MonoBehaviour
         introLabel.style.opacity = 0f;
         introLabel.style.translate = new UIE.StyleTranslate(new UIE.Translate(0, 20));
 
-        // 0.5秒の遅延
-        yield return new WaitForSeconds(0.5f);
+        // 0.6秒の遅延（1.2x slower）
+        yield return new WaitForSeconds(0.6f);
 
-        // 0.4秒かけてフェードアップ
-        float dur = 0.4f;
+        // 0.48秒かけてフェードアップ（1.2x slower）
+        float dur = 0.48f;
         float elapsed = 0f;
         while (elapsed < dur)
         {
@@ -4393,70 +4395,13 @@ public class BirthSystem : MonoBehaviour
         if (DataCarrier.Instance != null)
             DataCarrier.Instance.customBabyImagePath = fileName;
 
-        // ★ BabyMorph パラメータを先に設定（Synthesize内で自動適用される）
-        {
-            float holeCX = babySynthesizer.GetFaceHoleCX();
-            float holeCY = babySynthesizer.GetFaceHoleCY();
-            float holeRX = babySynthesizer.GetFaceHoleRX();
-            float holeRY = babySynthesizer.GetFaceHoleRY();
+        // ★ BabyMorph は一旦全て無効化（エフェクトなしでクロップのみ）
+        babySynthesizer.DisableBabyMorph();
 
-            Debug.Log($"[CoordTransform] ═══ 座標変換パイプライン開始 ═══\n" +
-                $"  元画像サイズ: {originalFaceW}x{originalFaceH} (aspect={((float)originalFaceW / Mathf.Max(originalFaceH, 1)):F3})\n" +
-                $"  クロップ方式: Center Crop (cropSize={Mathf.Min(originalFaceW, originalFaceH)})\n" +
-                $"  顔穴パラメータ: center=({holeCX:F3},{holeCY:F3}) radius=({holeRX:F3},{holeRY:F3})\n" +
-                $"  ユーザー調整: scale={eyeMarkSavedScale:F2} offset=({eyeMarkSavedOffsetX:F3},{eyeMarkSavedOffsetY:F3})\n" +
-                $"  ランドマーク有無: {detectedFaceLandmarks.HasValue}");
+        // 合成（フィルターが顔中心クロップ済みなのでオフセット/スケールはリセット）
+        babySynthesizer.SetCustomFaceTexture(filtered, 0f, 0f, 1f);
 
-            // ★ 目は顔中心より上 → bottom-origin では holeCY + offset
-            Vector2 morphLeftEye = new Vector2(holeCX - holeRX * 0.50f, holeCY + holeRY * 0.35f);
-            Vector2 morphRightEye = new Vector2(holeCX + holeRX * 0.50f, holeCY + holeRY * 0.35f);
-            // ★ 口は顔中心より下 → bottom-origin では holeCY - offset
-            Vector2 morphMouth = new Vector2(holeCX, holeCY - holeRY * 0.55f);
-            if (detectedFaceLandmarks.HasValue)
-            {
-                var lm = detectedFaceLandmarks.Value;
-                Debug.Log($"[CoordTransform] ランドマーク入力(top-left): " +
-                    $"leftEye=({lm.leftEyeCenter.x:F3},{lm.leftEyeCenter.y:F3}) " +
-                    $"rightEye=({lm.rightEyeCenter.x:F3},{lm.rightEyeCenter.y:F3}) " +
-                    $"mouth=({lm.mouthCenter.x:F3},{lm.mouthCenter.y:F3})");
-                var lmLeft = FaceLandmarkToComposite(lm.leftEyeCenter);
-                var lmRight = FaceLandmarkToComposite(lm.rightEyeCenter);
-                var lmMouth = FaceLandmarkToComposite(lm.mouthCenter);
-
-                // 顔穴内に収まるか検証
-                bool inBounds = lmLeft.x > holeCX - holeRX && lmLeft.x < holeCX + holeRX &&
-                    lmLeft.y > holeCY - holeRY && lmLeft.y < holeCY + holeRY;
-                Debug.Log($"[CoordTransform] 変換結果: " +
-                    $"leftEye=({lmLeft.x:F3},{lmLeft.y:F3}) " +
-                    $"rightEye=({lmRight.x:F3},{lmRight.y:F3}) " +
-                    $"mouth=({lmMouth.x:F3},{lmMouth.y:F3}) " +
-                    $"顔穴内={inBounds} [bounds: x({holeCX - holeRX:F3}~{holeCX + holeRX:F3}) y({holeCY - holeRY:F3}~{holeCY + holeRY:F3})]");
-
-                if (inBounds)
-                {
-                    morphLeftEye = lmLeft;
-                    morphRightEye = lmRight;
-                    morphMouth = lmMouth;
-                    Debug.Log($"[BirthSystem] ★ ランドマーク座標を採用");
-                }
-                else
-                {
-                    Debug.LogWarning($"[BirthSystem] ★ ランドマークが顔穴外 → ジオメトリフォールバック使用");
-                }
-            }
-            Debug.Log($"[BirthSystem] EnableBabyMorph 最終値: L({morphLeftEye.x:F3},{morphLeftEye.y:F3}) R({morphRightEye.x:F3},{morphRightEye.y:F3}) Mouth({morphMouth.x:F3},{morphMouth.y:F3})");
-            babySynthesizer.EnableBabyMorph(morphLeftEye, morphRightEye, morphMouth, detectedFaceLandmarks);
-        }
-
-        // 合成（顔位置調整で保存したパラメータを使用）
-        float synthOffX = BabySynthesizer.IsDebugFixedFace ? 0f : eyeMarkSavedOffsetX;
-        float synthOffY = BabySynthesizer.IsDebugFixedFace ? 0f : eyeMarkSavedOffsetY;
-        float synthScale = BabySynthesizer.IsDebugFixedFace ? 1f : eyeMarkSavedScale;
-        babySynthesizer.SetCustomFaceTexture(
-            filtered, synthOffX, synthOffY, synthScale);
-
-        // ★ モーフを合成画像に直接適用（多眼バグ修正: アルファブレンド不要に）
-        Sprite updatedSprite = babySynthesizer.ApplyMorphToCompositeIfEnabled();
+        Sprite updatedSprite = babySynthesizer.GetCompositeSprite();
 
         HideFilterLoadingOverlay();
 
@@ -5696,10 +5641,12 @@ public class BirthSystem : MonoBehaviour
 
         loveBtnRow.Add(loveBtn);
 
-        storyPanel.Add(loveBtnRow);
+        storyLoveBtnRow = loveBtnRow;
 
         storyPanel.style.display = UIE.DisplayStyle.None;
+        loveBtnRow.style.display = UIE.DisplayStyle.None;
         overlayRoot.Add(storyPanel);
+        overlayRoot.Add(loveBtnRow);
     }
 
     void OnStoryTap()
@@ -6210,10 +6157,34 @@ public class BirthSystem : MonoBehaviour
 
         if (!skipRequested) yield return new WaitForSeconds(0.3f);
 
+        // ── Phase 2: 中央に光の核 + 放射状光線 ──
+        UIE.VisualElement lightCore = null;
+        var lightRays = new System.Collections.Generic.List<UIE.VisualElement>();
         if (!skipRequested)
         {
-            // ── Phase 2: 中央に光の点が現れる ──
-            var lightCore = new UIE.VisualElement();
+            // 放射状光線（8本の金色レイ）
+            int rayCount = 8;
+            for (int i = 0; i < rayCount; i++)
+            {
+                var ray = new UIE.VisualElement();
+                ray.style.position = UIE.Position.Absolute;
+                ray.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+                ray.style.top = new UIE.StyleLength(new UIE.Length(48, UIE.LengthUnit.Percent));
+                ray.style.width = 3f;
+                ray.style.height = 0f;
+                ray.style.backgroundColor = new Color(1f, 0.88f, 0.4f, 0f);
+                SetAllRadius(ray, 1.5f);
+                float angleDeg = i * (360f / rayCount);
+                ray.style.rotate = new UIE.StyleRotate(new UIE.Rotate(angleDeg));
+                ray.style.transformOrigin = new UIE.StyleTransformOrigin(
+                    new UIE.TransformOrigin(new UIE.Length(50, UIE.LengthUnit.Percent), 0));
+                ray.style.translate = new UIE.StyleTranslate(new UIE.Translate(-1.5f, 0));
+                panel.Add(ray);
+                lightRays.Add(ray);
+            }
+
+            // 光の核
+            lightCore = new UIE.VisualElement();
             lightCore.style.position = UIE.Position.Absolute;
             lightCore.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
             lightCore.style.top = new UIE.StyleLength(new UIE.Length(48, UIE.LengthUnit.Percent));
@@ -6223,31 +6194,46 @@ public class BirthSystem : MonoBehaviour
             lightCore.style.translate = new UIE.StyleTranslate(
                 new UIE.Translate(-coreSize / 2, -coreSize / 2));
             SetAllRadius(lightCore, coreSize / 2);
-            lightCore.style.backgroundColor = new Color(1f, 0.718f, 0.773f, 0f); // サブカラー
+            lightCore.style.backgroundColor = new Color(1f, 0.718f, 0.773f, 0f);
             panel.Add(lightCore);
 
+            // 核 + 光線の出現アニメ
             elapsed = 0f;
-            float coreAppearDur = 0.6f;
+            float coreAppearDur = 0.8f;
             while (elapsed < coreAppearDur && !skipRequested)
             {
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / coreAppearDur);
                 float easeT = t * t;
-                float s = Mathf.Lerp(8f, 20f, easeT);
+
+                // 核：ピンク→白金にグラデーション
+                float s = Mathf.Lerp(8f, 28f, easeT);
                 lightCore.style.width = s;
                 lightCore.style.height = s;
                 lightCore.style.translate = new UIE.StyleTranslate(
                     new UIE.Translate(-s / 2, -s / 2));
                 SetAllRadius(lightCore, s / 2);
-                lightCore.style.backgroundColor = new Color(1f, 0.718f, 0.773f, easeT * 0.9f);
+                float goldT = easeT * 0.4f;
+                lightCore.style.backgroundColor = new Color(
+                    1f, Mathf.Lerp(0.718f, 0.92f, goldT),
+                    Mathf.Lerp(0.773f, 0.6f, goldT), easeT * 0.95f);
+
+                // 光線：伸長 + フェードイン
+                float rayLen = Mathf.Lerp(0f, 180f, easeT);
+                float rayAlpha = easeT * 0.5f;
+                foreach (var ray in lightRays)
+                {
+                    ray.style.height = rayLen;
+                    ray.style.backgroundColor = new Color(1f, 0.88f, 0.4f, rayAlpha);
+                }
                 yield return null;
             }
             yield return StartCoroutine(SkippableWait(0.2f));
         }
 
+        // ── Phase 3: 螺旋 + キラキラパーティクル ──
         if (!skipRequested)
         {
-            // ── Phase 3-6: 螺旋→フラッシュ→テキスト→ホワイトアウト ──
             var orbA = CreateLightOrb(colorA);
             var orbB = CreateLightOrb(colorB);
             panel.Add(orbA);
@@ -6259,7 +6245,18 @@ public class BirthSystem : MonoBehaviour
             panel.Add(glowA);
             panel.Add(glowB);
 
-            float spiralDur = 2.2f;
+            // 螺旋中に散らすキラキラ色
+            Color[] sparkleColors = new[] {
+                new Color(1f, 0.95f, 0.6f, 0.9f),   // ゴールド
+                new Color(1f, 0.78f, 0.85f, 0.85f),  // ピンク
+                new Color(0.7f, 0.9f, 1f, 0.8f),     // アクアブルー
+                new Color(0.85f, 0.75f, 1f, 0.8f),    // ラベンダー
+                new Color(1f, 1f, 1f, 0.9f),          // 白
+            };
+            float nextSparkle = 0f;
+            float sparkleInterval = 0.07f;
+
+            float spiralDur = 2.5f;
             float startRadius = 420f;
             elapsed = 0f;
             while (elapsed < spiralDur && !skipRequested)
@@ -6270,7 +6267,7 @@ public class BirthSystem : MonoBehaviour
                     ? 2f * t * t
                     : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
                 float radius = Mathf.Lerp(startRadius, 0f, easeT);
-                float angle = t * 900f * Mathf.Deg2Rad;
+                float angle = t * 1080f * Mathf.Deg2Rad; // 3回転（900→1080）
                 float ax = Mathf.Cos(angle) * radius;
                 float ay = Mathf.Sin(angle) * radius;
                 float bx = Mathf.Cos(angle + Mathf.PI) * radius;
@@ -6281,17 +6278,76 @@ public class BirthSystem : MonoBehaviour
                 PositionOrb(orbB, bx, by, orbSize);
                 PositionOrb(glowA, ax, ay, glowSize);
                 PositionOrb(glowB, bx, by, glowSize);
+
+                // 光線を螺旋に合わせてパルス
+                float rayPulse = 180f + Mathf.Sin(elapsed * 8f) * 60f;
+                float rayAlpha = 0.3f + Mathf.Sin(elapsed * 5f) * 0.2f;
+                foreach (var ray in lightRays)
+                {
+                    ray.style.height = rayPulse;
+                    ray.style.backgroundColor = new Color(1f, 0.88f, 0.4f, rayAlpha);
+                }
+
+                // 核も脈動
+                if (lightCore != null)
+                {
+                    float corePulse = 28f + Mathf.Sin(elapsed * 6f) * 8f;
+                    lightCore.style.width = corePulse;
+                    lightCore.style.height = corePulse;
+                    lightCore.style.translate = new UIE.StyleTranslate(
+                        new UIE.Translate(-corePulse / 2, -corePulse / 2));
+                    SetAllRadius(lightCore, corePulse / 2);
+                }
+
+                // キラキラパーティクル発生
+                nextSparkle -= Time.deltaTime;
+                if (nextSparkle <= 0f && t < 0.85f)
+                {
+                    nextSparkle = sparkleInterval;
+                    Color sc = sparkleColors[Random.Range(0, sparkleColors.Length)];
+                    // Orbの位置にキラキラ
+                    StartCoroutine(SpawnFateSparkle(panel, ax, ay, sc));
+                    StartCoroutine(SpawnFateSparkle(panel, bx, by, sc));
+                }
                 yield return null;
             }
             orbA.RemoveFromHierarchy();
             orbB.RemoveFromHierarchy();
             glowA.RemoveFromHierarchy();
             glowB.RemoveFromHierarchy();
+
+            // 光線フェードアウト
+            elapsed = 0f;
+            while (elapsed < 0.4f && !skipRequested)
+            {
+                elapsed += Time.deltaTime;
+                float t = 1f - Mathf.Clamp01(elapsed / 0.4f);
+                foreach (var ray in lightRays)
+                    ray.style.backgroundColor = new Color(1f, 0.88f, 0.4f, t * 0.5f);
+                if (lightCore != null)
+                    lightCore.style.opacity = t;
+                yield return null;
+            }
+            foreach (var ray in lightRays) ray.RemoveFromHierarchy();
+            if (lightCore != null) lightCore.RemoveFromHierarchy();
         }
 
         if (!skipRequested)
         {
-            // ── Phase 4-5: テキスト出現 + 脈動 ──
+            // ── Phase 4: テキスト出現 + 金色の光のオーラ ──
+            // テキスト背面のゴールドグロー
+            var textGlow = new UIE.VisualElement();
+            textGlow.style.position = UIE.Position.Absolute;
+            textGlow.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+            textGlow.style.top = new UIE.StyleLength(new UIE.Length(46, UIE.LengthUnit.Percent));
+            textGlow.style.width = 600;
+            textGlow.style.height = 120;
+            textGlow.style.translate = new UIE.StyleTranslate(new UIE.Translate(-300, -60));
+            SetAllRadius(textGlow, 60);
+            textGlow.style.backgroundColor = new Color(1f, 0.9f, 0.5f, 0f);
+            textGlow.pickingMode = UIE.PickingMode.Ignore;
+            panel.Add(textGlow);
+
             var textLabel = UIHelper.CreateLabel(Localization.Get("cutin_fate_moment"));
             UIHelper.ApplyFontBold(textLabel);
             textLabel.style.position = UIE.Position.Absolute;
@@ -6300,16 +6356,17 @@ public class BirthSystem : MonoBehaviour
             textLabel.style.top = new UIE.StyleLength(new UIE.Length(46, UIE.LengthUnit.Percent));
             textLabel.style.fontSize = 52;
             textLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            textLabel.style.color = new Color(0.051f, 0.051f, 0.078f, 0f); // ダークテキスト
+            textLabel.style.color = new Color(0.051f, 0.051f, 0.078f, 0f);
+            textLabel.style.letterSpacing = 4;
             panel.Add(textLabel);
 
-            float textInDur = 1.8f;
+            float textInDur = 2.0f;
             elapsed = 0f;
             while (elapsed < textInDur && !skipRequested)
             {
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / textInDur);
-                float alpha = Mathf.Clamp01(t * 6f);
+                float alpha = Mathf.Clamp01(t * 5f);
                 float easeT = 1f - (1f - t) * (1f - t);
                 float baseScale = Mathf.Lerp(0.8f, 1.1f, easeT);
                 float pulse = 1f + Mathf.Sin(elapsed * Mathf.PI * 2.5f) * 0.025f;
@@ -6317,6 +6374,14 @@ public class BirthSystem : MonoBehaviour
                 textLabel.style.color = new Color(0.051f, 0.051f, 0.078f, alpha);
                 textLabel.style.scale = new UIE.StyleScale(
                     new UIE.Scale(new Vector3(finalScale, finalScale, 1f)));
+
+                // テキスト背面グロー
+                float glowAlpha = alpha * 0.2f * (1f + Mathf.Sin(elapsed * 3f) * 0.3f);
+                float glowW = 600f + Mathf.Sin(elapsed * 2f) * 40f;
+                textGlow.style.width = glowW;
+                textGlow.style.translate = new UIE.StyleTranslate(
+                    new UIE.Translate(-glowW / 2f, -60));
+                textGlow.style.backgroundColor = new Color(1f, 0.9f, 0.5f, glowAlpha);
                 yield return null;
             }
             yield return StartCoroutine(SkippableWait(0.4f));
@@ -6327,6 +6392,45 @@ public class BirthSystem : MonoBehaviour
 
         // Canvas背景を復元
         if (mainBgImg != null) mainBgImg.gameObject.SetActive(true);
+    }
+
+    IEnumerator SpawnFateSparkle(UIE.VisualElement parent, float cx, float cy, Color color)
+    {
+        var sparkle = new UIE.VisualElement();
+        sparkle.style.position = UIE.Position.Absolute;
+        sparkle.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+        sparkle.style.top = new UIE.StyleLength(new UIE.Length(48, UIE.LengthUnit.Percent));
+        float sz = Random.Range(4f, 10f);
+        sparkle.style.width = sz;
+        sparkle.style.height = sz;
+        SetAllRadius(sparkle, sz / 2);
+        sparkle.style.backgroundColor = color;
+        float driftX = cx + Random.Range(-30f, 30f);
+        float driftY = cy + Random.Range(-30f, 30f);
+        sparkle.style.translate = new UIE.StyleTranslate(
+            new UIE.Translate(driftX - sz / 2, driftY - sz / 2));
+        parent.Add(sparkle);
+
+        float life = Random.Range(0.3f, 0.6f);
+        float el = 0f;
+        float endX = driftX + Random.Range(-40f, 40f);
+        float endY = driftY + Random.Range(-60f, -20f); // 上に漂う
+        while (el < life)
+        {
+            el += Time.deltaTime;
+            float t = Mathf.Clamp01(el / life);
+            float x = Mathf.Lerp(driftX, endX, t);
+            float y = Mathf.Lerp(driftY, endY, t);
+            float s = sz * (1f - t * 0.5f);
+            sparkle.style.width = s;
+            sparkle.style.height = s;
+            SetAllRadius(sparkle, s / 2);
+            sparkle.style.translate = new UIE.StyleTranslate(
+                new UIE.Translate(x - s / 2, y - s / 2));
+            sparkle.style.opacity = 1f - t;
+            yield return null;
+        }
+        sparkle.RemoveFromHierarchy();
     }
 
     UIE.VisualElement CreateLightOrb(Color color)
@@ -6441,7 +6545,19 @@ public class BirthSystem : MonoBehaviour
 
         if (!skipRequested)
         {
-            // ── Phase 2: 光の種 ──
+            // ── Phase 2: 光の種 + グローオーラ ──
+            // 背面グロー（大きくぼんやり光る）
+            var seedGlow = new UIE.VisualElement();
+            seedGlow.style.position = UIE.Position.Absolute;
+            seedGlow.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+            seedGlow.style.top = new UIE.StyleLength(new UIE.Length(48, UIE.LengthUnit.Percent));
+            seedGlow.style.width = 0;
+            seedGlow.style.height = 0;
+            SetAllRadius(seedGlow, 0);
+            seedGlow.style.backgroundColor = new Color(1f, 0.9f, 0.5f, 0f);
+            seedGlow.pickingMode = UIE.PickingMode.Ignore;
+            panel.Add(seedGlow);
+
             var seed = new UIE.VisualElement();
             seed.style.position = UIE.Position.Absolute;
             seed.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
@@ -6452,7 +6568,7 @@ public class BirthSystem : MonoBehaviour
             seed.style.translate = new UIE.StyleTranslate(
                 new UIE.Translate(-seedSize / 2, -seedSize / 2));
             SetAllRadius(seed, seedSize / 2);
-            seed.style.backgroundColor = new Color(1f, 0.718f, 0.773f, 0f); // サブカラー
+            seed.style.backgroundColor = new Color(1f, 0.718f, 0.773f, 0f);
             panel.Add(seed);
 
             elapsed = 0f;
@@ -6460,30 +6576,56 @@ public class BirthSystem : MonoBehaviour
             {
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / 0.8f);
-                float s = Mathf.Lerp(6f, 18f, t * t);
+                float easeT = t * t;
+                float s = Mathf.Lerp(6f, 22f, easeT);
                 seed.style.width = s;
                 seed.style.height = s;
                 seed.style.translate = new UIE.StyleTranslate(
                     new UIE.Translate(-s / 2, -s / 2));
                 SetAllRadius(seed, s / 2);
-                seed.style.backgroundColor = new Color(1f, 0.718f, 0.773f, t * t * 0.85f);
+                // ピンク→白金へ色シフト
+                seed.style.backgroundColor = new Color(
+                    1f, Mathf.Lerp(0.718f, 0.92f, easeT * 0.5f),
+                    Mathf.Lerp(0.773f, 0.7f, easeT * 0.5f), easeT * 0.9f);
+                // グロー出現
+                float gs = s * 4f;
+                seedGlow.style.width = gs;
+                seedGlow.style.height = gs;
+                seedGlow.style.translate = new UIE.StyleTranslate(
+                    new UIE.Translate(-gs / 2, -gs / 2));
+                SetAllRadius(seedGlow, gs / 2);
+                seedGlow.style.backgroundColor = new Color(1f, 0.9f, 0.5f, easeT * 0.15f);
                 yield return null;
             }
             yield return StartCoroutine(SkippableWait(0.3f));
 
-            // ── Phase 3: 鼓動 × 3 ──
+            // ── Phase 3: 鼓動 × 3 — 色が鼓動ごとに変化 ──
+            Color[] beatColors = {
+                new Color(1f, 0.718f, 0.773f, 0.9f),  // ピンク
+                new Color(1f, 0.88f, 0.4f, 0.9f),     // ゴールド
+                new Color(1f, 1f, 0.85f, 0.95f),       // 白金（最後のビートは最も輝く）
+            };
             for (int beat = 0; beat < 3 && !skipRequested; beat++)
             {
-                float beatPeak = beat < 2 ? 36f : 50f;
+                Color seedColor = beatColors[beat];
+                float beatPeak = beat == 0 ? 36f : beat == 1 ? 44f : 60f; // 段階的に大きく
                 elapsed = 0f;
                 while (elapsed < 0.14f && !skipRequested)
                 {
                     elapsed += Time.deltaTime;
                     float t = Mathf.Clamp01(elapsed / 0.14f);
-                    float s = Mathf.Lerp(18f, beatPeak, 1f - (1f - t) * (1f - t));
+                    float s = Mathf.Lerp(22f, beatPeak, 1f - (1f - t) * (1f - t));
                     seed.style.width = s; seed.style.height = s;
                     seed.style.translate = new UIE.StyleTranslate(new UIE.Translate(-s / 2, -s / 2));
                     SetAllRadius(seed, s / 2);
+                    seed.style.backgroundColor = Color.Lerp(seed.resolvedStyle.backgroundColor, seedColor, t);
+                    // グローも鼓動で膨張
+                    float gs = s * 5f;
+                    seedGlow.style.width = gs;
+                    seedGlow.style.height = gs;
+                    seedGlow.style.translate = new UIE.StyleTranslate(new UIE.Translate(-gs / 2, -gs / 2));
+                    SetAllRadius(seedGlow, gs / 2);
+                    seedGlow.style.backgroundColor = new Color(seedColor.r, seedColor.g, seedColor.b, 0.2f * t);
                     yield return null;
                 }
                 StartCoroutine(SpawnRipple(panel, beat));
@@ -6492,10 +6634,16 @@ public class BirthSystem : MonoBehaviour
                 {
                     elapsed += Time.deltaTime;
                     float t = Mathf.Clamp01(elapsed / 0.21f);
-                    float s = Mathf.Lerp(beatPeak, 18f, t * t);
+                    float s = Mathf.Lerp(beatPeak, 22f, t * t);
                     seed.style.width = s; seed.style.height = s;
                     seed.style.translate = new UIE.StyleTranslate(new UIE.Translate(-s / 2, -s / 2));
                     SetAllRadius(seed, s / 2);
+                    float gs = s * 4f;
+                    seedGlow.style.width = gs;
+                    seedGlow.style.height = gs;
+                    seedGlow.style.translate = new UIE.StyleTranslate(new UIE.Translate(-gs / 2, -gs / 2));
+                    SetAllRadius(seedGlow, gs / 2);
+                    seedGlow.style.backgroundColor = new Color(seedColor.r, seedColor.g, seedColor.b, 0.15f * (1f - t));
                     yield return null;
                 }
                 yield return StartCoroutine(SkippableWait(beat == 0 ? 0.7f : beat == 1 ? 0.5f : 0.3f));
@@ -6504,7 +6652,19 @@ public class BirthSystem : MonoBehaviour
 
         if (!skipRequested)
         {
-            // ── Phase 4: テキスト出現 ──
+            // ── Phase 4: テキスト出現 + 金色ゴールドグロー ──
+            var birthTextGlow = new UIE.VisualElement();
+            birthTextGlow.style.position = UIE.Position.Absolute;
+            birthTextGlow.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+            birthTextGlow.style.top = new UIE.StyleLength(new UIE.Length(44, UIE.LengthUnit.Percent));
+            birthTextGlow.style.width = 700;
+            birthTextGlow.style.height = 100;
+            birthTextGlow.style.translate = new UIE.StyleTranslate(new UIE.Translate(-350, -50));
+            SetAllRadius(birthTextGlow, 50);
+            birthTextGlow.style.backgroundColor = new Color(1f, 0.9f, 0.5f, 0f);
+            birthTextGlow.pickingMode = UIE.PickingMode.Ignore;
+            panel.Add(birthTextGlow);
+
             var textLabel = UIHelper.CreateLabel(Localization.Get("cutin_birth_wish"));
             UIHelper.ApplyFontBold(textLabel);
             textLabel.style.position = UIE.Position.Absolute;
@@ -6512,19 +6672,28 @@ public class BirthSystem : MonoBehaviour
             textLabel.style.top = new UIE.StyleLength(new UIE.Length(44, UIE.LengthUnit.Percent));
             textLabel.style.fontSize = 46;
             textLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            textLabel.style.color = new Color(0.051f, 0.051f, 0.078f, 0f); // ダークテキスト
+            textLabel.style.color = new Color(0.051f, 0.051f, 0.078f, 0f);
+            textLabel.style.letterSpacing = 4;
             panel.Add(textLabel);
 
             elapsed = 0f;
-            while (elapsed < 2.2f && !skipRequested)
+            while (elapsed < 2.5f && !skipRequested)
             {
                 elapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(elapsed / 2.2f);
+                float t = Mathf.Clamp01(elapsed / 2.5f);
                 float alpha = Mathf.Clamp01(elapsed / 0.4f);
                 float easeT = 1f - (1f - t) * (1f - t);
                 float s = Mathf.Lerp(0.85f, 1.05f, easeT) * (1f + Mathf.Sin(elapsed * Mathf.PI * 2f) * 0.02f);
                 textLabel.style.color = new Color(0.051f, 0.051f, 0.078f, alpha);
                 textLabel.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(s, s, 1f)));
+
+                // テキストグロー
+                float glowAlpha = alpha * 0.15f * (1f + Mathf.Sin(elapsed * 2.5f) * 0.4f);
+                float glowW = 700f + Mathf.Sin(elapsed * 1.8f) * 50f;
+                birthTextGlow.style.width = glowW;
+                birthTextGlow.style.translate = new UIE.StyleTranslate(
+                    new UIE.Translate(-glowW / 2f, -50));
+                birthTextGlow.style.backgroundColor = new Color(1f, 0.9f, 0.5f, glowAlpha);
                 yield return null;
             }
             yield return StartCoroutine(SkippableWait(0.5f));
@@ -6539,6 +6708,49 @@ public class BirthSystem : MonoBehaviour
 
     IEnumerator SpawnRipple(UIE.VisualElement parent, int intensity)
     {
+        // 各鼓動で複数レイヤーの波動を発射（虹色グラデーション）
+        Color[] rippleColors;
+        if (intensity >= 2)
+        {
+            // 最後の鼓動：ゴールド→ピンク→アクアの3層波動
+            rippleColors = new[] {
+                new Color(1f, 0.92f, 0.5f, 0.8f),   // ゴールド
+                new Color(1f, 0.718f, 0.773f, 0.7f),  // ピンク
+                new Color(0.67f, 0.94f, 0.82f, 0.6f), // アクセント
+            };
+        }
+        else
+        {
+            rippleColors = new[] {
+                new Color(1f, 0.718f, 0.773f, 0.7f),  // ピンク
+                new Color(1f, 0.9f, 0.6f, 0.5f),      // ゴールド（薄め）
+            };
+        }
+
+        for (int layer = 0; layer < rippleColors.Length; layer++)
+        {
+            StartCoroutine(SpawnSingleRipple(parent, intensity, rippleColors[layer], layer * 0.06f));
+        }
+
+        // 鼓動時に光の粒子も散らす
+        if (intensity >= 1)
+        {
+            int particleCount = intensity >= 2 ? 12 : 6;
+            for (int i = 0; i < particleCount; i++)
+            {
+                float angle = (i / (float)particleCount) * 360f * Mathf.Deg2Rad;
+                Color pc = rippleColors[i % rippleColors.Length];
+                StartCoroutine(SpawnBirthParticle(parent, angle, pc, intensity));
+            }
+        }
+
+        yield return null;
+    }
+
+    IEnumerator SpawnSingleRipple(UIE.VisualElement parent, int intensity, Color color, float delay)
+    {
+        if (delay > 0f) yield return new WaitForSeconds(delay);
+
         var ripple = new UIE.VisualElement();
         ripple.style.position = UIE.Position.Absolute;
         ripple.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
@@ -6550,27 +6762,30 @@ public class BirthSystem : MonoBehaviour
             new UIE.Translate(-startSize / 2, -startSize / 2));
         SetAllRadius(ripple, startSize / 2);
         ripple.style.backgroundColor = new Color(0, 0, 0, 0);
-        // 波紋は白い輪（borderで表現）
-        float borderWidth = intensity >= 3 ? 4f : 2f;
+
+        float borderWidth = intensity >= 2 ? 5f : 3f;
         ripple.style.borderTopWidth = borderWidth;
         ripple.style.borderBottomWidth = borderWidth;
         ripple.style.borderLeftWidth = borderWidth;
         ripple.style.borderRightWidth = borderWidth;
-        ripple.style.borderTopColor = new Color(1f, 0.718f, 0.773f, 0.7f);
-        ripple.style.borderBottomColor = new Color(1f, 0.718f, 0.773f, 0.7f);
-        ripple.style.borderLeftColor = new Color(1f, 0.718f, 0.773f, 0.7f);
-        ripple.style.borderRightColor = new Color(1f, 0.718f, 0.773f, 0.7f);
+        void SetRippleBorderColor(Color c)
+        {
+            ripple.style.borderTopColor = c;
+            ripple.style.borderBottomColor = c;
+            ripple.style.borderLeftColor = c;
+            ripple.style.borderRightColor = c;
+        }
+        SetRippleBorderColor(color);
         parent.Add(ripple);
 
-        // 波紋の拡大 + フェードアウト
-        float maxSize = intensity >= 3 ? 1800f : 600f + intensity * 300f;
-        float rippleDur = intensity >= 3 ? 1.2f : 1.0f;
+        float maxSize = intensity >= 2 ? 1800f : 600f + intensity * 300f;
+        float rippleDur = intensity >= 2 ? 1.4f : 1.0f;
         float elapsed = 0f;
         while (elapsed < rippleDur)
         {
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / rippleDur);
-            float easeT = 1f - (1f - t) * (1f - t); // ease-out
+            float easeT = 1f - (1f - t) * (1f - t);
             float s = Mathf.Lerp(startSize, maxSize, easeT);
             ripple.style.width = s;
             ripple.style.height = s;
@@ -6578,17 +6793,58 @@ public class BirthSystem : MonoBehaviour
                 new UIE.Translate(-s / 2, -s / 2));
             SetAllRadius(ripple, s / 2);
 
-            // フェードアウト
-            float alpha = 0.7f * (1f - t);
-            ripple.style.borderTopColor = new Color(1f, 0.718f, 0.773f, alpha);
-            ripple.style.borderBottomColor = new Color(1f, 0.718f, 0.773f, alpha);
-            ripple.style.borderLeftColor = new Color(1f, 0.718f, 0.773f, alpha);
-            ripple.style.borderRightColor = new Color(1f, 0.718f, 0.773f, alpha);
+            // 波紋の太さも徐々に細く
+            float bw = Mathf.Lerp(borderWidth, 1f, easeT);
+            ripple.style.borderTopWidth = bw;
+            ripple.style.borderBottomWidth = bw;
+            ripple.style.borderLeftWidth = bw;
+            ripple.style.borderRightWidth = bw;
+
+            float alpha = color.a * (1f - t);
+            SetRippleBorderColor(new Color(color.r, color.g, color.b, alpha));
 
             yield return null;
         }
 
         ripple.RemoveFromHierarchy();
+    }
+
+    IEnumerator SpawnBirthParticle(UIE.VisualElement parent, float angle, Color color, int intensity)
+    {
+        var particle = new UIE.VisualElement();
+        particle.style.position = UIE.Position.Absolute;
+        particle.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+        particle.style.top = new UIE.StyleLength(new UIE.Length(48, UIE.LengthUnit.Percent));
+        float sz = Random.Range(5f, 12f);
+        particle.style.width = sz;
+        particle.style.height = sz;
+        SetAllRadius(particle, sz / 2);
+        particle.style.backgroundColor = color;
+        particle.style.translate = new UIE.StyleTranslate(new UIE.Translate(-sz / 2, -sz / 2));
+        parent.Add(particle);
+
+        float speed = intensity >= 2 ? Random.Range(300f, 500f) : Random.Range(150f, 300f);
+        float life = Random.Range(0.5f, 0.9f);
+        float el = 0f;
+        float wobble = Random.Range(-1f, 1f);
+        while (el < life)
+        {
+            el += Time.deltaTime;
+            float t = Mathf.Clamp01(el / life);
+            float dist = speed * t * (1f - t * 0.3f); // 減速
+            float a = angle + Mathf.Sin(el * 8f) * wobble * 0.15f;
+            float x = Mathf.Cos(a) * dist;
+            float y = Mathf.Sin(a) * dist;
+            float s = sz * (1f - t * 0.6f);
+            particle.style.width = s;
+            particle.style.height = s;
+            SetAllRadius(particle, s / 2);
+            particle.style.translate = new UIE.StyleTranslate(
+                new UIE.Translate(x - s / 2, y - s / 2));
+            particle.style.opacity = 1f - t * t;
+            yield return null;
+        }
+        particle.RemoveFromHierarchy();
     }
 
     IEnumerator ShowLoveStory(ParentData father, ParentData mother, int fIdx, int mIdx)
@@ -6656,6 +6912,7 @@ public class BirthSystem : MonoBehaviour
             storyText.text = "";
             storyText.style.opacity = 0f;
             storyPanel.style.display = UIE.DisplayStyle.Flex;
+            if (storyLoveBtnRow != null) storyLoveBtnRow.style.display = UIE.DisplayStyle.Flex;
 
             // スキップボタン（テキスト全表示のみ、ページ送りはしない）
             var skipBtn = CreateSkipButton(storyPanel);
@@ -6701,6 +6958,7 @@ public class BirthSystem : MonoBehaviour
             }
 
             storyPanel.style.display = UIE.DisplayStyle.None;
+            if (storyLoveBtnRow != null) storyLoveBtnRow.style.display = UIE.DisplayStyle.None;
 
             // Canvas背景を復元
             if (mainBgImg != null) mainBgImg.gameObject.SetActive(true);
@@ -7444,12 +7702,12 @@ public class BirthSystem : MonoBehaviour
     {
         if (synthBabyImageEl == null) yield break;
 
-        // SE再生（タップ音を高ピッチで「ぷに」感）
-        if (seSource != null && seCardFlip != null)
+        // SE再生（タップ音を高ピッチで「ぷに」感）— 専用AudioSourceで再生しピッチ干渉を防ぐ
+        if (seBabySource != null && seCardFlip != null)
         {
-            seSource.pitch = 1.4f;
-            seSource.PlayOneShot(seCardFlip, 0.4f);
-            seSource.pitch = 1f;
+            seBabySource.pitch = 1.4f;
+            seBabySource.PlayOneShot(seCardFlip, 0.4f);
+            StartCoroutine(ResetBabySourcePitch(0.3f));
         }
 
         float translateDir = isLeft ? 8f : -8f;
@@ -7510,6 +7768,12 @@ public class BirthSystem : MonoBehaviour
         synthBabyImageEl.style.translate = new UIE.StyleTranslate(
             new UIE.Translate(0, 0));
         puniSquishCoroutine = null;
+    }
+
+    IEnumerator ResetBabySourcePitch(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (seBabySource != null) seBabySource.pitch = 1f;
     }
 
     /// <summary>

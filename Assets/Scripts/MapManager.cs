@@ -53,6 +53,10 @@ public class MapManager : MonoBehaviour
     const int TILE_SHOP_WALL = 28;
     const int TILE_JUKU_FLOOR = 29;
     const int TILE_JUKU_WALL = 30;
+    const int TILE_CHAMPAGNE = 31; // 儀式の回廊用シャンパン柵
+    const int TILE_CRYSTAL = 32;     // ステラ・オリジン: クリスタルの床
+    const int TILE_CRYSTAL_WALL = 33; // ステラ・オリジン: 宇宙の壁（通行不可）
+    // TILE 34, 35: 廃止（光の川・音叉ワープ）
 
     // マップデータ
     int[,] mapData;
@@ -66,6 +70,12 @@ public class MapManager : MonoBehaviour
     float moveSpeed = 8f;
     bool isMoving = false;
     Vector2 targetPosition;
+
+    // かぐやフォロワー（相思相愛後、後ろについてくる）
+    GameObject kaguyaFollowerObj;
+    RectTransform kaguyaFollowerRect;
+    Vector2 kaguyaFollowerTarget;
+    bool kaguyaFollowerMoving = false;
 
     // はいはいアニメーション
     RectTransform crawlHandL, crawlHandR;
@@ -87,7 +97,8 @@ public class MapManager : MonoBehaviour
     Texture2D lawnTex, dirtRoadTex, dirtBgTex, lakeBgTex, poisonLakeTex, poisonFenceTex, poisonRoadTex;
     Texture2D nobilityTileTex;
     Texture2D leftWallTex, rightWallTex, cornerWallTex;
-    Sprite poisonLakeSprite, poisonFenceSprite, poisonRoadSprite;
+    Sprite poisonLakeSprite, poisonFenceSprite, poisonRoadSprite, poisonFeltSprite, champagneSprite, toyShopBgSprite, toyShopDeskSprite, toyShopCaseSprite, toyShopBallSprite;
+    Sprite thirdBgSprite, thirdRoadSprite, thirdLakeSprite, thirdFenceSprite, thirdWoodtowerSprite, thirdPoolSprite, thirdWaterfallSprite;
 
     // UI Toolkit（area==0 DQタイル描画用）
     UIE.UIDocument villageUIDoc;
@@ -110,7 +121,7 @@ public class MapManager : MonoBehaviour
     GameObject goldenEggObj;
     const int GOLDEN_EGG_X = 9;
     const int GOLDEN_EGG_Y = 14;
-    const int GOLDEN_EGG_X_AREA3 = 4;
+    const int GOLDEN_EGG_X_AREA3 = 2;
     const int GOLDEN_EGG_Y_AREA3 = 31;
 
     // ミルクポイント（回復）
@@ -119,11 +130,34 @@ public class MapManager : MonoBehaviour
     int milkPointY = 10;
     bool milkCutinActive = false;
 
+    // 黄金の滝（Area 3）
+    GameObject waterfallObj;
+    TMPro.TextMeshProUGUI[] waterfallStars;
+    int waterfallX = 10, waterfallY = 24;
+    float waterfallMilkTimer;
+    int waterfallMilkGained;
+    TMPro.TextMeshProUGUI waterfallMilkText;
+
+    // 金の卵の老人NPC（Area 3）
+    GameObject goldenEggOldManObj;
+    TMPro.TextMeshProUGUI[] oldManStars;
+    int goldenEggOldManX = 8, goldenEggOldManY = 30;
+    bool goldenEggOldManDialogueActive = false;
+
+    // かぐやちゃんNPC（全エリア）
+    GameObject kaguyaNpcObj;
+    int kaguyaNpcX, kaguyaNpcY;
+    bool kaguyaDialogueActive = false;
+    TMPro.TextMeshProUGUI[] kaguyaHearts;
+    TMPro.TextMeshProUGUI[] poolBubbles;
+
     // 門番（長老）NPC
     GameObject elderNpcObj;
     int elderNpcX = 6;
     int elderNpcY = 10;
     bool elderDialogueActive = false;
+    bool elderDialogueCooldown = false; // 連続発動防止
+    float elderBossBlockCooldown = 0f; // ボスブロック連続発動防止（秒数）
 
     // 実家（母親）NPC
     GameObject motherNpcObj;
@@ -164,6 +198,69 @@ public class MapManager : MonoBehaviour
     int[] jukuStudentX = { 3, 7, 3, 7, 9 };
     int[] jukuStudentY = { 5, 5, 8, 8, 5 };
     bool jukuStudentDialogueActive = false;
+
+    // ステラ・オリジン（Area 8）
+    Image stellaPlayerGlow;       // 中間層（紫）
+    Image stellaPlayerAuraOuter;   // 外周（青白）
+    Image stellaPlayerAuraInner;   // 内周（白）
+    RectTransform stellaBgRect; // 背景回転用
+    // 浮遊タイル: 座標→(obj, img, targetAlpha, currentAlpha, baseY, phase, speed, tileX, tileY)
+    Dictionary<(int, int), StellaFloatingTile> stellaTileMap = new Dictionary<(int, int), StellaFloatingTile>();
+    class StellaFloatingTile
+    {
+        public RectTransform rt;
+        public Image img;
+        public float maxAlpha;     // タイル種別で決まる最大不透明度
+        public float currentAlpha; // 現在のアルファ値
+        public float goalAlpha;    // 補間先のアルファ値
+        public float baseY;
+        public float phase;
+        public float speed;
+        public int tileX, tileY;
+        public bool discovered;    // 一度でも3マス以内に入ったか
+        public bool visited;       // 一度でもプレイヤーが乗ったか
+    }
+    List<(RectTransform rt, float speed, float phase, float baseAlpha)> stellaPhotons = new List<(RectTransform, float, float, float)>(); // 光子パーティクル
+    // Aura波紋システム
+    Sprite stellaAuraSprite;
+    Material stellaAdditiveMat; // 加算合成マテリアル
+    class StellaAuraRipple
+    {
+        public RectTransform rt;
+        public Image img;
+        public float elapsed;
+        public float duration;
+        public Color tintColor;
+    }
+    List<StellaAuraRipple> stellaAuraRipples = new List<StellaAuraRipple>();
+    float stellaCrystalPulseTime;
+    List<(RectTransform rt, float speed, float phase)> stellaStarParticles = new List<(RectTransform, float, float)>();
+    // ガーディアンNPC
+    GameObject stellaGuardianDevilObj;
+    int stellaGuardianDevilX = 3, stellaGuardianDevilY = 19;
+    GameObject stellaGuardianMelodiasObj;
+    int stellaGuardianMelodiasX = 21, stellaGuardianMelodiasY = 19;
+    bool stellaGuardianDialogueActive = false;
+    // 光のゆりかご
+    GameObject stellaCradleObj;
+    int stellaCradleX = 12, stellaCradleY = 34;
+    bool stellaCradleActive = false;
+    // 宇宙の門
+    GameObject stellaCosmicGateObj;
+    int stellaCosmicGateX = 12, stellaCosmicGateY = 37;
+    List<(RectTransform rt, float phase)> stellaGateParticles = new List<(RectTransform, float)>();
+    bool stellaGateOpened = false; // ゲート開放済み（walkable化済み）
+    bool stellaGateOpenAnimPlaying = false;
+    // 音叉ワープ（行き: 左下/右下→ボス広場、帰り: ボス広場→中央）
+    (int x, int y) stellaForkA = (8, 5);   // 左下の音叉 → 西ボス広場(4,19)
+    (int x, int y) stellaForkADest = (4, 19);
+    (int x, int y) stellaForkB = (15, 5);  // 右下の音叉 → 東ボス広場(21,19)
+    (int x, int y) stellaForkBDest = (21, 19);
+    (int x, int y) stellaForkReturnW = (4, 20); // 西ボス広場の帰還音叉 → 中央(12,19)
+    (int x, int y) stellaForkReturnE = (21, 20); // 東ボス広場の帰還音叉 → 中央(12,19)
+    (int x, int y) stellaForkReturnDest = (12, 19); // 帰還先: 中央交差点
+    List<(RectTransform rt, Image img, float baseY, float phase)> stellaForkVisuals
+        = new List<(RectTransform, Image, float, float)>();
 
     // SE
     AudioSource seSource;
@@ -220,6 +317,10 @@ public class MapManager : MonoBehaviour
             mapHeight = 40;
         else if (area == 3)
         {
+            mapHeight = 40;
+        }
+        else if (area == 8)
+        {
             mapWidth = 24;
             mapHeight = 40;
         }
@@ -247,6 +348,12 @@ public class MapManager : MonoBehaviour
             // 旧マップの保存座標が新マップ外にならないようバウンドチェック
             if (playerTileX < 1 || playerTileX >= mapWidth - 1) playerTileX = mapWidth / 2;
             if (playerTileY < 1 || playerTileY >= mapHeight - 1) playerTileY = mapHeight / 4;
+            // ステラ・オリジン: 初回は中央交差点からスタート
+            if (area == 8 && DataCarrier.Instance.stellaOriginProgress == 0)
+            {
+                playerTileX = 12;
+                playerTileY = 19;
+            }
         }
 
         LoadTileset();
@@ -261,7 +368,9 @@ public class MapManager : MonoBehaviour
         if (area == 5)
             parentsInBed = Random.Range(0, 10) == 0;
 
-        if (area == 7)
+        if (area == 8)
+            GenerateStellaOriginMapData();
+        else if (area == 7)
             GenerateJukuMapData();
         else if (area == 6)
             GenerateWeaponShopMapData();
@@ -282,7 +391,15 @@ public class MapManager : MonoBehaviour
         CreatePlayer();
         UpdateCameraFollow();
 
-        if (area == 7)
+        if (area == 8)
+        {
+            CreateStellaOriginEffects();
+            CreateStellaTuningForks();
+            CreateStellaGuardianNPCs();
+            CreateStellaCradle();
+            CreateStellaCosmicGate();
+        }
+        else if (area == 7)
         {
             // 塾内部: ランダムエンカウントなし
             CreateJukuTeacherNPC();
@@ -332,10 +449,12 @@ public class MapManager : MonoBehaviour
         }
         else if (area == 3)
         {
-            milkPointX = 6;
+            milkPointX = 3;
             milkPointY = 18;
             CreateMilkPoint();
             CreateGoldenEgg();
+            CreateWaterfallOverlay();
+            CreateGoldenEggOldMan();
         }
         else if (area == 2)
         {
@@ -364,6 +483,9 @@ public class MapManager : MonoBehaviour
             fatherNpcY = 32;
         }
 
+        // かぐやちゃんNPC（全エリア共通）
+        CreateKaguyaNPC();
+
         // UI Toolkit overlay layer (above Canvas, separate GameObject to avoid UIDocument conflict)
         overlayPanelSettings = UIHelper.CreatePanelSettings(10f);
         var overlayObj = new GameObject("MapOverlayUI");
@@ -378,6 +500,7 @@ public class MapManager : MonoBehaviour
 
         CreateStatusUI();
         CreateMenuButton();
+        if (area == 8) CreateDebugResetButton();
 
         // 移動コントローラ初期化
         moveCtrl = new PlayerMovementController();
@@ -393,9 +516,24 @@ public class MapManager : MonoBehaviour
         // シンボルエンカウント生成
         SpawnEnemySymbols(area);
 
-        // プレイヤーを最前面に
+        // レイヤー順: 背景 < タイル < プレイヤー/アイテム < エフェクト
         if (playerObj != null)
-            playerObj.transform.SetAsLastSibling();
+        {
+            if (area == 8)
+            {
+                // Area 8: エフェクト（光子・波紋）をプレイヤーの上に配置
+                // まずプレイヤーを最前面にして、その後エフェクト系を上に移動
+                playerObj.transform.SetAsLastSibling();
+                // 光子パーティクルをプレイヤーの上に
+                foreach (var (phRt, _, _, _) in stellaPhotons)
+                    if (phRt != null) phRt.transform.SetAsLastSibling();
+                // 足元波紋削除済み
+            }
+            else
+            {
+                playerObj.transform.SetAsLastSibling();
+            }
+        }
 
         // ボス撃破後のワイプイン演出 + 初回到着時の案内
         bool firstVillitVisit = area == 0
@@ -427,8 +565,43 @@ public class MapManager : MonoBehaviour
     void PlayBGM(int area)
     {
         string clipPath = null;
-        if (area == 0 || area == 5 || area == 6)
+        if (area == 8)
+            clipPath = "BGM/stella_origin";
+        else if (area == 0 || area == 5 || area == 6)
             clipPath = "BGM/mura1";
+
+        if (area == 8)
+        {
+            // ステラ・オリジン専用BGM、なければArea3 BGMを宇宙アレンジ
+            var stellaClip = Resources.Load<AudioClip>("BGM/stella_origin");
+            if (stellaClip != null)
+            {
+                var src = gameObject.AddComponent<AudioSource>();
+                src.clip = stellaClip;
+                src.loop = true;
+                src.volume = 0.5f;
+                src.Play();
+            }
+            else
+            {
+                // フォールバック: Area 3 BGM を Pitch 0.5 + リバーブ風
+                var fallbackClip = Resources.Load<AudioClip>("BGM/mura1");
+                if (fallbackClip != null)
+                {
+                    var src = gameObject.AddComponent<AudioSource>();
+                    src.clip = fallbackClip;
+                    src.loop = true;
+                    src.volume = 0.35f;
+                    src.pitch = 0.5f;
+                    src.Play();
+                    // リバーブ追加
+                    var reverb = gameObject.AddComponent<AudioReverbFilter>();
+                    reverb.reverbPreset = AudioReverbPreset.Cave;
+                    reverb.reverbLevel = 800f;
+                }
+            }
+            return;
+        }
 
         if (clipPath == null) return;
 
@@ -455,13 +628,57 @@ public class MapManager : MonoBehaviour
         // ゴージャス・ヴィレッジ用テクスチャ（area==1）
         poisonLakeTex = Resources.Load<Texture2D>("Map/Poison_Lake");
         poisonFenceTex = Resources.Load<Texture2D>("Map/Poison_Fence");
-        poisonRoadTex = Resources.Load<Texture2D>("Map/Poison_Road");
         if (poisonLakeTex != null)
             poisonLakeSprite = Sprite.Create(poisonLakeTex, new Rect(0, 0, poisonLakeTex.width, poisonLakeTex.height), new Vector2(0.5f, 0.5f));
         if (poisonFenceTex != null)
             poisonFenceSprite = Sprite.Create(poisonFenceTex, new Rect(0, 0, poisonFenceTex.width, poisonFenceTex.height), new Vector2(0.5f, 0.5f));
+        poisonRoadTex = Resources.Load<Texture2D>("Map/Poison_Road");
         if (poisonRoadTex != null)
             poisonRoadSprite = Sprite.Create(poisonRoadTex, new Rect(0, 0, poisonRoadTex.width, poisonRoadTex.height), new Vector2(0.5f, 0.5f));
+        var poisonFeltTex = Resources.Load<Texture2D>("Map/Poison_Felt");
+        if (poisonFeltTex != null)
+            poisonFeltSprite = Sprite.Create(poisonFeltTex, new Rect(0, 0, poisonFeltTex.width, poisonFeltTex.height), new Vector2(0.5f, 0.5f));
+        var champagneTex = Resources.Load<Texture2D>("Map/champagne");
+        if (champagneTex != null)
+            champagneSprite = Sprite.Create(champagneTex, new Rect(0, 0, champagneTex.width, champagneTex.height), new Vector2(0.5f, 0.5f));
+        var toyShopBgTex = Resources.Load<Texture2D>("Map/Toy_Shop_Background");
+        if (toyShopBgTex != null)
+            toyShopBgSprite = Sprite.Create(toyShopBgTex, new Rect(0, 0, toyShopBgTex.width, toyShopBgTex.height), new Vector2(0.5f, 0.5f));
+        var toyShopDeskTex = Resources.Load<Texture2D>("Map/Toy_Shop_Desk");
+        if (toyShopDeskTex != null)
+            toyShopDeskSprite = Sprite.Create(toyShopDeskTex, new Rect(0, 0, toyShopDeskTex.width, toyShopDeskTex.height), new Vector2(0.5f, 0.5f));
+        var toyShopCaseTex = Resources.Load<Texture2D>("Map/Toy_Shop _Case");
+        if (toyShopCaseTex != null)
+            toyShopCaseSprite = Sprite.Create(toyShopCaseTex, new Rect(0, 0, toyShopCaseTex.width, toyShopCaseTex.height), new Vector2(0.5f, 0.5f));
+        var toyShopBallTex = Resources.Load<Texture2D>("Map/Toy_Shop_Ball");
+        if (toyShopBallTex != null)
+            toyShopBallSprite = Sprite.Create(toyShopBallTex, new Rect(0, 0, toyShopBallTex.width, toyShopBallTex.height), new Vector2(0.5f, 0.5f));
+        var toyShopWallTex = Resources.Load<Texture2D>("Map/Toy_Shop_Wall");
+        if (toyShopWallTex != null)
+            toyShopBallSprite = Sprite.Create(toyShopWallTex, new Rect(0, 0, toyShopWallTex.width, toyShopWallTex.height), new Vector2(0.5f, 0.5f));
+
+        // 小悪魔の街（Area 3）用スプライト
+        var thirdBgTex = Resources.Load<Texture2D>("Map/3rd/background");
+        if (thirdBgTex != null)
+            thirdBgSprite = Sprite.Create(thirdBgTex, new Rect(0, 0, thirdBgTex.width, thirdBgTex.height), new Vector2(0.5f, 0.5f));
+        var thirdRoadTex = Resources.Load<Texture2D>("Map/3rd/road");
+        if (thirdRoadTex != null)
+            thirdRoadSprite = Sprite.Create(thirdRoadTex, new Rect(0, 0, thirdRoadTex.width, thirdRoadTex.height), new Vector2(0.5f, 0.5f));
+        var thirdLakeTex = Resources.Load<Texture2D>("Map/3rd/lake");
+        if (thirdLakeTex != null)
+            thirdLakeSprite = Sprite.Create(thirdLakeTex, new Rect(0, 0, thirdLakeTex.width, thirdLakeTex.height), new Vector2(0.5f, 0.5f));
+        var thirdFenceTex = Resources.Load<Texture2D>("Map/3rd/fence");
+        if (thirdFenceTex != null)
+            thirdFenceSprite = Sprite.Create(thirdFenceTex, new Rect(0, 0, thirdFenceTex.width, thirdFenceTex.height), new Vector2(0.5f, 0.5f));
+        var thirdWoodtowerTex = Resources.Load<Texture2D>("Map/3rd/woodtower");
+        if (thirdWoodtowerTex != null)
+            thirdWoodtowerSprite = Sprite.Create(thirdWoodtowerTex, new Rect(0, 0, thirdWoodtowerTex.width, thirdWoodtowerTex.height), new Vector2(0.5f, 0.5f));
+        var thirdPoolTex = Resources.Load<Texture2D>("Map/3rd/pool");
+        if (thirdPoolTex != null)
+            thirdPoolSprite = Sprite.Create(thirdPoolTex, new Rect(0, 0, thirdPoolTex.width, thirdPoolTex.height), new Vector2(0.5f, 0.5f));
+        var thirdWaterfallTex = Resources.Load<Texture2D>("Map/3rd/waterfall");
+        if (thirdWaterfallTex != null)
+            thirdWaterfallSprite = Sprite.Create(thirdWaterfallTex, new Rect(0, 0, thirdWaterfallTex.width, thirdWaterfallTex.height), new Vector2(0.5f, 0.5f));
 
         // 実家のタイル
         nobilityTileTex = Resources.Load<Texture2D>("Map/Nobility_Tile");
@@ -605,9 +822,12 @@ public class MapManager : MonoBehaviour
                 ApplyDQDirtStyle(tile, false);
                 break;
             case TILE_DARK_DIRT:
-            case TILE_BOSS_MANSION:
             case TILE_BOSS_GATE:
                 ApplyDQDirtStyle(tile, true);
+                break;
+            case TILE_BOSS_MANSION:
+            case TILE_WEAPON_SHOP:
+                ApplyDQGrassStyle(tile);
                 break;
             case TILE_FATHER_FLOOR:
                 if (nobilityTileTex != null)
@@ -1012,136 +1232,447 @@ public class MapManager : MonoBehaviour
         mapData = new int[mapWidth, mapHeight];
         walkable = new bool[mapWidth, mapHeight];
 
-        // 基本は草で埋める
+        // =============================================
+        // Step 1: 全タイルを毒草壁（非歩行）で初期化
+        // =============================================
         for (int x = 0; x < mapWidth; x++)
-        {
             for (int y = 0; y < mapHeight; y++)
             {
                 mapData[x, y] = TILE_GRASS;
-                walkable[x, y] = true;
+                walkable[x, y] = false;
             }
-        }
 
         // === 外周 ===
-        // 上下（正面向き柵）
         for (int x = 0; x < mapWidth; x++)
         {
-            mapData[x, 0] = TILE_FENCE;
-            walkable[x, 0] = false;
-            mapData[x, mapHeight - 1] = TILE_FENCE;
-            walkable[x, mapHeight - 1] = false;
+            mapData[x, 0] = TILE_FENCE; walkable[x, 0] = false;
+            mapData[x, mapHeight - 1] = TILE_FENCE; walkable[x, mapHeight - 1] = false;
         }
-        // 左右（芝で塞ぐ — 柵画像が横向きに合わないため）
         for (int y = 0; y < mapHeight; y++)
         {
-            mapData[0, y] = TILE_GRASS;
-            walkable[0, y] = false;
-            mapData[mapWidth - 1, y] = TILE_GRASS;
-            walkable[mapWidth - 1, y] = false;
+            mapData[0, y] = TILE_GRASS; walkable[0, y] = false;
+            mapData[mapWidth - 1, y] = TILE_GRASS; walkable[mapWidth - 1, y] = false;
         }
+        mapData[0, 0] = TILE_FENCE; mapData[mapWidth - 1, 0] = TILE_FENCE;
+        mapData[0, mapHeight - 1] = TILE_FENCE; mapData[mapWidth - 1, mapHeight - 1] = TILE_FENCE;
 
         // === エリア出口（南端） ===
         mapData[5, 0] = TILE_AREA_EXIT;
         walkable[5, 0] = true;
 
-        // ============================================================
-        // 南エリア（y=0〜13）— ゴージャス・ヴィレッジの中心
-        // ============================================================
+        // =============================================
+        // Step 2: Perlinノイズで蛇行するメインパス (y=1〜32)
+        // =============================================
+        float perlinSeed = 42.5f;
+        int[] pathCenterX = new int[mapHeight]; // 各yでのパス中心xを記録
 
-        // === 暗い土の道（メインストリート + 縦パス） ===
-        // 横メインストリート y=9, y=10 (x=1〜x=10)
-        for (int x = 1; x <= 10; x++)
+        int prevCX = 5; // 出口のx位置から開始
+        for (int y = 1; y <= 32; y++)
         {
-            mapData[x, 9] = TILE_DARK_DIRT;
-            mapData[x, 10] = TILE_DARK_DIRT;
-        }
-
-        // 縦メインパス x=5 (y=1〜y=35 — 南端からボス手前まで)
-        for (int y = 1; y <= 35; y++)
-        {
-            mapData[5, y] = TILE_DARK_DIRT;
-        }
-
-        // === 溶岩池1（x=4〜6, y=2〜3） ===
-        for (int x = 4; x <= 6; x++)
-        {
-            for (int y = 2; y <= 3; y++)
+            // 溶岩川ゾーン(y=17〜21)はスキップ（後で橋を通す）
+            if (y >= 17 && y <= 21)
             {
-                mapData[x, y] = TILE_WATER;
-                walkable[x, y] = false;
+                pathCenterX[y] = prevCX;
+                continue;
+            }
+
+            float noise = Mathf.PerlinNoise(perlinSeed, y * 0.15f);
+            float offset = (noise - 0.5f) * 7.0f;
+            int cx = Mathf.RoundToInt(5 + offset);
+            cx = Mathf.Clamp(cx, 2, mapWidth - 3);
+
+            // 3タイル幅の道を掘る
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                int px = cx + dx;
+                if (px >= 1 && px <= mapWidth - 2)
+                {
+                    mapData[px, y] = TILE_DARK_DIRT;
+                    walkable[px, y] = true;
+                }
+            }
+
+            // 前行との段差が大きい場合、横に繋ぎを入れて接続を保証
+            if (y > 1 && y != 22) // y=22は橋接続で別途処理
+            {
+                int bridgeMin = Mathf.Min(cx, prevCX) - 1;
+                int bridgeMax = Mathf.Max(cx, prevCX) + 1;
+                for (int bx = bridgeMin; bx <= bridgeMax; bx++)
+                {
+                    if (bx >= 1 && bx <= mapWidth - 2 && !walkable[bx, y])
+                    {
+                        mapData[bx, y] = TILE_DARK_DIRT;
+                        walkable[bx, y] = true;
+                    }
+                }
+            }
+
+            pathCenterX[y] = cx;
+            prevCX = cx;
+        }
+
+        // =============================================
+        // Step 3: 溶岩の川 (y=17〜21) + 橋
+        // =============================================
+        // 橋の位置: y=16のパス中心に合わせる
+        int bridgeCX = pathCenterX[16];
+        if (bridgeCX < 3) bridgeCX = 3;
+        if (bridgeCX > mapWidth - 4) bridgeCX = mapWidth - 4;
+
+        // 溶岩川をPerlinで不規則に配置
+        for (int y = 17; y <= 21; y++)
+        {
+            for (int x = 1; x <= mapWidth - 2; x++)
+            {
+                float riverNoise = Mathf.PerlinNoise(x * 0.3f + 10f, y * 0.3f + 10f);
+                int distFromCenter = Mathf.Abs(y - 19);
+                float threshold = 0.4f + distFromCenter * 0.12f;
+
+                bool isRiver = riverNoise < threshold;
+                bool isBridge = (x >= bridgeCX - 1 && x <= bridgeCX + 1);
+
+                if (isRiver && !isBridge)
+                {
+                    mapData[x, y] = TILE_WATER;
+                    walkable[x, y] = false;
+                }
             }
         }
 
-        // === 溶岩池2（x=2〜3, y=18） ===
-        mapData[2, 18] = TILE_WATER;
-        walkable[2, 18] = false;
-        mapData[3, 18] = TILE_WATER;
-        walkable[3, 18] = false;
-
-        // === 溶岩池3（x=7〜9, y=30） ===
-        mapData[7, 30] = TILE_WATER;
-        walkable[7, 30] = false;
-        mapData[8, 30] = TILE_WATER;
-        walkable[8, 30] = false;
-        mapData[9, 30] = TILE_WATER;
-        walkable[9, 30] = false;
-
-        // ============================================================
-        // 北エリア（y=33〜38）— ボスの館
-        // ============================================================
-
-        // ボス接続パス y=35 (x=5〜7)
-        for (int x = 5; x <= 7; x++)
+        // 橋を掘る (TILE_DARK_DIRT, 3タイル幅)
+        for (int y = 17; y <= 21; y++)
         {
-            mapData[x, 35] = TILE_DARK_DIRT;
+            for (int bx = bridgeCX - 1; bx <= bridgeCX + 1; bx++)
+            {
+                if (bx >= 1 && bx <= mapWidth - 2)
+                {
+                    mapData[bx, y] = TILE_DARK_DIRT;
+                    walkable[bx, y] = true;
+                }
+            }
         }
 
-        // 暗い土 (x=6〜10, y=38), (x=6, y=36), (x=10, y=36)
-        for (int x = 6; x <= 10; x++)
+        // 橋の前後を道に接続 (y=16, y=22)
+        for (int bx = bridgeCX - 1; bx <= bridgeCX + 1; bx++)
         {
-            mapData[x, 38] = TILE_DARK_DIRT;
+            if (bx >= 1 && bx <= mapWidth - 2)
+            {
+                if (mapData[bx, 16] == TILE_GRASS) { mapData[bx, 16] = TILE_DARK_DIRT; walkable[bx, 16] = true; }
+                if (mapData[bx, 22] == TILE_GRASS) { mapData[bx, 22] = TILE_DARK_DIRT; walkable[bx, 22] = true; }
+            }
         }
-        mapData[6, 36] = TILE_DARK_DIRT;
-        mapData[10, 36] = TILE_DARK_DIRT;
+        // y=16とy=22のパス中心も橋と繋げる
+        int cx16 = pathCenterX[16];
+        int cx22 = pathCenterX[22];
+        for (int x = Mathf.Min(cx16, bridgeCX) - 1; x <= Mathf.Max(cx16, bridgeCX) + 1; x++)
+            if (x >= 1 && x <= mapWidth - 2) { mapData[x, 16] = TILE_DARK_DIRT; walkable[x, 16] = true; }
+        for (int x = Mathf.Min(cx22, bridgeCX) - 1; x <= Mathf.Max(cx22, bridgeCX) + 1; x++)
+            if (x >= 1 && x <= mapWidth - 2) { mapData[x, 22] = TILE_DARK_DIRT; walkable[x, 22] = true; }
 
-        // 館本体 3x2 (x=7〜9, y=36〜37)
-        for (int x = 7; x <= 9; x++)
-        {
-            for (int y = 36; y <= 37; y++)
+        // =============================================
+        // Step 4: 儀式の回廊 — L字アプローチ + ボスの館
+        // =============================================
+        // 館本体 3x2 (x=8〜10, y=37〜38) — 右上隅
+        for (int x = 8; x <= 10; x++)
+            for (int y = 37; y <= 38; y++)
             {
                 mapData[x, y] = TILE_BOSS_MANSION;
                 walkable[x, y] = false;
             }
+
+        // ボスの門 (9, 36) — 館の直下中央
+        mapData[9, 36] = TILE_BOSS_GATE;
+        walkable[9, 36] = false;
+
+        // L字パス: y=32のパス中心から北上 → y=36で東に折れて門へ
+        int approachX = pathCenterX[32];
+        approachX = Mathf.Clamp(approachX, 3, 7);
+
+        // 縦セグメント: (approachX, y=33〜36) を掘る
+        for (int y = 33; y <= 36; y++)
+        {
+            mapData[approachX, y] = TILE_DARK_DIRT;
+            walkable[approachX, y] = true;
+        }
+        // y=32からの接続も保証
+        {
+            int cx32 = pathCenterX[32];
+            for (int x = Mathf.Min(cx32, approachX); x <= Mathf.Max(cx32, approachX); x++)
+                if (x >= 1 && x <= mapWidth - 2)
+                {
+                    if (mapData[x, 32] == TILE_GRASS) { mapData[x, 32] = TILE_DARK_DIRT; walkable[x, 32] = true; }
+                }
         }
 
-        // 柵（館の左右 y=37）
-        mapData[6, 37] = TILE_FENCE;
-        walkable[6, 37] = false;
-        mapData[10, 37] = TILE_FENCE;
-        walkable[10, 37] = false;
-
-        // ボスの門 (8, 35)
-        mapData[8, 35] = TILE_BOSS_GATE;
-        walkable[8, 35] = false;
-
-        // === 装備ショップ (2x2: x=2〜3, y=14〜15) ===
-        for (int sx = 2; sx <= 3; sx++)
+        // 横セグメント: (approachX〜8, y=36) を掘る（門x=9の手前まで）
+        for (int x = approachX; x <= 8; x++)
         {
-            for (int sy = 14; sy <= 15; sy++)
+            mapData[x, 36] = TILE_DARK_DIRT;
+            walkable[x, 36] = true;
+        }
+
+        // シャンパン柵で両側を囲む（儀式的な警備感）
+        // 縦セグメントの左右にシャンパン柵
+        for (int y = 33; y <= 36; y++)
+        {
+            if (approachX - 1 >= 1 && mapData[approachX - 1, y] == TILE_GRASS)
+            {
+                mapData[approachX - 1, y] = TILE_CHAMPAGNE;
+                walkable[approachX - 1, y] = false;
+            }
+            // 横セグメントとの角を避ける
+            if (y < 36 && approachX + 1 <= mapWidth - 2 && mapData[approachX + 1, y] == TILE_GRASS)
+            {
+                mapData[approachX + 1, y] = TILE_CHAMPAGNE;
+                walkable[approachX + 1, y] = false;
+            }
+        }
+        // 横セグメントの上下にシャンパン柵
+        for (int x = approachX + 1; x <= 8; x++)
+        {
+            if (mapData[x, 37] == TILE_GRASS)
+            {
+                mapData[x, 37] = TILE_CHAMPAGNE;
+                walkable[x, 37] = false;
+            }
+            if (mapData[x, 35] == TILE_GRASS)
+            {
+                mapData[x, 35] = TILE_CHAMPAGNE;
+                walkable[x, 35] = false;
+            }
+        }
+
+        // =============================================
+        // Step 5: 武器屋 (x=2〜3, y=11〜12) + 枝道
+        // =============================================
+        for (int sx = 2; sx <= 3; sx++)
+            for (int sy = 11; sy <= 12; sy++)
             {
                 mapData[sx, sy] = TILE_WEAPON_SHOP;
                 walkable[sx, sy] = false;
             }
-        }
-        // ショップへの接続道
-        mapData[4, 14] = TILE_DARK_DIRT;
 
-        // プレイヤーの初期位置は必ず歩けるようにする
-        walkable[playerTileX, playerTileY] = true;
-        if (mapData[playerTileX, playerTileY] != TILE_DARK_DIRT && mapData[playerTileX, playerTileY] != TILE_GRASS)
+        // メインパスからショップ入口(x=4, y=11)への枝道
+        int shopConnectY = 11;
+        int mainAtShopY = pathCenterX[shopConnectY];
+        mapData[4, shopConnectY] = TILE_DARK_DIRT;
+        walkable[4, shopConnectY] = true;
+        for (int x = Mathf.Min(4, mainAtShopY - 1); x <= Mathf.Max(4, mainAtShopY + 1); x++)
         {
-            mapData[playerTileX, playerTileY] = TILE_DARK_DIRT;
+            if (x >= 1 && x <= mapWidth - 2 && mapData[x, shopConnectY] == TILE_GRASS)
+            {
+                mapData[x, shopConnectY] = TILE_DARK_DIRT;
+                walkable[x, shopConnectY] = true;
+            }
         }
+
+        // =============================================
+        // Step 6: 歩行可能な草地広場（エンカウント用）
+        // =============================================
+        int[,] clearings = new int[,] {
+            { 8, 4 },   // 南東（ミルクポイント9,4を含む）
+            { 3, 6 },   // 南西
+            { 8, 14 },  // 中央東
+            { 3, 25 },  // 北西
+            { 8, 28 },  // 北東
+            { 3, 31 },  // 北端西
+        };
+
+        for (int i = 0; i < clearings.GetLength(0); i++)
+        {
+            int ccx = clearings[i, 0];
+            int ccy = clearings[i, 1];
+
+            // 3x2 の歩行可能な草地を配置
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dy = 0; dy <= 1; dy++)
+                {
+                    int px = ccx + dx, py = ccy + dy;
+                    if (px >= 1 && px <= mapWidth - 2 && py >= 1 && py <= mapHeight - 2)
+                    {
+                        if (mapData[px, py] == TILE_GRASS)
+                            walkable[px, py] = true; // TILE_GRASSのまま歩行可能に
+                    }
+                }
+
+            // 広場からメインパスへ1タイル幅の接続道を掘る
+            DevilConnectToPath(ccx, ccy);
+        }
+
+        // ミルクポイント(9,4)を確実に歩行可能にする
+        if (mapData[9, 4] == TILE_GRASS) walkable[9, 4] = true;
+
+        // =============================================
+        // Step 7: 隠し通路（2〜3箇所）
+        // =============================================
+        // 隠し通路1: y=6付近、パスの東側にショートカット
+        int hp1cx = pathCenterX[6];
+        if (hp1cx + 3 <= mapWidth - 2 && mapData[hp1cx + 3, 6] == TILE_GRASS)
+        {
+            walkable[hp1cx + 3, 6] = true;
+            walkable[hp1cx + 3, 7] = true;
+        }
+
+        // 隠し通路2: y=26付近、パスの西側にショートカット
+        int hp2cx = pathCenterX[26];
+        if (hp2cx - 3 >= 1 && mapData[hp2cx - 3, 26] == TILE_GRASS)
+        {
+            walkable[hp2cx - 3, 26] = true;
+            walkable[hp2cx - 3, 27] = true;
+        }
+
+        // 隠し通路3: 溶岩川の東側、危険な裏道 (橋から離れた位置)
+        int hp3x = bridgeCX + 4;
+        if (hp3x <= mapWidth - 2)
+        {
+            for (int y = 17; y <= 21; y++)
+            {
+                if (mapData[hp3x, y] == TILE_GRASS)
+                    walkable[hp3x, y] = true;
+            }
+        }
+
+        // =============================================
+        // Step 8: 接続性検証（BFS）
+        // =============================================
+        DevilVerifyConnectivity();
+
+        // =============================================
+        // Step 9: プレイヤー初期位置の安全確保
+        // =============================================
+        walkable[playerTileX, playerTileY] = true;
+        if (mapData[playerTileX, playerTileY] != TILE_DARK_DIRT && mapData[playerTileX, playerTileY] != TILE_AREA_EXIT)
+            mapData[playerTileX, playerTileY] = TILE_DARK_DIRT;
+    }
+
+    // --- Devil Map ヘルパー ---
+
+    /// <summary>Area 3: 湖エリアに1枚絵のlake.pngオーバーレイを配置</summary>
+    void CreateLakeOverlay(int x1, int x2, int y1, int y2)
+    {
+        float cx = ((x1 + x2) / 2f - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float cy = ((y1 + y2) / 2f - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+        float w = (x2 - x1 + 1) * DISPLAY_TILE;
+        float h = (y2 - y1 + 1) * DISPLAY_TILE;
+
+        var lake = new GameObject("LakeOverlay");
+        lake.transform.SetParent(tilesContainer.transform, false);
+        var rect = lake.AddComponent<RectTransform>();
+        rect.anchoredPosition = new Vector2(cx, cy);
+        rect.sizeDelta = new Vector2(w, h);
+        var img = lake.AddComponent<Image>();
+        img.sprite = thirdLakeSprite;
+        img.type = Image.Type.Simple;
+        img.preserveAspect = false;
+        img.raycastTarget = false;
+    }
+
+    /// <summary>広場からメインパスへ横方向に接続道を掘る</summary>
+    void DevilConnectToPath(int fromX, int fromY)
+    {
+        // 右方向を探索
+        for (int dist = 1; dist < mapWidth; dist++)
+        {
+            int rx = fromX + dist;
+            if (rx > mapWidth - 2) break;
+            if (walkable[rx, fromY] && mapData[rx, fromY] == TILE_DARK_DIRT)
+            {
+                for (int x = fromX + 1; x < rx; x++)
+                    if (mapData[x, fromY] == TILE_GRASS)
+                    {
+                        mapData[x, fromY] = TILE_DARK_DIRT;
+                        walkable[x, fromY] = true;
+                    }
+                return;
+            }
+        }
+        // 左方向を探索
+        for (int dist = 1; dist < mapWidth; dist++)
+        {
+            int lx = fromX - dist;
+            if (lx < 1) break;
+            if (walkable[lx, fromY] && mapData[lx, fromY] == TILE_DARK_DIRT)
+            {
+                for (int x = lx + 1; x < fromX; x++)
+                    if (mapData[x, fromY] == TILE_GRASS)
+                    {
+                        mapData[x, fromY] = TILE_DARK_DIRT;
+                        walkable[x, fromY] = true;
+                    }
+                return;
+            }
+        }
+        // 同一yにパスが見つからない場合、上下1行ずらして再試行
+        if (fromY + 1 < mapHeight - 1)
+        {
+            for (int dist = 1; dist < mapWidth; dist++)
+            {
+                int rx = fromX + dist;
+                if (rx > mapWidth - 2) break;
+                if (walkable[rx, fromY + 1] && mapData[rx, fromY + 1] == TILE_DARK_DIRT)
+                {
+                    // まず縦に1タイル繋ぐ
+                    if (mapData[fromX, fromY + 1] == TILE_GRASS)
+                    {
+                        mapData[fromX, fromY + 1] = TILE_DARK_DIRT;
+                        walkable[fromX, fromY + 1] = true;
+                    }
+                    for (int x = fromX + 1; x < rx; x++)
+                        if (mapData[x, fromY + 1] == TILE_GRASS)
+                        {
+                            mapData[x, fromY + 1] = TILE_DARK_DIRT;
+                            walkable[x, fromY + 1] = true;
+                        }
+                    return;
+                }
+            }
+        }
+    }
+
+    /// <summary>出口からBFSで全歩行可能タイルの到達性を検証、孤立タイルは非歩行に戻す</summary>
+    void DevilVerifyConnectivity()
+    {
+        bool[,] visited = new bool[mapWidth, mapHeight];
+        var queue = new Queue<Vector2Int>();
+
+        // 出口付近（5,1）か、歩行可能な最初のタイルからBFS開始
+        int startX = 5, startY = 1;
+        if (!walkable[startX, startY])
+        {
+            // 出口付近で歩行可能タイルを探す
+            for (int y = 1; y <= 3 && !walkable[startX, startY]; y++)
+                for (int x = 4; x <= 6 && !walkable[startX, startY]; x++)
+                    if (walkable[x, y]) { startX = x; startY = y; }
+        }
+
+        if (!walkable[startX, startY]) return; // 安全弁
+
+        queue.Enqueue(new Vector2Int(startX, startY));
+        visited[startX, startY] = true;
+
+        int[] dx = { 0, 0, 1, -1 };
+        int[] dy = { 1, -1, 0, 0 };
+
+        while (queue.Count > 0)
+        {
+            var pos = queue.Dequeue();
+            for (int d = 0; d < 4; d++)
+            {
+                int nx = pos.x + dx[d], ny = pos.y + dy[d];
+                if (nx >= 0 && nx < mapWidth && ny >= 0 && ny < mapHeight
+                    && !visited[nx, ny] && walkable[nx, ny])
+                {
+                    visited[nx, ny] = true;
+                    queue.Enqueue(new Vector2Int(nx, ny));
+                }
+            }
+        }
+
+        // 到達できなかった歩行可能タイルは非歩行に戻す
+        for (int x = 0; x < mapWidth; x++)
+            for (int y = 0; y < mapHeight; y++)
+                if (walkable[x, y] && !visited[x, y])
+                    walkable[x, y] = false;
     }
 
     void GenerateFatherHouseMapData()
@@ -1424,13 +1955,9 @@ public class MapManager : MonoBehaviour
         walkable[2, 5] = false;
         walkable[3, 5] = false;
         walkable[4, 5] = false;
-        // 棚 (6, 8)
+        // 右奥の机 (6, 7)(6, 8)
+        walkable[6, 7] = false;
         walkable[6, 8] = false;
-        // 武器ラック (1, 7)(1, 8)
-        walkable[1, 7] = false;
-        walkable[1, 8] = false;
-        // 樽 (6, 6)
-        walkable[6, 6] = false;
     }
 
     void GenerateJukuMapData()
@@ -1560,26 +2087,29 @@ public class MapManager : MonoBehaviour
     {
         if (tilesContainer == null) return;
 
-        // カウンター (2〜4, 5) — 横3マス分
-        CreateFurnitureOverlay(3f, 5f, DISPLAY_TILE * 3f, DISPLAY_TILE * 0.8f,
-            new Color(0.35f, 0.2f, 0.45f));
+        // カウンター (2〜4, 5) — Toy_Shop_Case で配置
+        if (toyShopCaseSprite != null)
+        {
+            float posX = (3f - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+            float posY = (5f - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+            var caseObj = new GameObject("ToyShopCase");
+            caseObj.transform.SetParent(tilesContainer.transform, false);
+            var cRect = caseObj.AddComponent<RectTransform>();
+            cRect.anchoredPosition = new Vector2(posX, posY);
+            cRect.sizeDelta = new Vector2(DISPLAY_TILE * 4.5f, DISPLAY_TILE * 1.8f);
+            var cImg = caseObj.AddComponent<Image>();
+            cImg.sprite = toyShopCaseSprite;
+            cImg.preserveAspect = true;
+            cImg.raycastTarget = false;
+        }
+        else
+        {
+            CreateFurnitureOverlay(3f, 5f, DISPLAY_TILE * 3f, DISPLAY_TILE * 0.8f,
+                new Color(0.35f, 0.2f, 0.45f));
+        }
 
-        // 棚 (6, 8)
-        CreateFurnitureOverlay(6f, 8f, DISPLAY_TILE * 0.8f, DISPLAY_TILE * 0.9f,
-            new Color(0.3f, 0.15f, 0.4f));
-
-        // 武器ラック (1, 7-8) — 壁際に縦長の灰色ラック
-        CreateFurnitureOverlay(1f, 7.5f, DISPLAY_TILE * 0.8f, DISPLAY_TILE * 1.8f,
-            new Color(0.4f, 0.35f, 0.45f));
-        // 武器ラックのアイコン
-        CreateFurnitureLabel(1f, 7.5f, "\u2694", 22, new Color(0.8f, 0.7f, 1f));
-
-        // 樽 (6, 6) — 茶色の丸っぽいオブジェクト
-        CreateFurnitureOverlay(6f, 6f, DISPLAY_TILE * 0.7f, DISPLAY_TILE * 0.7f,
-            new Color(0.4f, 0.25f, 0.12f));
-
-        // ランタン — 壁の上部に配置
-        CreateFurnitureLabel(6f, 8f, "\U0001F3EE", 20, new Color(1f, 0.8f, 0.3f));
+        // Toy_Shop_Desk — 右奥に配置
+        CreateToyShopDeskOverlay(5.8f, 7.5f);
 
         // 出口マーク (3.5, 1) — ▽矢印
         CreateFurnitureLabel(3.5f, 1f, "▽ 出口", 18, new Color(0.8f, 0.7f, 1f));
@@ -1587,7 +2117,7 @@ public class MapManager : MonoBehaviour
 
     void GenerateImpTownMapData()
     {
-        // 24x40 の広大な小悪魔の街
+        // 12x40 の小悪魔の街（ステージ2と同サイズ）
         mapData = new int[mapWidth, mapHeight];
         walkable = new bool[mapWidth, mapHeight];
 
@@ -1601,7 +2131,7 @@ public class MapManager : MonoBehaviour
             }
         }
 
-        // === 外周（木の壁） ===
+        // === 外周（上下の柵のみ） ===
         for (int x = 0; x < mapWidth; x++)
         {
             mapData[x, 0] = TILE_TREE;
@@ -1609,109 +2139,71 @@ public class MapManager : MonoBehaviour
             mapData[x, mapHeight - 1] = TILE_TREE;
             walkable[x, mapHeight - 1] = false;
         }
-        for (int y = 0; y < mapHeight; y++)
+        // 左右は壁なし（草のまま通行不可）
+        for (int y = 1; y < mapHeight - 1; y++)
         {
-            mapData[0, y] = TILE_TREE;
             walkable[0, y] = false;
-            mapData[mapWidth - 1, y] = TILE_TREE;
             walkable[mapWidth - 1, y] = false;
         }
 
         // === エリア出口（南端） ===
-        mapData[11, 0] = TILE_AREA_EXIT;
-        walkable[11, 0] = true;
-        mapData[12, 0] = TILE_AREA_EXIT;
-        walkable[12, 0] = true;
+        mapData[5, 0] = TILE_AREA_EXIT;
+        walkable[5, 0] = true;
+        mapData[6, 0] = TILE_AREA_EXIT;
+        walkable[6, 0] = true;
 
-        // === メイン街道（曲がりくねった長い道） ===
-        // 入口から北へ (y=1〜5, x=11〜12)
+        // === メイン街道（ジグザグ） ===
+        // 入口から北へ (y=1〜5, x=5〜6)
         for (int y = 1; y <= 5; y++)
         {
-            mapData[11, y] = TILE_PATH;
-            mapData[12, y] = TILE_PATH;
+            mapData[5, y] = TILE_PATH;
+            mapData[6, y] = TILE_PATH;
         }
-        // 右に曲がる (y=5, x=12〜17)
-        for (int x = 12; x <= 17; x++)
+        // 右に曲がる (y=5, x=6〜9)
+        for (int x = 6; x <= 9; x++)
             mapData[x, 5] = TILE_PATH;
-        // 北へ (y=5〜12, x=17)
+        // 北へ (y=5〜12, x=9)
         for (int y = 5; y <= 12; y++)
-            mapData[17, y] = TILE_PATH;
-        // 左へ (y=12, x=10〜17)
-        for (int x = 10; x <= 17; x++)
+            mapData[9, y] = TILE_PATH;
+        // 左へ (y=12, x=5〜9)
+        for (int x = 5; x <= 9; x++)
             mapData[x, 12] = TILE_PATH;
-        // 北へ (y=12〜19, x=10)
+        // 北へ (y=12〜19, x=5)
         for (int y = 12; y <= 19; y++)
-            mapData[10, y] = TILE_PATH;
-        // 右へ (y=19, x=10〜18)
-        for (int x = 10; x <= 18; x++)
+            mapData[5, y] = TILE_PATH;
+        // 右へ (y=19, x=5〜9)
+        for (int x = 5; x <= 9; x++)
             mapData[x, 19] = TILE_PATH;
-        // 北へ (y=19〜26, x=18)
+        // 北へ (y=19〜26, x=9)
         for (int y = 19; y <= 26; y++)
-            mapData[18, y] = TILE_PATH;
-        // 左へ (y=26, x=8〜18)
-        for (int x = 8; x <= 18; x++)
+            mapData[9, y] = TILE_PATH;
+        // 左へ (y=26, x=4〜9)
+        for (int x = 4; x <= 9; x++)
             mapData[x, 26] = TILE_PATH;
-        // 北へ (y=26〜32, x=8)
+        // 北へ (y=26〜32, x=4)
         for (int y = 26; y <= 32; y++)
-            mapData[8, y] = TILE_PATH;
-        // 右へ (y=32, x=8〜14)
-        for (int x = 8; x <= 14; x++)
+            mapData[4, y] = TILE_PATH;
+        // 右へ (y=32, x=4〜6)
+        for (int x = 4; x <= 6; x++)
             mapData[x, 32] = TILE_PATH;
-        // 北へ (y=32〜37, x=14)
+        // 北へ (y=32〜37, x=6)
         for (int y = 32; y <= 37; y++)
-            mapData[14, y] = TILE_PATH;
+            mapData[6, y] = TILE_PATH;
 
         // === 毒沼（水場）===
-        // 西の大きな沼
-        for (int x = 2; x <= 6; x++)
+        // 沼 (x=1-2, y=15-16)
+        for (int x = 1; x <= 2; x++)
         {
-            for (int y = 8; y <= 10; y++)
-            {
-                mapData[x, y] = TILE_WATER;
-                walkable[x, y] = false;
-            }
-        }
-        // 東の沼
-        for (int x = 19; x <= 22; x++)
-        {
-            for (int y = 14; y <= 16; y++)
-            {
-                mapData[x, y] = TILE_WATER;
-                walkable[x, y] = false;
-            }
-        }
-        // 北東の小さな沼
-        for (int x = 17; x <= 20; x++)
-        {
-            for (int y = 30; y <= 31; y++)
+            for (int y = 15; y <= 16; y++)
             {
                 mapData[x, y] = TILE_WATER;
                 walkable[x, y] = false;
             }
         }
 
-        // === 暗い土の地面 ===
-        mapData[9, 3] = TILE_DARK_DIRT;
-        mapData[10, 3] = TILE_DARK_DIRT;
-        mapData[15, 8] = TILE_DARK_DIRT;
-        mapData[16, 8] = TILE_DARK_DIRT;
-        mapData[5, 15] = TILE_DARK_DIRT;
-        mapData[6, 15] = TILE_DARK_DIRT;
-        mapData[20, 22] = TILE_DARK_DIRT;
-        mapData[21, 22] = TILE_DARK_DIRT;
-        mapData[3, 28] = TILE_DARK_DIRT;
-        mapData[4, 28] = TILE_DARK_DIRT;
-        mapData[11, 35] = TILE_DARK_DIRT;
-        mapData[12, 35] = TILE_DARK_DIRT;
-        mapData[19, 26] = TILE_DARK_DIRT;
-        mapData[6, 20] = TILE_DARK_DIRT;
-        mapData[7, 20] = TILE_DARK_DIRT;
-
-        // === 岩 ===
+        // === 岩（woodtower） ===
         int[][] rocks = {
-            new[]{2, 4}, new[]{20, 7}, new[]{7, 14}, new[]{22, 20},
-            new[]{3, 22}, new[]{15, 24}, new[]{21, 28}, new[]{5, 33},
-            new[]{19, 35}, new[]{1, 18}, new[]{13, 16}
+            new[]{1, 4}, new[]{10, 7}, new[]{10, 20}, new[]{1, 28}
         };
         foreach (var r in rocks)
         {
@@ -1719,24 +2211,8 @@ public class MapManager : MonoBehaviour
             walkable[r[0], r[1]] = false;
         }
 
-        // === 花畑（エンカウント率高め） ===
-        int[][] flowers = {
-            new[]{4, 5}, new[]{5, 5}, new[]{4, 6}, new[]{5, 6},
-            new[]{14, 9}, new[]{15, 9}, new[]{14, 10}, new[]{15, 10},
-            new[]{8, 16}, new[]{9, 16}, new[]{9, 17},
-            new[]{20, 20}, new[]{21, 20}, new[]{20, 21},
-            new[]{3, 25}, new[]{4, 25}, new[]{3, 26},
-            new[]{12, 28}, new[]{13, 28}, new[]{13, 29},
-            new[]{18, 34}, new[]{19, 34}, new[]{18, 35},
-            new[]{6, 36}, new[]{7, 36}
-        };
-        foreach (var f in flowers)
-        {
-            mapData[f[0], f[1]] = TILE_FLOWER;
-        }
-
-        // === 武器ショップ (2x2: x=7〜8, y=27〜28) ===
-        for (int sx = 7; sx <= 8; sx++)
+        // === 武器ショップ (2x2: x=3〜4, y=27〜28) ===
+        for (int sx = 3; sx <= 4; sx++)
         {
             for (int sy = 27; sy <= 28; sy++)
             {
@@ -1745,26 +2221,33 @@ public class MapManager : MonoBehaviour
             }
         }
 
-        // === 109 館 (小道の北端付近) ===
-        for (int x = 13; x <= 15; x++)
+        // === 109 館 (x=5〜7, y=38) ===
+        for (int x = 5; x <= 7; x++)
         {
             mapData[x, 38] = TILE_BOSS_MANSION;
             walkable[x, 38] = false;
         }
 
-        // === 追加の木（内部に散在） ===
-        int[][] trees = {
-            new[]{2, 2}, new[]{8, 3}, new[]{19, 4}, new[]{22, 10},
-            new[]{1, 13}, new[]{13, 7}, new[]{3, 17}, new[]{16, 17},
-            new[]{22, 24}, new[]{1, 27}, new[]{5, 30}, new[]{20, 33},
-            new[]{10, 36}, new[]{2, 35}, new[]{16, 29}, new[]{21, 12},
-            new[]{11, 22}, new[]{4, 14}, new[]{18, 10}, new[]{9, 24},
-            new[]{22, 37}, new[]{1, 38}, new[]{6, 13}
-        };
-        foreach (var t in trees)
+        // === プール (x=1-4, y=34-36) — 左上エリア ===
+        for (int px = 1; px <= 4; px++)
         {
-            mapData[t[0], t[1]] = TILE_TREE;
-            walkable[t[0], t[1]] = false;
+            for (int py = 34; py <= 36; py++)
+            {
+                mapData[px, py] = TILE_WATER;
+                walkable[px, py] = false;
+            }
+        }
+
+        // === ブラッシュアップ ===
+
+        // 沼の触手 — 道に向かって1タイル延伸
+        mapData[3, 15] = TILE_WATER;
+        walkable[3, 15] = false;
+
+        // 秘密のショートカット — x=2, y=5〜25 を歩行可能に（タイルはそのまま＝隠しルート）
+        for (int sy = 5; sy <= 25; sy++)
+        {
+            walkable[2, sy] = true;
         }
 
         // プレイヤーの初期位置は必ず歩けるようにする
@@ -1992,6 +2475,1659 @@ public class MapManager : MonoBehaviour
         tmp.raycastTarget = false;
     }
 
+    // ===== ステラ・オリジン（Area 8）=====
+
+    void GenerateStellaOriginMapData()
+    {
+        mapData = new int[mapWidth, mapHeight];
+        walkable = new bool[mapWidth, mapHeight];
+
+        // 全て宇宙壁で埋める（床なし＝進入不可）
+        for (int x = 0; x < mapWidth; x++)
+            for (int y = 0; y < mapHeight; y++)
+            {
+                mapData[x, y] = TILE_CRYSTAL_WALL;
+                walkable[x, y] = false;
+            }
+
+        // --- ヘルパー: タイル配置 ---
+        System.Action<int, int> placeCrystal = (px, py) =>
+        {
+            if (px >= 0 && px < mapWidth && py >= 0 && py < mapHeight)
+            {
+                mapData[px, py] = TILE_CRYSTAL;
+                walkable[px, py] = true;
+            }
+        };
+        // 3x3広場
+        System.Action<int, int> placePlaza = (cx, cy) =>
+        {
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dy = -1; dy <= 1; dy++)
+                    placeCrystal(cx + dx, cy + dy);
+        };
+
+        // ============================================================
+        // 迷路のような一本道 — 蛇行しながら南から北へ
+        // プレイヤーが「光の道」を切り拓いていく感覚
+        // ============================================================
+
+        // --- 南の着地広場: 3x3 (center: 12,3) ---
+        placePlaza(12, 3);
+
+        // --- Phase 1: 南から蛇行して西の音叉へ ---
+        // 着地点から北へ (12, 4→7)
+        for (int y = 4; y <= 7; y++) placeCrystal(12, y);
+        // 西へ折れる (11→9, 7)
+        for (int x = 9; x <= 11; x++) placeCrystal(x, 7);
+        // 南に戻る (9, 6→5)
+        placeCrystal(9, 6); placeCrystal(9, 5);
+        // 西の音叉広場: 3x3 around (8,5)
+        placePlaza(8, 5);
+
+        // --- Phase 2: 東の音叉へ ---
+        // 着地点から東へ (13→15, 3)
+        for (int x = 13; x <= 15; x++) placeCrystal(x, 3);
+        // 北へ (15, 4→5)
+        placeCrystal(15, 4);
+        // 東の音叉広場: 3x3 around (15,5)
+        placePlaza(15, 5);
+
+        // --- Phase 3: メインの蛇行路（北上） ---
+        // (12,7) から北上 → 東へ蛇行 → 西へ蛇行を繰り返す
+        // 北へ (12, 8→11)
+        for (int y = 8; y <= 11; y++) placeCrystal(12, y);
+        // 東へ折れる (13→16, 11)
+        for (int x = 13; x <= 16; x++) placeCrystal(x, 11);
+        // 北へ (16, 12→14)
+        for (int y = 12; y <= 14; y++) placeCrystal(16, y);
+        // 西へ折れる (15→8, 14)
+        for (int x = 8; x <= 15; x++) placeCrystal(x, 14);
+        // 北へ (8, 15→17)
+        for (int y = 15; y <= 17; y++) placeCrystal(8, y);
+        // 東へ折れる (9→11, 17)
+        for (int x = 9; x <= 11; x++) placeCrystal(x, 17);
+
+        // --- 中央交差点: 3x3 (center: 12,19) ---
+        // (11,17) から北へ (11, 18→19)
+        placeCrystal(11, 18); placeCrystal(11, 19);
+        placePlaza(12, 19);
+
+        // --- Phase 4: 西のガーディアンへの道 ---
+        // 中央から西へ (10→6, 19) — x=5を欠落させて直接到達不可
+        for (int x = 6; x <= 10; x++) placeCrystal(x, 19);
+        // ガーディアン広場: 3x3 around (3,19)
+        placePlaza(3, 19);
+        placeCrystal(4, 19);
+
+        // --- Phase 5: 東のガーディアンへの道 ---
+        // 中央から東へ (14→19, 19) — 広場との間にギャップ
+        for (int x = 14; x <= 19; x++) placeCrystal(x, 19);
+        // ガーディアン広場: 3x3 around (21,19)
+        placePlaza(21, 19);
+        // (20,19)を通行不可にしてギャップを作る（広場の端を削る）
+        mapData[20, 19] = TILE_CRYSTAL_WALL;
+        walkable[20, 19] = false;
+
+        // --- Phase 6: 北への蛇行路 ---
+        // 中央から北へ (12, 20→22)
+        for (int y = 20; y <= 22; y++) placeCrystal(12, y);
+        // 西へ折れる (11→7, 22)
+        for (int x = 7; x <= 11; x++) placeCrystal(x, 22);
+        // 北へ (7, 23→25)
+        for (int y = 23; y <= 25; y++) placeCrystal(7, y);
+        // 東へ折れる (8→16, 25)
+        for (int x = 8; x <= 16; x++) placeCrystal(x, 25);
+        // 北へ (16, 26→28)
+        for (int y = 26; y <= 28; y++) placeCrystal(16, y);
+        // 西へ折れる (15→12, 28)
+        for (int x = 12; x <= 15; x++) placeCrystal(x, 28);
+        // 北へ (12, 29→33)
+        for (int y = 29; y <= 33; y++) placeCrystal(12, y);
+
+        // --- 北のゆりかご広場: 3x3 around (12,34) ---
+        placePlaza(12, 34);
+        // y=35を削除（ゲートとの隙間 — 直接歩けないようにする）
+        for (int rx = 11; rx <= 13; rx++)
+        {
+            mapData[rx, 35] = TILE_CRYSTAL_WALL;
+            walkable[rx, 35] = false;
+        }
+
+        // --- 天の川の橋 (y=35-36): 条件達成時にwalkable化 ---
+
+        // === 宇宙の門 (y=37): 通行不可 ===
+        for (int x = 11; x <= 13; x++)
+        {
+            mapData[x, 37] = TILE_CRYSTAL_WALL;
+            walkable[x, 37] = false;
+        }
+
+        // プレイヤー初期位置を確保
+        walkable[playerTileX, playerTileY] = true;
+        if (mapData[playerTileX, playerTileY] == TILE_CRYSTAL_WALL)
+            mapData[playerTileX, playerTileY] = TILE_CRYSTAL;
+    }
+
+    void CreateStellaOriginBackground()
+    {
+        if (tilesContainer == null) return;
+
+        float mapW = mapWidth * DISPLAY_TILE + 200;
+        float mapH = mapHeight * DISPLAY_TILE + 200;
+
+        // Layer 0: 一枚絵の宇宙背景（4th/background）— ゆっくり回転
+        var cosmicBg = new GameObject("CosmicBg");
+        cosmicBg.transform.SetParent(tilesContainer.transform, false);
+        var bgRect = cosmicBg.AddComponent<RectTransform>();
+        bgRect.anchorMin = new Vector2(0.5f, 0.5f);
+        bgRect.anchorMax = new Vector2(0.5f, 0.5f);
+        bgRect.anchoredPosition = Vector2.zero;
+        var bgImg = cosmicBg.AddComponent<Image>();
+
+        Sprite stellaBgSpr = Resources.Load<Sprite>("Map/4th/background");
+        if (stellaBgSpr == null)
+        {
+            var tex = Resources.Load<Texture2D>("Map/4th/background");
+            if (tex != null && tex.isReadable)
+                stellaBgSpr = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+        }
+        if (stellaBgSpr != null)
+        {
+            bgImg.sprite = stellaBgSpr;
+            bgImg.preserveAspect = false;
+            float imgAspect = (float)stellaBgSpr.texture.width / stellaBgSpr.texture.height;
+            float mapAspect = mapW / mapH;
+            float bgW, bgH;
+            if (mapAspect > imgAspect)
+            {
+                bgW = mapW;
+                bgH = mapW / imgAspect;
+            }
+            else
+            {
+                bgH = mapH;
+                bgW = mapH * imgAspect;
+            }
+            // 回転時に角が見えないよう1.5倍に拡大
+            bgRect.sizeDelta = new Vector2(bgW * 1.5f, bgH * 1.5f);
+            bgImg.color = new Color(0.5f, 0.5f, 0.5f, 1f);
+        }
+        else
+        {
+            bgRect.sizeDelta = new Vector2(mapW * 1.5f, mapH * 1.5f);
+            bgImg.color = new Color(0.03f, 0.02f, 0.08f);
+        }
+        bgImg.raycastTarget = false;
+        cosmicBg.transform.SetAsFirstSibling();
+        stellaBgRect = bgRect; // Update()で回転させる
+
+        // Layer 0.5: 40%黒オーバーレイ（重厚感）
+        var darkOverlay = new GameObject("DarkOverlay");
+        darkOverlay.transform.SetParent(tilesContainer.transform, false);
+        var darkRect = darkOverlay.AddComponent<RectTransform>();
+        darkRect.anchorMin = new Vector2(0.5f, 0.5f);
+        darkRect.anchorMax = new Vector2(0.5f, 0.5f);
+        darkRect.anchoredPosition = Vector2.zero;
+        darkRect.sizeDelta = bgRect.sizeDelta;
+        var darkImg = darkOverlay.AddComponent<Image>();
+        darkImg.color = new Color(0f, 0f, 0f, 0.4f);
+        darkImg.raycastTarget = false;
+        darkOverlay.transform.SetSiblingIndex(1);
+
+        // 背景とクリスタルタイルの間には何も描画しない
+        // （星雲・遠景の星・星座シルエットは廃止 — 背景画像の宇宙だけが見える）
+    }
+
+    void CreateNebula(Vector2 pos, Color color, float size)
+    {
+        if (tilesContainer == null) return;
+        var nebula = new GameObject("Nebula");
+        nebula.transform.SetParent(tilesContainer.transform, false);
+        var nRect = nebula.AddComponent<RectTransform>();
+        nRect.anchoredPosition = pos;
+        nRect.sizeDelta = new Vector2(size, size);
+        var nImg = nebula.AddComponent<Image>();
+        nImg.color = color;
+        nImg.raycastTarget = false;
+        // 丸みを帯びた星雲: 角丸を使用
+        // UnityのImageに丸はないが、CanvasRendererなので大きな角丸で代用
+    }
+
+    void CreateConstellationSilhouette(Vector2 pos, string symbol, string name)
+    {
+        if (tilesContainer == null) return;
+
+        // 星座の「星」を複数配置して線で繋ぐイメージ
+        var group = new GameObject("Constellation_" + name);
+        group.transform.SetParent(tilesContainer.transform, false);
+        var gRect = group.AddComponent<RectTransform>();
+        gRect.anchoredPosition = pos;
+        gRect.sizeDelta = new Vector2(200, 200);
+
+        // 中央シンボル（大きめ、半透明）
+        var symbolObj = new GameObject("Symbol");
+        symbolObj.transform.SetParent(group.transform, false);
+        var symRect = symbolObj.AddComponent<RectTransform>();
+        symRect.anchoredPosition = Vector2.zero;
+        symRect.sizeDelta = new Vector2(120, 120);
+        var symTmp = symbolObj.AddComponent<TMPro.TextMeshProUGUI>();
+        FontHelper.Apply(symTmp);
+        symTmp.text = symbol;
+        symTmp.fontSize = 60;
+        symTmp.alignment = TMPro.TextAlignmentOptions.Center;
+        symTmp.color = new Color(0.5f, 0.5f, 0.7f, 0.15f);
+        symTmp.raycastTarget = false;
+
+        // 周囲に小さな星（星座の点）
+        int points = 6;
+        for (int i = 0; i < points; i++)
+        {
+            float angle = i * Mathf.PI * 2f / points;
+            float radius = Random.Range(50f, 90f);
+            var point = new GameObject("Point" + i);
+            point.transform.SetParent(group.transform, false);
+            var pRect = point.AddComponent<RectTransform>();
+            pRect.anchoredPosition = new Vector2(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius);
+            pRect.sizeDelta = new Vector2(4, 4);
+            var pImg = point.AddComponent<Image>();
+            pImg.color = new Color(0.6f, 0.6f, 0.8f, 0.3f);
+            pImg.raycastTarget = false;
+        }
+    }
+
+    void CreateStellaOriginEffects()
+    {
+        if (tilesContainer == null) return;
+
+        // Aura_Sprite.png をロード + 加算合成マテリアル生成
+        stellaAuraSprite = Resources.Load<Sprite>("Map/4th/Aura_Sprite");
+        if (stellaAuraSprite == null)
+        {
+            var auraTex = Resources.Load<Texture2D>("Map/4th/Aura_Sprite");
+            if (auraTex != null && auraTex.isReadable)
+                stellaAuraSprite = Sprite.Create(auraTex, new Rect(0, 0, auraTex.width, auraTex.height), new Vector2(0.5f, 0.5f));
+        }
+        // 加算合成マテリアル（UI用）
+        var addShader = Shader.Find("UI/Default");
+        if (addShader != null)
+        {
+            stellaAdditiveMat = new Material(addShader);
+            // SrcAlpha One で加算合成
+            stellaAdditiveMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            stellaAdditiveMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+        }
+
+        // 光子パーティクル（20個）— ゆっくり漂う発光体（エフェクトレイヤー）
+        for (int i = 0; i < 20; i++)
+        {
+            var photon = new GameObject("Photon" + i);
+            photon.transform.SetParent(tilesContainer.transform, false);
+            var phRect = photon.AddComponent<RectTransform>();
+            float phx = Random.Range(-mapWidth * DISPLAY_TILE * 0.45f, mapWidth * DISPLAY_TILE * 0.45f);
+            float phy = Random.Range(-mapHeight * DISPLAY_TILE * 0.45f, mapHeight * DISPLAY_TILE * 0.45f);
+            phRect.anchoredPosition = new Vector2(phx, phy);
+            float phSize = Random.Range(6f, 14f);
+            phRect.sizeDelta = new Vector2(phSize, phSize);
+            var phImg = photon.AddComponent<Image>();
+            float baseAlpha = Random.Range(0.15f, 0.4f);
+            // 暖色〜寒色のランダム光子
+            float hue = Random.Range(0f, 1f);
+            Color phColor;
+            if (hue < 0.3f)
+                phColor = new Color(1f, 0.84f, 0.5f, baseAlpha); // ゴールド
+            else if (hue < 0.6f)
+                phColor = new Color(0.6f, 0.8f, 1f, baseAlpha); // 水色
+            else
+                phColor = new Color(0.8f, 0.6f, 1f, baseAlpha); // 薄紫
+            phImg.color = phColor;
+            phImg.raycastTarget = false;
+            stellaPhotons.Add((phRect, Random.Range(0.2f, 0.8f), Random.Range(0f, Mathf.PI * 2f), baseAlpha));
+        }
+
+        // 足元波紋・トレイル削除済み
+    }
+
+    // --- 音叉ビジュアル＋ワープ ---
+    void CreateStellaTuningForks()
+    {
+        if (tilesContainer == null) return;
+
+        Sprite forkSpr = Resources.Load<Sprite>("Map/4th/Tuning_Fork");
+        if (forkSpr == null)
+        {
+            var forkTex = Resources.Load<Texture2D>("Map/4th/Tuning_Fork");
+            if (forkTex != null && forkTex.isReadable)
+                forkSpr = Sprite.Create(forkTex, new Rect(0, 0, forkTex.width, forkTex.height), new Vector2(0.5f, 0.5f));
+        }
+        if (forkSpr == null) return;
+
+        var forkPositions = new[] { stellaForkA, stellaForkB, stellaForkReturnW, stellaForkReturnE };
+        for (int i = 0; i < forkPositions.Length; i++)
+        {
+            int tx = forkPositions[i].x, ty = forkPositions[i].y;
+            float posX = (tx - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+            float posY = (ty - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+
+            bool isReturn = (i >= 2); // 後半2つは帰還用（小さめ）
+            float forkScale = isReturn ? 1.0f : 1.6f;
+
+            var fork = new GameObject("TuningFork_" + tx + "_" + ty);
+            fork.transform.SetParent(tilesContainer.transform, false);
+            var rt = fork.AddComponent<RectTransform>();
+            rt.anchoredPosition = new Vector2(posX, posY + DISPLAY_TILE * 0.15f);
+            rt.sizeDelta = new Vector2(DISPLAY_TILE * forkScale, DISPLAY_TILE * forkScale);
+
+            var img = fork.AddComponent<Image>();
+            img.sprite = forkSpr;
+            img.preserveAspect = true;
+            img.color = new Color(1f, 1f, 1f, 0.9f);
+            img.raycastTarget = false;
+            if (stellaAdditiveMat != null)
+                img.material = stellaAdditiveMat;
+
+            stellaForkVisuals.Add((rt, img, posY + DISPLAY_TILE * 0.15f, Random.Range(0f, Mathf.PI * 2f)));
+
+            // 音叉の足元にAura_Gold（小さめ）
+            if (!isReturn)
+            {
+                Sprite goldSpr = Resources.Load<Sprite>("Map/4th/Aura_Gold");
+                if (goldSpr == null)
+                {
+                    var goldTex = Resources.Load<Texture2D>("Map/4th/Aura_Gold");
+                    if (goldTex != null && goldTex.isReadable)
+                        goldSpr = Sprite.Create(goldTex, new Rect(0, 0, goldTex.width, goldTex.height), new Vector2(0.5f, 0.5f));
+                }
+                if (goldSpr != null)
+                {
+                    var goldObj = new GameObject("ForkAuraGold_" + tx + "_" + ty);
+                    goldObj.transform.SetParent(tilesContainer.transform, false);
+                    var grt = goldObj.AddComponent<RectTransform>();
+                    grt.anchoredPosition = new Vector2(posX, posY - DISPLAY_TILE * 0.1f);
+                    grt.sizeDelta = new Vector2(DISPLAY_TILE * 0.8f, DISPLAY_TILE * 0.8f);
+                    var gimg = goldObj.AddComponent<Image>();
+                    gimg.sprite = goldSpr;
+                    gimg.preserveAspect = true;
+                    gimg.color = new Color(1f, 1f, 1f, 0.5f);
+                    gimg.raycastTarget = false;
+                    if (stellaAdditiveMat != null)
+                        gimg.material = stellaAdditiveMat;
+                }
+            }
+        }
+    }
+
+    // --- ガーディアンNPC ---
+
+    void CreateStellaGuardianNPCs()
+    {
+        if (tilesContainer == null) return;
+
+        // 西: 清らかな夫人（デヴィル夫人）— 紫オーラ
+        stellaGuardianDevilObj = CreateStellaGuardianObj(
+            "GuardianDevil", stellaGuardianDevilX, stellaGuardianDevilY,
+            "EnemyBabys/boss/devil-wife",
+            "Map/4th/Aura_Purple",
+            () => StartCoroutine(ShowStellaGuardianDialogue(false)));
+
+        // 東: 穏やかな女王（メロディアス女王）— ピンクオーラ
+        stellaGuardianMelodiasObj = CreateStellaGuardianObj(
+            "GuardianMelodias", stellaGuardianMelodiasX, stellaGuardianMelodiasY,
+            "EnemyBabys/boss/melodias",
+            "Map/4th/Aura _Pink",
+            () => StartCoroutine(ShowStellaGuardianDialogue(true)));
+    }
+
+    GameObject CreateStellaGuardianObj(string name, int tx, int ty, string spritePath, string auraSpritePath, UnityEngine.Events.UnityAction onClick)
+    {
+        float posX = (tx - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (ty - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+
+        var npc = new GameObject(name);
+        npc.transform.SetParent(tilesContainer.transform, false);
+        var rect = npc.AddComponent<RectTransform>();
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(DISPLAY_TILE * 1.5f, DISPLAY_TILE * 1.5f);
+
+        // オーラ（Aura画像スプライト + 加算合成 + 回転）
+        var aura = new GameObject("Aura");
+        aura.transform.SetParent(npc.transform, false);
+        var auraRect = aura.AddComponent<RectTransform>();
+        auraRect.anchoredPosition = Vector2.zero;
+        auraRect.sizeDelta = new Vector2(DISPLAY_TILE * 3f, DISPLAY_TILE * 3f);
+        var auraImg = aura.AddComponent<Image>();
+        Sprite auraSpr = Resources.Load<Sprite>(auraSpritePath);
+        if (auraSpr == null)
+        {
+            var auraTex = Resources.Load<Texture2D>(auraSpritePath);
+            if (auraTex != null && auraTex.isReadable)
+                auraSpr = Sprite.Create(auraTex, new Rect(0, 0, auraTex.width, auraTex.height), new Vector2(0.5f, 0.5f));
+        }
+        if (auraSpr != null)
+        {
+            auraImg.sprite = auraSpr;
+            auraImg.preserveAspect = true;
+            auraImg.color = new Color(1f, 1f, 1f, 0.7f);
+            // 加算合成で背景に溶け込む
+            if (stellaAdditiveMat != null)
+                auraImg.material = stellaAdditiveMat;
+        }
+        else
+        {
+            auraImg.color = Color.clear;
+        }
+        auraImg.raycastTarget = false;
+
+        // スプライト
+        var spr = Resources.Load<Sprite>(spritePath);
+        var sprObj = new GameObject("Sprite");
+        sprObj.transform.SetParent(npc.transform, false);
+        var sprRect = sprObj.AddComponent<RectTransform>();
+        sprRect.anchoredPosition = Vector2.zero;
+        sprRect.sizeDelta = new Vector2(DISPLAY_TILE * 1.2f, DISPLAY_TILE * 1.2f);
+        var sprImg = sprObj.AddComponent<Image>();
+        if (spr != null) sprImg.sprite = spr;
+        sprImg.preserveAspect = true;
+        sprImg.color = new Color(1f, 1f, 1f, 0.85f);
+        sprImg.raycastTarget = false;
+
+        // タップ用ボタン
+        var btnImg = npc.AddComponent<Image>();
+        btnImg.color = Color.clear;
+        var btn = npc.AddComponent<Button>();
+        btn.transition = Selectable.Transition.None;
+        btn.onClick.AddListener(onClick);
+
+        npc.transform.SetAsLastSibling();
+        return npc;
+    }
+
+    IEnumerator ShowStellaGuardianDialogue(bool isMelodias)
+    {
+        if (stellaGuardianDialogueActive) yield break;
+        stellaGuardianDialogueActive = true;
+        menuOpen = true;
+
+        int flag = isMelodias ? 2 : 1; // bit 1=DEF, bit 2=ATK
+        bool alreadyDone = DataCarrier.Instance != null && (DataCarrier.Instance.stellaOriginProgress & flag) != 0;
+
+        string npcName = isMelodias
+            ? Localization.Get("stella_guardian_melodias_name")
+            : Localization.Get("stella_guardian_devil_name");
+
+        // オーバーレイ
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.flexDirection = UIE.FlexDirection.Column;
+        overlay.style.justifyContent = UIE.Justify.FlexEnd;
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlayRoot.Add(overlay);
+
+        float elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.6f * (elapsed / 0.3f));
+            yield return null;
+        }
+
+        // NPC画像
+        string spritePath = isMelodias ? "EnemyBabys/boss/melodias" : "EnemyBabys/boss/devil-wife";
+        var portraitSpr = Resources.Load<Sprite>(spritePath);
+        var portraitEl = new UIE.VisualElement();
+        portraitEl.AddToClassList("milk-dialog-portrait");
+        if (portraitSpr != null)
+            portraitEl.style.backgroundImage = new UIE.StyleBackground(portraitSpr);
+        overlay.Add(portraitEl);
+
+        // ダイアログボックス
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
+
+        var nameLabel = UIHelper.CreateLabel(npcName, "milk-dialog-name");
+        dialogBox.Add(nameLabel);
+
+        var textLabel = UIHelper.CreateLabel("", "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        var tapHint = UIHelper.CreateLabel("", "milk-dialog-hint");
+        dialogBox.Add(tapHint);
+
+        if (alreadyDone)
+        {
+            textLabel.text = isMelodias
+                ? Localization.Get("stella_guardian_melodias_done")
+                : Localization.Get("stella_guardian_devil_done");
+            tapHint.text = "\u25BC タップで閉じる";
+            yield return new WaitForSeconds(0.3f);
+            bool tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+        }
+        else
+        {
+            // メイン台詞
+            textLabel.text = isMelodias
+                ? Localization.Get("stella_guardian_melodias_line")
+                : Localization.Get("stella_guardian_devil_line");
+            tapHint.text = "\u25BC タップで続く";
+            yield return new WaitForSeconds(0.3f);
+            bool tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+
+            // バフ付与
+            if (DataCarrier.Instance != null)
+            {
+                if (isMelodias)
+                    DataCarrier.Instance.babyAtk += 20;
+                else
+                    DataCarrier.Instance.babyDef += 20;
+
+                DataCarrier.Instance.stellaOriginProgress |= flag;
+                DataCarrier.Instance.SaveData();
+            }
+
+            textLabel.text = isMelodias
+                ? Localization.Get("stella_guardian_melodias_buff")
+                : Localization.Get("stella_guardian_devil_buff");
+            tapHint.text = "\u25BC タップで閉じる";
+            tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+
+            // 門の状態を更新
+            UpdateCosmicGateVisual();
+        }
+
+        // フェードアウト
+        elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.opacity = 1f - (elapsed / 0.3f);
+            yield return null;
+        }
+        overlay.RemoveFromHierarchy();
+
+        menuOpen = false;
+        stellaGuardianDialogueActive = false;
+
+        // 全条件が揃ったらゲート開放演出を自動発動
+        CheckCosmicGateAutoOpen();
+    }
+
+    void CheckStellaGuardianAutoTrigger()
+    {
+        if (menuOpen || stellaGuardianDialogueActive || stellaCradleActive) return;
+        // デヴィル夫人（西）
+        if (IsAdjacentToPos(stellaGuardianDevilX, stellaGuardianDevilY))
+        {
+            StartCoroutine(ShowStellaGuardianDialogue(false));
+            return;
+        }
+        // メロディアス女王（東）
+        if (IsAdjacentToPos(stellaGuardianMelodiasX, stellaGuardianMelodiasY))
+        {
+            StartCoroutine(ShowStellaGuardianDialogue(true));
+            return;
+        }
+        // 光のゆりかご
+        if (IsAdjacentToPos(stellaCradleX, stellaCradleY) ||
+            (playerTileX == stellaCradleX && playerTileY == stellaCradleY))
+        {
+            if (!stellaCradleActive)
+            {
+                StartCoroutine(ShowStellaCradleEvent());
+                return;
+            }
+        }
+    }
+
+    void CheckCosmicGateAutoOpen()
+    {
+        if (stellaGateOpened || stellaGateOpenAnimPlaying) return;
+        int progress = DataCarrier.Instance != null ? DataCarrier.Instance.stellaOriginProgress : 0;
+        if ((progress & 7) == 7)
+            StartCoroutine(ShowCosmicGateOpenFromDistance());
+    }
+
+    IEnumerator ShowCosmicGateOpenFromDistance()
+    {
+        // 離れた場所からゲートが開く演出（短縮版）
+        stellaGateOpenAnimPlaying = true;
+        menuOpen = true;
+
+        // 画面揺れ（軽め）
+        if (seSource != null && seQuizCorrect != null)
+        {
+            seSource.pitch = 0.3f;
+            seSource.PlayOneShot(seQuizCorrect, 0.8f);
+        }
+
+        // メッセージ表示
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.flexDirection = UIE.FlexDirection.Column;
+        overlay.style.justifyContent = UIE.Justify.Center;
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+        overlayRoot.Add(overlay);
+
+        var label = UIHelper.CreateLabel("……遠くで 何かが 動く音がした……", "map-message-text");
+        label.style.color = new Color(0.8f, 0.85f, 1f);
+        label.style.fontSize = 30;
+        label.style.whiteSpace = UIE.WhiteSpace.Normal;
+        label.style.width = 800;
+        label.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        UIHelper.ApplyFont(label);
+        overlay.Add(label);
+
+        yield return new WaitForSeconds(1.5f);
+
+        // walkable更新 + ビジュアル更新
+        UpdateCosmicGateVisual();
+
+        // ゲートオブジェクトを非アクティブに
+        if (stellaCosmicGateObj != null)
+            stellaCosmicGateObj.SetActive(false);
+
+        if (seSource != null) seSource.pitch = 1f;
+        if (seSource != null && seQuizCorrect != null)
+            seSource.PlayOneShot(seQuizCorrect, 0.6f);
+
+        yield return new WaitForSeconds(0.5f);
+
+        // フェードアウト
+        float elapsed = 0f;
+        while (elapsed < 0.4f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.opacity = 1f - (elapsed / 0.4f);
+            yield return null;
+        }
+        overlay.RemoveFromHierarchy();
+
+        menuOpen = false;
+        stellaGateOpenAnimPlaying = false;
+    }
+
+    // --- 光のゆりかご ---
+
+    List<GameObject> lightRiverObjs = new List<GameObject>();
+
+    void CreateLightRiverBridge()
+    {
+        if (tilesContainer == null) return;
+        if (lightRiverObjs.Count > 0) return; // 二重生成防止
+
+        // River_of_Light.png をロード
+        Sprite riverSpr = Resources.Load<Sprite>("Map/4th/River_of_Light");
+        if (riverSpr == null)
+        {
+            var riverTex = Resources.Load<Texture2D>("Map/4th/River_of_Light");
+            if (riverTex != null && riverTex.isReadable)
+                riverSpr = Sprite.Create(riverTex, new Rect(0, 0, riverTex.width, riverTex.height), new Vector2(0.5f, 0.5f));
+        }
+
+        float centerX = (12 - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float bandWidth = DISPLAY_TILE * 4.8f;   // 横1.5倍
+        float bandHeight = DISPLAY_TILE * 0.85f;
+
+        float posY = (35.0f - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+
+        var riverObj = new GameObject("LightRiver");
+        riverObj.transform.SetParent(tilesContainer.transform, false);
+        var rect = riverObj.AddComponent<RectTransform>();
+        rect.anchoredPosition = new Vector2(centerX, posY);
+        rect.sizeDelta = new Vector2(bandWidth, bandHeight);
+
+        var img = riverObj.AddComponent<Image>();
+        img.raycastTarget = false;
+        if (riverSpr != null)
+        {
+            img.sprite = riverSpr;
+            img.color = new Color(1f, 1f, 1f, 0.8f);
+        }
+        else
+        {
+            img.color = new Color(0.7f, 0.85f, 1f, 0.35f);
+        }
+
+        // プレイヤーより後ろに配置
+        if (playerObj != null)
+            riverObj.transform.SetSiblingIndex(playerObj.transform.GetSiblingIndex());
+
+        lightRiverObjs.Add(riverObj);
+    }
+
+    void CreateStellaCradle()
+    {
+        if (tilesContainer == null) return;
+
+        float posX = (stellaCradleX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (stellaCradleY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+
+        stellaCradleObj = new GameObject("CrystalCradle");
+        stellaCradleObj.transform.SetParent(tilesContainer.transform, false);
+        var rect = stellaCradleObj.AddComponent<RectTransform>();
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(DISPLAY_TILE * 1.8f, DISPLAY_TILE * 1.8f);
+
+        // 光のオーラ（背景色なし）
+        var glow = new GameObject("Glow");
+        glow.transform.SetParent(stellaCradleObj.transform, false);
+        var glowRect = glow.AddComponent<RectTransform>();
+        glowRect.anchoredPosition = Vector2.zero;
+        glowRect.sizeDelta = new Vector2(DISPLAY_TILE * 2.5f, DISPLAY_TILE * 2.5f);
+        var glowImg = glow.AddComponent<Image>();
+        glowImg.color = Color.clear;
+        glowImg.raycastTarget = false;
+
+        // ゆりかごシンボル
+        var symbol = new GameObject("Symbol");
+        symbol.transform.SetParent(stellaCradleObj.transform, false);
+        var symRect = symbol.AddComponent<RectTransform>();
+        symRect.anchoredPosition = Vector2.zero;
+        symRect.sizeDelta = new Vector2(DISPLAY_TILE * 1.5f, DISPLAY_TILE * 1.5f);
+        var symTmp = symbol.AddComponent<TMPro.TextMeshProUGUI>();
+        FontHelper.Apply(symTmp);
+        symTmp.text = "\u2728"; // sparkle
+        symTmp.fontSize = 48;
+        symTmp.alignment = TMPro.TextAlignmentOptions.Center;
+        symTmp.color = new Color(1f, 0.84f, 0f, 0.9f);
+        symTmp.raycastTarget = false;
+
+        // 完了済みなら見た目を変える（グローは既にクリアなので不要）
+
+        // タップ
+        var btnImg = stellaCradleObj.AddComponent<Image>();
+        btnImg.color = Color.clear;
+        var btn = stellaCradleObj.AddComponent<Button>();
+        btn.transition = Selectable.Transition.None;
+        btn.onClick.AddListener(() => {
+            if (!stellaCradleActive) StartCoroutine(ShowStellaCradleEvent());
+        });
+
+        stellaCradleObj.transform.SetAsLastSibling();
+    }
+
+    IEnumerator ShowStellaCradleEvent()
+    {
+        stellaCradleActive = true;
+        menuOpen = true;
+
+        int progress = DataCarrier.Instance != null ? DataCarrier.Instance.stellaOriginProgress : 0;
+        bool done = (progress & 4) != 0;
+        bool bossesVisited = (progress & 3) == 3; // bit1=DEF, bit2=ATK 両方必要
+
+        // オーバーレイ
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.flexDirection = UIE.FlexDirection.Column;
+        overlay.style.justifyContent = UIE.Justify.Center;
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlayRoot.Add(overlay);
+
+        float elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.7f * (elapsed / 0.3f));
+            yield return null;
+        }
+
+        if (!bossesVisited && !done)
+        {
+            // 両ボス未訪問: ゆりかごはまだ使えない
+            var lockedLabel = UIHelper.CreateLabel(
+                "ゆりかごは まだ 目覚めていない…\nふたりの 守護者に 会いに行こう", "map-message-text");
+            lockedLabel.style.color = new Color(0.7f, 0.7f, 0.9f);
+            lockedLabel.style.fontSize = 28;
+            lockedLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
+            lockedLabel.style.width = 800;
+            lockedLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+            UIHelper.ApplyFont(lockedLabel);
+            overlay.Add(lockedLabel);
+
+            yield return new WaitForSeconds(0.3f);
+            bool tapped2 = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped2 = true);
+            while (!tapped2) yield return null;
+        }
+        else if (done)
+        {
+            string title = DataCarrier.Instance != null ? DataCarrier.Instance.stellaOriginTitle : "";
+            var doneLabel = UIHelper.CreateLabel(
+                $"『{title}』の ゆりかごは\nおだやかに 輝いている…", "map-message-text");
+            doneLabel.style.color = new Color(1f, 0.84f, 0f);
+            UIHelper.ApplyFont(doneLabel);
+            overlay.Add(doneLabel);
+
+            yield return new WaitForSeconds(0.3f);
+            bool tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+        }
+        else
+        {
+            // おじさんの声
+            var introLabel = UIHelper.CreateLabel(
+                Localization.Get("stella_cradle_intro"), "map-message-text");
+            introLabel.style.color = new Color(1f, 0.84f, 0f);
+            introLabel.style.fontSize = 28;
+            introLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
+            introLabel.style.width = 800;
+            introLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+            UIHelper.ApplyFont(introLabel);
+            overlay.Add(introLabel);
+
+            yield return new WaitForSeconds(0.5f);
+            bool tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+            introLabel.RemoveFromHierarchy();
+
+            // 選択UI
+            var chooseLabel = UIHelper.CreateLabel(
+                Localization.Get("stella_cradle_choose"), "map-message-text");
+            chooseLabel.style.color = Color.white;
+            chooseLabel.style.fontSize = 32;
+            chooseLabel.style.marginBottom = 30;
+            UIHelper.ApplyFont(chooseLabel);
+            UIHelper.ApplyFontBold(chooseLabel);
+            overlay.Add(chooseLabel);
+
+            string[] titleKeys = {
+                "stella_cradle_title_courage",
+                "stella_cradle_title_kindness",
+                "stella_cradle_title_wisdom",
+                "stella_cradle_title_harmony"
+            };
+
+            string chosenTitle = null;
+            for (int i = 0; i < titleKeys.Length; i++)
+            {
+                string title = Localization.Get(titleKeys[i]);
+                var btn = new UIE.Button();
+                btn.AddToClassList("map-menu-item-btn");
+                btn.text = title;
+                UIHelper.ApplyFont(btn);
+                UIHelper.ApplyFontBold(btn);
+                string captured = title;
+                btn.clicked += () => { chosenTitle = captured; };
+                overlay.Add(btn);
+            }
+
+            while (chosenTitle == null) yield return null;
+
+            // 選択完了 → ボタン群除去
+            overlay.Clear();
+
+            // 称号付与
+            if (DataCarrier.Instance != null)
+            {
+                DataCarrier.Instance.stellaOriginTitle = chosenTitle;
+                DataCarrier.Instance.stellaOriginProgress |= 4;
+                DataCarrier.Instance.SaveData();
+            }
+
+            // 完了演出
+            string babyName = DataCarrier.Instance != null ? DataCarrier.Instance.babyName : "???";
+            var completeLabel = UIHelper.CreateLabel(
+                Localization.Get("stella_cradle_complete", chosenTitle, babyName), "map-message-text");
+            completeLabel.style.color = new Color(1f, 0.84f, 0f);
+            completeLabel.style.fontSize = 30;
+            completeLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
+            completeLabel.style.width = 800;
+            completeLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+            UIHelper.ApplyFont(completeLabel);
+            overlay.Add(completeLabel);
+
+            yield return new WaitForSeconds(0.5f);
+            tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+
+            // 門の状態を更新
+            UpdateCosmicGateVisual();
+        }
+
+        elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.opacity = 1f - (elapsed / 0.3f);
+            yield return null;
+        }
+        overlay.RemoveFromHierarchy();
+
+        menuOpen = false;
+        stellaCradleActive = false;
+
+        // 全条件が揃ったらゲート開放演出を自動発動
+        CheckCosmicGateAutoOpen();
+    }
+
+    // --- 宇宙の門 ---
+
+    void CreateStellaCosmicGate()
+    {
+        if (tilesContainer == null) return;
+
+        float posX = (stellaCosmicGateX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (stellaCosmicGateY - mapHeight / 2f + 0.5f) * DISPLAY_TILE; // y=37
+
+        stellaCosmicGateObj = new GameObject("CosmicGate");
+        stellaCosmicGateObj.transform.SetParent(tilesContainer.transform, false);
+        var rect = stellaCosmicGateObj.AddComponent<RectTransform>();
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(DISPLAY_TILE * 3f, DISPLAY_TILE * 3f);
+
+        // 門の本体: gate.png を使用
+        var gateBody = new GameObject("GateBody");
+        gateBody.transform.SetParent(stellaCosmicGateObj.transform, false);
+        var gRect = gateBody.AddComponent<RectTransform>();
+        gRect.anchoredPosition = Vector2.zero;
+        gRect.sizeDelta = new Vector2(DISPLAY_TILE * 3f, DISPLAY_TILE * 3f);
+        var gImg = gateBody.AddComponent<Image>();
+        gImg.raycastTarget = false;
+        gImg.preserveAspect = true;
+
+        // gate.png をロード
+        Sprite gateSpr = Resources.Load<Sprite>("Map/4th/gate");
+        if (gateSpr == null)
+        {
+            var gateTex = Resources.Load<Texture2D>("Map/4th/gate");
+            if (gateTex != null && gateTex.isReadable)
+                gateSpr = Sprite.Create(gateTex, new Rect(0, 0, gateTex.width, gateTex.height), new Vector2(0.5f, 0.5f));
+        }
+        if (gateSpr != null)
+            gImg.sprite = gateSpr;
+        gImg.color = Color.white;
+
+        stellaCosmicGateObj.transform.SetAsLastSibling();
+
+        UpdateCosmicGateVisual();
+    }
+
+    void UpdateCosmicGateVisual()
+    {
+        if (stellaCosmicGateObj == null) return;
+
+        int progress = DataCarrier.Instance != null ? DataCarrier.Instance.stellaOriginProgress : 0;
+        bool allDone = (progress & 7) == 7; // bit 1 + 2 + 4
+
+        var gateBody = stellaCosmicGateObj.transform.Find("GateBody");
+
+        if (allDone && !stellaGateOpened)
+        {
+            // ゲート開放: 天の川(y=35-36) + 門(y=37)をwalkableにする
+            stellaGateOpened = true;
+
+            // 天の川の橋: y=35-36を歩行可能にする
+            for (int gx = 11; gx <= 13; gx++)
+            {
+                for (int gy = 35; gy <= 36; gy++)
+                {
+                    if (gx >= 0 && gx < mapWidth && gy >= 0 && gy < mapHeight)
+                    {
+                        mapData[gx, gy] = TILE_CRYSTAL;
+                        walkable[gx, gy] = true;
+                    }
+                }
+                // 門本体 (y=37)
+                if (gx >= 0 && gx < mapWidth && 37 < mapHeight)
+                    walkable[gx, 37] = true;
+            }
+            // 光の川ビジュアル（一本の帯）
+            CreateLightRiverBridge();
+
+        }
+
+        // gate.png の表示制御（テキストなし、画像のみ）
+        if (gateBody != null)
+        {
+            var img = gateBody.GetComponent<Image>();
+            if (img != null)
+            {
+                img.color = Color.white; // 全状態でくっきり表示
+            }
+        }
+
+        // ゲートパーティクル削除済み
+    }
+
+    IEnumerator ShowCosmicGateEvent()
+    {
+        if (stellaGateOpenAnimPlaying) yield break;
+        menuOpen = true;
+
+        int progress = DataCarrier.Instance != null ? DataCarrier.Instance.stellaOriginProgress : 0;
+        bool allDone = (progress & 7) == 7;
+
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.flexDirection = UIE.FlexDirection.Column;
+        overlay.style.justifyContent = UIE.Justify.Center;
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlayRoot.Add(overlay);
+
+        float elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * (elapsed / 0.3f));
+            yield return null;
+        }
+
+        if (!allDone)
+        {
+            // 未完了: ヒントメッセージ
+            string hint = Localization.Get("stella_gate_locked");
+            if ((progress & 1) == 0)
+                hint += "\n" + Localization.Get("stella_gate_hint_devil");
+            else if ((progress & 2) == 0)
+                hint += "\n" + Localization.Get("stella_gate_hint_melodias");
+            else if ((progress & 4) == 0)
+                hint += "\n" + Localization.Get("stella_gate_hint_cradle");
+
+            var label = UIHelper.CreateLabel(hint, "map-message-text");
+            label.style.color = new Color(0.7f, 0.7f, 0.8f);
+            label.style.fontSize = 28;
+            label.style.whiteSpace = UIE.WhiteSpace.Normal;
+            label.style.width = 800;
+            label.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+            UIHelper.ApplyFont(label);
+            overlay.Add(label);
+
+            yield return new WaitForSeconds(0.5f);
+            bool tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+
+            elapsed = 0f;
+            while (elapsed < 0.3f)
+            {
+                elapsed += Time.deltaTime;
+                overlay.style.opacity = 1f - (elapsed / 0.3f);
+                yield return null;
+            }
+            overlay.RemoveFromHierarchy();
+            menuOpen = false;
+            yield break;
+        }
+
+        // === 全条件クリア: ゲート開放演出 ===
+        stellaGateOpenAnimPlaying = true;
+
+        // ゴゴゴ…SE（重低音: 正解SEをpitch 0.3で再生）
+        if (seSource != null && seQuizCorrect != null)
+        {
+            seSource.pitch = 0.3f;
+            seSource.PlayOneShot(seQuizCorrect, 1f);
+        }
+
+        yield return new WaitForSeconds(1.5f);
+
+        // ゲート画像がゆっくり光を帯びる → フェードアウトして開放
+        elapsed = 0f;
+        float gateFadeDur = 2f;
+        var gateBody = stellaCosmicGateObj != null ? stellaCosmicGateObj.transform.Find("GateBody") : null;
+
+        while (elapsed < gateFadeDur)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / gateFadeDur);
+
+            // 門画像を白く光らせながらフェードアウト
+            if (gateBody != null)
+            {
+                var img = gateBody.GetComponent<Image>();
+                if (img != null)
+                    img.color = new Color(1f, 1f, 1f, 1f - t * 0.6f);
+            }
+
+            yield return null;
+        }
+
+        // SE pitch戻す
+        if (seSource != null) seSource.pitch = 1f;
+
+        if (seSource != null && seQuizCorrect != null)
+            seSource.PlayOneShot(seQuizCorrect, 0.8f);
+
+        // walkable更新 + ビジュアル更新
+        UpdateCosmicGateVisual();
+
+        // ゲートオブジェクトを非アクティブに
+        if (stellaCosmicGateObj != null)
+            stellaCosmicGateObj.SetActive(false);
+
+        yield return new WaitForSeconds(0.5f);
+
+        // 静かにフェードアウト
+        elapsed = 0f;
+        while (elapsed < 0.5f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.opacity = 1f - (elapsed / 0.5f);
+            yield return null;
+        }
+        overlay.RemoveFromHierarchy();
+
+        menuOpen = false;
+        stellaGateOpenAnimPlaying = false;
+
+    }
+
+    // === ラスボス「エゴ・マザー・マシーン」降臨シークエンス ===
+    IEnumerator CosmicGateEntrySequence()
+    {
+        menuOpen = true;
+        if (moveCtrl != null) moveCtrl.IsLocked = true;
+
+        // --- Phase 1: ゲート進入 → 操作無効 → カメラ北へズーム ---
+        // プレイヤーをゲート内へ歩かせる
+        float gateY = (stellaCosmicGateY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+        float gatePosX = (stellaCosmicGateX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        playerTileX = stellaCosmicGateX;
+        playerTileY = stellaCosmicGateY;
+        Vector2 gatePos = new Vector2(gatePosX, gateY);
+        float walkDur = 0.5f, walkEl = 0f;
+        Vector2 walkStart = playerRect.anchoredPosition;
+        while (walkEl < walkDur)
+        {
+            walkEl += Time.deltaTime;
+            playerRect.anchoredPosition = Vector2.Lerp(walkStart, gatePos, walkEl / walkDur);
+            yield return null;
+        }
+        playerRect.anchoredPosition = gatePos;
+
+        yield return new WaitForSeconds(0.3f);
+
+        // UI Toolkitオーバーレイ: 全画面演出レイヤー
+        var cutsceneOverlay = new UIE.VisualElement();
+        cutsceneOverlay.AddToClassList("fill");
+        cutsceneOverlay.style.position = UIE.Position.Absolute;
+        cutsceneOverlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        cutsceneOverlay.pickingMode = UIE.PickingMode.Ignore;
+        overlayRoot.Add(cutsceneOverlay);
+
+        // --- Phase 2: 黄金の盲目フラッシュ(Blinding Light) ---
+        // 暗転 → 一瞬の黄金閃光
+        float fadeEl = 0f;
+        while (fadeEl < 1f)
+        {
+            fadeEl += Time.deltaTime;
+            float t = Mathf.Clamp01(fadeEl / 1f);
+            cutsceneOverlay.style.backgroundColor = new Color(0, 0, 0, t);
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(0.5f);
+
+        // 黄金フラッシュ: 複数回明滅
+        for (int flash = 0; flash < 3; flash++)
+        {
+            float flashIn = 0f;
+            while (flashIn < 0.15f)
+            {
+                flashIn += Time.deltaTime;
+                float a = Mathf.Clamp01(flashIn / 0.15f);
+                cutsceneOverlay.style.backgroundColor = new Color(1f, 0.84f, 0f, a * 0.9f);
+                yield return null;
+            }
+            float flashOut = 0f;
+            while (flashOut < 0.2f)
+            {
+                flashOut += Time.deltaTime;
+                float a = 1f - Mathf.Clamp01(flashOut / 0.2f);
+                cutsceneOverlay.style.backgroundColor = new Color(1f, 0.84f, 0f, a * 0.9f);
+                yield return null;
+            }
+            cutsceneOverlay.style.backgroundColor = new Color(0, 0, 0, 0.9f);
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        // 黄金フルブラスト
+        fadeEl = 0f;
+        while (fadeEl < 0.5f)
+        {
+            fadeEl += Time.deltaTime;
+            float t = Mathf.Clamp01(fadeEl / 0.5f);
+            cutsceneOverlay.style.backgroundColor = new Color(1f, 0.84f + 0.16f * t, t * 0.3f, 0.95f);
+            yield return null;
+        }
+
+        // SE: 重低音
+        if (seSource != null && seQuizCorrect != null)
+        {
+            seSource.pitch = 0.2f;
+            seSource.PlayOneShot(seQuizCorrect, 1f);
+        }
+
+        yield return new WaitForSeconds(1f);
+
+        // --- Phase 3: 渦巻く銀河 + ラスボスシルエット浮上 ---
+        // 背景を銀河渦巻きに切り替え
+        cutsceneOverlay.style.backgroundColor = new Color(0.02f, 0.01f, 0.06f, 1f);
+
+        // 渦巻く星パーティクル
+        var galaxyParticles = new List<(UIE.VisualElement el, float angle, float radius, float speed)>();
+        for (int i = 0; i < 80; i++)
+        {
+            var star = new UIE.VisualElement();
+            float size = Random.Range(2f, 6f);
+            star.style.width = size;
+            star.style.height = size;
+            star.style.borderTopLeftRadius = size;
+            star.style.borderTopRightRadius = size;
+            star.style.borderBottomLeftRadius = size;
+            star.style.borderBottomRightRadius = size;
+            star.style.position = UIE.Position.Absolute;
+            float b = Random.Range(0.5f, 1f);
+            bool isGold = Random.value < 0.4f;
+            star.style.backgroundColor = isGold
+                ? new Color(1f, 0.84f * b, 0f, b)
+                : new Color(b, b, b * 0.9f + 0.1f, b * 0.8f);
+            cutsceneOverlay.Add(star);
+            float ang = Random.Range(0f, Mathf.PI * 2f);
+            float rad = Random.Range(50f, 450f);
+            float spd = Random.Range(0.3f, 1.2f);
+            galaxyParticles.Add((star, ang, rad, spd));
+        }
+
+        // 中心に向かう吸引パーティクル
+        var suckParticles = new List<(UIE.VisualElement el, float angle, float startR, float life)>();
+        for (int i = 0; i < 40; i++)
+        {
+            var p = new UIE.VisualElement();
+            float size = Random.Range(3f, 8f);
+            p.style.width = size;
+            p.style.height = size;
+            p.style.borderTopLeftRadius = size;
+            p.style.borderTopRightRadius = size;
+            p.style.borderBottomLeftRadius = size;
+            p.style.borderBottomRightRadius = size;
+            p.style.position = UIE.Position.Absolute;
+            p.style.backgroundColor = new Color(1f, 0.84f, 0f, Random.Range(0.3f, 0.7f));
+            cutsceneOverlay.Add(p);
+            suckParticles.Add((p, Random.Range(0f, Mathf.PI * 2f), Random.Range(300f, 500f), Random.Range(0f, 1f)));
+        }
+
+        // ボスシルエット（中央、最初は下方に隠れている）
+        var bossContainer = new UIE.VisualElement();
+        bossContainer.style.position = UIE.Position.Absolute;
+        bossContainer.style.width = 320;
+        bossContainer.style.height = 320;
+        bossContainer.style.left = UIE.Length.Percent(50);
+        bossContainer.style.top = UIE.Length.Percent(50);
+        bossContainer.style.translate = new UIE.StyleTranslate(new UIE.Translate(-160, 300)); // 画面下に隠す
+        cutsceneOverlay.Add(bossContainer);
+
+        // ボスのシルエット暗影
+        var bossShadow = new UIE.VisualElement();
+        bossShadow.style.width = UIE.Length.Percent(100);
+        bossShadow.style.height = UIE.Length.Percent(100);
+        bossShadow.style.borderTopLeftRadius = 48;
+        bossShadow.style.borderTopRightRadius = 48;
+        bossShadow.style.borderBottomLeftRadius = 48;
+        bossShadow.style.borderBottomRightRadius = 48;
+        bossShadow.style.backgroundColor = new Color(0, 0, 0, 0.85f);
+        bossContainer.Add(bossShadow);
+
+        // ボスのスプライト（シルエットの中に）
+        var bossSpriteEl = new UIE.VisualElement();
+        bossSpriteEl.style.position = UIE.Position.Absolute;
+        bossSpriteEl.style.width = UIE.Length.Percent(90);
+        bossSpriteEl.style.height = UIE.Length.Percent(90);
+        bossSpriteEl.style.left = UIE.Length.Percent(5);
+        bossSpriteEl.style.top = UIE.Length.Percent(5);
+        bossSpriteEl.style.opacity = 0f;
+        var bossSprite = Resources.Load<Sprite>("EnemyBabys/boss/ego-mother-machine");
+        if (bossSprite != null)
+        {
+            bossSpriteEl.style.backgroundImage = new UIE.StyleBackground(bossSprite);
+            bossSpriteEl.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+        }
+        bossContainer.Add(bossSpriteEl);
+
+        // 黄金のオーラ(ボスの後ろ)
+        var bossAura = new UIE.VisualElement();
+        bossAura.style.position = UIE.Position.Absolute;
+        bossAura.style.width = 400;
+        bossAura.style.height = 400;
+        bossAura.style.left = -40;
+        bossAura.style.top = -40;
+        bossAura.style.borderTopLeftRadius = 200;
+        bossAura.style.borderTopRightRadius = 200;
+        bossAura.style.borderBottomLeftRadius = 200;
+        bossAura.style.borderBottomRightRadius = 200;
+        bossAura.style.backgroundColor = new Color(1f, 0.84f, 0f, 0f);
+        bossContainer.Insert(0, bossAura); // シルエットの後ろに
+
+        // アニメーション: 銀河回転 + ボス浮上 (4秒)
+        float phase3Dur = 4f;
+        float phase3El = 0f;
+        float galaxyTime = 0f;
+
+        while (phase3El < phase3Dur)
+        {
+            phase3El += Time.deltaTime;
+            galaxyTime += Time.deltaTime;
+            float t = Mathf.Clamp01(phase3El / phase3Dur);
+
+            // 銀河渦巻き回転
+            float cx = 540f, cy = 960f; // 画面中央付近（概算）
+            foreach (var (el, ang, rad, spd) in galaxyParticles)
+            {
+                float curAngle = ang + galaxyTime * spd;
+                float curRad = rad * (1f - t * 0.3f); // 少し中心に吸引
+                el.style.left = cx + Mathf.Cos(curAngle) * curRad;
+                el.style.top = cy + Mathf.Sin(curAngle) * curRad;
+            }
+
+            // 吸引パーティクル: 外から中心へ
+            foreach (var (el, ang, startR, life) in suckParticles)
+            {
+                float lt = Mathf.Repeat(galaxyTime * 0.5f + life, 1f);
+                float curR = startR * (1f - lt);
+                el.style.left = cx + Mathf.Cos(ang + galaxyTime * 0.3f) * curR;
+                el.style.top = cy + Mathf.Sin(ang + galaxyTime * 0.3f) * curR;
+                el.style.opacity = lt < 0.8f ? 1f : (1f - (lt - 0.8f) / 0.2f);
+            }
+
+            // ボス浮上: 下から中央へ (ease-out)
+            float riseT = t < 0.3f ? 0f : Mathf.Clamp01((t - 0.3f) / 0.7f);
+            float easeRise = 1f - Mathf.Pow(1f - riseT, 3f); // ease-out cubic
+            float yOffset = Mathf.Lerp(300f, -160f, easeRise);
+            bossContainer.style.translate = new UIE.StyleTranslate(new UIE.Translate(-160, yOffset));
+
+            // ボスシルエット → 徐々に明らかに
+            bossShadow.style.backgroundColor = new Color(0, 0, 0, 0.85f * (1f - riseT * 0.6f));
+            bossSpriteEl.style.opacity = riseT * 0.8f;
+
+            // ボスオーラ: 徐々に光る
+            float auraA = riseT * 0.15f;
+            bossAura.style.backgroundColor = new Color(1f, 0.84f, 0f, auraA);
+
+            yield return null;
+        }
+
+        // SE: 高音 — ボスが見えた
+        if (seSource != null)
+        {
+            seSource.pitch = 1.5f;
+            if (seQuizCorrect != null) seSource.PlayOneShot(seQuizCorrect, 0.7f);
+        }
+
+        // ボス完全表示
+        bossShadow.style.backgroundColor = new Color(0, 0, 0, 0.1f);
+        bossSpriteEl.style.opacity = 1f;
+        bossAura.style.backgroundColor = new Color(1f, 0.84f, 0f, 0.25f);
+
+        yield return new WaitForSeconds(0.5f);
+
+        // --- Phase 4: タイトルタイポグラフィ ---
+        // 銀河を暗くする
+        foreach (var (el, _, _, _) in galaxyParticles)
+            el.style.opacity = 0.3f;
+
+        var titleContainer = new UIE.VisualElement();
+        titleContainer.style.position = UIE.Position.Absolute;
+        titleContainer.style.width = UIE.Length.Percent(100);
+        titleContainer.style.height = UIE.Length.Percent(100);
+        titleContainer.style.flexDirection = UIE.FlexDirection.Column;
+        titleContainer.style.justifyContent = UIE.Justify.FlexStart;
+        titleContainer.style.alignItems = UIE.Align.Center;
+        titleContainer.style.paddingTop = 120;
+        titleContainer.pickingMode = UIE.PickingMode.Ignore;
+        cutsceneOverlay.Add(titleContainer);
+
+        // メイン名
+        var bossNameLabel = UIHelper.CreateLabel("", "map-message-text");
+        bossNameLabel.style.color = new Color(1f, 0.84f, 0f, 0f);
+        bossNameLabel.style.fontSize = 48;
+        bossNameLabel.style.letterSpacing = 12;
+        bossNameLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        UIHelper.ApplyFontBold(bossNameLabel);
+        titleContainer.Add(bossNameLabel);
+
+        // サブタイトル
+        var subtitleLabel = UIHelper.CreateLabel("", "map-message-text");
+        subtitleLabel.style.color = new Color(0.9f, 0.85f, 0.7f, 0f);
+        subtitleLabel.style.fontSize = 24;
+        subtitleLabel.style.letterSpacing = 8;
+        subtitleLabel.style.marginTop = 16;
+        subtitleLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        UIHelper.ApplyFont(subtitleLabel);
+        titleContainer.Add(subtitleLabel);
+
+        // タイトル文字フェードイン
+        bossNameLabel.text = "EGO MOTHER MACHINE";
+        subtitleLabel.text = "- THE FINAL DESTINY -";
+
+        fadeEl = 0f;
+        while (fadeEl < 1.5f)
+        {
+            fadeEl += Time.deltaTime;
+            float t = Mathf.Clamp01(fadeEl / 1.5f);
+            bossNameLabel.style.color = new Color(1f, 0.84f, 0f, t);
+            // サブタイトルは少し遅れて
+            float st = Mathf.Clamp01((fadeEl - 0.5f) / 1f);
+            subtitleLabel.style.color = new Color(0.9f, 0.85f, 0.7f, st);
+
+            // ボスオーラ脈動
+            float pulse = 0.2f + 0.1f * Mathf.Sin(fadeEl * 4f);
+            bossAura.style.backgroundColor = new Color(1f, 0.84f, 0f, pulse);
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(1.5f);
+
+        // SE pitch戻す
+        if (seSource != null) seSource.pitch = 1f;
+
+        // --- Phase 5: 画面フェードアウト → バトルシーンへ遷移 ---
+        fadeEl = 0f;
+        while (fadeEl < 1.2f)
+        {
+            fadeEl += Time.deltaTime;
+            float t = Mathf.Clamp01(fadeEl / 1.2f);
+            // 黄金フラッシュからブラックアウト
+            float r = Mathf.Lerp(1f, 0f, t);
+            float g = Mathf.Lerp(0.84f, 0f, t);
+            cutsceneOverlay.style.backgroundColor = new Color(r, g, 0f, 1f);
+            yield return null;
+        }
+
+        cutsceneOverlay.style.backgroundColor = new Color(0, 0, 0, 1f);
+
+        // DataCarrier設定
+        if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.cameFromMap = true;
+            DataCarrier.Instance.isBossBattle = true;
+            DataCarrier.Instance.SaveData();
+        }
+
+        yield return StartCoroutine(CaptureMapScreenshot());
+        SceneManager.LoadScene("BattleScene");
+    }
+
+    void SpawnStellaRipple()
+    {
+        if (tilesContainer == null || stellaAuraSprite == null) return;
+        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+        if (area != 8) return;
+
+        float posX = (playerTileX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (playerTileY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+
+        // タイルの色を取得してTintに使用
+        Color tint = new Color(0.6f, 0.8f, 1f); // デフォルト: 水色
+        if (stellaTileMap.TryGetValue((playerTileX, playerTileY), out var tile) && tile.img != null)
+        {
+            var tc = tile.img.color;
+            tint = new Color(tc.r, tc.g, tc.b);
+        }
+
+        var aura = new GameObject("AuraRipple");
+        aura.transform.SetParent(tilesContainer.transform, false);
+        var rt = aura.AddComponent<RectTransform>();
+        rt.anchoredPosition = new Vector2(posX, posY);
+        float startSize = DISPLAY_TILE * 0.5f;
+        rt.sizeDelta = new Vector2(startSize, startSize);
+
+        var img = aura.AddComponent<Image>();
+        img.sprite = stellaAuraSprite;
+        img.preserveAspect = true;
+        img.color = new Color(tint.r, tint.g, tint.b, 1f);
+        img.raycastTarget = false;
+        // 加算合成マテリアル適用
+        if (stellaAdditiveMat != null)
+            img.material = stellaAdditiveMat;
+
+        // プレイヤーの直下に配置
+        aura.transform.SetSiblingIndex(playerObj.transform.GetSiblingIndex());
+
+        stellaAuraRipples.Add(new StellaAuraRipple
+        {
+            rt = rt,
+            img = img,
+            elapsed = 0f,
+            duration = Random.Range(0.4f, 0.6f),
+            tintColor = tint
+        });
+    }
+
+    void UpdateStellaOrigin()
+    {
+        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+        if (area != 8) return;
+
+        stellaCrystalPulseTime += Time.deltaTime;
+
+        // Aura波紋の拡大 + フェードアウト（加算合成）
+        for (int i = stellaAuraRipples.Count - 1; i >= 0; i--)
+        {
+            var ar = stellaAuraRipples[i];
+            if (ar.rt == null) { stellaAuraRipples.RemoveAt(i); continue; }
+
+            ar.elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(ar.elapsed / ar.duration);
+
+            // サイズ: 0.5x → 2.0x (DISPLAY_TILE基準)
+            float size = Mathf.Lerp(DISPLAY_TILE * 0.5f, DISPLAY_TILE * 2.0f, t);
+            ar.rt.sizeDelta = new Vector2(size, size);
+
+            // 不透明度: 1.0 → 0.0
+            float alpha = Mathf.Lerp(1f, 0f, t);
+            ar.img.color = new Color(ar.tintColor.r, ar.tintColor.g, ar.tintColor.b, alpha);
+
+            if (t >= 1f)
+            {
+                Destroy(ar.rt.gameObject);
+                stellaAuraRipples.RemoveAt(i);
+            }
+        }
+
+        // 背景のゆっくり回転（1分で1回転 = 6°/秒）
+        if (stellaBgRect != null)
+        {
+            stellaBgRect.localRotation = Quaternion.Euler(0, 0, stellaCrystalPulseTime * 6f);
+        }
+
+        // ガーディアンオーラリング回転
+        if (stellaGuardianDevilObj != null)
+        {
+            var devilAura = stellaGuardianDevilObj.transform.Find("Aura");
+            if (devilAura != null)
+                devilAura.localRotation = Quaternion.Euler(0, 0, -stellaCrystalPulseTime * 20f);
+        }
+        if (stellaGuardianMelodiasObj != null)
+        {
+            var melAura = stellaGuardianMelodiasObj.transform.Find("Aura");
+            if (melAura != null)
+                melAura.localRotation = Quaternion.Euler(0, 0, stellaCrystalPulseTime * 20f);
+        }
+
+        // 音叉: 浮遊アニメーション + 明滅
+        for (int i = 0; i < stellaForkVisuals.Count; i++)
+        {
+            var (frt, fimg, fbaseY, fphase) = stellaForkVisuals[i];
+            if (frt == null) continue;
+            float floatY = Mathf.Sin(stellaCrystalPulseTime * 0.7f + fphase) * 4f;
+            frt.anchoredPosition = new Vector2(frt.anchoredPosition.x, fbaseY + floatY);
+            if (fimg != null)
+            {
+                float pulse = 0.8f + 0.15f * Mathf.Sin(stellaCrystalPulseTime * 1.5f + fphase);
+                fimg.color = new Color(1f, 1f, 1f, pulse);
+            }
+        }
+
+        // クリスタルタイルの浮遊 + 現在地ハイライト
+        // 全タイル常時表示。現在地だけ100%輝度、それ以外はベースアルファ
+        float playerWorldX = (playerTileX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float playerWorldY = (playerTileY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+        float fadeSpeed = 1f / 0.2f;
+
+        foreach (var kv in stellaTileMap)
+        {
+            var t = kv.Value;
+            if (t.rt == null) continue;
+
+            int dist = Mathf.Abs(t.tileX - playerTileX) + Mathf.Abs(t.tileY - playerTileY);
+
+            // 目標アルファ: 現在地=100%, 隣接=基本値, 遠方=基本値
+            t.goalAlpha = (dist == 0) ? t.maxAlpha : t.maxAlpha * 0.7f;
+
+            // スムーズ補間
+            t.currentAlpha = Mathf.MoveTowards(t.currentAlpha, t.goalAlpha, fadeSpeed * Time.deltaTime * t.maxAlpha);
+
+            // 色更新
+            var c = t.img.color;
+            t.img.color = new Color(c.r, c.g, c.b, t.currentAlpha);
+
+            // 浮遊アニメーション（sin波）
+            float floatY = Mathf.Sin(stellaCrystalPulseTime * t.speed + t.phase) * 2.5f;
+            t.rt.anchoredPosition = new Vector2(t.rt.anchoredPosition.x, t.baseY + floatY);
+        }
+
+        // 光子パーティクルのドリフト + アルファ脈動
+        float halfMapW = mapWidth * DISPLAY_TILE * 0.45f;
+        float halfMapH = mapHeight * DISPLAY_TILE * 0.45f;
+        for (int i = 0; i < stellaPhotons.Count; i++)
+        {
+            var (phRt, phSpeed, phPhase, phBaseAlpha) = stellaPhotons[i];
+            if (phRt == null) continue;
+            // ゆっくりドリフト
+            var phPos = phRt.anchoredPosition;
+            phPos.x += Mathf.Cos(stellaCrystalPulseTime * phSpeed + phPhase) * 8f * Time.deltaTime;
+            phPos.y += Mathf.Sin(stellaCrystalPulseTime * phSpeed * 0.7f + phPhase) * 6f * Time.deltaTime;
+            // 画面外に出たらワープ
+            if (phPos.x > halfMapW) phPos.x = -halfMapW;
+            if (phPos.x < -halfMapW) phPos.x = halfMapW;
+            if (phPos.y > halfMapH) phPos.y = -halfMapH;
+            if (phPos.y < -halfMapH) phPos.y = halfMapH;
+            phRt.anchoredPosition = phPos;
+            // アルファ脈動
+            var phImg = phRt.GetComponent<Image>();
+            if (phImg != null)
+            {
+                float a = phBaseAlpha * (0.5f + 0.5f * Mathf.Sin(stellaCrystalPulseTime * phSpeed * 1.5f + phPhase));
+                phImg.color = new Color(phImg.color.r, phImg.color.g, phImg.color.b, a);
+            }
+        }
+
+        // 足元波紋・トレイル削除済み
+    }
+
     void CreateMapUI()
     {
         if (canvas == null) return;
@@ -2024,6 +4160,8 @@ public class MapManager : MonoBehaviour
             bg.color = new Color(0.1f, 0.08f, 0.08f);   // 館内: 暗灰
         else if (areaForColor == 1)
             bg.color = new Color(0.2f, 0.08f, 0.15f);   // ゴージャス・ヴィレッジ: 暗い赤紫
+        else if (areaForColor == 8)
+            bg.color = new Color(0.02f, 0.01f, 0.06f);  // ステラ・オリジン: 深宇宙
         else if (areaForColor == 7)
             bg.color = new Color(0.75f, 0.70f, 0.60f);  // 塾: 明るいベージュ
         else
@@ -2038,6 +4176,77 @@ public class MapManager : MonoBehaviour
         tilesContainerRect.anchorMax = new Vector2(0.5f, 0.5f);
         tilesContainerRect.anchoredPosition = new Vector2(0, -40);
         tilesContainerRect.sizeDelta = new Vector2(mapWidth * DISPLAY_TILE, mapHeight * DISPLAY_TILE);
+
+        // Area 8: ステラ・オリジン宇宙背景
+        if (areaForColor == 8)
+            CreateStellaOriginBackground();
+
+        // Area 3: 1枚絵の背景（銀河のベロア）をLayer 0として敷く
+        if (areaForColor == 3 && thirdBgSprite != null)
+        {
+            var bgLayer = new GameObject("ThirdBgLayer");
+            bgLayer.transform.SetParent(tilesContainer.transform, false);
+            var bgRect = bgLayer.AddComponent<RectTransform>();
+            bgRect.anchorMin = new Vector2(0.5f, 0.5f);
+            bgRect.anchorMax = new Vector2(0.5f, 0.5f);
+            bgRect.anchoredPosition = Vector2.zero;
+            bgRect.sizeDelta = new Vector2(mapWidth * DISPLAY_TILE, mapHeight * DISPLAY_TILE);
+            var bgImg = bgLayer.AddComponent<Image>();
+            bgImg.sprite = thirdBgSprite;
+            bgImg.type = Image.Type.Simple;
+            bgImg.preserveAspect = false;
+            bgImg.raycastTarget = false;
+            bgLayer.transform.SetAsFirstSibling();
+        }
+
+        // Area 3: 湖オーバーレイ（背景の上、タイルの下）
+        if (areaForColor == 3 && thirdLakeSprite != null)
+        {
+            // 沼 (x=1-3, y=15-16)
+            CreateLakeOverlay(1, 3, 15, 16);
+
+            // プール (x=1-5, y=33-36)
+            if (thirdPoolSprite != null)
+            {
+                float cx = ((1 + 4) / 2f - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+                float cy = ((34 + 36) / 2f - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+                float w = 4 * DISPLAY_TILE;
+                float h = 3 * DISPLAY_TILE;
+                var pool = new GameObject("PoolOverlay");
+                pool.transform.SetParent(tilesContainer.transform, false);
+                var pRect = pool.AddComponent<RectTransform>();
+                pRect.anchoredPosition = new Vector2(cx, cy);
+                pRect.sizeDelta = new Vector2(w, h);
+
+                var pImg = pool.AddComponent<Image>();
+                pImg.sprite = thirdPoolSprite;
+                pImg.type = Image.Type.Simple;
+                pImg.preserveAspect = false;
+                pImg.raycastTarget = false;
+
+                // かぐや3回目: プールに泡ヒント
+                if (DataCarrier.Instance != null && DataCarrier.Instance.kaguyaMetCount == 2 && !DataCarrier.Instance.kaguyaLover)
+                {
+                    poolBubbles = new TMPro.TextMeshProUGUI[3];
+                    for (int bi = 0; bi < poolBubbles.Length; bi++)
+                    {
+                        var bubObj = new GameObject("PoolBubble" + bi);
+                        bubObj.transform.SetParent(pool.transform, false);
+                        var bRect = bubObj.AddComponent<RectTransform>();
+                        bRect.anchoredPosition = new Vector2(Random.Range(-w * 0.3f, w * 0.3f), Random.Range(-h * 0.2f, h * 0.2f));
+                        bRect.sizeDelta = new Vector2(20, 20);
+                        var bTmp = bubObj.AddComponent<TMPro.TextMeshProUGUI>();
+                        FontHelper.Apply(bTmp);
+                        bTmp.text = "\u25CB";
+                        bTmp.fontSize = 10 + bi * 3;
+                        bTmp.alignment = TMPro.TextAlignmentOptions.Center;
+                        bTmp.color = new Color(0.8f, 0.95f, 1f, 0f);
+                        bTmp.raycastTarget = false;
+                        poolBubbles[bi] = bTmp;
+                    }
+                }
+            }
+        }
 
         // タイルを配置
         for (int x = 0; x < mapWidth; x++)
@@ -2448,7 +4657,12 @@ public class MapManager : MonoBehaviour
 
         int areaForTile = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
 
-        if (areaForTile == 1 && tileType == TILE_GRASS && poisonRoadSprite != null)
+        if (areaForTile == 3 && tileType == TILE_GRASS)
+        {
+            // 背景1枚絵を透かすため透明に
+            img.color = Color.clear;
+        }
+        else if (areaForTile == 1 && tileType == TILE_GRASS && poisonRoadSprite != null)
         {
             img.sprite = poisonRoadSprite;
             img.color = Color.white;
@@ -2457,33 +4671,93 @@ public class MapManager : MonoBehaviour
         {
             CreateModernGrassTile(tileObj.transform, img, x, y);
         }
+        else if (areaForTile == 3 && tileType == TILE_WATER)
+        {
+            // 背景1枚絵+湖オーバーレイを透かすため透明に
+            img.color = Color.clear;
+        }
         else if (areaForTile == 1 && tileType == TILE_WATER && poisonLakeSprite != null)
         {
             img.sprite = poisonLakeSprite;
             img.color = Color.white;
+        }
+        else if (tileType == TILE_CHAMPAGNE)
+        {
+            // 背景: フェルト
+            if (poisonFeltSprite != null)
+            {
+                img.sprite = poisonFeltSprite;
+                img.color = Color.white;
+            }
+            // 前面: シャンパン（引き伸ばしなし）
+            if (champagneSprite != null)
+            {
+                var overlay = new GameObject("Champagne");
+                overlay.transform.SetParent(tileObj.transform, false);
+                var oRect = overlay.AddComponent<RectTransform>();
+                oRect.anchoredPosition = Vector2.zero;
+                oRect.sizeDelta = new Vector2(DISPLAY_TILE, DISPLAY_TILE);
+                var oImg = overlay.AddComponent<Image>();
+                oImg.sprite = champagneSprite;
+                oImg.preserveAspect = true;
+                oImg.raycastTarget = false;
+            }
         }
         else if (areaForTile == 1 && tileType == TILE_FENCE && poisonFenceSprite != null)
         {
             img.sprite = poisonFenceSprite;
             img.color = Color.white;
         }
+        else if (areaForTile == 3 && tileType == TILE_TREE && thirdFenceSprite != null)
+        {
+            img.sprite = thirdFenceSprite;
+            img.color = Color.white;
+        }
+        else if (areaForTile == 3 && tileType == TILE_ROCK && thirdWoodtowerSprite != null)
+        {
+            img.color = Color.clear; // 背景を透かす
+            var tower = new GameObject("Woodtower");
+            tower.transform.SetParent(tileObj.transform, false);
+            var tRect = tower.AddComponent<RectTransform>();
+            tRect.anchoredPosition = Vector2.zero;
+            tRect.sizeDelta = new Vector2(DISPLAY_TILE, DISPLAY_TILE);
+            var tImg = tower.AddComponent<Image>();
+            tImg.sprite = thirdWoodtowerSprite;
+            tImg.preserveAspect = true;
+            tImg.raycastTarget = false;
+        }
+        else if (areaForTile == 3 && (tileType == TILE_PATH || tileType == TILE_DARK_DIRT) && thirdRoadSprite != null)
+        {
+            img.sprite = thirdRoadSprite;
+            img.color = Color.white;
+        }
+        else if (areaForTile == 1 && tileType == TILE_DARK_DIRT && poisonFeltSprite != null)
+        {
+            img.sprite = poisonFeltSprite;
+            img.color = Color.white;
+        }
         else if (tileSprites.ContainsKey(tileType) && tileSprites[tileType] != null)
         {
             img.sprite = tileSprites[tileType];
-            if (areaForTile == 3 && tileType == TILE_WATER)
-                img.color = new Color(0.6f, 0.3f, 0.8f);
-            else if (areaForTile == 1 && tileType == TILE_WATER)
+            if (areaForTile == 1 && tileType == TILE_WATER)
                 img.color = new Color(1f, 0.4f, 0.3f);
             else
                 img.color = Color.white;
         }
         else if (tileType == TILE_SHOP_FLOOR)
         {
-            // 武器屋: 市松模様の石畳
-            if ((x + y) % 2 == 0)
-                img.color = new Color(0.30f, 0.22f, 0.35f);
+            if (toyShopBgSprite != null)
+            {
+                img.sprite = toyShopBgSprite;
+                img.color = Color.white;
+            }
             else
-                img.color = new Color(0.24f, 0.16f, 0.28f);
+            {
+                if ((x + y) % 2 == 0)
+                    img.color = new Color(0.30f, 0.22f, 0.35f);
+                else
+                    img.color = new Color(0.24f, 0.16f, 0.28f);
+            }
         }
         else if (tileType == TILE_JUKU_FLOOR)
         {
@@ -2543,6 +4817,84 @@ public class MapManager : MonoBehaviour
             img.sprite = sprite;
             img.color = Color.white;
             rect.localRotation = Quaternion.Euler(0, 0, -90);
+        }
+        else if (tileType == TILE_BOSS_MANSION || tileType == TILE_WEAPON_SHOP)
+        {
+            // 建物タイルの背景: 周囲の草タイルと同じ見た目にする
+            if (areaForTile == 3)
+            {
+                // 背景1枚絵を透かすため透明に
+                img.color = Color.clear;
+            }
+            else if (areaForTile == 1 && poisonRoadSprite != null)
+            {
+                img.sprite = poisonRoadSprite;
+                img.color = Color.white;
+            }
+            else
+            {
+                CreateModernGrassTile(tileObj.transform, img, x, y);
+            }
+        }
+        else if (tileType == TILE_SHOP_WALL && toyShopBallSprite != null)
+        {
+            img.sprite = toyShopBallSprite;
+            img.color = Color.white;
+        }
+        else if (areaForTile == 8 && tileType == TILE_CRYSTAL)
+        {
+            // タイルサイズを75%に縮小（隙間から宇宙背景がしっかり見える）
+            float crystalSize = DISPLAY_TILE * 0.75f;
+            rect.sizeDelta = new Vector2(crystalSize, crystalSize);
+
+            // Crystal_Tile.png でタイルを描画
+            Sprite crystalSpr = Resources.Load<Sprite>("Map/4th/Crystal_Tile");
+            if (crystalSpr == null)
+            {
+                var cTex = Resources.Load<Texture2D>("Map/4th/Crystal_Tile");
+                if (cTex != null && cTex.isReadable)
+                    crystalSpr = Sprite.Create(cTex, new Rect(0, 0, cTex.width, cTex.height), new Vector2(0.5f, 0.5f));
+            }
+
+            float maxAlpha;
+            if (crystalSpr != null)
+            {
+                img.sprite = crystalSpr;
+                maxAlpha = 0.7f;
+            }
+            else
+            {
+                maxAlpha = 0.5f;
+            }
+
+            if (crystalSpr != null)
+                img.color = new Color(0.9f, 0.95f, 1f, maxAlpha);
+            else
+                img.color = new Color(0.3f, 0.3f, 0.5f, maxAlpha);
+
+            // 浮遊タイルマップに登録（最初から全て表示）
+            var tile = new StellaFloatingTile
+            {
+                rt = rect,
+                img = img,
+                maxAlpha = maxAlpha,
+                currentAlpha = maxAlpha,
+                goalAlpha = maxAlpha,
+                baseY = rect.anchoredPosition.y,
+                phase = Random.Range(0f, Mathf.PI * 2f),
+                speed = Random.Range(0.8f, 1.6f),
+                tileX = x,
+                tileY = y,
+                discovered = true,
+                visited = false
+            };
+            stellaTileMap[(x, y)] = tile;
+
+            // 音叉タイルのラベルは不要（Tuning_Fork.png ビジュアルが別途作成される）
+        }
+        else if (areaForTile == 8 && tileType == TILE_CRYSTAL_WALL)
+        {
+            img.color = Color.clear; // 透明（宇宙背景を透かす）
         }
         else
         {
@@ -2798,6 +5150,9 @@ public class MapManager : MonoBehaviour
             case TILE_SHOP_WALL: return new Color(0.18f, 0.08f, 0.22f);
             case TILE_JUKU_FLOOR: return new Color(0.85f, 0.80f, 0.70f);
             case TILE_JUKU_WALL: return new Color(0.65f, 0.60f, 0.55f);
+            case TILE_CHAMPAGNE: return new Color(0.95f, 0.85f, 0.55f); // シャンパンゴールド
+            case TILE_CRYSTAL: return new Color(0.15f, 0.18f, 0.35f, 0.3f);       // クリスタル床（半透明）
+            case TILE_CRYSTAL_WALL: return new Color(0.02f, 0.01f, 0.06f, 0f);    // 宇宙壁（透明）
             default: return Color.magenta;
         }
     }
@@ -2819,8 +5174,66 @@ public class MapManager : MonoBehaviour
 
         GenerateRpgCharacter(playerObj.transform);
 
+        // ステラ・オリジン: オーラ削除済み
+
         playerObj.transform.SetAsLastSibling();
         targetPosition = playerRect.anchoredPosition;
+
+        // 相思相愛後: かぐやフォロワー作成
+        CreateKaguyaFollower();
+    }
+
+    void CreateKaguyaFollower()
+    {
+        if (tilesContainer == null) return;
+        if (DataCarrier.Instance == null || !DataCarrier.Instance.kaguyaLover) return;
+        if (kaguyaFollowerObj != null) return; // 既に作成済み
+
+        kaguyaFollowerObj = new GameObject("KaguyaFollower");
+        kaguyaFollowerObj.transform.SetParent(tilesContainer.transform, false);
+
+        kaguyaFollowerRect = kaguyaFollowerObj.AddComponent<RectTransform>();
+        kaguyaFollowerRect.sizeDelta = new Vector2((DISPLAY_TILE - 4) * 0.5f, (DISPLAY_TILE - 4) * 0.5f);
+
+        // プレイヤーの1タイル後ろに配置
+        int followerX = playerTileX;
+        int followerY = playerTileY - 1;
+        if (followerY < 0) followerY = playerTileY;
+        float fx = (followerX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float fy = (followerY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+        kaguyaFollowerRect.anchoredPosition = new Vector2(fx, fy);
+        kaguyaFollowerTarget = kaguyaFollowerRect.anchoredPosition;
+
+        var followerImg = kaguyaFollowerObj.AddComponent<Image>();
+        var kSpr = Resources.Load<Sprite>("MapCharacters/heroine/kaguya3");
+        if (kSpr != null)
+        {
+            followerImg.sprite = kSpr;
+            followerImg.preserveAspect = true;
+            followerImg.color = Color.white;
+        }
+        else
+        {
+            followerImg.color = new Color(0, 0, 0, 0);
+        }
+        followerImg.raycastTarget = false;
+
+        // ハートを頭上に
+        var heartObj = new GameObject("FollowerHeart");
+        heartObj.transform.SetParent(kaguyaFollowerObj.transform, false);
+        var hRect = heartObj.AddComponent<RectTransform>();
+        hRect.anchoredPosition = new Vector2(0, 30);
+        hRect.sizeDelta = new Vector2(20, 20);
+        var heartTmp = heartObj.AddComponent<TMPro.TextMeshProUGUI>();
+        FontHelper.Apply(heartTmp);
+        heartTmp.text = "\u2764";
+        heartTmp.fontSize = 12;
+        heartTmp.alignment = TMPro.TextAlignmentOptions.Center;
+        heartTmp.color = new Color(1f, 0.4f, 0.6f, 0.8f);
+        heartTmp.raycastTarget = false;
+
+        // プレイヤーより手前に表示（後ろ歩きなのでプレイヤーの下レイヤー）
+        kaguyaFollowerObj.transform.SetSiblingIndex(playerObj.transform.GetSiblingIndex());
     }
 
     void RebuildPlayerSprite()
@@ -3082,7 +5495,8 @@ public class MapManager : MonoBehaviour
         }
 
         // === STARオーラ（半透明オーバーレイ、最前面、低重心対応） ===
-        if (godBaby)
+        int areaForGodGlow = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+        if (godBaby && areaForGodGlow != 8)
         {
             var glow = FacePart("GodGlow", parent, new Vector2(0, -4 * s), new Vector2(56 * s, 50 * s));
             glow.AddComponent<Image>().color = new Color(1f, 0.9f, 0.4f, 0.1f);
@@ -3141,6 +5555,8 @@ public class MapManager : MonoBehaviour
         var bar = new UIE.VisualElement();
         bar.AddToClassList("map-status-bar");
         bar.style.top = safeTop;
+        // ステータスバーを非表示
+        bar.style.display = UIE.DisplayStyle.None;
         overlayRoot.Add(bar);
 
         statusLabel = UIHelper.CreateLabel("", "map-status-text");
@@ -3154,22 +5570,101 @@ public class MapManager : MonoBehaviour
     {
         if (overlayRoot == null) return;
 
+        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+
         var btn = new UIE.Button();
         btn.AddToClassList("map-menu-btn");
         btn.focusable = false;
 
-        // menu.png を背景に表示
-        var menuSpr = Resources.Load<Sprite>("UI/menu");
-        if (menuSpr != null)
-            btn.style.backgroundImage = new UIE.StyleBackground(menuSpr);
-        btn.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+        if (area == 8)
+        {
+            // Area 8: Crystal_UI_Button.png を使用
+            var crystalBtnSpr = Resources.Load<Sprite>("Map/4th/Crystal_UI_Button");
+            if (crystalBtnSpr == null)
+            {
+                var crystalBtnTex = Resources.Load<Texture2D>("Map/4th/Crystal_UI_Button");
+                if (crystalBtnTex != null && crystalBtnTex.isReadable)
+                    crystalBtnSpr = Sprite.Create(crystalBtnTex, new Rect(0, 0, crystalBtnTex.width, crystalBtnTex.height), new Vector2(0.5f, 0.5f));
+            }
+            if (crystalBtnSpr != null)
+                btn.style.backgroundImage = new UIE.StyleBackground(crystalBtnSpr);
+            btn.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+            btn.style.backgroundColor = new Color(0, 0, 0, 0);
+            btn.style.borderTopWidth = 0;
+            btn.style.borderBottomWidth = 0;
+            btn.style.borderLeftWidth = 0;
+            btn.style.borderRightWidth = 0;
+            // サイズを少し大きく（クリスタルの視認性向上）
+            btn.style.width = 180;
+            btn.style.height = 180;
 
-        // 「メニュー」ラベル
-        var menuLabel = UIHelper.CreateLabel("メニュー", "map-menu-label");
-        UIHelper.ApplyFontBold(menuLabel);
-        btn.Add(menuLabel);
+            // ラベル不要（ボタン画像にSTELLA ORIGINの文字が含まれる）
+        }
+        else
+        {
+            // 通常エリア: menu.png を背景に表示
+            var menuSpr = Resources.Load<Sprite>("UI/menu");
+            if (menuSpr != null)
+                btn.style.backgroundImage = new UIE.StyleBackground(menuSpr);
+            btn.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+
+            // 「メニュー」ラベル
+            var menuLabel = UIHelper.CreateLabel("メニュー", "map-menu-label");
+            UIHelper.ApplyFontBold(menuLabel);
+            btn.Add(menuLabel);
+        }
 
         btn.clicked += ToggleMenu;
+        overlayRoot.Add(btn);
+    }
+
+    void CreateDebugResetButton()
+    {
+        if (overlayRoot == null) return;
+
+        var btn = new UIE.Button();
+        btn.text = "RESET";
+        btn.style.position = UIE.Position.Absolute;
+        btn.style.top = 60;
+        btn.style.right = 20;
+        btn.style.width = 100;
+        btn.style.height = 50;
+        btn.style.fontSize = 18;
+        btn.style.backgroundColor = new Color(0.3f, 0.3f, 0.3f, 0.7f);
+        btn.style.color = Color.white;
+        btn.style.borderTopLeftRadius = 12;
+        btn.style.borderTopRightRadius = 12;
+        btn.style.borderBottomLeftRadius = 12;
+        btn.style.borderBottomRightRadius = 12;
+        btn.focusable = false;
+        UIHelper.ApplyFont(btn);
+
+        btn.clicked += () =>
+        {
+            if (DataCarrier.Instance != null)
+            {
+                // イベント進行をリセット
+                int oldProgress = DataCarrier.Instance.stellaOriginProgress;
+                DataCarrier.Instance.stellaOriginProgress = 0;
+                DataCarrier.Instance.stellaOriginTitle = "";
+                // バフもリセット（重複付与を防ぐ）
+                if ((oldProgress & 1) != 0) DataCarrier.Instance.babyDef -= 20; // DEFバフ取消
+                if ((oldProgress & 2) != 0) DataCarrier.Instance.babyAtk -= 20; // ATKバフ取消
+                DataCarrier.Instance.mapPlayerX = 12;
+                DataCarrier.Instance.mapPlayerY = 19;
+                DataCarrier.Instance.SaveData();
+            }
+            // ローカル状態もクリア
+            stellaGateOpened = false;
+            stellaGateOpenAnimPlaying = false;
+            stellaGuardianDialogueActive = false;
+            stellaCradleActive = false;
+            menuOpen = false;
+            // シーンリロード
+            UnityEngine.SceneManagement.SceneManager.LoadScene(
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        };
+
         overlayRoot.Add(btn);
     }
 
@@ -3198,6 +5693,9 @@ public class MapManager : MonoBehaviour
 
     void Update()
     {
+        if (elderBossBlockCooldown > 0f)
+            elderBossBlockCooldown -= Time.deltaTime;
+
         var kb = Keyboard.current;
         bool escPressed = kb != null && kb.escapeKey.wasPressedThisFrame;
 
@@ -3239,6 +5737,10 @@ public class MapManager : MonoBehaviour
         UpdateMovement();
         UpdateCameraFollow();
         UpdateEnemySymbols();
+        UpdateWaterfall();
+        UpdateGoldenEggOldMan();
+        UpdateKaguyaHearts();
+        UpdateStellaOrigin();
 
         // インタラクト
         if (kb != null && kb.spaceKey.wasPressedThisFrame)
@@ -3286,12 +5788,19 @@ public class MapManager : MonoBehaviour
         // ボスの門に歩いて入ろうとした場合
         if (mapData[newX, newY] == TILE_BOSS_GATE)
         {
+            int areaForGate2 = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+            // Area 0: シバ撃破済みならシバの家→次エリアへ
+            if (areaForGate2 == 0 && DataCarrier.Instance != null && DataCarrier.Instance.HasDefeatedEnemy("青年のシバ"))
+            {
+                StartCoroutine(EnterShibaHouse());
+                return;
+            }
             if (IsBabyTooYoungForBoss())
             {
+                if (elderBossBlockCooldown > 0f) return;
                 StartCoroutine(ShowElderBossBlockDialogue());
                 return;
             }
-            int areaForGate2 = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
             if (areaForGate2 == 1)
             {
                 StartCoroutine(EnterMansionArea());
@@ -3304,12 +5813,19 @@ public class MapManager : MonoBehaviour
         // 小悪魔の街: 館に歩いて入ろうとした場合 → 109（area 4）へ
         if (mapData[newX, newY] == TILE_BOSS_MANSION)
         {
+            int areaForGate = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+            // Area 0: シバ撃破済みならシバの家→次エリアへ
+            if (areaForGate == 0 && DataCarrier.Instance != null && DataCarrier.Instance.HasDefeatedEnemy("青年のシバ"))
+            {
+                StartCoroutine(EnterShibaHouse());
+                return;
+            }
             if (IsBabyTooYoungForBoss())
             {
+                if (elderBossBlockCooldown > 0f) return;
                 StartCoroutine(ShowElderBossBlockDialogue());
                 return;
             }
-            int areaForGate = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
             if (areaForGate == 3)
             {
                 StartCoroutine(Enter109());
@@ -3388,8 +5904,71 @@ public class MapManager : MonoBehaviour
             return;
         }
 
+        // ステラ・オリジン: 宇宙の門 (y=37)
+        if (DataCarrier.Instance != null && DataCarrier.Instance.currentArea == 8
+            && newY == 37 && newX >= 11 && newX <= 13)
+        {
+            if (!stellaGateOpened)
+            {
+                StartCoroutine(ShowCosmicGateEvent());
+                return;
+            }
+            // 開放済み: ラスボス演出へ
+            StartCoroutine(CosmicGateEntrySequence());
+            return;
+        }
+
         if (!walkable[newX, newY])
             return;
+
+        // ステラ・オリジン: 音叉ワープ（音叉→ボス広場）
+        if (DataCarrier.Instance != null && DataCarrier.Instance.currentArea == 8)
+        {
+            int warpDestX = 0, warpDestY = 0;
+            bool doWarp = false;
+            if (newX == stellaForkA.x && newY == stellaForkA.y)
+            {
+                warpDestX = stellaForkADest.x; warpDestY = stellaForkADest.y; doWarp = true;
+            }
+            else if (newX == stellaForkB.x && newY == stellaForkB.y)
+            {
+                warpDestX = stellaForkBDest.x; warpDestY = stellaForkBDest.y; doWarp = true;
+            }
+            else if (newX == stellaForkReturnW.x && newY == stellaForkReturnW.y)
+            {
+                warpDestX = stellaForkReturnDest.x; warpDestY = stellaForkReturnDest.y; doWarp = true;
+            }
+            else if (newX == stellaForkReturnE.x && newY == stellaForkReturnE.y)
+            {
+                warpDestX = stellaForkReturnDest.x; warpDestY = stellaForkReturnDest.y; doWarp = true;
+            }
+            if (doWarp)
+            {
+                playerTileX = warpDestX;
+                playerTileY = warpDestY;
+                float wpX = (playerTileX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+                float wpY = (playerTileY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+                playerRect.anchoredPosition = new Vector2(wpX, wpY);
+                targetPosition = playerRect.anchoredPosition;
+                isMoving = false;
+                UpdateCameraFollow();
+                SpawnStellaRipple();
+                // ワープ先でガーディアンに隣接していたら自動で対話開始
+                CheckStellaGuardianAutoTrigger();
+                return;
+            }
+        }
+
+        // かぐやフォロワー: プレイヤーの今の位置を目標にする（1歩遅れてついてくる）
+        if (kaguyaFollowerRect != null)
+        {
+            float fTargetX = (playerTileX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+            float fTargetY = (playerTileY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+            kaguyaFollowerTarget = new Vector2(fTargetX, fTargetY);
+            kaguyaFollowerMoving = true;
+            // プレイヤーの下レイヤーに維持
+            kaguyaFollowerObj.transform.SetSiblingIndex(playerObj.transform.GetSiblingIndex());
+        }
 
         playerTileX = newX;
         playerTileY = newY;
@@ -3409,12 +5988,21 @@ public class MapManager : MonoBehaviour
             seSource.Play();
         }
 
+        // ステラ・オリジン: Aura波紋
+        int areaForRipple = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+        if (areaForRipple == 8)
+            SpawnStellaRipple();
+
         // DataCarrierに位置保存
         if (DataCarrier.Instance != null)
         {
             DataCarrier.Instance.mapPlayerX = playerTileX;
             DataCarrier.Instance.mapPlayerY = playerTileY;
         }
+
+        // ステラ・オリジン: ガーディアンに隣接したら自動対話
+        if (DataCarrier.Instance != null && DataCarrier.Instance.currentArea == 8)
+            CheckStellaGuardianAutoTrigger();
     }
 
     void UpdateMovement()
@@ -3426,6 +6014,21 @@ public class MapManager : MonoBehaviour
             targetPosition,
             moveSpeed * DISPLAY_TILE * Time.deltaTime
         );
+
+        // かぐやフォロワー追従（少し遅めにふわっとついてくる）
+        if (kaguyaFollowerMoving && kaguyaFollowerRect != null)
+        {
+            kaguyaFollowerRect.anchoredPosition = Vector2.MoveTowards(
+                kaguyaFollowerRect.anchoredPosition,
+                kaguyaFollowerTarget,
+                moveSpeed * DISPLAY_TILE * 0.85f * Time.deltaTime
+            );
+            if (Vector2.Distance(kaguyaFollowerRect.anchoredPosition, kaguyaFollowerTarget) < 0.5f)
+            {
+                kaguyaFollowerRect.anchoredPosition = kaguyaFollowerTarget;
+                kaguyaFollowerMoving = false;
+            }
+        }
 
         // はいはいアニメーション（手足を交互に動かす：クロスクロール）
         if (crawlHandL != null)
@@ -3490,6 +6093,12 @@ public class MapManager : MonoBehaviour
 
             // 塾の生徒NPC判定
             CheckJukuStudents();
+
+            // 金の卵の老人NPC判定
+            CheckGoldenEggOldMan();
+
+            // かぐやちゃんNPC判定
+            CheckKaguyaNPC();
         }
     }
 
@@ -3876,6 +6485,7 @@ public class MapManager : MonoBehaviour
         {
             if (IsBabyTooYoungForBoss())
             {
+                if (elderBossBlockCooldown > 0f) return;
                 StartCoroutine(ShowElderBossBlockDialogue());
                 return;
             }
@@ -3894,6 +6504,62 @@ public class MapManager : MonoBehaviour
             }
             StartCoroutine(EnterBossMansion());
             return;
+        }
+
+        // ステラ・オリジン（Area 8）: NPC・ゆりかご・門
+        int areaForExamine = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+        if (areaForExamine == 8)
+        {
+            // ガーディアン（デヴィル夫人）
+            if (IsAdjacentToPos(stellaGuardianDevilX, stellaGuardianDevilY))
+            {
+                StartCoroutine(ShowStellaGuardianDialogue(false));
+                return;
+            }
+            // ガーディアン（メロディアス女王）
+            if (IsAdjacentToPos(stellaGuardianMelodiasX, stellaGuardianMelodiasY))
+            {
+                StartCoroutine(ShowStellaGuardianDialogue(true));
+                return;
+            }
+            // 光のゆりかご（完了済みならブロックしない）
+            if (IsAdjacentToPos(stellaCradleX, stellaCradleY) ||
+                (playerTileX == stellaCradleX && playerTileY == stellaCradleY))
+            {
+                bool cradleDone = DataCarrier.Instance != null && (DataCarrier.Instance.stellaOriginProgress & 4) != 0;
+                if (!stellaCradleActive && !cradleDone)
+                {
+                    StartCoroutine(ShowStellaCradleEvent());
+                    return;
+                }
+                // 完了済み: ゆりかごのタップではなく通常操作に流す
+            }
+            // 宇宙の門（y=36〜37, x=11〜13 付近）
+            if (playerTileY >= 36 && playerTileX >= 10 && playerTileX <= 14)
+            {
+                if (!stellaGateOpened)
+                {
+                    StartCoroutine(ShowCosmicGateEvent());
+                    return;
+                }
+            }
+        }
+
+        // 玩具屋内部: 家具に隣接して調べた時のメッセージ
+        if (areaForExamine == 6)
+        {
+            // カウンター (2-4, 5) に隣接
+            if (IsAdjacentToPos(2, 5) || IsAdjacentToPos(3, 5) || IsAdjacentToPos(4, 5))
+            {
+                ShowMessage("ショーケースには おもちゃが ずらり！\nどれも キラキラ してるよ✨");
+                return;
+            }
+            // 右奥の机 (6, 7-8) に隣接
+            if (IsAdjacentToPos(6, 7) || IsAdjacentToPos(6, 8))
+            {
+                ShowMessage("たくさんの おもちゃが\nきれいに ならべられている🧸");
+                return;
+            }
         }
 
         int tileType = mapData[playerTileX, playerTileY];
@@ -3920,6 +6586,21 @@ public class MapManager : MonoBehaviour
                     ShowMessage(Localization.Get("map_nothing"));
                 break;
         }
+    }
+
+    // シバ撃破後: シバの家に入り、次のエリアへ進む
+    IEnumerator EnterShibaHouse()
+    {
+        yield return StartCoroutine(ShowTransitionOverlay("シバの家に入った…"));
+
+        if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.currentArea = 1;
+            DataCarrier.Instance.mapPlayerX = 5;
+            DataCarrier.Instance.mapPlayerY = 1;
+            DataCarrier.Instance.SaveData();
+        }
+        SceneManager.LoadScene("MapScene");
     }
 
     IEnumerator EnterBossMansion()
@@ -4019,6 +6700,56 @@ public class MapManager : MonoBehaviour
             DataCarrier.Instance.SaveData();
         }
         SceneManager.LoadScene("MapScene");
+    }
+
+    /// <summary>玩具屋の床全体をToy_Shop_Background 1枚で覆う</summary>
+    void CreateToyShopFloorOverlay()
+    {
+        if (tilesContainer == null || toyShopBgSprite == null) return;
+
+        // 床タイル範囲: x=1〜6, y=2〜8 (6幅 × 7高)
+        float minX = 1, maxX = 6, minY = 2, maxY = 8;
+        float centerTileX = (minX + maxX) / 2f;
+        float centerTileY = (minY + maxY) / 2f;
+        float posX = (centerTileX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (centerTileY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+        float width = (maxX - minX + 1) * DISPLAY_TILE;
+        float height = (maxY - minY + 1) * DISPLAY_TILE;
+
+        var bg = new GameObject("ToyShopFloorBg");
+        bg.transform.SetParent(tilesContainer.transform, false);
+        var rect = bg.AddComponent<RectTransform>();
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(width, height);
+
+        var img = bg.AddComponent<Image>();
+        img.sprite = toyShopBgSprite;
+        img.type = Image.Type.Simple;
+        img.preserveAspect = false;
+        img.raycastTarget = false;
+
+        // タイルより上、プレイヤーやNPCより下に配置
+        bg.transform.SetAsLastSibling();
+    }
+
+    void CreateToyShopDeskOverlay(float tileX, float tileY)
+    {
+        if (tilesContainer == null || toyShopDeskSprite == null) return;
+
+        float posX = (tileX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (tileY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+
+        var desk = new GameObject("ToyShopDesk");
+        desk.transform.SetParent(tilesContainer.transform, false);
+        var rect = desk.AddComponent<RectTransform>();
+        rect.anchoredPosition = new Vector2(posX, posY);
+        // 2タイル分の高さで引き伸ばしなし
+        rect.sizeDelta = new Vector2(DISPLAY_TILE * 1.2f, DISPLAY_TILE * 2.2f);
+
+        var img = desk.AddComponent<Image>();
+        img.sprite = toyShopDeskSprite;
+        img.preserveAspect = true;
+        img.raycastTarget = false;
     }
 
     // ゴージャス・ヴィレッジから武器屋内部（area 6）に入る
@@ -4270,6 +7001,13 @@ public class MapManager : MonoBehaviour
             }
         }
         return false;
+    }
+
+    bool IsAdjacentToPos(int tx, int ty)
+    {
+        int dx = Mathf.Abs(playerTileX - tx);
+        int dy = Mathf.Abs(playerTileY - ty);
+        return (dx + dy) <= 1;
     }
 
     // ===== メニュー =====
@@ -4538,19 +7276,30 @@ public class MapManager : MonoBehaviour
         float posX = (eggX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
         float posY = (eggY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
         rect.anchoredPosition = new Vector2(posX, posY);
-        rect.sizeDelta = new Vector2(DISPLAY_TILE, DISPLAY_TILE);
+        rect.sizeDelta = new Vector2(DISPLAY_TILE * 0.5f, DISPLAY_TILE * 0.5f);
 
-        // 金色の楕円（たまご本体）
-        var eggBody = FacePart("EggBody", goldenEggObj.transform, new Vector2(0, -3), new Vector2(52, 66));
-        eggBody.AddComponent<Image>().color = new Color(1f, 0.84f, 0f);
-
-        // 上部ハイライト
-        var highlight = FacePart("Highlight", goldenEggObj.transform, new Vector2(-7, 10), new Vector2(18, 24));
-        highlight.AddComponent<Image>().color = new Color(1f, 1f, 0.7f, 0.7f);
-
-        // 輝きエフェクト（小さい星）
-        var sparkle = FacePart("Sparkle", goldenEggObj.transform, new Vector2(14, 21), new Vector2(10, 10));
-        sparkle.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.8f);
+        var eggImg = goldenEggObj.AddComponent<Image>();
+        var eggSpr = Resources.Load<Sprite>("Map/goldenegg");
+        if (eggSpr != null)
+        {
+            eggImg.sprite = eggSpr;
+            eggImg.preserveAspect = true;
+        }
+        else
+        {
+            // Spriteで読めない場合はTexture2Dから生成
+            var eggTex = Resources.Load<Texture2D>("Map/goldenegg");
+            if (eggTex != null && eggTex.isReadable)
+            {
+                eggImg.sprite = Sprite.Create(eggTex, new Rect(0, 0, eggTex.width, eggTex.height),
+                    new Vector2(0.5f, 0.5f));
+                eggImg.preserveAspect = true;
+            }
+            else
+            {
+                eggImg.color = new Color(1f, 0.84f, 0f);
+            }
+        }
 
         goldenEggObj.transform.SetAsLastSibling();
     }
@@ -4570,64 +7319,229 @@ public class MapManager : MonoBehaviour
             DataCarrier.Instance.AddItem(eggItemName);
         }
 
-        Destroy(goldenEggObj);
-        goldenEggObj = null;
-
-        ShowMessage(Localization.Get("map_golden_egg"));
-        StartCoroutine(ShowGoldenEggHint());
+        StartCoroutine(ShowGoldenEggEvent());
     }
 
-    IEnumerator ShowGoldenEggHint()
+    IEnumerator ShowGoldenEggEvent()
     {
-        yield return new WaitForSeconds(1.5f);
-
         menuOpen = true;
-        bool tapped = false;
 
+        // --- Phase 1: 暗転 + 卵が画面中央に浮き上がる ---
         var overlay = new UIE.VisualElement();
         overlay.AddToClassList("fill");
         overlay.style.flexDirection = UIE.FlexDirection.Column;
-        overlay.style.justifyContent = UIE.Justify.FlexEnd;
+        overlay.style.justifyContent = UIE.Justify.Center;
         overlay.style.alignItems = UIE.Align.Center;
         overlay.style.backgroundColor = new Color(0, 0, 0, 0);
-        overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
         overlayRoot.Add(overlay);
 
-        // フェードイン
+        // 中央に卵画像を配置
+        var eggEl = new UIE.VisualElement();
+        eggEl.style.width = 200;
+        eggEl.style.height = 200;
+        eggEl.style.opacity = 0f;
+        var eggTex = Resources.Load<Texture2D>("Map/goldenegg");
+        if (eggTex != null)
+            eggEl.style.backgroundImage = new UIE.StyleBackground(eggTex);
+        else
+            eggEl.style.backgroundColor = new Color(1f, 0.84f, 0f);
+        overlay.Add(eggEl);
+
+        // マップ上の卵を消す
+        if (goldenEggObj != null) { Destroy(goldenEggObj); goldenEggObj = null; }
+
+        // 暗転 + 卵フェードイン (0.6s)
         float elapsed = 0f;
-        while (elapsed < 0.3f)
+        while (elapsed < 0.6f)
         {
             elapsed += Time.deltaTime;
-            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * (elapsed / 0.3f));
+            float t = Mathf.Clamp01(elapsed / 0.6f);
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.6f * t);
+            eggEl.style.opacity = t;
+            float s = 0.5f + 0.5f * t;
+            eggEl.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(s, s, 1f)));
             yield return null;
         }
-        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.6f);
+        eggEl.style.opacity = 1f;
+        eggEl.style.scale = new UIE.StyleScale(new UIE.Scale(Vector3.one));
 
-        var dialogBox = new UIE.VisualElement();
-        dialogBox.AddToClassList("milk-dialog-box");
-        overlay.Add(dialogBox);
+        // --- Phase 2: 卵が輝く + ゆっくり回転 + キラキラパーティクル ---
+        // 金色グロー
+        var glowEl = new UIE.VisualElement();
+        glowEl.style.position = UIE.Position.Absolute;
+        glowEl.style.width = 320;
+        glowEl.style.height = 320;
+        glowEl.style.left = UIE.Length.Percent(50);
+        glowEl.style.top = UIE.Length.Percent(50);
+        glowEl.style.translate = new UIE.StyleTranslate(new UIE.Translate(-160, -160));
+        glowEl.style.borderTopLeftRadius = 160;
+        glowEl.style.borderTopRightRadius = 160;
+        glowEl.style.borderBottomLeftRadius = 160;
+        glowEl.style.borderBottomRightRadius = 160;
+        glowEl.style.backgroundColor = new Color(1f, 0.84f, 0f, 0f);
+        overlay.Insert(0, glowEl);
 
-        var textLabel = UIHelper.CreateLabel(Localization.Get("map_golden_egg_hint"), "milk-dialog-text");
-        dialogBox.Add(textLabel);
+        // キラキラパーティクル生成
+        Color[] sparkleColors = {
+            new Color(1f, 0.84f, 0f),      // ゴールド
+            new Color(1f, 0.72f, 0.77f),    // ピンク
+            new Color(1f, 1f, 0.8f),        // ライトイエロー
+            new Color(0.67f, 0.94f, 0.82f), // ミントグリーン
+            new Color(1f, 1f, 1f)           // ホワイト
+        };
 
-        var tapHint = UIHelper.CreateLabel("▼ タップで閉じる", "milk-dialog-hint");
-        dialogBox.Add(tapHint);
+        elapsed = 0f;
+        float shineDuration = 2.0f;
+        float nextSparkle = 0f;
+        while (elapsed < shineDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / shineDuration;
 
+            // 卵ぷるんバウンス
+            float bounceY = 1f + 0.04f * Mathf.Sin(elapsed * 4f * Mathf.PI);
+            float bounceX = 1f - 0.02f * Mathf.Sin(elapsed * 4f * Mathf.PI);
+            eggEl.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(bounceX, bounceY, 1f)));
+
+            // ゆっくり回転
+            float rot = Mathf.Sin(elapsed * 1.5f * Mathf.PI) * 8f;
+            eggEl.style.rotate = new UIE.StyleRotate(new UIE.Rotate(rot));
+
+            // グロー脈動
+            float glowAlpha = 0.15f + 0.15f * Mathf.Sin(elapsed * 3f * Mathf.PI);
+            glowEl.style.backgroundColor = new Color(1f, 0.84f, 0f, glowAlpha);
+            float gs = 1f + 0.1f * Mathf.Sin(elapsed * 3f * Mathf.PI);
+            glowEl.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(gs, gs, 1f)));
+
+            // キラキラ生成
+            if (elapsed >= nextSparkle)
+            {
+                nextSparkle = elapsed + 0.12f;
+                var color = sparkleColors[UnityEngine.Random.Range(0, sparkleColors.Length)];
+                StartCoroutine(SpawnEggSparkle(overlay, color));
+            }
+
+            yield return null;
+        }
+
+        eggEl.style.rotate = new UIE.StyleRotate(new UIE.Rotate(0));
+        eggEl.style.scale = new UIE.StyleScale(new UIE.Scale(Vector3.one));
+
+        // --- Phase 3: テキスト表示 ---
+        var textContainer = new UIE.VisualElement();
+        textContainer.style.position = UIE.Position.Absolute;
+        textContainer.style.bottom = UIE.Length.Percent(22);
+        textContainer.style.left = UIE.Length.Percent(50);
+        textContainer.style.translate = new UIE.StyleTranslate(new UIE.Translate(UIE.Length.Percent(-50), 0));
+        textContainer.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+        textContainer.style.paddingTop = 16;
+        textContainer.style.paddingBottom = 16;
+        textContainer.style.paddingLeft = 40;
+        textContainer.style.paddingRight = 40;
+        textContainer.style.borderTopLeftRadius = 40;
+        textContainer.style.borderTopRightRadius = 40;
+        textContainer.style.borderBottomLeftRadius = 40;
+        textContainer.style.borderBottomRightRadius = 40;
+        overlay.Add(textContainer);
+
+        var titleLabel = UIHelper.CreateLabel("", "");
+        titleLabel.text = Localization.Get("map_golden_egg");
+        titleLabel.style.fontSize = 34;
+        titleLabel.style.color = new Color(1f, 0.84f, 0f);
+        titleLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        UIHelper.ApplyFontBold(titleLabel);
+        textContainer.Add(titleLabel);
+
+        var hintLabel = UIHelper.CreateLabel("", "");
+        hintLabel.text = Localization.Get("map_golden_egg_hint");
+        hintLabel.style.fontSize = 26;
+        hintLabel.style.color = Color.white;
+        hintLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        hintLabel.style.marginTop = 12;
+        textContainer.Add(hintLabel);
+
+        var tapHint = UIHelper.CreateLabel("\u25BC \u30BF\u30C3\u30D7\u3067\u3068\u3058\u308B", "");
+        tapHint.style.fontSize = 22;
+        tapHint.style.color = new Color(1f, 1f, 1f, 0.6f);
+        tapHint.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        tapHint.style.marginTop = 8;
+        textContainer.Add(tapHint);
+
+        // テキストフェードイン
+        textContainer.style.opacity = 0f;
+        elapsed = 0f;
+        while (elapsed < 0.4f)
+        {
+            elapsed += Time.deltaTime;
+            textContainer.style.opacity = Mathf.Clamp01(elapsed / 0.4f);
+            yield return null;
+        }
+
+        // タップ待ち
         yield return new WaitForSeconds(0.3f);
-        tapped = false;
+        bool tapped = false;
+        overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
         while (!tapped) yield return null;
 
-        // フェードアウト
+        // --- Phase 4: 卵が縮んで消える + フェードアウト ---
         elapsed = 0f;
-        while (elapsed < 0.3f)
+        while (elapsed < 0.5f)
         {
             elapsed += Time.deltaTime;
-            float fadeT = 1f - (elapsed / 0.3f);
-            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * fadeT);
+            float t = Mathf.Clamp01(elapsed / 0.5f);
+            float s = 1f - t;
+            eggEl.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(s, s, 1f)));
+            eggEl.style.opacity = 1f - t;
+            glowEl.style.opacity = 1f - t;
+            textContainer.style.opacity = 1f - t;
+            float bgA = 0.6f * (1f - t);
+            overlay.style.backgroundColor = new Color(0, 0, 0, bgA);
             yield return null;
         }
+
         overlay.RemoveFromHierarchy();
         menuOpen = false;
+    }
+
+    IEnumerator SpawnEggSparkle(UIE.VisualElement parent, Color color)
+    {
+        float angle = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
+        float dist = UnityEngine.Random.Range(60f, 160f);
+        float startX = Mathf.Cos(angle) * dist * 0.3f;
+        float startY = Mathf.Sin(angle) * dist * 0.3f;
+        float endX = Mathf.Cos(angle) * dist;
+        float endY = Mathf.Sin(angle) * dist;
+        float size = UnityEngine.Random.Range(6f, 14f);
+
+        var sp = new UIE.VisualElement();
+        sp.style.position = UIE.Position.Absolute;
+        sp.style.width = size;
+        sp.style.height = size;
+        sp.style.left = UIE.Length.Percent(50);
+        sp.style.top = UIE.Length.Percent(50);
+        sp.style.borderTopLeftRadius = size / 2;
+        sp.style.borderTopRightRadius = size / 2;
+        sp.style.borderBottomLeftRadius = size / 2;
+        sp.style.borderBottomRightRadius = size / 2;
+        sp.style.backgroundColor = color;
+        parent.Add(sp);
+
+        float dur = UnityEngine.Random.Range(0.6f, 1.2f);
+        float elapsed = 0f;
+        while (elapsed < dur)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / dur);
+            float x = Mathf.Lerp(startX, endX, t);
+            float y = Mathf.Lerp(startY, endY, t);
+            sp.style.translate = new UIE.StyleTranslate(new UIE.Translate(x - size / 2, y - size / 2));
+            sp.style.opacity = t < 0.3f ? t / 0.3f : 1f - (t - 0.3f) / 0.7f;
+            float sc = t < 0.3f ? 0.5f + 0.5f * (t / 0.3f) : 1f - 0.5f * ((t - 0.3f) / 0.7f);
+            sp.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(sc, sc, 1f)));
+            yield return null;
+        }
+        sp.RemoveFromHierarchy();
     }
 
     // ===== ミルクポイント（回復） =====
@@ -4656,6 +7570,1060 @@ public class MapManager : MonoBehaviour
         DrawMilkNPC(milkPointObj.transform, 0.8f);
 
         milkPointObj.transform.SetAsLastSibling();
+    }
+
+    void CreateWaterfallOverlay()
+    {
+        if (tilesContainer == null || thirdWaterfallSprite == null) return;
+
+        waterfallObj = new GameObject("Waterfall");
+        waterfallObj.transform.SetParent(tilesContainer.transform, false);
+
+        var rect = waterfallObj.AddComponent<RectTransform>();
+        float posX = (waterfallX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (waterfallY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(DISPLAY_TILE * 2f, DISPLAY_TILE * 2f);
+
+        // 滝画像
+        var img = waterfallObj.AddComponent<Image>();
+        img.sprite = thirdWaterfallSprite;
+        img.preserveAspect = true;
+        img.raycastTarget = false;
+
+        // キラキラ星（小さな✦を複数配置、各々異なる位相で明滅）
+        waterfallStars = new TMPro.TextMeshProUGUI[6];
+        Vector2[] starPositions = {
+            new Vector2(-20, 30), new Vector2(25, 15), new Vector2(-10, -20),
+            new Vector2(15, -10), new Vector2(-25, 5), new Vector2(5, 25)
+        };
+        for (int i = 0; i < waterfallStars.Length; i++)
+        {
+            var starObj = new GameObject("Star" + i);
+            starObj.transform.SetParent(waterfallObj.transform, false);
+            var sRect = starObj.AddComponent<RectTransform>();
+            sRect.anchoredPosition = starPositions[i];
+            sRect.sizeDelta = new Vector2(30, 30);
+            var star = starObj.AddComponent<TMPro.TextMeshProUGUI>();
+            FontHelper.Apply(star);
+            star.text = "*";
+            star.fontSize = 18 + (i % 3) * 4;
+            star.alignment = TMPro.TextAlignmentOptions.Center;
+            star.color = new Color(1f, 0.84f, 0f, 0f);
+            star.raycastTarget = false;
+            waterfallStars[i] = star;
+        }
+
+        // ミルク獲得テキスト（上に浮かぶ）
+        var textObj = new GameObject("WaterfallMilkText");
+        textObj.transform.SetParent(waterfallObj.transform, false);
+        var textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchoredPosition = new Vector2(0, DISPLAY_TILE * 1.2f);
+        textRect.sizeDelta = new Vector2(DISPLAY_TILE * 3f, 60);
+        waterfallMilkText = textObj.AddComponent<TMPro.TextMeshProUGUI>();
+        FontHelper.Apply(waterfallMilkText);
+        waterfallMilkText.fontSize = 28;
+        waterfallMilkText.alignment = TMPro.TextAlignmentOptions.Center;
+        waterfallMilkText.color = new Color(1f, 0.84f, 0f);
+        waterfallMilkText.text = "";
+        waterfallMilkText.raycastTarget = false;
+
+        waterfallMilkTimer = 0f;
+        waterfallMilkGained = 0;
+
+        waterfallObj.transform.SetAsLastSibling();
+    }
+
+    void UpdateWaterfall()
+    {
+        if (waterfallObj == null) return;
+
+        // キラキラ星アニメーション（常時、各星が異なる位相で明滅）
+        if (waterfallStars != null)
+        {
+            for (int i = 0; i < waterfallStars.Length; i++)
+            {
+                if (waterfallStars[i] == null) continue;
+                float phase = i * Mathf.PI * 2f / waterfallStars.Length;
+                float alpha = (Mathf.Sin(Time.time * 2.5f + phase) + 1f) * 0.5f;
+                waterfallStars[i].color = new Color(1f, 0.84f, 0f, alpha * 0.9f);
+            }
+        }
+
+        // プレイヤーが滝の上にいるかチェック
+        bool onWaterfall = (playerTileX == waterfallX && playerTileY == waterfallY);
+        if (onWaterfall && !menuOpen && DataCarrier.Instance != null)
+        {
+            waterfallMilkTimer += Time.deltaTime;
+            if (waterfallMilkTimer >= 1f)
+            {
+                waterfallMilkTimer -= 1f;
+                int gain = 2;
+                DataCarrier.Instance.milk += gain;
+                DataCarrier.Instance.SaveData();
+                waterfallMilkGained += gain;
+                UpdateStatusText();
+            }
+            if (waterfallMilkText != null)
+                waterfallMilkText.text = waterfallMilkGained > 0
+                    ? "+" + waterfallMilkGained + " 🍼"
+                    : "";
+        }
+        else
+        {
+            if (waterfallMilkGained > 0)
+            {
+                waterfallMilkGained = 0;
+                if (waterfallMilkText != null)
+                    waterfallMilkText.text = "";
+            }
+            waterfallMilkTimer = 0f;
+        }
+    }
+
+    // ===== 金の卵の老人NPC =====
+
+    void CreateGoldenEggOldMan()
+    {
+        if (tilesContainer == null) return;
+        int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
+        if (area != 3) return;
+
+        goldenEggOldManObj = new GameObject("GoldenEggOldMan");
+        goldenEggOldManObj.transform.SetParent(tilesContainer.transform, false);
+
+        var rect = goldenEggOldManObj.AddComponent<RectTransform>();
+        float posX = (goldenEggOldManX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (goldenEggOldManY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(DISPLAY_TILE, DISPLAY_TILE);
+
+        int state = DataCarrier.Instance != null ? DataCarrier.Instance.goldenEggOldManState : 0;
+        string spriteName = state >= 1 ? "MapCharacters/gold_ikemen" : "MapCharacters/gold_men";
+        var spr = Resources.Load<Sprite>(spriteName);
+        var btnImg = goldenEggOldManObj.AddComponent<Image>();
+        if (spr != null)
+        {
+            btnImg.sprite = spr;
+            btnImg.preserveAspect = true;
+        }
+        else
+            btnImg.color = new Color(0, 0, 0, 0);
+
+        var btn = goldenEggOldManObj.AddComponent<Button>();
+        btn.transition = Selectable.Transition.None;
+        btn.onClick.AddListener(() => OnGoldenEggOldManTapped());
+
+        // 変身済みなら金パーティクル追加
+        if (state >= 1)
+            AddOldManGoldenStars(goldenEggOldManObj.transform, 0.8f);
+
+        goldenEggOldManObj.transform.SetAsLastSibling();
+    }
+
+    void AddOldManGoldenStars(Transform parent, float scale)
+    {
+        float s = scale;
+        oldManStars = new TMPro.TextMeshProUGUI[4];
+        Vector2[] starPos = {
+            new Vector2(-22 * s, 20 * s), new Vector2(22 * s, 10 * s),
+            new Vector2(-15 * s, -25 * s), new Vector2(18 * s, -15 * s)
+        };
+        for (int i = 0; i < oldManStars.Length; i++)
+        {
+            var starObj = new GameObject("OldManStar" + i);
+            starObj.transform.SetParent(parent, false);
+            var sRect = starObj.AddComponent<RectTransform>();
+            sRect.anchoredPosition = starPos[i];
+            sRect.sizeDelta = new Vector2(20, 20);
+            var star = starObj.AddComponent<TMPro.TextMeshProUGUI>();
+            FontHelper.Apply(star);
+            star.text = "*";
+            star.fontSize = 14 + (i % 2) * 4;
+            star.alignment = TMPro.TextAlignmentOptions.Center;
+            star.color = new Color(1f, 0.84f, 0f, 0f);
+            star.raycastTarget = false;
+            oldManStars[i] = star;
+        }
+    }
+
+    void UpdateGoldenEggOldMan()
+    {
+        if (oldManStars == null) return;
+        for (int i = 0; i < oldManStars.Length; i++)
+        {
+            if (oldManStars[i] == null) continue;
+            float phase = i * Mathf.PI * 2f / oldManStars.Length;
+            float alpha = (Mathf.Sin(Time.time * 2.5f + phase) + 1f) * 0.5f;
+            oldManStars[i].color = new Color(1f, 0.84f, 0f, alpha * 0.9f);
+        }
+    }
+
+    void OnGoldenEggOldManTapped()
+    {
+        if (goldenEggOldManDialogueActive || menuOpen) return;
+        StartCoroutine(ShowGoldenEggOldManDialogue());
+    }
+
+    void CheckGoldenEggOldMan()
+    {
+        if (goldenEggOldManObj == null || goldenEggOldManDialogueActive) return;
+        if (playerTileX == goldenEggOldManX && playerTileY == goldenEggOldManY)
+            OnGoldenEggOldManTapped();
+    }
+
+    IEnumerator ShowGoldenEggOldManDialogue()
+    {
+        goldenEggOldManDialogueActive = true;
+        menuOpen = true;
+
+        if (DataCarrier.Instance != null)
+            DataCarrier.Instance.AddMetNpc("金の卵の老人");
+
+        int state = DataCarrier.Instance != null ? DataCarrier.Instance.goldenEggOldManState : 0;
+        bool hasEgg = DataCarrier.Instance != null && DataCarrier.Instance.HasItem("金のたまご2");
+
+        // オーバーレイ
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.flexDirection = UIE.FlexDirection.Column;
+        overlay.style.justifyContent = UIE.Justify.FlexEnd;
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlayRoot.Add(overlay);
+
+        // フェードイン
+        float elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * (elapsed / 0.3f));
+            yield return null;
+        }
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+
+        // NPC画像
+        string portraitPath = state >= 1 ? "MapCharacters/gold_ikemen" : "MapCharacters/gold_men";
+        var portraitSpr = Resources.Load<Sprite>(portraitPath);
+        var portraitEl = new UIE.VisualElement();
+        portraitEl.AddToClassList("milk-dialog-portrait");
+        if (portraitSpr != null)
+            portraitEl.style.backgroundImage = new UIE.StyleBackground(portraitSpr);
+        overlay.Add(portraitEl);
+
+        // ダイアログボックス
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
+
+        var nameLabel = UIHelper.CreateLabel("金の卵の老人", "milk-dialog-name");
+        dialogBox.Add(nameLabel);
+
+        var textLabel = UIHelper.CreateLabel("", "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        var tapHint = UIHelper.CreateLabel("▼ タップで続く", "milk-dialog-hint");
+        dialogBox.Add(tapHint);
+
+        if (state >= 1)
+        {
+            // 変身済み — 一言だけ
+            textLabel.text = Localization.Get("oldman_after");
+            tapHint.text = "▼ タップで閉じる";
+            yield return new WaitForSeconds(0.3f);
+            bool tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+        }
+        else if (!hasEgg)
+        {
+            // 卵なし — 震える台詞
+            textLabel.text = Localization.Get("oldman_wait");
+            tapHint.text = "▼ タップで閉じる";
+            yield return new WaitForSeconds(0.3f);
+            bool tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+        }
+        else
+        {
+            // 卵所持 — イベント開始
+            string[] msgs = {
+                Localization.Get("oldman_wait"),
+                Localization.Get("oldman_notice"),
+                Localization.Get("oldman_request")
+            };
+
+            for (int i = 0; i < msgs.Length; i++)
+            {
+                textLabel.text = msgs[i];
+                tapHint.text = "▼ タップで続く";
+                yield return new WaitForSeconds(0.3f);
+                bool t = false;
+                overlay.RegisterCallback<UIE.ClickEvent>(evt => t = true);
+                while (!t) yield return null;
+            }
+
+            // 選択肢表示
+            tapHint.style.display = UIE.DisplayStyle.None;
+            textLabel.style.display = UIE.DisplayStyle.None;
+
+            var choiceBox = new UIE.VisualElement();
+            choiceBox.style.flexDirection = UIE.FlexDirection.Column;
+            choiceBox.style.alignItems = UIE.Align.Center;
+            choiceBox.style.marginTop = 20;
+            dialogBox.Add(choiceBox);
+
+            int choice = -1;
+
+            var yesBtn = UIHelper.CreatePillButton(Localization.Get("oldman_choice_yes"), "map-save-close-btn");
+            yesBtn.style.marginBottom = 12;
+            yesBtn.clicked += () => choice = 1;
+            choiceBox.Add(yesBtn);
+
+            var noBtn = UIHelper.CreatePillButton(Localization.Get("oldman_choice_no"), "map-save-close-btn");
+            noBtn.clicked += () => choice = 0;
+            choiceBox.Add(noBtn);
+
+            while (choice < 0) yield return null;
+
+            choiceBox.RemoveFromHierarchy();
+            tapHint.style.display = UIE.DisplayStyle.Flex;
+            textLabel.style.display = UIE.DisplayStyle.Flex;
+
+            if (choice == 0)
+            {
+                // やめとく — 閉じる
+            }
+            else
+            {
+                // 装着演出 — 暗転
+                float darkElapsed = 0f;
+                while (darkElapsed < 0.5f)
+                {
+                    darkElapsed += Time.deltaTime;
+                    overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0.5f, 0.85f, darkElapsed / 0.5f));
+                    yield return null;
+                }
+
+                yield return new WaitForSeconds(0.3f);
+
+                // 老人のスプライトを差し替え（gold_men → gold_ikemen）
+                if (goldenEggOldManObj != null)
+                {
+                    var ikemenSpr = Resources.Load<Sprite>("MapCharacters/gold_ikemen");
+                    var img = goldenEggOldManObj.GetComponent<Image>();
+                    if (ikemenSpr != null && img != null)
+                        img.sprite = ikemenSpr;
+                    AddOldManGoldenStars(goldenEggOldManObj.transform, 0.8f);
+                }
+
+                // 明転
+                darkElapsed = 0f;
+                while (darkElapsed < 0.5f)
+                {
+                    darkElapsed += Time.deltaTime;
+                    overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Lerp(0.85f, 0.5f, darkElapsed / 0.5f));
+                    yield return null;
+                }
+
+                // 装着後台詞
+                string[] afterMsgs = {
+                    Localization.Get("oldman_power"),
+                    Localization.Get("oldman_reward")
+                };
+                for (int i = 0; i < afterMsgs.Length; i++)
+                {
+                    textLabel.text = afterMsgs[i];
+                    tapHint.text = (i < afterMsgs.Length - 1) ? "▼ タップで続く" : "▼ タップで閉じる";
+                    yield return new WaitForSeconds(0.3f);
+                    bool t = false;
+                    overlay.RegisterCallback<UIE.ClickEvent>(evt => t = true);
+                    while (!t) yield return null;
+                }
+
+                // 報酬付与
+                if (DataCarrier.Instance != null)
+                {
+                    DataCarrier.Instance.RemoveItem("金のたまご2");
+                    DataCarrier.Instance.AddEquipment("ゴールデン・ベビーステッキ");
+                    DataCarrier.Instance.EquipItem("ゴールデン・ベビーステッキ");
+                    DataCarrier.Instance.goldenEggOldManState = 1;
+                    DataCarrier.Instance.SaveData();
+                }
+
+                // ステッキ画像表示
+                var stickTex = Resources.Load<Texture2D>("Shop/ゴールデンベビーステッキ");
+                if (stickTex != null)
+                {
+                    var stickSprite = Sprite.Create(stickTex, new Rect(0, 0, stickTex.width, stickTex.height), new Vector2(0.5f, 0.5f));
+                    var stickImg = new UIE.VisualElement();
+                    stickImg.style.width = 250;
+                    stickImg.style.height = 250;
+                    stickImg.style.backgroundImage = new UIE.StyleBackground(stickSprite);
+                    stickImg.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+                    stickImg.style.alignSelf = UIE.Align.Center;
+                    stickImg.style.marginBottom = 16;
+                    dialogBox.Insert(dialogBox.IndexOf(textLabel), stickImg);
+                }
+
+                // 取得メッセージ表示
+                textLabel.text = Localization.Get("oldman_got_item");
+                tapHint.text = "▼ タップで閉じる";
+                yield return new WaitForSeconds(0.3f);
+                bool finalTap = false;
+                overlay.RegisterCallback<UIE.ClickEvent>(evt => finalTap = true);
+                while (!finalTap) yield return null;
+            }
+        }
+
+        // フェードアウト
+        elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            float fadeT = 1f - (elapsed / 0.3f);
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * fadeT);
+            portraitEl.style.opacity = fadeT;
+            dialogBox.style.opacity = fadeT;
+            yield return null;
+        }
+
+        overlay.RemoveFromHierarchy();
+        menuOpen = false;
+        goldenEggOldManDialogueActive = false;
+    }
+
+    // ===== かぐやちゃんNPC =====
+    bool kaguyaPoolHidden = false; // 3回目: プールに潜んでいる
+
+    void CreateKaguyaNPC()
+    {
+        if (tilesContainer == null || DataCarrier.Instance == null) return;
+
+        int area = DataCarrier.Instance.currentArea;
+        int metCount = DataCarrier.Instance.kaguyaMetCount;
+        bool lover = DataCarrier.Instance.kaguyaLover;
+        kaguyaPoolHidden = false;
+
+        // 表示条件判定 & 座標決定
+        bool shouldShow = false;
+        if (lover)
+        {
+            // 相思相愛後 → フォロワーとしてついてくるのでNPC配置不要
+            return;
+        }
+        else
+        {
+            // かぐやは教室（area 7）の端っこにだけ隠れている
+            if (metCount < 2 && area == 7)
+            {
+                kaguyaNpcX = 10; kaguyaNpcY = 1;
+                shouldShow = true;
+            }
+            else if (metCount >= 2 && area == 3)
+            {
+                // 3回目以降（バトル勝利まで）: プールに潜んでいる → NPC非表示、プール横で判定
+                kaguyaPoolHidden = true;
+                return;
+            }
+        }
+
+        if (!shouldShow) return;
+
+        kaguyaNpcObj = new GameObject("KaguyaNPC");
+        kaguyaNpcObj.transform.SetParent(tilesContainer.transform, false);
+
+        var rect = kaguyaNpcObj.AddComponent<RectTransform>();
+        float posX = (kaguyaNpcX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (kaguyaNpcY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+        rect.anchoredPosition = new Vector2(posX, posY);
+        // 教室(area7)では端っこに隠れている = 半分サイズ
+        float kaguyaScale = (area == 7) ? 0.5f : 1f;
+        rect.sizeDelta = new Vector2(DISPLAY_TILE * kaguyaScale, DISPLAY_TILE * kaguyaScale);
+
+        var btnImg = kaguyaNpcObj.AddComponent<Image>();
+        // metCountに応じた画像を表示 (0→kaguya1, 1→kaguya2, lover→kaguya3, Area3→kaguya_pool)
+        string kaguyaSprName;
+        if (lover) kaguyaSprName = "kaguya3";
+        else if (area == 3) kaguyaSprName = "kaguya_pool";
+        else if (metCount <= 0) kaguyaSprName = "kaguya1";
+        else kaguyaSprName = "kaguya2";
+        var kaguyaSpr = Resources.Load<Sprite>("MapCharacters/heroine/" + kaguyaSprName);
+        if (kaguyaSpr != null)
+        {
+            btnImg.sprite = kaguyaSpr;
+            btnImg.preserveAspect = true;
+            btnImg.color = Color.white;
+        }
+        else
+        {
+            btnImg.color = new Color(0, 0, 0, 0);
+        }
+        // タップ領域を広げる（半分サイズでもタップしやすく）
+        var tapArea = new GameObject("KaguyaTapArea");
+        tapArea.transform.SetParent(kaguyaNpcObj.transform, false);
+        var tapRect = tapArea.AddComponent<RectTransform>();
+        tapRect.anchoredPosition = Vector2.zero;
+        tapRect.sizeDelta = new Vector2(DISPLAY_TILE, DISPLAY_TILE);
+        var tapImg = tapArea.AddComponent<Image>();
+        tapImg.color = new Color(0, 0, 0, 0); // 透明
+        tapImg.raycastTarget = true;
+        var btn = tapArea.AddComponent<Button>();
+        btn.transition = Selectable.Transition.None;
+        btn.onClick.AddListener(() => OnKaguyaTapped());
+
+        // 相思相愛後はハートを周囲にふわふわ
+        if (lover)
+            AddKaguyaLoverHearts(kaguyaNpcObj.transform, 0.8f);
+
+        kaguyaNpcObj.transform.SetAsLastSibling();
+    }
+
+    void AddKaguyaLoverHearts(Transform parent, float scale)
+    {
+        float s = scale;
+        kaguyaHearts = new TMPro.TextMeshProUGUI[3];
+        Vector2[] heartPos = {
+            new Vector2(-20 * s, 25 * s), new Vector2(22 * s, 18 * s), new Vector2(0, 35 * s)
+        };
+        for (int i = 0; i < kaguyaHearts.Length; i++)
+        {
+            var heartObj = new GameObject("KaguyaHeart" + i);
+            heartObj.transform.SetParent(parent, false);
+            var hRect = heartObj.AddComponent<RectTransform>();
+            hRect.anchoredPosition = heartPos[i];
+            hRect.sizeDelta = new Vector2(20, 20);
+            var heart = heartObj.AddComponent<TMPro.TextMeshProUGUI>();
+            FontHelper.Apply(heart);
+            heart.text = "\u2764";
+            heart.fontSize = 12 + (i % 2) * 4;
+            heart.alignment = TMPro.TextAlignmentOptions.Center;
+            heart.color = new Color(1f, 0.4f, 0.6f, 0f);
+            heart.raycastTarget = false;
+            kaguyaHearts[i] = heart;
+        }
+    }
+
+    void UpdateKaguyaHearts()
+    {
+        if (kaguyaHearts == null) return;
+        for (int i = 0; i < kaguyaHearts.Length; i++)
+        {
+            if (kaguyaHearts[i] == null) continue;
+            float phase = i * Mathf.PI * 2f / kaguyaHearts.Length;
+            float alpha = (Mathf.Sin(Time.time * 2f + phase) + 1f) * 0.5f;
+            kaguyaHearts[i].color = new Color(1f, 0.4f, 0.6f, alpha * 0.8f);
+        }
+        // プールの泡ヒントアニメーション
+        if (poolBubbles != null)
+        {
+            for (int i = 0; i < poolBubbles.Length; i++)
+            {
+                if (poolBubbles[i] == null) continue;
+                float phase = i * Mathf.PI * 2f / poolBubbles.Length;
+                float alpha = (Mathf.Sin(Time.time * 1.5f + phase) + 1f) * 0.5f;
+                poolBubbles[i].color = new Color(0.8f, 0.95f, 1f, alpha * 0.6f);
+                var rt = poolBubbles[i].rectTransform;
+                rt.anchoredPosition += new Vector2(0, Time.deltaTime * 8f);
+            }
+        }
+    }
+
+    void OnKaguyaTapped()
+    {
+        if (kaguyaDialogueActive || menuOpen) return;
+        StartCoroutine(ShowKaguyaDialogue());
+    }
+
+    void CheckKaguyaNPC()
+    {
+        // 3回目: プールに潜んでいるパターン
+        if (kaguyaPoolHidden && !kaguyaDialogueActive)
+        {
+            // プール付近（x=5-6, y=33-37）を通ったらトリガー
+            // プール=x1-4,y34-36、街道=x6,y32-37
+            if (playerTileX >= 5 && playerTileX <= 6 && playerTileY >= 33 && playerTileY <= 37)
+            {
+                kaguyaPoolHidden = false; // 一度トリガーしたら再発火しない
+                StartCoroutine(ShowPoolDiveSequence());
+            }
+            return;
+        }
+
+        if (kaguyaNpcObj == null || kaguyaDialogueActive) return;
+        // 同じタイルまたは隣接タイルで発動（半分サイズで踏めない場合の対策）
+        int dx = Mathf.Abs(playerTileX - kaguyaNpcX);
+        int dy = Mathf.Abs(playerTileY - kaguyaNpcY);
+        if (dx + dy <= 1)
+            OnKaguyaTapped();
+    }
+
+    IEnumerator ShowKaguyaDialogue()
+    {
+        kaguyaDialogueActive = true;
+        menuOpen = true;
+
+        if (DataCarrier.Instance != null)
+            DataCarrier.Instance.AddMetNpc("かぐやちゃん");
+
+        int metCount = DataCarrier.Instance != null ? DataCarrier.Instance.kaguyaMetCount : 0;
+        bool lover = DataCarrier.Instance != null && DataCarrier.Instance.kaguyaLover;
+
+        // オーバーレイ
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.flexDirection = UIE.FlexDirection.Column;
+        overlay.style.justifyContent = UIE.Justify.FlexEnd;
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlayRoot.Add(overlay);
+
+        // フェードイン
+        float elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * (elapsed / 0.3f));
+            yield return null;
+        }
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+
+        // ダイアログボックス
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
+
+        var nameLabel = UIHelper.CreateLabel("かぐやちゃん", "milk-dialog-name");
+        dialogBox.Add(nameLabel);
+
+        var textLabel = UIHelper.CreateLabel("", "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        var tapHint = UIHelper.CreateLabel("\u25bc \u30bf\u30c3\u30d7\u3067\u7d9a\u304f", "milk-dialog-hint");
+        dialogBox.Add(tapHint);
+
+        if (lover)
+        {
+            // 相思相愛後
+            textLabel.text = Localization.Get("kaguya_lover");
+            tapHint.text = "\u25bc \u30bf\u30c3\u30d7\u3067\u9589\u3058\u308b";
+            yield return new WaitForSeconds(0.3f);
+            bool tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+        }
+        else
+        {
+            // かくれんぼ台詞
+            string[] msgs;
+            if (metCount == 0)
+                msgs = new string[] {
+                    Localization.Get("kaguya_meet1_1"),
+                    Localization.Get("kaguya_meet1_2"),
+                    Localization.Get("kaguya_meet1_3")
+                };
+            else if (metCount == 1)
+                msgs = new string[] {
+                    Localization.Get("kaguya_meet2_1"),
+                    Localization.Get("kaguya_meet2_2"),
+                    Localization.Get("kaguya_meet2_3")
+                };
+            else
+                msgs = new string[] {
+                    Localization.Get("kaguya_meet3_1"),
+                    Localization.Get("kaguya_meet3_2"),
+                    Localization.Get("kaguya_meet3_3")
+                };
+
+            for (int i = 0; i < msgs.Length; i++)
+            {
+                textLabel.text = msgs[i];
+                tapHint.text = (i < msgs.Length - 1) ? "\u25bc \u30bf\u30c3\u30d7\u3067\u7d9a\u304f" : "\u25bc \u30bf\u30c3\u30d7\u3067\u9589\u3058\u308b";
+                yield return new WaitForSeconds(0.3f);
+                bool t = false;
+                overlay.RegisterCallback<UIE.ClickEvent>(evt => t = true);
+                while (!t) yield return null;
+            }
+
+            // 状態更新
+            if (DataCarrier.Instance != null)
+            {
+                DataCarrier.Instance.kaguyaMetCount = metCount + 1;
+                DataCarrier.Instance.SaveData();
+            }
+
+            if (metCount == 2)
+            {
+                // 3回目 → バトル突入
+                // フェードアウトしてバトルへ
+                elapsed = 0f;
+                while (elapsed < 0.3f)
+                {
+                    elapsed += Time.deltaTime;
+                    float fadeT = 1f - (elapsed / 0.3f);
+                    overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * fadeT);
+                    dialogBox.style.opacity = fadeT;
+                    yield return null;
+                }
+                overlay.RemoveFromHierarchy();
+                kaguyaDialogueActive = false;
+                menuOpen = false;
+                StartCoroutine(StartFixedEncounter("かぐやちゃん"));
+                yield break;
+            }
+
+            // 1回目・2回目 → 消える演出
+            if (kaguyaNpcObj != null)
+            {
+                // ハートエフェクト（uGUI側）
+                for (int h = 0; h < 3; h++)
+                {
+                    var heartObj = new GameObject("DisappearHeart" + h);
+                    heartObj.transform.SetParent(kaguyaNpcObj.transform, false);
+                    var hRect = heartObj.AddComponent<RectTransform>();
+                    hRect.anchoredPosition = new Vector2(Random.Range(-20f, 20f), Random.Range(10f, 35f));
+                    hRect.sizeDelta = new Vector2(25, 25);
+                    var heartTmp = heartObj.AddComponent<TMPro.TextMeshProUGUI>();
+                    FontHelper.Apply(heartTmp);
+                    heartTmp.text = "\u2764";
+                    heartTmp.fontSize = 16;
+                    heartTmp.alignment = TMPro.TextAlignmentOptions.Center;
+                    heartTmp.color = new Color(1f, 0.4f, 0.6f, 0.9f);
+                    heartTmp.raycastTarget = false;
+                }
+
+                yield return new WaitForSeconds(0.5f);
+
+                Destroy(kaguyaNpcObj);
+                kaguyaNpcObj = null;
+            }
+        }
+
+        // フェードアウト
+        elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            float fadeT = 1f - (elapsed / 0.3f);
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * fadeT);
+            dialogBox.style.opacity = fadeT;
+            yield return null;
+        }
+
+        overlay.RemoveFromHierarchy();
+        menuOpen = false;
+        kaguyaDialogueActive = false;
+    }
+
+    // ===== 3回目: プール飛び込み演出 =====
+    IEnumerator ShowPoolDiveSequence()
+    {
+        kaguyaDialogueActive = true;
+        menuOpen = true;
+
+        // --- 選択肢: プールに飛び込む？ ---
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.flexDirection = UIE.FlexDirection.Column;
+        overlay.style.justifyContent = UIE.Justify.Center;
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlayRoot.Add(overlay);
+
+        // フェードイン
+        float elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * (elapsed / 0.3f));
+            yield return null;
+        }
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+
+        // ダイアログ: 「プールの中に何かが光っている……」
+        var dialogBox = new UIE.VisualElement();
+        dialogBox.AddToClassList("milk-dialog-box");
+        overlay.Add(dialogBox);
+
+        var textLabel = UIHelper.CreateLabel(Localization.Get("kaguya_pool_notice"), "milk-dialog-text");
+        dialogBox.Add(textLabel);
+
+        // 選択ボタン（縦並び）
+        var btnCol = new UIE.VisualElement();
+        btnCol.style.flexDirection = UIE.FlexDirection.Column;
+        btnCol.style.alignItems = UIE.Align.Center;
+        btnCol.style.marginTop = 16;
+        dialogBox.Add(btnCol);
+
+        int choice = -1;
+        var diveBtn = UIHelper.CreatePillButton(Localization.Get("kaguya_pool_dive"), "pill-button");
+        diveBtn.clicked += () => choice = 1;
+        btnCol.Add(diveBtn);
+
+        var leaveBtn = UIHelper.CreatePillButton(Localization.Get("kaguya_pool_leave"), "pill-button");
+        leaveBtn.style.marginTop = 12;
+        leaveBtn.clicked += () => choice = 0;
+        btnCol.Add(leaveBtn);
+
+        while (choice < 0) yield return null;
+
+        if (choice == 0)
+        {
+            // やめておく → 閉じる（再トリガー可にする）
+            kaguyaPoolHidden = true;
+
+            elapsed = 0f;
+            while (elapsed < 0.3f)
+            {
+                elapsed += Time.deltaTime;
+                overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f * (1f - elapsed / 0.3f));
+                dialogBox.style.opacity = 1f - elapsed / 0.3f;
+                yield return null;
+            }
+            overlay.RemoveFromHierarchy();
+            menuOpen = false;
+            kaguyaDialogueActive = false;
+            yield break;
+        }
+
+        // --- 飛び込み演出 ---
+        dialogBox.RemoveFromHierarchy();
+
+        // 画面が青くフラッシュ（ざぶーん！）
+        var splashLabel = UIHelper.CreateLabel(Localization.Get("kaguya_pool_splash"));
+        splashLabel.style.fontSize = 48;
+        splashLabel.style.color = Color.white;
+        splashLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+        UIHelper.ApplyFontBold(splashLabel);
+        overlay.Add(splashLabel);
+
+        Color waterBlue = new Color(0.2f, 0.55f, 0.85f);
+        elapsed = 0f;
+        while (elapsed < 0.5f)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / 0.5f;
+            overlay.style.backgroundColor = Color.Lerp(new Color(0, 0, 0, 0.5f), new Color(waterBlue.r, waterBlue.g, waterBlue.b, 0.9f), t);
+            yield return null;
+        }
+
+        // 泡ぶくぶく演出
+        var bubbles = new UIE.VisualElement[12];
+        for (int i = 0; i < bubbles.Length; i++)
+        {
+            var bub = new UIE.VisualElement();
+            float size = Random.Range(12f, 30f);
+            bub.style.width = size;
+            bub.style.height = size;
+            bub.style.borderTopLeftRadius = size;
+            bub.style.borderTopRightRadius = size;
+            bub.style.borderBottomLeftRadius = size;
+            bub.style.borderBottomRightRadius = size;
+            bub.style.backgroundColor = new Color(0.7f, 0.9f, 1f, 0.5f);
+            bub.style.position = UIE.Position.Absolute;
+            bub.style.left = Random.Range(50f, 550f);
+            bub.style.top = Random.Range(400f, 900f);
+            overlay.Add(bub);
+            bubbles[i] = bub;
+        }
+
+        splashLabel.text = "";
+        yield return new WaitForSeconds(0.4f);
+
+        // 泡が上に浮かぶアニメーション
+        elapsed = 0f;
+        while (elapsed < 1.2f)
+        {
+            elapsed += Time.deltaTime;
+            for (int i = 0; i < bubbles.Length; i++)
+            {
+                if (bubbles[i] == null) continue;
+                float speed = 80f + i * 20f;
+                var pos = bubbles[i].resolvedStyle.top;
+                bubbles[i].style.top = pos - speed * Time.deltaTime;
+                float wobble = Mathf.Sin(Time.time * 3f + i) * 1.5f;
+                bubbles[i].style.left = bubbles[i].resolvedStyle.left + wobble;
+            }
+            yield return null;
+        }
+
+        // 泡を消す
+        foreach (var b in bubbles) b?.RemoveFromHierarchy();
+
+        // --- 水中でかぐや発見！ ---
+        // かぐやの画像を画面いっぱいに表示
+        var kaguyaContainer = new UIE.VisualElement();
+        kaguyaContainer.AddToClassList("fill");
+        kaguyaContainer.style.alignItems = UIE.Align.Center;
+        kaguyaContainer.style.justifyContent = UIE.Justify.Center;
+        kaguyaContainer.style.opacity = 0f;
+        overlay.Add(kaguyaContainer);
+
+        var kaguyaImg = new UIE.VisualElement();
+        var kSpr = Resources.Load<Sprite>("MapCharacters/heroine/kaguya_pool");
+        if (kSpr != null)
+        {
+            kaguyaImg.style.backgroundImage = new UIE.StyleBackground(kSpr);
+            kaguyaImg.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+        }
+        kaguyaImg.style.width = new UIE.Length(100, UIE.LengthUnit.Percent);
+        kaguyaImg.style.height = new UIE.Length(100, UIE.LengthUnit.Percent);
+        kaguyaImg.style.flexGrow = 1;
+        kaguyaContainer.Add(kaguyaImg);
+
+        // ゆらゆらフェードイン
+        elapsed = 0f;
+        while (elapsed < 1f)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / 1f;
+            kaguyaContainer.style.opacity = t;
+            float sway = Mathf.Sin(Time.time * 2f) * 8f;
+            kaguyaImg.style.translate = new UIE.Translate(new UIE.Length(sway), 0);
+            yield return null;
+        }
+        kaguyaContainer.style.opacity = 1f;
+
+        // 吹き出し（画像の上に重ねて表示）
+        var bubble = new UIE.VisualElement();
+        bubble.style.position = UIE.Position.Absolute;
+        bubble.style.bottom = 120;
+        bubble.style.left = new UIE.Length(5, UIE.LengthUnit.Percent);
+        bubble.style.right = new UIE.Length(5, UIE.LengthUnit.Percent);
+        bubble.style.backgroundColor = new Color(1f, 1f, 1f, 0.92f);
+        bubble.style.borderTopLeftRadius = 36;
+        bubble.style.borderTopRightRadius = 36;
+        bubble.style.borderBottomLeftRadius = 36;
+        bubble.style.borderBottomRightRadius = 36;
+        bubble.style.paddingTop = 20;
+        bubble.style.paddingBottom = 20;
+        bubble.style.paddingLeft = 28;
+        bubble.style.paddingRight = 28;
+        bubble.style.alignItems = UIE.Align.FlexStart;
+        kaguyaContainer.Add(bubble);
+
+        // 吹き出しのしっぽ（三角）
+        var bubbleTail = new UIE.VisualElement();
+        bubbleTail.style.position = UIE.Position.Absolute;
+        bubbleTail.style.bottom = 106;
+        bubbleTail.style.left = new UIE.Length(15, UIE.LengthUnit.Percent);
+        bubbleTail.style.width = 0;
+        bubbleTail.style.height = 0;
+        bubbleTail.style.borderTopWidth = 14;
+        bubbleTail.style.borderLeftWidth = 10;
+        bubbleTail.style.borderRightWidth = 10;
+        bubbleTail.style.borderBottomWidth = 0;
+        bubbleTail.style.borderTopColor = new Color(1f, 1f, 1f, 0.92f);
+        bubbleTail.style.borderLeftColor = Color.clear;
+        bubbleTail.style.borderRightColor = Color.clear;
+        bubbleTail.style.borderBottomColor = Color.clear;
+        kaguyaContainer.Add(bubbleTail);
+
+        var bubbleName = UIHelper.CreateLabel("かぐやちゃん");
+        bubbleName.style.fontSize = 24;
+        bubbleName.style.color = new Color(1f, 0.4f, 0.6f);
+        UIHelper.ApplyFontBold(bubbleName);
+        bubbleName.style.marginBottom = 8;
+        bubble.Add(bubbleName);
+
+        var bubbleText = UIHelper.CreateLabel("");
+        bubbleText.style.fontSize = 30;
+        bubbleText.style.color = Color.black;
+        bubbleText.style.whiteSpace = UIE.WhiteSpace.Normal;
+        bubble.Add(bubbleText);
+
+        var bubbleHint = UIHelper.CreateLabel("");
+        bubbleHint.style.fontSize = 20;
+        bubbleHint.style.color = new Color(0.5f, 0.5f, 0.5f, 0.7f);
+        bubbleHint.style.marginTop = 8;
+        bubbleHint.style.unityTextAlign = TextAnchor.MiddleRight;
+        bubbleHint.style.alignSelf = UIE.Align.FlexEnd;
+        bubble.Add(bubbleHint);
+
+        // 台詞（吹き出しで順番に表示）
+        string[] msgs = new string[] {
+            Localization.Get("kaguya_pool_found"),
+            Localization.Get("kaguya_pool_line1"),
+            Localization.Get("kaguya_meet3_2"),
+            Localization.Get("kaguya_meet3_3")
+        };
+
+        // ハートを散りばめる
+        var heartAnims = new System.Collections.Generic.List<UIE.VisualElement>();
+        for (int hi = 0; hi < 15; hi++)
+        {
+            var heart = new UIE.Label();
+            heart.text = "\u2764";
+            heart.style.position = UIE.Position.Absolute;
+            heart.style.fontSize = Random.Range(18, 36);
+            heart.style.color = new Color(1f, Random.Range(0.3f, 0.6f), Random.Range(0.5f, 0.8f), 0f);
+            heart.style.left = Random.Range(20f, 580f);
+            heart.style.top = Random.Range(100f, 800f);
+            kaguyaContainer.Add(heart);
+            heartAnims.Add(heart);
+        }
+        StartCoroutine(AnimatePoolHearts(heartAnims));
+
+        bool tapped = false;
+        for (int i = 0; i < msgs.Length; i++)
+        {
+            bubbleText.text = msgs[i];
+            bubbleHint.text = (i < msgs.Length - 1) ? "\u25bc \u30bf\u30c3\u30d7\u3067\u7d9a\u304f" : "\u25bc \u30bf\u30c3\u30d7\u3067\u9589\u3058\u308b";
+            yield return new WaitForSeconds(0.3f);
+            tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+        }
+
+        // ハートを消す
+        foreach (var h in heartAnims) h?.RemoveFromHierarchy();
+
+        // 状態更新
+        if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.kaguyaMetCount = 3;
+            DataCarrier.Instance.SaveData();
+        }
+
+        // フェードアウトしてバトルへ
+        elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            float fadeT = 1f - (elapsed / 0.3f);
+            overlay.style.opacity = fadeT;
+            yield return null;
+        }
+        overlay.RemoveFromHierarchy();
+        kaguyaDialogueActive = false;
+        menuOpen = false;
+        StartCoroutine(StartFixedEncounter("かぐやちゃん"));
+    }
+
+    IEnumerator AnimatePoolHearts(System.Collections.Generic.List<UIE.VisualElement> hearts)
+    {
+        float duration = 8f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            for (int i = 0; i < hearts.Count; i++)
+            {
+                var h = hearts[i];
+                if (h == null || h.parent == null) continue;
+                float phase = i * Mathf.PI * 2f / hearts.Count;
+                float alpha = (Mathf.Sin(Time.time * 1.5f + phase) + 1f) * 0.5f * 0.8f;
+                float r = h.resolvedStyle.color.r;
+                float g = h.resolvedStyle.color.g;
+                float b = h.resolvedStyle.color.b;
+                h.style.color = new Color(r, g, b, alpha);
+                float drift = Mathf.Sin(Time.time * 2f + phase) * 0.8f;
+                h.style.top = h.resolvedStyle.top - Time.deltaTime * (15f + i * 2f);
+                h.style.left = h.resolvedStyle.left + drift;
+            }
+            yield return null;
+        }
     }
 
     void DrawBabyBottle(Transform parent, float scale)
@@ -5014,6 +8982,7 @@ public class MapManager : MonoBehaviour
         {
             messageList.Add(Localization.Get("map_mother_give_item"));
             messageList.Add(Localization.Get("map_mother_got_item", itemName));
+            messageList.Add(Localization.Get("map_mother_equip_hint"));
             messageList.Add(Localization.Get("map_mother_goodbye"));
         }
         else
@@ -5023,18 +8992,87 @@ public class MapManager : MonoBehaviour
 
         string[] messages = messageList.ToArray();
 
+        // アイテム取得メッセージのインデックスを特定（"〜を手に入れた！"）
+        int gotItemMsgIdx = -1;
+        if (giveItem)
+        {
+            for (int j = 0; j < messages.Length; j++)
+            {
+                if (messages[j].Contains("手に入れた") || messages[j].Contains("Got "))
+                { gotItemMsgIdx = j; break; }
+            }
+        }
+
+        UIE.VisualElement itemCard = null;
+
         // メッセージループ
         for (int i = 0; i < messages.Length; i++)
         {
             textLabel.text = messages[i];
             tapHint.text = (i < messages.Length - 1) ? "▼ タップで続く" : "▼ タップで閉じる";
 
+            // アイテム取得時にアイテムカードを表示
+            if (i == gotItemMsgIdx && giveItem)
+            {
+                itemCard = new UIE.VisualElement();
+                itemCard.style.position = UIE.Position.Absolute;
+                itemCard.style.left = new UIE.StyleLength(new UIE.Length(50, UIE.LengthUnit.Percent));
+                itemCard.style.top = new UIE.StyleLength(new UIE.Length(25, UIE.LengthUnit.Percent));
+                itemCard.style.width = 400;
+                itemCard.style.translate = new UIE.StyleTranslate(new UIE.Translate(-200, 0));
+                itemCard.style.backgroundColor = new Color(1f, 0.98f, 0.92f, 0.95f);
+                itemCard.style.borderTopLeftRadius = 32;
+                itemCard.style.borderTopRightRadius = 32;
+                itemCard.style.borderBottomLeftRadius = 32;
+                itemCard.style.borderBottomRightRadius = 32;
+                itemCard.style.paddingTop = 24;
+                itemCard.style.paddingBottom = 24;
+                itemCard.style.paddingLeft = 20;
+                itemCard.style.paddingRight = 20;
+                itemCard.style.alignItems = UIE.Align.Center;
+                itemCard.style.borderTopWidth = 3;
+                itemCard.style.borderBottomWidth = 3;
+                itemCard.style.borderLeftWidth = 3;
+                itemCard.style.borderRightWidth = 3;
+                itemCard.style.borderTopColor = new Color(1f, 0.718f, 0.773f, 0.6f);
+                itemCard.style.borderBottomColor = new Color(1f, 0.718f, 0.773f, 0.6f);
+                itemCard.style.borderLeftColor = new Color(1f, 0.718f, 0.773f, 0.6f);
+                itemCard.style.borderRightColor = new Color(1f, 0.718f, 0.773f, 0.6f);
+
+                var itemNameLabel = UIHelper.CreateLabel(itemName);
+                UIHelper.ApplyFontBold(itemNameLabel);
+                itemNameLabel.style.fontSize = 36;
+                itemNameLabel.style.color = new Color(0.47f, 0.22f, 0.33f);
+                itemNameLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+                itemNameLabel.style.marginBottom = 8;
+                itemCard.Add(itemNameLabel);
+
+                string effectKey = "equip_effect_" + motherJaName;
+                string effect = Localization.Get(effectKey);
+                if (!string.IsNullOrEmpty(effect) && effect != effectKey)
+                {
+                    var effectLabel = UIHelper.CreateLabel(effect);
+                    UIHelper.ApplyFont(effectLabel);
+                    effectLabel.style.fontSize = 26;
+                    effectLabel.style.color = new Color(0.4f, 0.6f, 0.3f);
+                    effectLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+                    itemCard.Add(effectLabel);
+                }
+
+                overlay.Add(itemCard);
+            }
+
             yield return new WaitForSeconds(0.3f);
 
             bool tapped = false;
             overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
             while (!tapped) yield return null;
+
+            // アイテムカードは次のメッセージまで表示し続ける（ヒントメッセージの間も見える）
         }
+
+        // アイテムカード除去
+        if (itemCard != null) itemCard.RemoveFromHierarchy();
 
         // アイテム付与処理
         if (giveItem && DataCarrier.Instance != null)
@@ -6416,7 +10454,15 @@ public class MapManager : MonoBehaviour
     {
         if (elderNpcObj == null) return;
         if (playerTileX == elderNpcX && playerTileY == elderNpcY)
-            OnElderTapped();
+        {
+            if (!elderDialogueCooldown)
+                OnElderTapped();
+        }
+        else
+        {
+            // プレイヤーが長老タイルから離れたらクールダウン解除
+            elderDialogueCooldown = false;
+        }
     }
 
     void OnElderTapped()
@@ -6424,6 +10470,7 @@ public class MapManager : MonoBehaviour
         if (elderDialogueActive) return;
         if (menuOpen) return;
 
+        elderDialogueCooldown = true;
         StartCoroutine(ShowElderDialogue());
     }
 
@@ -6599,6 +10646,7 @@ public class MapManager : MonoBehaviour
         }
 
         overlay.RemoveFromHierarchy();
+        elderBossBlockCooldown = 3f;
         menuOpen = false;
         elderDialogueActive = false;
     }
@@ -7307,9 +11355,17 @@ public class MapManager : MonoBehaviour
         {
             if (si.equipName == equipName)
             {
-                string ek = "shop_effect_" + si.key;
-                string et = Localization.Get(ek);
-                if (et != ek) effectText = et;
+                // 装備画面用の詳細効果があればそちらを優先
+                string realKey = "equip_real_effect_" + si.key;
+                string realText = Localization.Get(realKey);
+                if (realText != realKey)
+                    effectText = realText;
+                else
+                {
+                    string ek = "shop_effect_" + si.key;
+                    string et = Localization.Get(ek);
+                    if (et != ek) effectText = et;
+                }
                 return;
             }
         }
@@ -7317,11 +11373,33 @@ public class MapManager : MonoBehaviour
         {
             if (si.equipName == equipName)
             {
-                string ek = "shop_effect_" + si.key;
-                string et = Localization.Get(ek);
-                if (et != ek) effectText = et;
+                string realKey = "equip_real_effect_" + si.key;
+                string realText = Localization.Get(realKey);
+                if (realText != realKey)
+                    effectText = realText;
+                else
+                {
+                    string ek = "shop_effect_" + si.key;
+                    string et = Localization.Get(ek);
+                    if (et != ek) effectText = et;
+                }
                 return;
             }
+        }
+
+        // イベント報酬装備
+        if (equipName == "ゴールデン・ベビーステッキ")
+        {
+            var tex = Resources.Load<Texture2D>("Shop/ゴールデンベビーステッキ");
+            if (tex != null)
+                sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+            effectText = Localization.Get("shop_effect_golden_stick");
+            return;
+        }
+        if (equipName == "かぐやのリボン")
+        {
+            effectText = Localization.Get("shop_effect_kaguya_ribbon");
+            return;
         }
     }
 
@@ -7655,19 +11733,20 @@ public class MapManager : MonoBehaviour
 
     struct ShopItem
     {
-        public string key;     // localization key suffix
+        public string key;       // localization key suffix
         public string equipName; // equipment name for DataCarrier
         public int price;
-        public bool requiresS;  // Sランク限定
+        public bool requiresS;   // Sランク限定
+        public string imagePath; // Resources.Loadパス（null=画像なし）
     }
 
     static readonly ShopItem[] shopItems = new ShopItem[]
     {
-        new ShopItem { key = "garagara", equipName = "ガラガラソード", price = 30 },
-        new ShopItem { key = "yodare", equipName = "よだれかけシールド", price = 30 },
+        new ShopItem { key = "garagara", equipName = "ガラガラソード", price = 30, imagePath = "Shop/ガラガラ" },
+        new ShopItem { key = "yodare", equipName = "よだれかけシールド", price = 30, imagePath = "Shop/よだれかけ" },
         new ShopItem { key = "oshaburi", equipName = "おしゃぶりチャーム", price = 50 },
-        new ShopItem { key = "omutsu", equipName = "魔法のおむつ", price = 60 },
-        new ShopItem { key = "honyubin", equipName = "黄金のほ乳瓶", price = 80 },
+        new ShopItem { key = "omutsu", equipName = "魔法のおむつ", price = 60, imagePath = "Shop/おむつ" },
+        new ShopItem { key = "honyubin", equipName = "黄金のほ乳瓶", price = 80, imagePath = "Shop/きんいろの哺乳瓶" },
         new ShopItem { key = "tiara", equipName = "悪魔のティアラ", price = 100 },
     };
 
@@ -7704,104 +11783,214 @@ public class MapManager : MonoBehaviour
         // エリアに応じて商品リストを切り替え
         int entryArea = DataCarrier.Instance != null ? DataCarrier.Instance.shopEntryArea : 1;
         ShopItem[] currentShopItems = entryArea == 0 ? villageShopItems : shopItems;
-        bool isSRank = DataCarrier.Instance != null
-            && BabySynthesizer.DetermineRank(DataCarrier.Instance.babyFortune) == BabySynthesizer.BabyRank.S;
+
+        // スクロール可能なグリッド表示
+        var scrollView = new UIE.ScrollView(UIE.ScrollViewMode.Vertical);
+        scrollView.style.flexGrow = 1;
+        scrollView.style.maxHeight = 850;
+
+        var grid = new UIE.VisualElement();
+        grid.AddToClassList("map-shop-grid");
 
         foreach (var item in currentShopItems)
         {
-            var row = new UIE.VisualElement();
-            row.AddToClassList("map-shop-row");
-
-            var infoCol = new UIE.VisualElement();
-            infoCol.style.flexDirection = UIE.FlexDirection.Column;
-            infoCol.style.flexGrow = 1;
-
-            var nameLabel = UIHelper.CreateLabel(Localization.Get("shop_item_" + item.key), "map-shop-item-name");
-            infoCol.Add(nameLabel);
-
-            var effectLabel = UIHelper.CreateLabel(Localization.Get("shop_effect_" + item.key), "map-shop-item-effect");
-            infoCol.Add(effectLabel);
-
-            // Sランク限定表示
-            if (item.requiresS)
-            {
-                var sLabel = UIHelper.CreateLabel(Localization.Get("shop_s_rank_only"), "map-shop-item-effect");
-                sLabel.style.color = new Color(0.9f, 0.6f, 0.1f);
-                infoCol.Add(sLabel);
-            }
-
-            row.Add(infoCol);
-
             bool owned = DataCarrier.Instance != null && DataCarrier.Instance.HasEquipment(item.equipName);
 
-            if (owned)
+            var card = new UIE.VisualElement();
+            card.AddToClassList("map-shop-card");
+            if (owned) card.style.opacity = 0.5f;
+
+            // 画像
+            var imgEl = new UIE.VisualElement();
+            imgEl.AddToClassList("map-shop-card-img");
+            if (!string.IsNullOrEmpty(item.imagePath))
             {
-                var purchasedBtn = UIHelper.CreatePillButton(Localization.Get("shop_purchased"), "map-shop-buy-btn");
-                purchasedBtn.style.opacity = 0.4f;
-                purchasedBtn.clicked += () =>
-                {
-                    CloseWeaponShop();
-                    ShowMerchantMessage(Localization.Get("shop_merchant_already_owned"));
-                };
-                row.Add(purchasedBtn);
-            }
-            else if (item.requiresS && !isSRank)
-            {
-                // Sランク限定で、Sランクでない場合は購入不可
-                var lockedBtn = UIHelper.CreatePillButton(Localization.Get("shop_s_rank_only"), "map-shop-buy-btn");
-                lockedBtn.style.opacity = 0.4f;
-                lockedBtn.clicked += () =>
-                {
-                    CloseWeaponShop();
-                    ShowMerchantMessage(Localization.Get("shop_merchant_need_s_rank"));
-                };
-                row.Add(lockedBtn);
+                var spr = Resources.Load<Sprite>(item.imagePath);
+                if (spr != null)
+                    imgEl.style.backgroundImage = new UIE.StyleBackground(spr);
+                else
+                    imgEl.style.backgroundColor = new Color(0.85f, 0.80f, 0.90f);
             }
             else
             {
-                var buyBtn = UIHelper.CreatePillButton(Localization.Get("shop_buy", item.price), "map-shop-buy-btn");
-                bool canAfford = currentMilk >= item.price;
-                if (!canAfford)
-                {
-                    buyBtn.SetEnabled(false);
-                    buyBtn.style.opacity = 0.4f;
-                }
+                imgEl.style.backgroundColor = new Color(0.85f, 0.80f, 0.90f);
+                var qLabel = UIHelper.CreateLabel("?", null);
+                qLabel.style.fontSize = 60;
+                qLabel.style.color = new Color(0.6f, 0.5f, 0.7f);
+                qLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+                qLabel.style.flexGrow = 1;
+                imgEl.Add(qLabel);
+            }
+            card.Add(imgEl);
 
-                string capturedEquipName = item.equipName;
-                string capturedKey = item.key;
-                int capturedPrice = item.price;
-                buyBtn.clicked += () =>
-                {
-                    if (DataCarrier.Instance == null) return;
-                    if (DataCarrier.Instance.milk < capturedPrice) return;
+            // 名前
+            var nameLabel = UIHelper.CreateLabel(Localization.Get("shop_item_" + item.key), "map-shop-card-name");
+            card.Add(nameLabel);
 
-                    DataCarrier.Instance.milk -= capturedPrice;
-                    DataCarrier.Instance.AddEquipment(capturedEquipName);
-                    // スロットに空きがあれば自動装備
-                    DataCarrier.Instance.EquipItem(capturedEquipName);
-                    DataCarrier.Instance.SaveData();
-                    UpdateStatusText();
-
-                    // ショップUIを再構築
-                    CloseWeaponShop();
-                    ShowMessage(Localization.Get("shop_bought", Localization.Get("shop_item_" + capturedKey)));
-                    // 少し遅れてショップを再度開く
-                    StartCoroutine(ReopenShopAfterDelay());
-                };
-
-                row.Add(buyBtn);
+            // 購入済みバッジ
+            if (owned)
+            {
+                var badge = UIHelper.CreateLabel("持ってるよ！", null);
+                UIHelper.ApplyFont(badge);
+                badge.style.fontSize = 24;
+                badge.style.color = new Color(0.47f, 0.71f, 0.47f);
+                badge.style.unityFontStyleAndWeight = UnityEngine.FontStyle.Bold;
+                badge.style.unityTextAlign = TextAnchor.MiddleCenter;
+                badge.style.marginTop = 4;
+                card.Add(badge);
             }
 
-            shopOverlayEl.Add(row);
+            // タップで詳細を開く
+            ShopItem capturedItem = item;
+            card.RegisterCallback<UIE.ClickEvent>(evt =>
+            {
+                evt.StopPropagation();
+                ShowShopItemDetail(capturedItem);
+            });
+
+            grid.Add(card);
         }
 
-        var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "pill-button-small");
+        scrollView.Add(grid);
+        shopOverlayEl.Add(scrollView);
+
+        var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "pill-button");
         closeBtn.style.marginTop = 20;
+        closeBtn.style.height = 100;
+        closeBtn.style.fontSize = 34;
         closeBtn.clicked += () => CloseWeaponShop();
         shopOverlayEl.Add(closeBtn);
 
         overlay.Add(shopOverlayEl);
         overlayRoot.Add(overlay);
+    }
+
+    UIE.VisualElement shopDetailOverlay;
+
+    void ShowShopItemDetail(ShopItem item)
+    {
+        if (shopDetailOverlay != null)
+        {
+            shopDetailOverlay.RemoveFromHierarchy();
+            shopDetailOverlay = null;
+        }
+
+        shopDetailOverlay = UIHelper.CreateOverlay();
+        shopDetailOverlay.RegisterCallback<UIE.ClickEvent>(evt =>
+        {
+            if (evt.target == shopDetailOverlay)
+            {
+                shopDetailOverlay.RemoveFromHierarchy();
+                shopDetailOverlay = null;
+            }
+        });
+
+        var panel = new UIE.VisualElement();
+        panel.AddToClassList("map-shop-detail-panel");
+
+        // 画像
+        var imgEl = new UIE.VisualElement();
+        imgEl.AddToClassList("map-shop-detail-img");
+        if (!string.IsNullOrEmpty(item.imagePath))
+        {
+            var spr = Resources.Load<Sprite>(item.imagePath);
+            if (spr != null)
+                imgEl.style.backgroundImage = new UIE.StyleBackground(spr);
+            else
+                imgEl.style.backgroundColor = new Color(0.85f, 0.80f, 0.90f);
+        }
+        else
+        {
+            imgEl.style.backgroundColor = new Color(0.85f, 0.80f, 0.90f);
+        }
+        panel.Add(imgEl);
+
+        // 名前
+        var nameLabel = UIHelper.CreateLabel(Localization.Get("shop_item_" + item.key), "map-shop-detail-name");
+        panel.Add(nameLabel);
+
+        // 効果
+        var effectLabel = UIHelper.CreateLabel(Localization.Get("shop_effect_" + item.key), "map-shop-detail-effect");
+        panel.Add(effectLabel);
+
+        // 価格
+        int currentMilk = DataCarrier.Instance != null ? DataCarrier.Instance.milk : 0;
+        var priceLabel = UIHelper.CreateLabel("🍼 " + item.price + " ミルク", "map-shop-detail-price");
+        panel.Add(priceLabel);
+
+        bool owned = DataCarrier.Instance != null && DataCarrier.Instance.HasEquipment(item.equipName);
+        bool isSRank = DataCarrier.Instance != null
+            && BabySynthesizer.DetermineRank(DataCarrier.Instance.babyFortune) == BabySynthesizer.BabyRank.S;
+
+        if (owned)
+        {
+            var purchasedBtn = UIHelper.CreatePillButton("持ってるよ！", "pill-button");
+            purchasedBtn.style.height = 100;
+            purchasedBtn.style.fontSize = 34;
+            purchasedBtn.style.opacity = 0.4f;
+            purchasedBtn.SetEnabled(false);
+            panel.Add(purchasedBtn);
+        }
+        else if (item.requiresS && !isSRank)
+        {
+            var lockedBtn = UIHelper.CreatePillButton(Localization.Get("shop_s_rank_only"), "pill-button");
+            lockedBtn.style.height = 100;
+            lockedBtn.style.fontSize = 34;
+            lockedBtn.style.opacity = 0.4f;
+            lockedBtn.SetEnabled(false);
+            panel.Add(lockedBtn);
+        }
+        else
+        {
+            var buyBtn = UIHelper.CreatePillButton(Localization.Get("shop_buy", item.price), "pill-button");
+            buyBtn.style.height = 100;
+            buyBtn.style.fontSize = 34;
+            bool canAfford = currentMilk >= item.price;
+            if (!canAfford)
+            {
+                buyBtn.SetEnabled(false);
+                buyBtn.style.opacity = 0.4f;
+            }
+
+            string capturedEquipName = item.equipName;
+            string capturedKey = item.key;
+            int capturedPrice = item.price;
+            buyBtn.clicked += () =>
+            {
+                if (DataCarrier.Instance == null) return;
+                if (DataCarrier.Instance.milk < capturedPrice) return;
+
+                DataCarrier.Instance.milk -= capturedPrice;
+                DataCarrier.Instance.AddEquipment(capturedEquipName);
+                DataCarrier.Instance.EquipItem(capturedEquipName);
+                DataCarrier.Instance.SaveData();
+                UpdateStatusText();
+
+                // 詳細を閉じてショップを再構築
+                shopDetailOverlay.RemoveFromHierarchy();
+                shopDetailOverlay = null;
+                CloseWeaponShop();
+                ShowMessage(Localization.Get("shop_bought", Localization.Get("shop_item_" + capturedKey)));
+                StartCoroutine(ReopenShopAfterDelay());
+            };
+
+            panel.Add(buyBtn);
+        }
+
+        // 閉じるボタン
+        var closeBtn = UIHelper.CreatePillButton(Localization.Get("ui_close"), "pill-button");
+        closeBtn.style.height = 100;
+        closeBtn.style.fontSize = 34;
+        closeBtn.style.marginTop = 12;
+        closeBtn.clicked += () =>
+        {
+            shopDetailOverlay.RemoveFromHierarchy();
+            shopDetailOverlay = null;
+        };
+        panel.Add(closeBtn);
+
+        shopDetailOverlay.Add(panel);
+        overlayRoot.Add(shopDetailOverlay);
     }
 
     IEnumerator ReopenShopAfterDelay()
@@ -7812,6 +12001,11 @@ public class MapManager : MonoBehaviour
 
     void CloseWeaponShop()
     {
+        if (shopDetailOverlay != null)
+        {
+            shopDetailOverlay.RemoveFromHierarchy();
+            shopDetailOverlay = null;
+        }
         if (shopOverlayEl != null)
         {
             shopOverlayEl.parent?.RemoveFromHierarchy();

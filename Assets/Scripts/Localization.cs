@@ -592,6 +592,8 @@ public static class Localization
         Add("enemy_デヴィル傭兵A", "おもてなし給仕A", "Hospitality Server A");
         Add("enemy_デヴィル傭兵B", "おもてなし給仕B", "Hospitality Server B");
         Add("enemy_デヴィル夫人", "デヴィル夫人", "Devil Lady");
+        Add("enemy_メロディアス女王", "メロディアス女王", "Queen Melodias");
+        Add("enemy_エゴ・マザー・マシーン", "エゴ・マザー・マシーン", "Ego Mother Machine");
 
         // Enemy bios
         Add("enemy_bio_えんえんベイビー",
@@ -910,6 +912,88 @@ public static class Localization
         Add("area_name_0", "よちよちの里", "Toddler's Training Ground");
         Add("area_name_1", "ゴージャス・ヴィレッジ", "Gorgeous Village");
         Add("area_name_3", "小悪魔の街", "Imp Town");
+        Add("area_name_8", "ステラ・オリジン", "Stella Origin");
+
+        // ステラ・オリジン ガーディアンNPC
+        Add("stella_guardian_devil_name", "清らかな夫人", "Purified Lady");
+        Add("stella_guardian_devil_line",
+            "……よくここまで 来ましたね。\nその金の卵の重み、今のあなたなら 支えられるはず。\nわたくしの『誇り』を 授けましょう。",
+            "...You've come this far.\nYou can bear the weight of that golden egg now.\nLet me bestow my 'Pride' upon you.");
+        Add("stella_guardian_devil_buff",
+            "<color=#AAF0D1>清らかな夫人の『誇り』を 受け取った！</color>\n<color=#FFD700>おちつき +20！</color>",
+            "<color=#AAF0D1>Received the Purified Lady's 'Pride'!</color>\n<color=#FFD700>DEF +20!</color>");
+        Add("stella_guardian_devil_done",
+            "……あなたの おちつきは、もう わたくし以上ね。\n……がんばりなさい。",
+            "...Your composure surpasses even mine now.\n...Do your best.");
+
+        Add("stella_guardian_melodias_name", "穏やかな女王", "Gentle Queen");
+        Add("stella_guardian_melodias_line",
+            "不協和音は もう 聞こえないわ……。\nあなたの産声は、きっと\n宇宙で一番 美しい旋律になる。\n私の『勇気』を 受け取って。",
+            "I hear no more dissonance...\nYour first cry will surely become\nthe most beautiful melody in the cosmos.\nTake my 'Courage'.");
+        Add("stella_guardian_melodias_buff",
+            "<color=#AAF0D1>穏やかな女王の『勇気』を 受け取った！</color>\n<color=#FFD700>ぬくもり +20！</color>",
+            "<color=#AAF0D1>Received the Gentle Queen's 'Courage'!</color>\n<color=#FFD700>ATK +20!</color>");
+        Add("stella_guardian_melodias_done",
+            "……その旋律、宇宙の果てまで 届けなさい。\n……わたくしは ここで 聴いているわ。",
+            "...Carry that melody to the edge of the cosmos.\n...I'll be listening from here.");
+
+        // ステラ・オリジン ゆりかごイベント
+        Add("stella_cradle_intro",
+            "フォッフォッフォ……\n仕上げじゃ。\nお前さんの旅で得た『素材』を、\nここで一つに 編み上げるのじゃ！",
+            "Ho ho ho...\nTime for the finishing touch.\nLet's weave together all the\n'materials' from your journey!");
+        Add("stella_cradle_choose", "お前さんの 個性を 決めるのじゃ！", "Choose your identity!");
+        Add("stella_cradle_title_courage", "勇気の星", "Star of Courage");
+        Add("stella_cradle_title_kindness", "優しさの星", "Star of Kindness");
+        Add("stella_cradle_title_wisdom", "知恵の星", "Star of Wisdom");
+        Add("stella_cradle_title_harmony", "調和の星", "Star of Harmony");
+        Add("stella_cradle_complete",
+            "『{0}』の 称号を 得た！\n{1}は 黄金の輝きに 包まれた…！",
+            "Received the title '{0}'!\n{1} is bathed in golden light...!");
+
+        // ステラ・オリジン 宇宙の門
+        Add("stella_gate_locked",
+            "……まだ全ての魂の欠片が\n揃っていないようだ",
+            "...Not all soul fragments\nhave been gathered yet.");
+        Add("stella_gate_open",
+            "すべての魂の欠片が 共鳴する…！\n宇宙の門が 黄金の光とともに 開く…！",
+            "All soul fragments resonate...!\nThe Cosmic Gate opens with golden light...!");
+        Add("stella_gate_hint_devil",
+            "西の小部屋に 清らかな気配を感じる…",
+            "You sense a pure presence in the west room...");
+        Add("stella_gate_hint_melodias",
+            "東の小部屋に 穏やかな旋律が聞こえる…",
+            "You hear a gentle melody from the east room...");
+        Add("stella_gate_hint_cradle",
+            "北の広場に まばゆい光が見える…",
+            "You see a dazzling light in the north plaza...");
+
+        // エゴ・マザー・マシーン
+        Add("battle_ego_mother_intro_1",
+            "……静寂の果てに\n何かが 脈打っている",
+            "...At the edge of silence,\nsomething pulses.");
+        Add("battle_ego_mother_intro_2",
+            "全ての母の 愛と執着が\nひとつの形を なしている……",
+            "All mothers' love and obsession\ntake a single form...");
+        Add("battle_ego_mother_intro_3",
+            "「おまえは わたしの こどもだ」",
+            "\"You are MY child.\"");
+
+        // エゴ・マザー・マシーン撃破シークエンス
+        Add("ego_mother_defeat_1",
+            "マシーンの 歯車が 止まった……\n無数の 光の粒が 溢れ出す",
+            "The Machine's gears have stopped...\nCountless particles of light overflow.");
+        Add("ego_mother_defeat_2",
+            "縛られていた あかちゃんたちの\n魂が ひとつずつ 解き放たれていく……",
+            "The bound souls of babies\nare set free, one by one...");
+        Add("ego_mother_defeat_3",
+            "もう だれも\nしばられなくて いいんだよ",
+            "No one needs to be\nbound anymore.");
+        Add("ego_mother_defeat_4",
+            "あたたかい 光が\n空の はるか彼方へ のぼっていく……",
+            "A warm light rises\nfar beyond the sky...");
+        Add("ego_mother_defeat_5",
+            "銀河の聖域へ",
+            "To the Galactic Sanctuary");
 
         // 前のステージに戻る
         Add("map_return_confirm", "<size=120%>{0} に\n戻りますか？</size>",
@@ -931,6 +1015,8 @@ public static class Localization
         Add("map_mother_give_item", "これ、持っていきなさい。\nきっと役に立つわ。",
             "Take this with you.\nI'm sure it will come in handy.");
         Add("map_mother_got_item", "{0}を手に入れた！", "Got {0}!");
+        Add("map_mother_equip_hint", "メニューの「そうび」から\nアイテムをつけられるわよ。",
+            "You can equip items from\nthe \"Equipment\" menu.");
         Add("map_mother_goodbye", "じゃあ、母さんはお家に帰るわね。\n気をつけるのよ。",
             "Well, Mom's going home now.\nBe careful out there.");
 
@@ -1025,12 +1111,37 @@ public static class Localization
         Add("battle_melodias_debuffed", "<color=#FF69B4>ふしぎな ちからで あそびぢからが さがった！ 3ターン！</color>",
             "<color=#FF69B4>Attack power dropped from enchanting power! 3 turns!</color>");
 
-        // Melodias Queen defeat
-        Add("melodias_defeat_line1", "メロディアス女王 が にっこり おやすみした…\n", "Queen Melodias has fallen...\n");
-        Add("melodias_defeat_line2", "「…私の メロディが…\n届かなかった というの…？」\n",
-            "\"...My melody...\ndidn't reach you...?\"\n");
-        Add("melodias_defeat_line3", "109に 静寂が 戻った。\n魅惑の音色が 消えていく…\n",
-            "Silence returns to 109.\nThe enchanting melody fades...\n");
+        // Melodias Queen defeat cutscene: 黄金の産声と解き放たれた音色
+        Add("melodias_cutscene_shatter",
+            "さいごの いちげきで\n女王の 歪んだ楽器が くだけ散った…！",
+            "With the final blow,\nthe Queen's twisted instrument shattered...!");
+        Add("melodias_cutscene_notes_free",
+            "閉じこめられていた 音の精霊たちが\nベロアの空へ 昇っていく…",
+            "The imprisoned sound spirits\nrise into the velvet sky...");
+        Add("melodias_cutscene_transform",
+            "狂気が 静まり…\n女王の すがたが ちいさく やわらかく なっていく…",
+            "The madness subsides...\nThe Queen's form grows small and gentle...");
+        Add("melodias_cutscene_queen_line",
+            "「……いい音色……。\nこれなら、あの空の向こうまで 届くわ……」",
+            "\"...What a lovely sound...\nThis one... could reach beyond the sky...\"");
+        Add("melodias_cutscene_queen_sleep",
+            "メロディアス女王は おだやかに ねむりについた…",
+            "Queen Melodias peacefully drifted to sleep...");
+        Add("melodias_cutscene_goldikemen_arrive",
+            "…！？",
+            "...!?");
+        Add("melodias_cutscene_goldikemen_line1",
+            "「よくやった、若き命よ！」",
+            "\"Well done, young life!\"");
+        Add("melodias_cutscene_goldikemen_line2",
+            "「今こそ、お主の\n『魂の故郷』へ 帰る時じゃ！」",
+            "\"Now is the time to return\nto your 'Soul's Homeland'!\"");
+        Add("melodias_cutscene_launch",
+            "金の卵の エネルギーが ステッキに 注がれる…！",
+            "Energy from the golden egg flows into the wand...!");
+        Add("melodias_cutscene_launch2",
+            "赤ちゃんが 黄金の光となり\n紺色のベロアの空を 突き破っていく…！",
+            "The baby becomes a golden light\nand pierces through the velvet sky...!");
 
         // Victory screen
         Add("battle_saved_return", "<color=#FFD700>{0}({1}ヶ月)</color>\n<color=#00FF00>セーブしました！</color>",
@@ -1177,7 +1288,8 @@ public static class Localization
         Add("shop_effect_yodare", "DEF+4", "DEF+4");
         Add("shop_effect_oshaburi", "毎ターンごきげん+3回復", "Mood+3 per turn");
         Add("shop_effect_omutsu", "DEF+3 トゲトゲ・バブル耐性", "DEF+3 Poison resist");
-        Add("shop_effect_honyubin", "ATK+3 DEF+3", "ATK+3 DEF+3");
+        Add("shop_effect_honyubin", "???", "???");
+        Add("equip_real_effect_honyubin", "HP+100 DEF+50", "HP+100 DEF+50");
         Add("shop_effect_tiara", "ATK+6 DEF-2", "ATK+6 DEF-2");
         Add("shop_item_nakineko", "なきねこミット", "Crying Cat Punch");
         Add("shop_item_yodarekake_mini", "ミニよだれかけ", "Mini Bib");
@@ -1195,6 +1307,52 @@ public static class Localization
             "<color=#FFB6C1>Gained {0}ml milk!</color>");
         Add("battle_oshaburi_heal", "<color=#00FF00>おしゃぶりチャームで ごきげん+{0}！</color>",
             "<color=#00FF00>Pacifier Charm restores Mood+{0}!</color>");
+
+        // ===== 金の卵の老人NPC =====
+        Add("oldman_wait", "金の卵……金の卵さえ あれば……", "Golden egg... if only I had a golden egg...");
+        Add("oldman_notice", "！！ そ、それは……金の卵！！", "!! Th-that's... a golden egg!!");
+        Add("oldman_request", "それを……それを ワシに 装着させてくれ……！", "Please... let me wear it...!");
+        Add("oldman_choice_yes", "つけてあげる", "Put it on");
+        Add("oldman_choice_no", "やめとく", "Never mind");
+        Add("oldman_power", "おおお……力が みなぎる……！", "Ohhh... power surges through me...!");
+        Add("oldman_reward", "これを おぬしに やろう……最強の あかちゃんステッキだ！", "Take this... the mightiest baby stick!");
+        Add("oldman_got_item", "ゴールデン・ベビーステッキ を てにいれた！", "Got Golden Baby Stick!");
+        Add("oldman_after", "フォッフォッフォ……この 輝き……たまらんのう……", "Ho ho ho... this radiance... magnificent...");
+        Add("shop_effect_golden_stick", "ATK+50 HP+50 DEF+50", "ATK+50 HP+50 DEF+50");
+
+        // ===== かぐやちゃんイベント =====
+        Add("kaguya_meet1_1", "あ……！ み、見つかっちゃった……💗", "Ah...! Y-you found me...! 💗");
+        Add("kaguya_meet1_2", "え、えっと……わたし かぐや。あなたの こと、ずっと みてたの……", "U-um... I'm Kaguya. I've been watching you for a while...");
+        Add("kaguya_meet1_3", "きゃっ！ は、恥ずかしい……！ バイバイ！", "Eek! S-so embarrassing...! Bye bye!");
+        Add("kaguya_meet2_1", "あっ！ また あなた……！ おいかけて きたの……？", "Ah! You again...! Did you come looking for me...?");
+        Add("kaguya_meet2_2", "うれしい……けど、恥ずかしいよぉ……💗", "I'm happy... but so embarrassed... 💗");
+        Add("kaguya_meet2_3", "ま、また どこかで ね……！", "S-see you somewhere again...!");
+        Add("kaguya_meet3_1", "もう……3かいも 見つけるなんて……！", "Geez... you found me three times...!");
+        Add("kaguya_meet3_2", "わかった！ わたしの ほんきの あそび、うけてみて！", "Fine! Try to handle my serious play!");
+        Add("kaguya_meet3_3", "まけないんだから……！💗", "I won't lose...! 💗");
+        Add("kaguya_lover", "えへへ……あなたに あえて うれしいな💗", "Ehehe... I'm so happy to see you 💗");
+        Add("kaguya_lover_won", "かぐやちゃんと そうしそうあいに なった！ 💗", "You and Kaguya are now in love! 💗");
+        Add("kaguya_lover_item", "かぐやのリボン を もらった！", "Got Kaguya's Ribbon!");
+        Add("kaguya_cheer", "かぐやちゃんの おうえん！💗 ちからが わいてきた！", "Kaguya cheers you on! 💗 You feel empowered!");
+        Add("shop_effect_kaguya_ribbon", "DEF+200", "DEF+200");
+
+        // かぐや 3回目: プール演出
+        Add("kaguya_pool_notice", "プールの おくに なにか 光っている……", "Something is shimmering deep in the pool...");
+        Add("kaguya_pool_dive", "もぐってみる", "Dive in");
+        Add("kaguya_pool_leave", "やめておく", "Leave it");
+        Add("kaguya_pool_splash", "ざぶーん！💦", "Splash! 💦");
+        Add("kaguya_pool_found", "！？ かぐやちゃんが いた！💗", "!? You found Kaguya! 💗");
+        Add("kaguya_pool_line1", "ぷはぁっ！ こんなとこまで みつけるの！？💗", "Pwah! You found me even here!? 💗");
+
+        // かぐや 告白シーン
+        Add("kaguya_confess1", "……つよいね。まけちゃった……💗", "...You're so strong. I lost... 💗");
+        Add("kaguya_confess2", "でも ね、ほんとは まけたかったの。", "But you know, I actually wanted to lose.");
+        Add("kaguya_confess3", "あなたの こと……ずっと すきだったの💗", "I've always... liked you 💗");
+        Add("kaguya_confess_ask", "わたしと……おともだちに なって くれる？💗", "Will you... be my special friend? 💗");
+        Add("kaguya_confess_yes", "いいよ！💗", "Yes! 💗");
+        Add("kaguya_confess_no", "まだ はやいかな……", "Maybe not yet...");
+        Add("kaguya_confess_happy", "えっ……ほんと！？ うれしいっ！！💗💗💗", "R-really!? I'm so happy!! 💗💗💗");
+        Add("kaguya_confess_sad", "そっか……。でも わたし、まってるから……💗", "I see... But I'll be waiting... 💗");
 
         // ===== Juku (Cram school) =====
         Add("juku_intro", "きょうも おべんきょう しましょう！\nいまの ちえ: {0}\n3もん れんぞく せいかいで ちえ アップ！",

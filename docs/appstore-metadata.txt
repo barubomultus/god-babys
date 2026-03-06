@@ -1,0 +1,88 @@
+==========================================
+ Star Babys - App Store Connect Metadata
+==========================================
+
+--- Basic Info ---
+App Name: Star Babys
+Subtitle: Baby RPG Adventure
+Bundle ID: com.akitoshiwin.starbabys
+Category: Games > Role Playing
+Content Rating: 4+ (no objectionable content)
+
+--- Description (Japanese) ---
+赤ちゃんRPG「Star Babys」
+
+お父さんとお母さんを選んで、世界にひとつだけの赤ちゃんを誕生させよう！
+
+あなたの赤ちゃんは、よちよちの里からゴージャス・ヴィレッジ、
+デヴィル夫人のやかた、小悪魔の街、109、
+そして銀河の果て「ステラ・オリジン」まで冒険します。
+
+おともだちと「あそび」で勝負！
+あそぶ、とくぎ、おもちゃ、みまもる...
+やさしい世界で、最強の赤ちゃんを育てよう。
+
+[Features]
+- 6人のお父さん x 6人のお母さん = 36通りの赤ちゃん
+- パステルカラーの優しいバトルシステム
+- 個性豊かなボスたちとの物語
+- 自分だけの赤ちゃんの顔をカスタマイズ
+- クリスタルに輝く宇宙ステージ
+
+--- Description (English) ---
+Baby RPG "Star Babys"
+
+Choose a father and mother to create your one-of-a-kind baby!
+
+Your baby will adventure from Yochiyochi Village to Gorgeous Village,
+Devil Lady's Mansion, Little Devil Town, 109,
+and all the way to the galactic frontier "Stella Origin."
+
+Battle friends through "play"!
+Play, Skills, Toys, Guard...
+Raise the strongest baby in a gentle world.
+
+[Features]
+- 6 fathers x 6 mothers = 36 unique babies
+- Soft pastel-colored battle system
+- Rich stories with unique bosses
+- Customize your baby's face
+- Crystal-shining cosmic stages
+
+--- Keywords (Japanese, max 100 chars) ---
+赤ちゃん,RPG,育成,ベビー,パステル,冒険,かわいい,銀河,バトル,ゲーム
+
+--- Keywords (English, max 100 chars) ---
+baby,RPG,raising,pastel,adventure,cute,galaxy,battle,game,kawaii
+
+--- What's New (v1.0.0) ---
+Star Babys initial release!
+
+--- Privacy Policy URL ---
+https://barubomultus.github.io/god-babys/privacy-policy.html
+(Enable GitHub Pages: Settings > Pages > Source: Deploy from branch > main > /docs)
+
+--- Screenshots Required ---
+iPhone 6.7" (1290 x 2796): iPhone 15 Pro Max / 16 Pro Max
+  1. Title screen
+  2. Baby birth scene
+  3. Battle scene (boss)
+  4. Map exploration
+  5. Stella Origin stage
+
+iPhone 6.5" (1284 x 2778): iPhone 14 Plus / 15 Plus
+  (same screenshots, Unity handles resolution)
+
+--- Age Rating Questionnaire ---
+Violence: None (playful battle, no blood/violence)
+Sexual Content: None
+Profanity: None
+Drugs/Alcohol: None
+Gambling: None
+Horror: None
+Medical Info: None
+Contests: None
+User Generated Content: No (face photo is local only)
+Unrestricted Web Access: No
+
+Result: Rated 4+

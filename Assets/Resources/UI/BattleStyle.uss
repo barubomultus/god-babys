@@ -40,7 +40,7 @@
     flex-direction: column;
     align-items: center;
     margin-top: auto;
-    margin-bottom: 240px;
+    margin-bottom: 300px;
 }
 
 /* === Center (VS + log) === */
@@ -953,6 +953,108 @@
     font-size: 40px;
     -unity-font-style: bold;
     color: var(--color-sub);
+}
+
+/* === Melodias cutscene === */
+.melodias-cutscene-overlay {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(10, 5, 30, 0);
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition-property: background-color;
+    transition-duration: 1.0s;
+}
+.melodias-cutscene-overlay-dark {
+    background-color: rgba(10, 5, 30, 0.97);
+}
+
+.melodias-cutscene-text {
+    font-size: 30px;
+    color: white;
+    -unity-text-align: middle-center;
+    white-space: normal;
+    width: 800px;
+    opacity: 0;
+    margin-top: 12px;
+    margin-bottom: 12px;
+    letter-spacing: 4px;
+}
+
+.melodias-cutscene-text-visible {
+    opacity: 1;
+}
+
+.melodias-cutscene-title {
+    font-size: 36px;
+    -unity-font-style: bold;
+    color: #FFD700;
+    letter-spacing: 8px;
+}
+
+.melodias-cutscene-sprite {
+    width: 200px;
+    height: 200px;
+    -unity-background-scale-mode: scale-to-fit;
+    margin-bottom: 20px;
+}
+
+.melodias-cutscene-teddy {
+    font-size: 120px;
+    -unity-text-align: middle-center;
+    margin-bottom: 20px;
+}
+
+.melodias-cutscene-goldikemen {
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    -unity-background-scale-mode: scale-to-fit;
+    bottom: -200px;
+    left: 50%;
+    translate: -50% 0;
+}
+
+.melodias-cutscene-dialogue {
+    font-size: 32px;
+    color: #FFD700;
+    -unity-text-align: middle-center;
+    white-space: normal;
+    width: 800px;
+    opacity: 0;
+    -unity-font-style: bold;
+    letter-spacing: 4px;
+}
+
+.melodias-cutscene-dialogue-visible {
+    opacity: 1;
+}
+
+.melodias-note-particle {
+    position: absolute;
+    font-size: 28px;
+    opacity: 0;
+}
+
+.melodias-golden-particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background-color: #FFD700;
+    opacity: 0;
+}
+
+.melodias-launch-flash {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(255, 215, 0, 0);
+    transition-property: background-color;
+    transition-duration: 0.5s;
+}
+.melodias-launch-flash-bright {
+    background-color: rgba(255, 215, 0, 1);
 }
 
 /* === Victory panel === */

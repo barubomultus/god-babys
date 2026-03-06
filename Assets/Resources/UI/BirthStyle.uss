@@ -194,14 +194,14 @@
     padding-right: 15px;
     padding-bottom: 10px;
     min-height: 100px;
-    font-size: 40px;
+    font-size: 52px;
     -unity-text-align: middle-center;
-    color: rgb(255, 230, 128);
+    color: rgb(255, 210, 80);
     white-space: normal;
     flex-shrink: 0;
-    -unity-text-outline-width: 0.8px;
-    -unity-text-outline-color: rgba(255, 200, 100, 0.4);
-    text-shadow: 0 0 12px rgba(255, 230, 128, 0.6);
+    -unity-text-outline-width: 1.2px;
+    -unity-text-outline-color: rgba(180, 120, 40, 0.6);
+    text-shadow: 0 0 12px rgba(120, 80, 20, 0.5);
 }
 
 /* --- ステータス確認ボタン（アコーディオン展開） --- */
@@ -316,8 +316,8 @@
 
 /* --- アコーディオン内 Bio テキスト --- */
 .birth-accordion-bio {
-    font-size: 28px;
-    color: rgba(255, 255, 255, 0.9);
+    font-size: 34px;
+    color: rgba(255, 255, 255, 1.0);
     white-space: normal;
     -unity-text-align: upper-left;
     padding-left: 12px;
@@ -631,6 +631,7 @@
     flex-grow: 1;
     flex-direction: column;
     background-color: rgb(245, 235, 218);
+    padding-bottom: 140px;
 }
 
 .birth-story-bg-wrapper {
@@ -645,8 +646,8 @@
 
 .birth-story-title {
     flex-shrink: 0;
-    padding-top: 64px;
-    padding-bottom: 16px;
+    padding-top: 80px;
+    padding-bottom: 8px;
     font-size: 60px;
     -unity-font-style: bold-and-italic;
     -unity-text-align: middle-center;
@@ -759,8 +760,8 @@
     height: 2px;
     background-color: rgba(160, 130, 90, 0.5);
     align-self: center;
-    margin-top: 24px;
-    margin-bottom: 0;
+    margin-top: 12px;
+    margin-bottom: 12px;
 }
 
 /* --- ストーリーテキストコンテナ（不透明背景、重なり解消） --- */
@@ -770,7 +771,7 @@
     background-color: rgba(245, 235, 218, 1);
     margin-left: 24px;
     margin-right: 24px;
-    margin-top: 12px;
+    margin-top: 4px;
     border-radius: 24px;
     overflow: hidden;
 }
@@ -792,13 +793,18 @@
     -unity-paragraph-spacing: 24px;
 }
 
-/* --- 「愛を育む」ボタン行 --- */
+/* --- 「愛を育む」ボタン行（画面下部固定） --- */
 .birth-story-love-btn-row {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
     flex-shrink: 0;
     flex-direction: row;
     justify-content: center;
-    padding-bottom: 100px;
+    padding-bottom: 60px;
     padding-top: 16px;
+    background-color: rgba(245, 235, 218, 0.95);
 }
 
 .birth-story-love-btn {
@@ -1418,8 +1424,8 @@
 
 /* --- Story Popup: bio text (typewriter target) --- */
 .birth-story-popup-bio {
-    font-size: 28px;
-    color: rgb(60, 40, 25);
+    font-size: 34px;
+    color: rgb(30, 20, 10);
     white-space: normal;
     -unity-text-align: upper-left;
     padding-left: 20px;

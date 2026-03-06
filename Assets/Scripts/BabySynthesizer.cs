@@ -74,6 +74,17 @@ public class BabySynthesizer : MonoBehaviour
         Debug.Log($"[BabySynthesizer] Morph ENABLED: L({leftEye.x:F3},{leftEye.y:F3}) R({rightEye.x:F3},{rightEye.y:F3}) Mouth({mouthPos.x:F3},{mouthPos.y:F3})");
     }
 
+    public void DisableBabyMorph()
+    {
+        morphEnabled = false;
+        Debug.Log("[BabySynthesizer] Morph DISABLED");
+    }
+
+    public Sprite GetCompositeSprite()
+    {
+        return compositeSprite;
+    }
+
     // ===== Rank & Swaddle Determination =====
 
     public static BabyRank DetermineRank(int fortune)

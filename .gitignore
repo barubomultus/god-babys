@@ -73,6 +73,11 @@ mono_crash.*
 *.unitypackage.meta
 *.app
 
+# iOS build output
+/StarBabys_iOS/
+*.xcodeproj
+*.xcworkspace
+
 # Crashlytics generated file
 crashlytics-build.properties
 

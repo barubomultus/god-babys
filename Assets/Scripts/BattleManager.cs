@@ -54,6 +54,7 @@ public class BattleManager : MonoBehaviour
         {"ぷんぷんベイビー", "ぷんぷんど"},
         {"いやだいやだベイビー", "いやいやど"},
         {"どたばたベイビー", "どたばたど"},
+        {"エゴ・マザー・マシーン", "しはいど"},
     };
 
     string GetEnemyMeterLabel()
@@ -303,11 +304,16 @@ public class BattleManager : MonoBehaviour
             if (DataCarrier.Instance.IsEquipped("ガラガラソード")) playerAtk += 4;
             if (DataCarrier.Instance.IsEquipped("よだれかけシールド")) playerDef += 4;
             if (DataCarrier.Instance.IsEquipped("魔法のおむつ")) playerDef += 3;
-            if (DataCarrier.Instance.IsEquipped("黄金のほ乳瓶")) { playerAtk += 3; playerDef += 3; }
+            if (DataCarrier.Instance.IsEquipped("黄金のほ乳瓶")) { playerMaxHp += 100; playerHp += 100; playerDef += 50; }
             if (DataCarrier.Instance.IsEquipped("悪魔のティアラ")) { playerAtk += 6; playerDef -= 2; }
             if (DataCarrier.Instance.IsEquipped("泣き猫パンチ")) playerAtk += 2;
             if (DataCarrier.Instance.IsEquipped("ミニよだれかけ")) playerDef += 2;
             if (DataCarrier.Instance.IsEquipped("にじいろガラガラ")) { playerAtk += 5; playerDef += 2; }
+            if (DataCarrier.Instance.IsEquipped("ゴールデン・ベビーステッキ")) { playerAtk += 50; playerMaxHp += 50; playerHp += 50; playerDef += 50; }
+            if (DataCarrier.Instance.IsEquipped("かぐやのリボン")) { playerDef += 200; }
+
+            // かぐやちゃん相思相愛バフ（常時）
+            if (DataCarrier.Instance.kaguyaLover) { playerAtk += 5; playerDef += 5; }
 
             playerFatherName = DataCarrier.Instance.fatherName ?? "";
             playerMotherName = DataCarrier.Instance.motherName ?? "";
@@ -381,7 +387,20 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
-        if (fromMap && bossBattle && area == 4)
+        if (fromMap && bossBattle && area == 8)
+        {
+            enemyName = "エゴ・マザー・マシーン";
+            enemyAge = -1;
+            enemyMaxHp = 1500;
+            enemyHp = enemyMaxHp;
+            enemyAtk = 130;
+            enemyDef = 60;
+            enemySpeed = 90;
+            isDevilEnemy = false;
+            enemyBgColor = new Color(0.1f, 0.05f, 0.15f);
+            loadedEnemySprite = Resources.Load<Sprite>("EnemyBabys/boss/ego-mother-machine");
+        }
+        else if (fromMap && bossBattle && area == 4)
         {
             enemyName = "メロディアス女王";
             enemyAge = -1;
@@ -547,6 +566,21 @@ public class BattleManager : MonoBehaviour
     {
         enemyName = fixedName;
         enemyAge = -1;
+
+        if (fixedName == "かぐやちゃん")
+        {
+            cannotRun = false;
+            isDevilEnemy = false;
+            loadedEnemySprite = Resources.Load<Sprite>("MapCharacters/heroine/kaguya3");
+            enemyMaxHp = 120;
+            enemyHp = enemyMaxHp;
+            enemyAtk = 25;
+            enemyDef = 20;
+            enemySpeed = 60;
+            enemyBgColor = new Color(1f, 0.72f, 0.77f);
+            return;
+        }
+
         cannotRun = true;
         isDevilEnemy = true;
         loadedEnemySprite = Resources.Load<Sprite>(
@@ -641,7 +675,7 @@ public class BattleManager : MonoBehaviour
         autoBattleBtn.AddToClassList("battle-auto-pill");
         autoBattleBtn.AddToClassList("battle-auto-off");
         UIHelper.ApplyFont(autoBattleBtn);
-        autoBattleBtn.text = "自動 \u25B6\u25B6";
+        autoBattleBtn.text = "オート \u25B6\u25B6";
         autoBattleBtn.clicked += ToggleAutoBattle;
         bottomBar.Add(autoBattleBtn);
 
@@ -667,10 +701,12 @@ public class BattleManager : MonoBehaviour
         submenuEl.style.display = UIE.DisplayStyle.None;
         actionPanelEl.Add(submenuEl);
 
-        // top-bar の bottom を actionPanelEl の高さに合わせる
+        // top-bar と player-area の bottom を actionPanelEl の高さに合わせる
         actionPanelEl.RegisterCallback<UIE.GeometryChangedEvent>(evt =>
         {
-            bottomBar.style.bottom = evt.newRect.height;
+            float actionHeight = evt.newRect.height;
+            bottomBar.style.bottom = actionHeight;
+            playerAreaEl.style.marginBottom = actionHeight + 60;
         });
 
         // インタラクションブロッカー
@@ -1064,7 +1100,7 @@ public class BattleManager : MonoBehaviour
         {
             autoBattleBtn.RemoveFromClassList("battle-auto-off");
             autoBattleBtn.AddToClassList("battle-auto-on");
-            autoBattleBtn.text = "自動：ON";
+            autoBattleBtn.text = "オート：ON";
             // 現在ターン中なら即座に攻撃
             if (waitingForAction) OnAttack();
         }
@@ -1072,7 +1108,7 @@ public class BattleManager : MonoBehaviour
         {
             autoBattleBtn.RemoveFromClassList("battle-auto-on");
             autoBattleBtn.AddToClassList("battle-auto-off");
-            autoBattleBtn.text = "自動 \u25B6\u25B6";
+            autoBattleBtn.text = "オート \u25B6\u25B6";
         }
     }
 
@@ -1821,6 +1857,102 @@ public class BattleManager : MonoBehaviour
         flashOverlay.style.opacity = 0f;
     }
 
+    IEnumerator ShowBattleTutorial()
+    {
+        if (overlayRoot == null) yield break;
+
+        string[] tips = new[] {
+            "はじめてのバトル！\nあいてと「あそび」でしょうぶしよう",
+            "「あそぶ」でこうげき！\nあいてのメーターをゼロにしたら かち",
+            "「とくぎ」はとくべつなわざ。\nかいふくやつよいこうげきがあるよ",
+            "「おもちゃ」はアイテムをつかえるよ。\nそうびすると バトルがラクになる！",
+            "「みまもる」はぼうぎょ。\nダメージがへって すこしかいふくするよ",
+            "ごきげん（HP）がゼロにならないように\nじょうずにたたかおう！",
+        };
+
+        var overlay = new UIE.VisualElement();
+        overlay.style.position = UIE.Position.Absolute;
+        overlay.style.left = 0; overlay.style.top = 0;
+        overlay.style.right = 0; overlay.style.bottom = 0;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0.55f);
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.justifyContent = UIE.Justify.Center;
+        overlayRoot.Add(overlay);
+
+        var card = new UIE.VisualElement();
+        card.style.width = 860;
+        card.style.backgroundColor = new Color(1f, 0.98f, 0.94f, 0.97f);
+        card.style.borderTopLeftRadius = 48;
+        card.style.borderTopRightRadius = 48;
+        card.style.borderBottomLeftRadius = 48;
+        card.style.borderBottomRightRadius = 48;
+        card.style.paddingTop = 36;
+        card.style.paddingBottom = 32;
+        card.style.paddingLeft = 32;
+        card.style.paddingRight = 32;
+        card.style.alignItems = UIE.Align.Center;
+        overlay.Add(card);
+
+        var titleLabel = UIHelper.CreateLabel("あそびかた");
+        UIHelper.ApplyFontBold(titleLabel);
+        titleLabel.style.fontSize = 40;
+        titleLabel.style.color = new Color(0.47f, 0.22f, 0.33f);
+        titleLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+        titleLabel.style.marginBottom = 20;
+        card.Add(titleLabel);
+
+        var textLabel = UIHelper.CreateLabel("");
+        UIHelper.ApplyFont(textLabel);
+        textLabel.style.fontSize = 32;
+        textLabel.style.color = new Color(0.2f, 0.15f, 0.1f);
+        textLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+        textLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
+        textLabel.style.marginBottom = 24;
+        textLabel.style.minHeight = 100;
+        card.Add(textLabel);
+
+        var pageLabel = UIHelper.CreateLabel("");
+        UIHelper.ApplyFont(pageLabel);
+        pageLabel.style.fontSize = 24;
+        pageLabel.style.color = new Color(0.6f, 0.5f, 0.4f);
+        pageLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+        pageLabel.style.marginBottom = 16;
+        card.Add(pageLabel);
+
+        var nextBtn = new UIE.Button();
+        nextBtn.style.width = 400;
+        nextBtn.style.height = 80;
+        nextBtn.style.borderTopLeftRadius = 40;
+        nextBtn.style.borderTopRightRadius = 40;
+        nextBtn.style.borderBottomLeftRadius = 40;
+        nextBtn.style.borderBottomRightRadius = 40;
+        nextBtn.style.backgroundColor = new Color(1f, 0.718f, 0.773f);
+        nextBtn.style.borderTopWidth = 0;
+        nextBtn.style.borderBottomWidth = 0;
+        nextBtn.style.borderLeftWidth = 0;
+        nextBtn.style.borderRightWidth = 0;
+        nextBtn.style.fontSize = 30;
+        nextBtn.style.color = Color.white;
+        nextBtn.style.unityTextAlign = TextAnchor.MiddleCenter;
+        UIHelper.ApplyFontBold(nextBtn);
+        card.Add(nextBtn);
+
+        for (int i = 0; i < tips.Length; i++)
+        {
+            textLabel.text = tips[i];
+            pageLabel.text = $"{i + 1} / {tips.Length}";
+            nextBtn.text = (i < tips.Length - 1) ? "つぎへ" : "バトルかいし！";
+
+            bool tapped = false;
+            System.Action handler = () => tapped = true;
+            nextBtn.clicked += handler;
+            while (!tapped) yield return null;
+            nextBtn.clicked -= handler;
+        }
+
+        overlay.RemoveFromHierarchy();
+    }
+
     IEnumerator IntroHeartBurstEffect()
     {
         if (overlayRoot == null) yield break;
@@ -2561,11 +2693,15 @@ public class BattleManager : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
         encounterOverlay.RemoveFromHierarchy();
 
-        // デヴィル夫人ボス: 戦闘前イントロ台詞
+        // ボス戦前イントロ台詞
         bool isBossStart = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle;
         if (isBossStart && enemyName == "デヴィル夫人")
         {
             yield return StartCoroutine(ShowDevilLadyIntro());
+        }
+        else if (isBossStart && enemyName == "エゴ・マザー・マシーン")
+        {
+            yield return StartCoroutine(ShowEgoMotherIntro());
         }
 
         // バトルUI フェードイン
@@ -2585,6 +2721,11 @@ public class BattleManager : MonoBehaviour
         if (bgmSource != null && bgmSource.clip != null)
             bgmSource.Play();
 
+        // 最初のバトル（BirthScene直後）ならチュートリアル表示
+        bool isFirstBattle = DataCarrier.Instance != null && !DataCarrier.Instance.cameFromMap;
+        if (isFirstBattle)
+            yield return StartCoroutine(ShowBattleTutorial());
+
         // バトル開始
         battleLogLabel.text = "";
         int playerSpeed = DataCarrier.Instance != null ? DataCarrier.Instance.babyAthletic : 50;
@@ -2600,6 +2741,15 @@ public class BattleManager : MonoBehaviour
 
         isPlayerTurn = true;
         playerDefending = false;
+
+        // かぐやちゃんの応援（15%の確率でHP+5）
+        if (DataCarrier.Instance != null && DataCarrier.Instance.kaguyaLover && Random.Range(0, 100) < 15)
+        {
+            playerHp = Mathf.Min(playerMaxHp, playerHp + 5);
+            UpdatePlayerDisplay();
+            battleLogLabel.text = Localization.Get("kaguya_cheer");
+            yield return new WaitForSeconds(0.8f);
+        }
 
         // おしゃぶりチャーム: 毎ターンHP+3回復
         if (DataCarrier.Instance != null && DataCarrier.Instance.IsEquipped("おしゃぶりチャーム") && playerHp < playerMaxHp)
@@ -2912,6 +3062,67 @@ public class BattleManager : MonoBehaviour
             float fadeT = 1f - (elapsed / 0.5f);
             introOverlay.style.backgroundColor = new Color(0, 0, 0, 0.8f * fadeT);
             introText.style.opacity = fadeT;
+            yield return null;
+        }
+        introOverlay.RemoveFromHierarchy();
+    }
+
+    IEnumerator ShowEgoMotherIntro()
+    {
+        var introOverlay = new UIE.VisualElement();
+        introOverlay.AddToClassList("fill");
+        introOverlay.style.flexDirection = UIE.FlexDirection.Column;
+        introOverlay.style.justifyContent = UIE.Justify.Center;
+        introOverlay.style.alignItems = UIE.Align.Center;
+        introOverlay.style.backgroundColor = new Color(0.02f, 0.01f, 0.06f, 0.95f);
+        overlayRoot.Add(introOverlay);
+
+        var introText = new UIE.Label();
+        introText.enableRichText = true;
+        introText.style.color = new Color(1f, 0.84f, 0f);
+        introText.style.fontSize = 32;
+        introText.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        introText.style.whiteSpace = UIE.WhiteSpace.Normal;
+        introText.style.width = 900;
+        introText.style.letterSpacing = 4;
+        UIHelper.ApplyFont(introText);
+        introOverlay.Add(introText);
+
+        string[] lines = new string[]
+        {
+            Localization.Get("battle_ego_mother_intro_1"),
+            Localization.Get("battle_ego_mother_intro_2"),
+            Localization.Get("battle_ego_mother_intro_3"),
+        };
+
+        foreach (var line in lines)
+        {
+            introText.text = line;
+            introText.style.opacity = 0f;
+            float fadeIn = 0f;
+            while (fadeIn < 0.6f)
+            {
+                fadeIn += Time.deltaTime;
+                introText.style.opacity = Mathf.Clamp01(fadeIn / 0.6f);
+                yield return null;
+            }
+            yield return new WaitForSeconds(2f);
+            float fadeOut = 0f;
+            while (fadeOut < 0.4f)
+            {
+                fadeOut += Time.deltaTime;
+                introText.style.opacity = 1f - Mathf.Clamp01(fadeOut / 0.4f);
+                yield return null;
+            }
+            yield return new WaitForSeconds(0.2f);
+        }
+
+        // 最終フェードアウト
+        float elapsed = 0f;
+        while (elapsed < 0.5f)
+        {
+            elapsed += Time.deltaTime;
+            introOverlay.style.opacity = 1f - Mathf.Clamp01(elapsed / 0.5f);
             yield return null;
         }
         introOverlay.RemoveFromHierarchy();
@@ -3316,7 +3527,7 @@ public class BattleManager : MonoBehaviour
         }
 
         bool isBossWin = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle;
-        bool isFixedWin = cannotRun;
+        bool isFixedWin = cannotRun || enemyName == "かぐやちゃん";
         if (DataCarrier.Instance != null)
             DataCarrier.Instance.SaveData();
 
@@ -3693,6 +3904,16 @@ public class BattleManager : MonoBehaviour
 
     IEnumerator FixedEncounterVictory()
     {
+        // かぐやちゃん勝利 → 告白演出（選択肢あり）
+        if (enemyName == "かぐやちゃん" && DataCarrier.Instance != null)
+        {
+            yield return StartCoroutine(KaguyaConfessionSequence());
+            DataCarrier.Instance.cameFromMap = false;
+            DataCarrier.Instance.isBossBattle = false;
+            SceneManager.LoadScene("MapScene");
+            yield break;
+        }
+
         yield return new WaitForSeconds(1.5f);
 
         if (DataCarrier.Instance != null)
@@ -3704,6 +3925,1136 @@ public class BattleManager : MonoBehaviour
         SceneManager.LoadScene("MapScene");
     }
 
+    IEnumerator KaguyaConfessionSequence()
+    {
+        // 全画面オーバーレイ
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.backgroundColor = new Color(1f, 0.72f, 0.77f, 0f);
+        overlay.style.alignItems = UIE.Align.Center;
+        overlay.style.justifyContent = UIE.Justify.Center;
+        overlayRoot.Add(overlay);
+
+        // ピンク背景フェードイン
+        float elapsed = 0f;
+        while (elapsed < 0.5f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(1f, 0.72f, 0.77f, Mathf.Lerp(0f, 0.85f, elapsed / 0.5f));
+            yield return null;
+        }
+
+        // kaguya3 画像（画面いっぱい）
+        var kaguyaImg = new UIE.VisualElement();
+        var kSpr = Resources.Load<Sprite>("MapCharacters/heroine/kaguya3");
+        if (kSpr != null)
+        {
+            kaguyaImg.style.backgroundImage = new UIE.StyleBackground(kSpr);
+            kaguyaImg.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+        }
+        kaguyaImg.style.position = UIE.Position.Absolute;
+        kaguyaImg.style.top = 0;
+        kaguyaImg.style.bottom = 0;
+        kaguyaImg.style.left = 0;
+        kaguyaImg.style.right = 0;
+        kaguyaImg.style.opacity = 0f;
+        overlay.Add(kaguyaImg);
+
+        // 画像フェードイン
+        elapsed = 0f;
+        while (elapsed < 0.8f)
+        {
+            elapsed += Time.deltaTime;
+            kaguyaImg.style.opacity = elapsed / 0.8f;
+            yield return null;
+        }
+        kaguyaImg.style.opacity = 1f;
+
+        // ハートを散らす
+        var hearts = new System.Collections.Generic.List<UIE.VisualElement>();
+        for (int i = 0; i < 15; i++)
+        {
+            var heart = UIHelper.CreateLabel("\u2764");
+            heart.style.fontSize = 24 + Random.Range(0, 24);
+            heart.style.position = UIE.Position.Absolute;
+            heart.style.left = Random.Range(30, 620);
+            heart.style.top = Random.Range(80, 1000);
+            heart.style.color = new UIE.StyleColor(new Color(1f, Random.Range(0.3f, 0.6f), Random.Range(0.5f, 0.8f), 0f));
+            overlay.Add(heart);
+            hearts.Add(heart);
+        }
+        StartCoroutine(AnimateConfessionHearts(hearts));
+
+        // 吹き出し
+        var bubble = new UIE.VisualElement();
+        bubble.style.position = UIE.Position.Absolute;
+        bubble.style.bottom = 140;
+        bubble.style.left = new UIE.Length(5, UIE.LengthUnit.Percent);
+        bubble.style.right = new UIE.Length(5, UIE.LengthUnit.Percent);
+        bubble.style.backgroundColor = new Color(1f, 1f, 1f, 0.92f);
+        bubble.style.borderTopLeftRadius = 36;
+        bubble.style.borderTopRightRadius = 36;
+        bubble.style.borderBottomLeftRadius = 36;
+        bubble.style.borderBottomRightRadius = 36;
+        bubble.style.paddingTop = 20;
+        bubble.style.paddingBottom = 20;
+        bubble.style.paddingLeft = 28;
+        bubble.style.paddingRight = 28;
+        bubble.style.alignItems = UIE.Align.FlexStart;
+        overlay.Add(bubble);
+
+        // 吹き出しのしっぽ
+        var bubbleTail = new UIE.VisualElement();
+        bubbleTail.style.position = UIE.Position.Absolute;
+        bubbleTail.style.bottom = 126;
+        bubbleTail.style.left = new UIE.Length(15, UIE.LengthUnit.Percent);
+        bubbleTail.style.width = 0;
+        bubbleTail.style.height = 0;
+        bubbleTail.style.borderTopWidth = 14;
+        bubbleTail.style.borderLeftWidth = 10;
+        bubbleTail.style.borderRightWidth = 10;
+        bubbleTail.style.borderBottomWidth = 0;
+        bubbleTail.style.borderTopColor = new Color(1f, 1f, 1f, 0.92f);
+        bubbleTail.style.borderLeftColor = Color.clear;
+        bubbleTail.style.borderRightColor = Color.clear;
+        bubbleTail.style.borderBottomColor = Color.clear;
+        overlay.Add(bubbleTail);
+
+        var bubbleName = UIHelper.CreateLabel("かぐやちゃん");
+        bubbleName.style.fontSize = 24;
+        bubbleName.style.color = new Color(1f, 0.4f, 0.6f);
+        UIHelper.ApplyFontBold(bubbleName);
+        bubbleName.style.marginBottom = 8;
+        bubble.Add(bubbleName);
+
+        var bubbleText = UIHelper.CreateLabel("");
+        bubbleText.style.fontSize = 30;
+        bubbleText.style.color = Color.black;
+        bubbleText.style.whiteSpace = UIE.WhiteSpace.Normal;
+        bubble.Add(bubbleText);
+
+        var bubbleHint = UIHelper.CreateLabel("");
+        bubbleHint.style.fontSize = 20;
+        bubbleHint.style.color = new Color(0.5f, 0.5f, 0.5f, 0.7f);
+        bubbleHint.style.marginTop = 8;
+        bubbleHint.style.alignSelf = UIE.Align.FlexEnd;
+        bubble.Add(bubbleHint);
+
+        // 告白台詞（タップで進む）
+        string[] confMsgs = new string[] {
+            Localization.Get("kaguya_confess1"),
+            Localization.Get("kaguya_confess2"),
+            Localization.Get("kaguya_confess3")
+        };
+
+        bool tapped = false;
+        for (int i = 0; i < confMsgs.Length; i++)
+        {
+            bubbleText.text = confMsgs[i];
+            bubbleHint.text = "\u25bc \u30bf\u30c3\u30d7\u3067\u7d9a\u304f";
+            yield return new WaitForSeconds(0.3f);
+            tapped = false;
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+        }
+
+        // --- 選択肢: 付き合う / 付き合わない ---
+        bubbleText.text = Localization.Get("kaguya_confess_ask");
+        bubbleHint.RemoveFromHierarchy();
+
+        var btnCol = new UIE.VisualElement();
+        btnCol.style.flexDirection = UIE.FlexDirection.Column;
+        btnCol.style.alignItems = UIE.Align.Center;
+        btnCol.style.marginTop = 16;
+        btnCol.style.width = new UIE.Length(100, UIE.LengthUnit.Percent);
+        bubble.Add(btnCol);
+
+        int choice = -1;
+        var yesBtn = UIHelper.CreatePillButton(Localization.Get("kaguya_confess_yes"), "pill-button");
+        yesBtn.clicked += () => choice = 1;
+        btnCol.Add(yesBtn);
+
+        var noBtn = UIHelper.CreatePillButton(Localization.Get("kaguya_confess_no"), "pill-button");
+        noBtn.style.marginTop = 12;
+        noBtn.clicked += () => choice = 0;
+        btnCol.Add(noBtn);
+
+        while (choice < 0) yield return null;
+
+        if (choice == 1)
+        {
+            // --- 付き合う → 相思相愛 ---
+            btnCol.RemoveFromHierarchy();
+            bubbleText.text = Localization.Get("kaguya_confess_happy");
+            yield return new WaitForSeconds(0.5f);
+            tapped = false;
+            var hintYes = UIHelper.CreateLabel("\u25bc \u30bf\u30c3\u30d7\u3067\u7d9a\u304f");
+            hintYes.style.fontSize = 20;
+            hintYes.style.color = new Color(0.5f, 0.5f, 0.5f, 0.7f);
+            hintYes.style.marginTop = 8;
+            hintYes.style.alignSelf = UIE.Align.FlexEnd;
+            bubble.Add(hintYes);
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+
+            DataCarrier.Instance.kaguyaLover = true;
+            DataCarrier.Instance.AddEquipment("かぐやのリボン");
+            DataCarrier.Instance.EquipItem("かぐやのリボン");
+            DataCarrier.Instance.SaveData();
+
+            // 相思相愛テキスト
+            hintYes.RemoveFromHierarchy();
+            bubbleName.text = "";
+            bubbleText.text = Localization.Get("kaguya_lover_won");
+            bubbleText.style.unityTextAlign = TextAnchor.MiddleCenter;
+            UIHelper.ApplyFontBold(bubbleText);
+            bubbleText.style.color = new Color(1f, 0.4f, 0.6f);
+
+            yield return new WaitForSeconds(1.5f);
+
+            // リボン取得テキスト
+            bubbleText.text = Localization.Get("kaguya_lover_item");
+            yield return new WaitForSeconds(1.5f);
+        }
+        else
+        {
+            // --- 付き合わない → かぐやが悲しんで去る ---
+            btnCol.RemoveFromHierarchy();
+            bubbleText.text = Localization.Get("kaguya_confess_sad");
+            yield return new WaitForSeconds(0.5f);
+            tapped = false;
+            var hintNo = UIHelper.CreateLabel("\u25bc \u30bf\u30c3\u30d7\u3067\u9589\u3058\u308b");
+            hintNo.style.fontSize = 20;
+            hintNo.style.color = new Color(0.5f, 0.5f, 0.5f, 0.7f);
+            hintNo.style.marginTop = 8;
+            hintNo.style.alignSelf = UIE.Align.FlexEnd;
+            bubble.Add(hintNo);
+            overlay.RegisterCallback<UIE.ClickEvent>(evt => tapped = true);
+            while (!tapped) yield return null;
+
+            // metCountを2に戻してプール再出現可能に
+            DataCarrier.Instance.kaguyaMetCount = 2;
+            DataCarrier.Instance.SaveData();
+        }
+
+        // フェードアウト
+        elapsed = 0f;
+        while (elapsed < 0.5f)
+        {
+            elapsed += Time.deltaTime;
+            overlay.style.opacity = 1f - (elapsed / 0.5f);
+            yield return null;
+        }
+        overlay.RemoveFromHierarchy();
+    }
+
+    IEnumerator AnimateConfessionHearts(System.Collections.Generic.List<UIE.VisualElement> hearts)
+    {
+        while (true)
+        {
+            for (int i = 0; i < hearts.Count; i++)
+            {
+                var h = hearts[i];
+                if (h == null || h.parent == null) yield break;
+                float phase = i * Mathf.PI * 2f / hearts.Count;
+                float alpha = (Mathf.Sin(Time.time * 1.5f + phase) + 1f) * 0.5f * 0.7f;
+                float r = h.resolvedStyle.color.r;
+                float g = h.resolvedStyle.color.g;
+                float b = h.resolvedStyle.color.b;
+                h.style.color = new Color(r, g, b, alpha);
+                h.style.top = h.resolvedStyle.top - Time.deltaTime * (10f + i * 3f);
+                float drift = Mathf.Sin(Time.time * 2f + phase) * 0.5f;
+                h.style.left = h.resolvedStyle.left + drift;
+            }
+            yield return null;
+        }
+    }
+
+    // ===== エゴ・マザー・マシーン 専用カットシーン =====
+    // 『エゴからの解放』
+
+    IEnumerator EgoMotherDefeatCutscene()
+    {
+        float scw = 1080f, sch = 1920f;
+        float cx = scw * 0.5f, cy = sch * 0.4f;
+
+        // --- Phase 1: 黄金パーティクル放出 ---
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("fill");
+        overlay.style.position = UIE.Position.Absolute;
+        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlay.pickingMode = UIE.PickingMode.Ignore;
+        overlayRoot.Add(overlay);
+
+        // 暗転
+        float fadeEl = 0f;
+        while (fadeEl < 1f)
+        {
+            fadeEl += Time.deltaTime;
+            overlay.style.backgroundColor = new Color(0, 0, 0, Mathf.Clamp01(fadeEl / 1f) * 0.85f);
+            yield return null;
+        }
+
+        // テキスト: マシーンの崩壊
+        var text1 = UIHelper.CreateLabel(
+            Localization.Get("ego_mother_defeat_1"), "melodias-cutscene-text");
+        UIHelper.ApplyFont(text1);
+        text1.style.opacity = 0f;
+        overlay.Add(text1);
+
+        fadeEl = 0f;
+        while (fadeEl < 0.8f)
+        {
+            fadeEl += Time.deltaTime;
+            text1.style.opacity = Mathf.Clamp01(fadeEl / 0.8f);
+            yield return null;
+        }
+        yield return new WaitForSeconds(2f);
+
+        // 黄金パーティクル放出(銀河のベロア・ハイライトと同色)
+        var particleContainer = new UIE.VisualElement();
+        particleContainer.pickingMode = UIE.PickingMode.Ignore;
+        particleContainer.style.position = UIE.Position.Absolute;
+        particleContainer.style.left = 0; particleContainer.style.top = 0;
+        particleContainer.style.right = 0; particleContainer.style.bottom = 0;
+        overlay.Add(particleContainer);
+
+        // SE: きらきら
+        var seKira = Resources.Load<AudioClip>("SE/きらきら輝く6");
+        if (seSource != null && seKira != null)
+        {
+            seSource.pitch = 0.8f;
+            seSource.PlayOneShot(seKira, 0.9f);
+        }
+
+        var goldParticles = new List<(UIE.VisualElement el, float vx, float vy, float born)>();
+        int burstCount = 60;
+        for (int i = 0; i < burstCount; i++)
+        {
+            var p = new UIE.VisualElement();
+            float size = Random.Range(4f, 14f);
+            p.style.width = size;
+            p.style.height = size;
+            p.style.borderTopLeftRadius = size;
+            p.style.borderTopRightRadius = size;
+            p.style.borderBottomLeftRadius = size;
+            p.style.borderBottomRightRadius = size;
+            p.style.position = UIE.Position.Absolute;
+            // 銀河ベロアのハイライト色: 紫-金-ピンクのグラデーション
+            float hue = Random.Range(0f, 1f);
+            Color pCol;
+            if (hue < 0.4f) pCol = new Color(1f, 0.84f, 0f, 0.9f); // 黄金
+            else if (hue < 0.7f) pCol = new Color(1f, 0.72f, 0.77f, 0.8f); // パステルピンク
+            else pCol = new Color(0.67f, 0.83f, 1f, 0.7f); // 淡い青
+            p.style.backgroundColor = pCol;
+            p.style.left = cx;
+            p.style.top = cy;
+            particleContainer.Add(p);
+            float angle = Random.Range(0f, Mathf.PI * 2f);
+            float speed = Random.Range(100f, 400f);
+            goldParticles.Add((p, Mathf.Cos(angle) * speed, Mathf.Sin(angle) * speed, 0f));
+        }
+
+        // パーティクルアニメーション 2秒
+        float burstDur = 2f;
+        fadeEl = 0f;
+        while (fadeEl < burstDur)
+        {
+            fadeEl += Time.deltaTime;
+            float t = fadeEl / burstDur;
+            for (int i = 0; i < goldParticles.Count; i++)
+            {
+                var (el, vx, vy, born) = goldParticles[i];
+                float curL = el.resolvedStyle.left;
+                float curT = el.resolvedStyle.top;
+                el.style.left = curL + vx * Time.deltaTime;
+                el.style.top = curT + vy * Time.deltaTime;
+                el.style.opacity = Mathf.Clamp01(1f - t * 0.8f);
+            }
+            yield return null;
+        }
+
+        yield return StartCoroutine(FadeOutElement(text1, 0.5f));
+        text1.RemoveFromHierarchy();
+
+        // --- Phase 2: エゴの呪縛が解ける → 赤ちゃんたちの解放 ---
+        var text2 = UIHelper.CreateLabel(
+            Localization.Get("ego_mother_defeat_2"), "melodias-cutscene-text");
+        UIHelper.ApplyFont(text2);
+        text2.style.opacity = 0f;
+        overlay.Add(text2);
+        fadeEl = 0f;
+        while (fadeEl < 0.8f)
+        {
+            fadeEl += Time.deltaTime;
+            text2.style.opacity = Mathf.Clamp01(fadeEl / 0.8f);
+            yield return null;
+        }
+        yield return new WaitForSeconds(1.5f);
+
+        // シルエットの赤ちゃんたちが浮かび上がる → キラキラに変換
+        particleContainer.Clear();
+        string[] babyEmojis = { "\U0001F476", "\u2728", "\U0001F31F", "\U0001F4AB", "\U0001F49B" };
+        var babyEls = new List<(UIE.Label el, float delay)>();
+
+        for (int i = 0; i < 12; i++)
+        {
+            var baby = new UIE.Label();
+            baby.pickingMode = UIE.PickingMode.Ignore;
+            baby.text = babyEmojis[i % babyEmojis.Length];
+            baby.style.position = UIE.Position.Absolute;
+            baby.style.fontSize = Random.Range(28, 48);
+            baby.style.left = Random.Range(80f, scw - 80f);
+            baby.style.top = Random.Range(sch * 0.3f, sch * 0.7f);
+            baby.style.opacity = 0f;
+            baby.style.color = Color.white;
+            particleContainer.Add(baby);
+            babyEls.Add((baby, i * 0.15f));
+        }
+
+        // SE: きらきら(高音)
+        if (seSource != null && seKira != null)
+        {
+            seSource.pitch = 1.2f;
+            seSource.PlayOneShot(seKira, 0.8f);
+        }
+
+        // 赤ちゃん出現アニメーション + 白エフェクト
+        float babyDur = 2.5f;
+        fadeEl = 0f;
+        while (fadeEl < babyDur)
+        {
+            fadeEl += Time.deltaTime;
+            foreach (var (el, delay) in babyEls)
+            {
+                float localT = fadeEl - delay;
+                if (localT < 0f) continue;
+                float appear = Mathf.Clamp01(localT / 0.4f);
+                el.style.opacity = appear;
+                // ゆっくり上昇
+                float curTop = el.resolvedStyle.top;
+                el.style.top = curTop - 15f * Time.deltaTime;
+            }
+            yield return null;
+        }
+
+        yield return StartCoroutine(FadeOutElement(text2, 0.5f));
+        text2.RemoveFromHierarchy();
+
+        // --- Phase 3: 解放のメッセージ ---
+        var text3 = UIHelper.CreateLabel(
+            Localization.Get("ego_mother_defeat_3"), "melodias-cutscene-text");
+        UIHelper.ApplyFont(text3);
+        UIHelper.ApplyFontBold(text3);
+        text3.style.color = new Color(1f, 0.84f, 0f);
+        text3.style.fontSize = 36;
+        text3.style.letterSpacing = 6;
+        text3.style.opacity = 0f;
+        overlay.Add(text3);
+        fadeEl = 0f;
+        while (fadeEl < 1f)
+        {
+            fadeEl += Time.deltaTime;
+            text3.style.opacity = Mathf.Clamp01(fadeEl / 1f);
+            yield return null;
+        }
+        yield return new WaitForSeconds(2.5f);
+
+        yield return StartCoroutine(FadeOutElement(text3, 0.5f));
+        text3.RemoveFromHierarchy();
+
+        // --- Phase 4: カメラ上昇 → 雲突き抜け → 聖域の光 ---
+        var text4 = UIHelper.CreateLabel(
+            Localization.Get("ego_mother_defeat_4"), "melodias-cutscene-text");
+        UIHelper.ApplyFont(text4);
+        text4.style.opacity = 0f;
+        overlay.Add(text4);
+        fadeEl = 0f;
+        while (fadeEl < 0.8f)
+        {
+            fadeEl += Time.deltaTime;
+            text4.style.opacity = Mathf.Clamp01(fadeEl / 0.8f);
+            yield return null;
+        }
+
+        // 赤ちゃんたちが上昇しながら消えていく
+        float riseDur = 3f;
+        fadeEl = 0f;
+        while (fadeEl < riseDur)
+        {
+            fadeEl += Time.deltaTime;
+            float t = fadeEl / riseDur;
+            foreach (var (el, _) in babyEls)
+            {
+                float curTop = el.resolvedStyle.top;
+                el.style.top = curTop - 40f * Time.deltaTime;
+                el.style.opacity = Mathf.Clamp01(1f - t * 0.7f);
+            }
+            // 背景が徐々に明るくなる（雲を突き抜ける表現）
+            float brightness = t * 0.6f;
+            overlay.style.backgroundColor = new Color(brightness, brightness, brightness * 0.9f + 0.1f, 0.9f);
+            yield return null;
+        }
+
+        yield return StartCoroutine(FadeOutElement(text4, 0.5f));
+        text4.RemoveFromHierarchy();
+        particleContainer.RemoveFromHierarchy();
+
+        // --- Phase 5: BGMクロスフェード → 聖域の光 ---
+        // BGMを透明感のある旋律にクロスフェード
+        // (stella_origin_clear BGMがなければ mura1 を高pitch + リバーブで代用)
+        var clearBgm = Resources.Load<AudioClip>("BGM/stella_origin_clear");
+        if (clearBgm == null)
+            clearBgm = Resources.Load<AudioClip>("BGM/mura1");
+
+        if (bgmSource != null && clearBgm != null)
+        {
+            bgmSource.clip = clearBgm;
+            bgmSource.pitch = clearBgm.name.Contains("mura") ? 1.3f : 1f;
+            bgmSource.volume = 0f;
+            bgmSource.Play();
+
+            // リバーブ追加（オルゴール感）
+            var reverb = bgmSource.gameObject.GetComponent<AudioReverbFilter>();
+            if (reverb == null)
+                reverb = bgmSource.gameObject.AddComponent<AudioReverbFilter>();
+            reverb.reverbPreset = AudioReverbPreset.Cave;
+            reverb.reverbLevel = 800f;
+        }
+
+        // 画面を白 → 黄金 → 聖域の光へ
+        float holyDur = 3f;
+        fadeEl = 0f;
+
+        var holyText = UIHelper.CreateLabel(
+            Localization.Get("ego_mother_defeat_5"), "melodias-cutscene-text");
+        UIHelper.ApplyFont(holyText);
+        UIHelper.ApplyFontBold(holyText);
+        holyText.style.color = new Color(1f, 0.84f, 0f);
+        holyText.style.fontSize = 40;
+        holyText.style.letterSpacing = 10;
+        holyText.style.opacity = 0f;
+        overlay.Add(holyText);
+
+        while (fadeEl < holyDur)
+        {
+            fadeEl += Time.deltaTime;
+            float t = Mathf.Clamp01(fadeEl / holyDur);
+
+            // 白 → 温かい黄金
+            float r = Mathf.Lerp(0.8f, 1f, t);
+            float g = Mathf.Lerp(0.8f, 0.96f, t);
+            float b = Mathf.Lerp(0.85f, 0.8f, t);
+            overlay.style.backgroundColor = new Color(r, g, b, 1f);
+
+            // BGMフェードイン
+            if (bgmSource != null)
+                bgmSource.volume = t * 0.4f;
+
+            // テキストフェードイン
+            holyText.style.opacity = Mathf.Clamp01((fadeEl - 1f) / 1.5f);
+
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(2f);
+
+        // --- Phase 6: フェードアウト → エンディングへ ---
+        fadeEl = 0f;
+        while (fadeEl < 1.5f)
+        {
+            fadeEl += Time.deltaTime;
+            float t = Mathf.Clamp01(fadeEl / 1.5f);
+            overlay.style.backgroundColor = new Color(
+                Mathf.Lerp(1f, 0f, t),
+                Mathf.Lerp(0.96f, 0f, t),
+                Mathf.Lerp(0.8f, 0f, t), 1f);
+            holyText.style.opacity = 1f - t;
+            if (bgmSource != null)
+                bgmSource.volume = 0.4f * (1f - t);
+            yield return null;
+        }
+
+        if (bgmSource != null)
+        {
+            bgmSource.Stop();
+            var reverb = bgmSource.gameObject.GetComponent<AudioReverbFilter>();
+            if (reverb != null) Object.Destroy(reverb);
+        }
+        if (seSource != null) seSource.pitch = 1f;
+
+        yield return new WaitForSeconds(0.5f);
+        overlay.RemoveFromHierarchy();
+
+        // --- 遷移: エンディングシーン or タイトルへ ---
+        if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.cameFromMap = false;
+            DataCarrier.Instance.isBossBattle = false;
+            DataCarrier.Instance.babyCurrentHp = -1;
+            DataCarrier.Instance.pendingWipeIn = false;
+            DataCarrier.Instance.SaveData();
+        }
+
+        // エンディングシーンが存在すれば遷移、なければタイトルへ
+        if (Application.CanStreamedLevelBeLoaded("EndingScene"))
+            SceneManager.LoadScene("EndingScene");
+        else
+            SceneManager.LoadScene("TitleScene");
+    }
+
+    // ===== メロディアス女王 専用カットシーン =====
+    // 『黄金の産声と解き放たれた音色』
+
+    IEnumerator MelodiasDefeatCutscene()
+    {
+        // --- Phase 1: 暗転 ---
+        var overlay = new UIE.VisualElement();
+        overlay.AddToClassList("melodias-cutscene-overlay");
+        overlayRoot.Add(overlay);
+
+        yield return null;
+        overlay.AddToClassList("melodias-cutscene-overlay-dark");
+        yield return new WaitForSeconds(1.2f);
+
+        // --- Phase 2: 歪んだ楽器が砕け散る ---
+        var text1 = UIHelper.CreateLabel(
+            Localization.Get("melodias_cutscene_shatter"), "melodias-cutscene-text");
+        UIHelper.ApplyFont(text1);
+        text1.AddToClassList("melodias-cutscene-title");
+        overlay.Add(text1);
+        yield return null;
+        text1.AddToClassList("melodias-cutscene-text-visible");
+        yield return new WaitForSeconds(2.5f);
+
+        // 楽器の破片エフェクト（小さなラベルが散らばる）
+        var shatterContainer = new UIE.VisualElement();
+        shatterContainer.pickingMode = UIE.PickingMode.Ignore;
+        shatterContainer.style.position = UIE.Position.Absolute;
+        shatterContainer.style.left = 0; shatterContainer.style.top = 0;
+        shatterContainer.style.right = 0; shatterContainer.style.bottom = 0;
+        overlay.Add(shatterContainer);
+
+        string[] shardEmojis = { "\u2726", "\u2727", "\u2728", "\u2736", "\u2605" };
+        int shardCount = 12;
+        var shards = new List<(UIE.Label el, float vx, float vy)>();
+        float scw = 1080f, sch = 1920f;
+        float cx = scw * 0.5f, cy = sch * 0.4f;
+        for (int i = 0; i < shardCount; i++)
+        {
+            var shard = new UIE.Label();
+            shard.pickingMode = UIE.PickingMode.Ignore;
+            shard.text = shardEmojis[i % shardEmojis.Length];
+            shard.style.position = UIE.Position.Absolute;
+            shard.style.fontSize = Random.Range(18, 36);
+            shard.style.color = new Color(1f, 0.84f, 0f); // gold
+            shard.style.left = cx;
+            shard.style.top = cy;
+            shard.style.opacity = 1f;
+            shatterContainer.Add(shard);
+            float angle = Random.Range(0f, Mathf.PI * 2f);
+            float speed = Random.Range(200f, 500f);
+            shards.Add((shard, Mathf.Cos(angle) * speed, Mathf.Sin(angle) * speed));
+        }
+
+        float shatterDur = 1.0f, shatterElapsed = 0f;
+        while (shatterElapsed < shatterDur)
+        {
+            shatterElapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(shatterElapsed / shatterDur);
+            for (int i = 0; i < shards.Count; i++)
+            {
+                var (el, vx, vy) = shards[i];
+                el.style.left = cx + vx * t;
+                el.style.top = cy + vy * t;
+                el.style.opacity = 1f - t;
+            }
+            yield return null;
+        }
+        shatterContainer.RemoveFromHierarchy();
+
+        // テキストフェードアウト
+        yield return StartCoroutine(FadeOutElement(text1, 0.5f));
+        text1.RemoveFromHierarchy();
+
+        // --- Phase 3: 音の精霊（音符）が空へ昇る ---
+        var text2 = UIHelper.CreateLabel(
+            Localization.Get("melodias_cutscene_notes_free"), "melodias-cutscene-text");
+        UIHelper.ApplyFont(text2);
+        overlay.Add(text2);
+        yield return null;
+        text2.AddToClassList("melodias-cutscene-text-visible");
+
+        // 音符パーティクル上昇
+        var noteContainer = new UIE.VisualElement();
+        noteContainer.pickingMode = UIE.PickingMode.Ignore;
+        noteContainer.style.position = UIE.Position.Absolute;
+        noteContainer.style.left = 0; noteContainer.style.top = 0;
+        noteContainer.style.right = 0; noteContainer.style.bottom = 0;
+        overlay.Add(noteContainer);
+
+        string[] noteEmojis = { "\u266A", "\u266B", "\U0001F3B5", "\U0001F3B6", "\u2728" };
+        int noteCount = 16;
+        var notes = new (UIE.Label el, float x, float vy, float sway)[ noteCount ];
+        for (int i = 0; i < noteCount; i++)
+        {
+            var note = new UIE.Label();
+            note.pickingMode = UIE.PickingMode.Ignore;
+            note.text = noteEmojis[i % noteEmojis.Length];
+            note.style.position = UIE.Position.Absolute;
+            note.style.fontSize = Random.Range(20, 40);
+            float startX = Random.Range(scw * 0.15f, scw * 0.85f);
+            float startY = Random.Range(sch * 0.5f, sch * 0.8f);
+            note.style.left = startX;
+            note.style.top = startY;
+            note.style.opacity = 0f;
+            note.style.color = new Color(
+                Random.Range(0.8f, 1f), Random.Range(0.7f, 1f), Random.Range(0.9f, 1f));
+            noteContainer.Add(note);
+            notes[i] = (note, startX, Random.Range(-200f, -400f), Random.Range(-40f, 40f));
+        }
+
+        float noteDur = 3.0f, noteElapsed = 0f;
+        while (noteElapsed < noteDur)
+        {
+            noteElapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(noteElapsed / noteDur);
+            for (int i = 0; i < notes.Length; i++)
+            {
+                var (el, x, vy, sway) = notes[i];
+                el.style.left = x + Mathf.Sin(t * Mathf.PI * 2f + i) * sway;
+                el.style.top = notes[i].el.resolvedStyle.top + vy * Time.deltaTime;
+                // フェードイン→フェードアウト
+                el.style.opacity = t < 0.2f ? t / 0.2f : (t > 0.7f ? (1f - t) / 0.3f : 1f);
+            }
+            yield return null;
+        }
+        noteContainer.RemoveFromHierarchy();
+
+        yield return StartCoroutine(FadeOutElement(text2, 0.5f));
+        text2.RemoveFromHierarchy();
+
+        // --- Phase 4: 女王がテディベアに変化 ---
+        var text3 = UIHelper.CreateLabel(
+            Localization.Get("melodias_cutscene_transform"), "melodias-cutscene-text");
+        UIHelper.ApplyFont(text3);
+        overlay.Add(text3);
+        yield return null;
+        text3.AddToClassList("melodias-cutscene-text-visible");
+        yield return new WaitForSeconds(2.0f);
+        yield return StartCoroutine(FadeOutElement(text3, 0.5f));
+        text3.RemoveFromHierarchy();
+
+        // 女王スプライト → テディベア変身
+        UIE.VisualElement queenSprite = null;
+        if (loadedEnemySprite != null)
+        {
+            queenSprite = new UIE.VisualElement();
+            queenSprite.AddToClassList("melodias-cutscene-sprite");
+            queenSprite.style.backgroundImage = new UIE.StyleBackground(loadedEnemySprite);
+            overlay.Add(queenSprite);
+            queenSprite.style.opacity = 0f;
+            yield return null;
+
+            // フェードイン
+            float qe = 0f;
+            while (qe < 0.8f)
+            {
+                qe += Time.deltaTime;
+                queenSprite.style.opacity = Mathf.Clamp01(qe / 0.8f);
+                yield return null;
+            }
+            yield return new WaitForSeconds(0.8f);
+
+            // 縮小 + フェードアウト
+            float shrinkDur = 1.2f; qe = 0f;
+            while (qe < shrinkDur)
+            {
+                qe += Time.deltaTime;
+                float t = Mathf.Clamp01(qe / shrinkDur);
+                float scale = Mathf.Lerp(1f, 0.3f, t);
+                queenSprite.style.scale = new UIE.StyleScale(new Vector2(scale, scale));
+                queenSprite.style.opacity = 1f - t * 0.5f;
+                yield return null;
+            }
+            queenSprite.RemoveFromHierarchy();
+        }
+
+        // テディベア登場
+        var teddy = new UIE.Label();
+        teddy.AddToClassList("melodias-cutscene-teddy");
+        teddy.text = "\U0001F9F8"; // テディベア絵文字
+        teddy.style.opacity = 0f;
+        overlay.Add(teddy);
+        {
+            float te = 0f;
+            while (te < 0.6f)
+            {
+                te += Time.deltaTime;
+                teddy.style.opacity = Mathf.Clamp01(te / 0.6f);
+                yield return null;
+            }
+        }
+        yield return new WaitForSeconds(0.5f);
+
+        // 女王の最後の台詞
+        var queenLine = UIHelper.CreateLabel(
+            Localization.Get("melodias_cutscene_queen_line"), "melodias-cutscene-text");
+        UIHelper.ApplyFont(queenLine);
+        queenLine.style.color = new Color(1f, 0.72f, 0.77f); // パステルピンク
+        overlay.Add(queenLine);
+        yield return null;
+        queenLine.AddToClassList("melodias-cutscene-text-visible");
+        yield return new WaitForSeconds(3.0f);
+        yield return StartCoroutine(FadeOutElement(queenLine, 0.8f));
+        queenLine.RemoveFromHierarchy();
+
+        // スヤスヤ演出
+        var sleepText = UIHelper.CreateLabel(
+            Localization.Get("melodias_cutscene_queen_sleep"), "melodias-cutscene-text");
+        UIHelper.ApplyFont(sleepText);
+        overlay.Add(sleepText);
+        yield return null;
+        sleepText.AddToClassList("melodias-cutscene-text-visible");
+
+        // 💤 パーティクル
+        var zzz = new UIE.Label();
+        zzz.pickingMode = UIE.PickingMode.Ignore;
+        zzz.text = "\U0001F4A4";
+        zzz.style.position = UIE.Position.Absolute;
+        zzz.style.fontSize = 48;
+        zzz.style.left = scw * 0.55f;
+        zzz.style.top = sch * 0.42f;
+        zzz.style.opacity = 0f;
+        overlay.Add(zzz);
+        {
+            float ze = 0f;
+            while (ze < 2.0f)
+            {
+                ze += Time.deltaTime;
+                float t = Mathf.Clamp01(ze / 2.0f);
+                zzz.style.top = sch * 0.42f - t * 80f;
+                zzz.style.opacity = t < 0.3f ? t / 0.3f : (t > 0.7f ? (1f - t) / 0.3f : 1f);
+                yield return null;
+            }
+        }
+        zzz.RemoveFromHierarchy();
+
+        // テディベアとテキストフェードアウト
+        yield return StartCoroutine(FadeOutElement(teddy, 0.6f));
+        teddy.RemoveFromHierarchy();
+        yield return StartCoroutine(FadeOutElement(sleepText, 0.5f));
+        sleepText.RemoveFromHierarchy();
+
+        yield return new WaitForSeconds(0.5f);
+
+        // --- Phase 5: お爺さん（gold_ikemen）登場 ---
+        // 「…！？」テキスト
+        var surpriseText = UIHelper.CreateLabel(
+            Localization.Get("melodias_cutscene_goldikemen_arrive"), "melodias-cutscene-text");
+        UIHelper.ApplyFont(surpriseText);
+        surpriseText.style.fontSize = 48;
+        surpriseText.style.color = new Color(1f, 0.84f, 0f); // gold
+        overlay.Add(surpriseText);
+        yield return null;
+        surpriseText.AddToClassList("melodias-cutscene-text-visible");
+        yield return new WaitForSeconds(1.2f);
+        yield return StartCoroutine(FadeOutElement(surpriseText, 0.3f));
+        surpriseText.RemoveFromHierarchy();
+
+        // gold_ikemen スプライト登場（下から超人ジャンプ）
+        var ikemenSprite = Resources.Load<Sprite>("MapCharacters/gold_ikemen");
+        var ikemenEl = new UIE.VisualElement();
+        ikemenEl.AddToClassList("melodias-cutscene-goldikemen");
+        if (ikemenSprite != null)
+            ikemenEl.style.backgroundImage = new UIE.StyleBackground(ikemenSprite);
+        overlay.Add(ikemenEl);
+
+        // ジャンプアニメーション（下→中央、放物線）
+        float jumpDur = 0.8f, jumpElapsed = 0f;
+        float jumpStartY = sch + 200f;
+        float jumpEndY = sch * 0.35f;
+        while (jumpElapsed < jumpDur)
+        {
+            jumpElapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(jumpElapsed / jumpDur);
+            // イーズアウト
+            float et = 1f - (1f - t) * (1f - t);
+            float currentY = Mathf.Lerp(jumpStartY, jumpEndY, et);
+            ikemenEl.style.bottom = UIE.StyleKeyword.Auto;
+            ikemenEl.style.top = currentY;
+            yield return null;
+        }
+
+        // 着地時の衝撃波（小さな波紋）
+        var impactRing = new UIE.VisualElement();
+        impactRing.pickingMode = UIE.PickingMode.Ignore;
+        impactRing.style.position = UIE.Position.Absolute;
+        impactRing.style.width = 20;
+        impactRing.style.height = 20;
+        impactRing.style.borderTopLeftRadius = 100;
+        impactRing.style.borderTopRightRadius = 100;
+        impactRing.style.borderBottomLeftRadius = 100;
+        impactRing.style.borderBottomRightRadius = 100;
+        impactRing.style.borderTopWidth = 3;
+        impactRing.style.borderBottomWidth = 3;
+        impactRing.style.borderLeftWidth = 3;
+        impactRing.style.borderRightWidth = 3;
+        impactRing.style.borderTopColor = new Color(1f, 0.84f, 0f, 0.8f);
+        impactRing.style.borderBottomColor = new Color(1f, 0.84f, 0f, 0.8f);
+        impactRing.style.borderLeftColor = new Color(1f, 0.84f, 0f, 0.8f);
+        impactRing.style.borderRightColor = new Color(1f, 0.84f, 0f, 0.8f);
+        impactRing.style.left = scw * 0.5f;
+        impactRing.style.top = jumpEndY + 180f;
+        overlay.Add(impactRing);
+
+        float ringDur = 0.6f, ringElapsed = 0f;
+        while (ringElapsed < ringDur)
+        {
+            ringElapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(ringElapsed / ringDur);
+            float size = Mathf.Lerp(20f, 300f, t);
+            impactRing.style.width = size;
+            impactRing.style.height = size * 0.4f;
+            impactRing.style.left = scw * 0.5f - size * 0.5f;
+            impactRing.style.top = jumpEndY + 180f - size * 0.2f;
+            impactRing.style.opacity = 1f - t;
+            yield return null;
+        }
+        impactRing.RemoveFromHierarchy();
+
+        yield return new WaitForSeconds(0.3f);
+
+        // お爺さんの台詞1
+        var gLine1 = UIHelper.CreateLabel(
+            Localization.Get("melodias_cutscene_goldikemen_line1"), "melodias-cutscene-dialogue");
+        UIHelper.ApplyFont(gLine1);
+        UIHelper.ApplyFontBold(gLine1);
+        overlay.Add(gLine1);
+        yield return null;
+        gLine1.AddToClassList("melodias-cutscene-dialogue-visible");
+        yield return new WaitForSeconds(2.0f);
+        yield return StartCoroutine(FadeOutElement(gLine1, 0.4f));
+        gLine1.RemoveFromHierarchy();
+
+        // お爺さんの台詞2
+        var gLine2 = UIHelper.CreateLabel(
+            Localization.Get("melodias_cutscene_goldikemen_line2"), "melodias-cutscene-dialogue");
+        UIHelper.ApplyFont(gLine2);
+        UIHelper.ApplyFontBold(gLine2);
+        overlay.Add(gLine2);
+        yield return null;
+        gLine2.AddToClassList("melodias-cutscene-dialogue-visible");
+        yield return new WaitForSeconds(2.5f);
+        yield return StartCoroutine(FadeOutElement(gLine2, 0.4f));
+        gLine2.RemoveFromHierarchy();
+
+        // --- Phase 6: 打ち上げ（発射） ---
+        // エネルギー注入テキスト
+        var launchText1 = UIHelper.CreateLabel(
+            Localization.Get("melodias_cutscene_launch"), "melodias-cutscene-text");
+        UIHelper.ApplyFont(launchText1);
+        launchText1.style.color = new Color(1f, 0.84f, 0f);
+        overlay.Add(launchText1);
+        yield return null;
+        launchText1.AddToClassList("melodias-cutscene-text-visible");
+
+        // 金色パーティクルがお爺さんから集まる演出
+        var goldenContainer = new UIE.VisualElement();
+        goldenContainer.pickingMode = UIE.PickingMode.Ignore;
+        goldenContainer.style.position = UIE.Position.Absolute;
+        goldenContainer.style.left = 0; goldenContainer.style.top = 0;
+        goldenContainer.style.right = 0; goldenContainer.style.bottom = 0;
+        overlay.Add(goldenContainer);
+
+        int goldenCount = 24;
+        var goldenParts = new (UIE.VisualElement el, float startX, float startY, float delay)[ goldenCount ];
+        float targetX = scw * 0.5f, targetY = sch * 0.25f;
+        for (int i = 0; i < goldenCount; i++)
+        {
+            var gp = new UIE.VisualElement();
+            gp.AddToClassList("melodias-golden-particle");
+            float sx = scw * 0.5f + Random.Range(-60f, 60f);
+            float sy = jumpEndY + 90f + Random.Range(-30f, 30f);
+            gp.style.left = sx;
+            gp.style.top = sy;
+            float size = Random.Range(6f, 14f);
+            gp.style.width = size;
+            gp.style.height = size;
+            gp.style.borderTopLeftRadius = size * 0.5f;
+            gp.style.borderTopRightRadius = size * 0.5f;
+            gp.style.borderBottomLeftRadius = size * 0.5f;
+            gp.style.borderBottomRightRadius = size * 0.5f;
+            goldenContainer.Add(gp);
+            goldenParts[i] = (gp, sx, sy, Random.Range(0f, 0.5f));
+        }
+
+        float gatherDur = 2.0f, gatherElapsed = 0f;
+        while (gatherElapsed < gatherDur)
+        {
+            gatherElapsed += Time.deltaTime;
+            for (int i = 0; i < goldenParts.Length; i++)
+            {
+                var (el, sx, sy, delay) = goldenParts[i];
+                float localT = Mathf.Clamp01((gatherElapsed - delay) / (gatherDur - delay));
+                float et = localT * localT; // ease-in
+                el.style.left = Mathf.Lerp(sx, targetX, et);
+                el.style.top = Mathf.Lerp(sy, targetY, et);
+                el.style.opacity = localT > 0f ? (localT < 0.8f ? 1f : (1f - localT) / 0.2f) : 0f;
+            }
+            yield return null;
+        }
+        goldenContainer.RemoveFromHierarchy();
+
+        yield return StartCoroutine(FadeOutElement(launchText1, 0.3f));
+        launchText1.RemoveFromHierarchy();
+
+        // 発射テキスト
+        var launchText2 = UIHelper.CreateLabel(
+            Localization.Get("melodias_cutscene_launch2"), "melodias-cutscene-text");
+        UIHelper.ApplyFont(launchText2);
+        launchText2.style.color = new Color(1f, 0.84f, 0f);
+        overlay.Add(launchText2);
+        yield return null;
+        launchText2.AddToClassList("melodias-cutscene-text-visible");
+        yield return new WaitForSeconds(1.0f);
+
+        // お爺さんフェードアウト
+        yield return StartCoroutine(FadeOutElement(ikemenEl, 0.5f));
+        ikemenEl.RemoveFromHierarchy();
+
+        // 赤ちゃんが黄金の光弾として上昇
+        var babyLight = new UIE.VisualElement();
+        babyLight.style.position = UIE.Position.Absolute;
+        babyLight.style.width = 40;
+        babyLight.style.height = 40;
+        babyLight.style.borderTopLeftRadius = 20;
+        babyLight.style.borderTopRightRadius = 20;
+        babyLight.style.borderBottomLeftRadius = 20;
+        babyLight.style.borderBottomRightRadius = 20;
+        babyLight.style.backgroundColor = new Color(1f, 0.84f, 0f);
+        babyLight.style.left = scw * 0.5f - 20f;
+        babyLight.style.top = sch * 0.5f;
+        overlay.Add(babyLight);
+
+        // 光の軌跡パーティクル
+        var trailContainer = new UIE.VisualElement();
+        trailContainer.pickingMode = UIE.PickingMode.Ignore;
+        trailContainer.style.position = UIE.Position.Absolute;
+        trailContainer.style.left = 0; trailContainer.style.top = 0;
+        trailContainer.style.right = 0; trailContainer.style.bottom = 0;
+        overlay.Add(trailContainer);
+
+        float launchDur = 1.5f, launchElapsed = 0f;
+        float babyStartY = sch * 0.5f;
+        var trails = new List<(UIE.VisualElement el, float born)>();
+        while (launchElapsed < launchDur)
+        {
+            launchElapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(launchElapsed / launchDur);
+            // 加速度的に上昇
+            float accelT = t * t * t;
+            float currentBabyY = Mathf.Lerp(babyStartY, -100f, accelT);
+            babyLight.style.top = currentBabyY;
+
+            // 軌跡パーティクル生成
+            if (Random.value < 0.6f)
+            {
+                var trail = new UIE.VisualElement();
+                trail.pickingMode = UIE.PickingMode.Ignore;
+                float ts = Random.Range(4f, 10f);
+                trail.style.position = UIE.Position.Absolute;
+                trail.style.width = ts;
+                trail.style.height = ts;
+                trail.style.borderTopLeftRadius = ts * 0.5f;
+                trail.style.borderTopRightRadius = ts * 0.5f;
+                trail.style.borderBottomLeftRadius = ts * 0.5f;
+                trail.style.borderBottomRightRadius = ts * 0.5f;
+                trail.style.backgroundColor = new Color(1f, Random.Range(0.7f, 1f), Random.Range(0f, 0.4f));
+                trail.style.left = scw * 0.5f - ts * 0.5f + Random.Range(-15f, 15f);
+                trail.style.top = currentBabyY + Random.Range(10f, 40f);
+                trail.style.opacity = 0.8f;
+                trailContainer.Add(trail);
+                trails.Add((trail, launchElapsed));
+            }
+
+            // 古い軌跡をフェードアウト
+            for (int i = trails.Count - 1; i >= 0; i--)
+            {
+                float age = launchElapsed - trails[i].born;
+                if (age > 0.5f)
+                {
+                    trails[i].el.RemoveFromHierarchy();
+                    trails.RemoveAt(i);
+                }
+                else
+                {
+                    trails[i].el.style.opacity = 0.8f * (1f - age / 0.5f);
+                }
+            }
+            yield return null;
+        }
+        babyLight.RemoveFromHierarchy();
+        trailContainer.RemoveFromHierarchy();
+
+        yield return StartCoroutine(FadeOutElement(launchText2, 0.5f));
+        launchText2.RemoveFromHierarchy();
+
+        // --- Phase 7: 黄金フラッシュ → フェードアウト ---
+        var flash = new UIE.VisualElement();
+        flash.AddToClassList("melodias-launch-flash");
+        overlay.Add(flash);
+        yield return null;
+        flash.AddToClassList("melodias-launch-flash-bright");
+        yield return new WaitForSeconds(0.6f);
+
+        // ゆっくりフェードアウト（黄金 → 白 → 黒）
+        float finalFade = 2.0f, finalElapsed = 0f;
+        while (finalElapsed < finalFade)
+        {
+            finalElapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(finalElapsed / finalFade);
+            float r = Mathf.Lerp(1f, 0f, t);
+            float g = Mathf.Lerp(0.84f, 0f, t);
+            float b = Mathf.Lerp(0f, 0f, t);
+            flash.style.backgroundColor = new Color(r, g, b, 1f);
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(0.5f);
+
+        // クリーンアップ
+        overlay.RemoveFromHierarchy();
+
+        // --- 遷移: Area 8（ステラ・オリジン） ---
+        if (DataCarrier.Instance != null)
+        {
+            DataCarrier.Instance.cameFromMap = false;
+            DataCarrier.Instance.isBossBattle = false;
+            DataCarrier.Instance.babyCurrentHp = -1;
+            DataCarrier.Instance.currentArea = 8;
+            DataCarrier.Instance.mapPlayerX = 12;
+            DataCarrier.Instance.mapPlayerY = 35;
+            DataCarrier.Instance.pendingWipeIn = false;
+            DataCarrier.Instance.SaveData();
+        }
+
+        SceneManager.LoadScene("MapScene");
+    }
+
+    // カットシーン用フェードアウトヘルパー
+    IEnumerator FadeOutElement(UIE.VisualElement el, float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            el.style.opacity = Mathf.Lerp(1f, 0f, elapsed / duration);
+            yield return null;
+        }
+        el.style.opacity = 0f;
+    }
+
     // ===== ボス撃破演出 =====
 
     IEnumerator BossDefeatSequence()
@@ -3711,14 +5062,17 @@ public class BattleManager : MonoBehaviour
         int area = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
 
         string[] bossLines;
-        if (area == 4 && enemyName == "メロディアス女王")
+        if (area == 8 && enemyName == "エゴ・マザー・マシーン")
         {
-            bossLines = new string[]
-            {
-                Localization.Get("melodias_defeat_line1"),
-                Localization.Get("melodias_defeat_line2"),
-                Localization.Get("melodias_defeat_line3"),
-            };
+            // 専用カットシーン『エゴからの解放』
+            yield return StartCoroutine(EgoMotherDefeatCutscene());
+            yield break;
+        }
+        else if (area == 4 && enemyName == "メロディアス女王")
+        {
+            // 専用カットシーン『黄金の産声と解き放たれた音色』
+            yield return StartCoroutine(MelodiasDefeatCutscene());
+            yield break;
         }
         else if (area == 2 && enemyName == "デヴィル夫人")
         {
@@ -3871,20 +5225,21 @@ public class BattleManager : MonoBehaviour
             if (area == 4 && enemyName == "メロディアス女王")
             {
                 DataCarrier.Instance.currentArea = 3;
-                DataCarrier.Instance.mapPlayerX = 14;
+                DataCarrier.Instance.mapPlayerX = 6;
                 DataCarrier.Instance.mapPlayerY = 37;
             }
             else if (area == 2 && enemyName == "デヴィル夫人")
             {
                 DataCarrier.Instance.currentArea = 3;
-                DataCarrier.Instance.mapPlayerX = 11;
+                DataCarrier.Instance.mapPlayerX = 5;
                 DataCarrier.Instance.mapPlayerY = 2;
             }
             else
             {
-                DataCarrier.Instance.currentArea = 1;
-                DataCarrier.Instance.mapPlayerX = 5;
-                DataCarrier.Instance.mapPlayerY = 9;
+                // シバ撃破後: Area 0に戻る（シバの家から次のエリアへ進む）
+                DataCarrier.Instance.currentArea = 0;
+                DataCarrier.Instance.mapPlayerX = 8;
+                DataCarrier.Instance.mapPlayerY = 34;
             }
 
             if (isFirstBoss)

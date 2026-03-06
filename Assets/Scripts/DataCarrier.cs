@@ -31,7 +31,7 @@ public class DataCarrier : MonoBehaviour
     public bool isGodBaby;
     public bool cameFromMap = false;
     public bool isBossBattle = false;
-    public int currentArea = 0;     // 0=よちよちの里, 1=ゴージャス・ヴィレッジ, 2=デヴィル夫人のやかた, 3=小悪魔の街, 4=109
+    public int currentArea = 0;     // 0=よちよちの里, 1=ゴージャス・ヴィレッジ, 2=デヴィル夫人のやかた, 3=小悪魔の街, 4=109, 5=実家, 6=武器屋, 7=塾, 8=ステラ・オリジン
     public int shopEntryArea = 1;    // おあそびどうぐやに入った元エリア（戻り先）
     public string fixedEncounterEnemy = "";  // 固定エンカウント敵名（空=ランダム）
     public int babyCurrentHp = -1;  // おあそび間HP持越し（-1=maxHP）
@@ -51,6 +51,11 @@ public class DataCarrier : MonoBehaviour
     public string equipment = "";       // 所持装備（購入済み全て）
     public string equippedSlots = "";   // 装備中（最大3つ）
     public bool motherGaveItem = false;
+    public int goldenEggOldManState = 0; // 0=待機, 1=変身済み
+    public int kaguyaMetCount = 0;   // 0=未遭遇, 1=1回目済, 2=2回目済, 3=バトル前
+    public bool kaguyaLover = false; // 相思相愛
+    public int stellaOriginProgress = 0; // ビットフラグ: 1=DEFバフ済, 2=ATKバフ済, 4=ゆりかご済
+    public string stellaOriginTitle = ""; // ゆりかごで選んだ称号
 
     [Header("Currency")]
     public int milk = 0;
@@ -131,6 +136,11 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.SetString(p + "equipment", equipment);
         PlayerPrefs.SetString(p + "equippedSlots", equippedSlots);
         PlayerPrefs.SetInt(p + "motherGaveItem", motherGaveItem ? 1 : 0);
+        PlayerPrefs.SetInt(p + "goldenEggOldManState", goldenEggOldManState);
+        PlayerPrefs.SetInt(p + "kaguyaMetCount", kaguyaMetCount);
+        PlayerPrefs.SetInt(p + "kaguyaLover", kaguyaLover ? 1 : 0);
+        PlayerPrefs.SetInt(p + "stellaOriginProgress", stellaOriginProgress);
+        PlayerPrefs.SetString(p + "stellaOriginTitle", stellaOriginTitle);
         PlayerPrefs.SetString(p + "defeatedEnemyList", defeatedEnemyList);
         PlayerPrefs.SetString(p + "metNpcList", metNpcList);
         PlayerPrefs.SetString(p + "fixedEncounterEnemy", fixedEncounterEnemy);
@@ -182,6 +192,11 @@ public class DataCarrier : MonoBehaviour
             equippedSlots = string.Join(",", items, 0, count);
         }
         motherGaveItem = PlayerPrefs.GetInt(p + "motherGaveItem", 0) == 1;
+        goldenEggOldManState = PlayerPrefs.GetInt(p + "goldenEggOldManState", 0);
+        kaguyaMetCount = PlayerPrefs.GetInt(p + "kaguyaMetCount", 0);
+        kaguyaLover = PlayerPrefs.GetInt(p + "kaguyaLover", 0) == 1;
+        stellaOriginProgress = PlayerPrefs.GetInt(p + "stellaOriginProgress", 0);
+        stellaOriginTitle = PlayerPrefs.GetString(p + "stellaOriginTitle", "");
         defeatedEnemyList = PlayerPrefs.GetString(p + "defeatedEnemyList", "");
         metNpcList = PlayerPrefs.GetString(p + "metNpcList", "");
         fixedEncounterEnemy = PlayerPrefs.GetString(p + "fixedEncounterEnemy", "");
@@ -252,6 +267,11 @@ public class DataCarrier : MonoBehaviour
         PlayerPrefs.DeleteKey(p + "equipment");
         PlayerPrefs.DeleteKey(p + "equippedSlots");
         PlayerPrefs.DeleteKey(p + "motherGaveItem");
+        PlayerPrefs.DeleteKey(p + "goldenEggOldManState");
+        PlayerPrefs.DeleteKey(p + "kaguyaMetCount");
+        PlayerPrefs.DeleteKey(p + "kaguyaLover");
+        PlayerPrefs.DeleteKey(p + "stellaOriginProgress");
+        PlayerPrefs.DeleteKey(p + "stellaOriginTitle");
         PlayerPrefs.DeleteKey(p + "defeatedEnemyList");
         PlayerPrefs.DeleteKey(p + "metNpcList");
         PlayerPrefs.DeleteKey(p + "fixedEncounterEnemy");
@@ -280,6 +300,11 @@ public class DataCarrier : MonoBehaviour
         equipment = "";
         equippedSlots = "";
         motherGaveItem = false;
+        goldenEggOldManState = 0;
+        kaguyaMetCount = 0;
+        kaguyaLover = false;
+        stellaOriginProgress = 0;
+        stellaOriginTitle = "";
         milk = 0;
         defeatedEnemyList = "";
         metNpcList = "";
@@ -388,6 +413,14 @@ public class DataCarrier : MonoBehaviour
     {
         if (string.IsNullOrEmpty(inventory)) return new string[0];
         return inventory.Split(',');
+    }
+
+    public void RemoveItem(string item)
+    {
+        if (string.IsNullOrEmpty(inventory)) return;
+        var items = new System.Collections.Generic.List<string>(inventory.Split(','));
+        items.Remove(item);
+        inventory = string.Join(",", items);
     }
 
     // ===== 縁の書（あそんだおともだち管理） =====
