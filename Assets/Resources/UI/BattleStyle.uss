@@ -1197,3 +1197,29 @@
     padding-right: 30px;
     white-space: normal;
 }
+
+/* === Dark theme for final boss (Ego Mother Machine) === */
+.battle-dark-theme .battle-char-name,
+.battle-dark-theme .battle-name-player,
+.battle-dark-theme .battle-name-enemy,
+.battle-dark-theme .battle-age-label,
+.battle-dark-theme .battle-hp-text {
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.battle-dark-theme .battle-log {
+    background-color: rgba(20, 10, 30, 0.85);
+    border-color: rgba(170, 140, 200, 0.4);
+}
+
+.battle-dark-theme .battle-log-glow {
+    background-color: rgba(80, 50, 120, 0.2);
+}
+
+.battle-dark-theme .battle-log-text {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.battle-dark-theme .battle-hp-bg {
+    background-color: rgba(255, 255, 255, 0.15);
+}

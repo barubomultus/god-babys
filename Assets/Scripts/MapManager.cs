@@ -77,12 +77,12 @@ public class MapManager : MonoBehaviour
     Vector2 kaguyaFollowerTarget;
     bool kaguyaFollowerMoving = false;
 
-    // はいはいアニメーション
-    RectTransform crawlHandL, crawlHandR;
-    RectTransform crawlKneeL, crawlKneeR;
-    Vector2 crawlHandLBase, crawlHandRBase;
-    Vector2 crawlKneeLBase, crawlKneeRBase;
-    float crawlAnimTime;
+    // キャラクタースプライト
+    Sprite[] playerIdleSprites = new Sprite[4]; // 0=south,1=north,2=west,3=east
+    Sprite[][] playerWalkSprites = new Sprite[4][]; // [dir][frame]
+    int walkFrameIndex;
+    float walkFrameTimer;
+    const float WALK_FRAME_INTERVAL = 0.1f;
 
     // UI要素
     GameObject mapPanel;
@@ -204,6 +204,12 @@ public class MapManager : MonoBehaviour
     Image stellaPlayerAuraOuter;   // 外周（青白）
     Image stellaPlayerAuraInner;   // 内周（白）
     RectTransform stellaBgRect; // 背景回転用
+    Image stellaBgImg;           // 背景Image（虹色明滅用）
+    Vector2 stellaBgBasePos;     // 背景の基本位置（パララックス用）
+    RectTransform stellaDarkOverlayRect; // ダークオーバーレイ（パララックス用）
+    Vector2 stellaDarkBasePos;
+    List<(RectTransform rt, Image img, float phase, float speed)> stellaGlitters
+        = new List<(RectTransform, Image, float, float)>(); // グリッターパーティクル
     // 浮遊タイル: 座標→(obj, img, targetAlpha, currentAlpha, baseY, phase, speed, tileX, tileY)
     Dictionary<(int, int), StellaFloatingTile> stellaTileMap = new Dictionary<(int, int), StellaFloatingTile>();
     class StellaFloatingTile
@@ -243,7 +249,7 @@ public class MapManager : MonoBehaviour
     bool stellaGuardianDialogueActive = false;
     // 光のゆりかご
     GameObject stellaCradleObj;
-    int stellaCradleX = 12, stellaCradleY = 34;
+    int stellaCradleX = 12, stellaCradleY = 35;
     bool stellaCradleActive = false;
     // 宇宙の門
     GameObject stellaCosmicGateObj;
@@ -2584,17 +2590,23 @@ public class MapManager : MonoBehaviour
         for (int x = 12; x <= 15; x++) placeCrystal(x, 28);
         // 北へ (12, 29→33)
         for (int y = 29; y <= 33; y++) placeCrystal(12, y);
+        // 一本道の最上(y=33)の左右にタイル追加
+        placeCrystal(11, 33);
+        placeCrystal(13, 33);
 
-        // --- 北のゆりかご広場: 3x3 around (12,34) ---
-        placePlaza(12, 34);
-        // y=35を削除（ゲートとの隙間 — 直接歩けないようにする）
+        // 北へ続く (12, 34)
+        placeCrystal(12, 34);
+
+        // --- 北のゆりかご広場: 3x3 around (12,35) ---
+        placePlaza(12, 35);
+        // y=36を壁に（ゲートとの隙間 — 直接歩けないようにする）
         for (int rx = 11; rx <= 13; rx++)
         {
-            mapData[rx, 35] = TILE_CRYSTAL_WALL;
-            walkable[rx, 35] = false;
+            mapData[rx, 36] = TILE_CRYSTAL_WALL;
+            walkable[rx, 36] = false;
         }
 
-        // --- 天の川の橋 (y=35-36): 条件達成時にwalkable化 ---
+        // --- 天の川の橋 (y=36): 条件達成時にwalkable化 ---
 
         // === 宇宙の門 (y=37): 通行不可 ===
         for (int x = 11; x <= 13; x++)
@@ -2661,6 +2673,8 @@ public class MapManager : MonoBehaviour
         bgImg.raycastTarget = false;
         cosmicBg.transform.SetAsFirstSibling();
         stellaBgRect = bgRect; // Update()で回転させる
+        stellaBgImg = bgImg;   // 虹色明滅用
+        stellaBgBasePos = Vector2.zero; // パララックス基準
 
         // Layer 0.5: 40%黒オーバーレイ（重厚感）
         var darkOverlay = new GameObject("DarkOverlay");
@@ -2674,9 +2688,40 @@ public class MapManager : MonoBehaviour
         darkImg.color = new Color(0f, 0f, 0f, 0.4f);
         darkImg.raycastTarget = false;
         darkOverlay.transform.SetSiblingIndex(1);
+        stellaDarkOverlayRect = darkRect;
+        stellaDarkBasePos = Vector2.zero;
 
-        // 背景とクリスタルタイルの間には何も描画しない
-        // （星雲・遠景の星・星座シルエットは廃止 — 背景画像の宇宙だけが見える）
+        // Layer 0.3: グリッターパーティクル（背景とオーバーレイの間）
+        CreateStellaGlitters(bgRect.sizeDelta);
+    }
+
+    void CreateStellaGlitters(Vector2 areaSize)
+    {
+        int count = 60;
+        float halfW = areaSize.x * 0.4f;
+        float halfH = areaSize.y * 0.4f;
+
+        for (int i = 0; i < count; i++)
+        {
+            var obj = new GameObject($"Glitter_{i}");
+            obj.transform.SetParent(tilesContainer.transform, false);
+            var rect = obj.AddComponent<RectTransform>();
+            float size = Random.Range(2f, 6f);
+            rect.sizeDelta = new Vector2(size, size);
+            rect.anchoredPosition = new Vector2(
+                Random.Range(-halfW, halfW),
+                Random.Range(-halfH, halfH));
+            var img = obj.AddComponent<Image>();
+            img.raycastTarget = false;
+            // パステル系の白〜青〜ピンクからランダム
+            float hue = Random.Range(0f, 1f);
+            img.color = Color.HSVToRGB(hue, 0.15f, 1f) * new Color(1, 1, 1, 0f);
+            obj.transform.SetSiblingIndex(1); // 背景の直上
+
+            stellaGlitters.Add((rect, img,
+                Random.Range(0f, Mathf.PI * 2f),
+                Random.Range(0.3f, 1.2f)));
+        }
     }
 
     void CreateNebula(Vector2 pos, Color color, float size)
@@ -3176,7 +3221,7 @@ public class MapManager : MonoBehaviour
         float bandWidth = DISPLAY_TILE * 4.8f;   // 横1.5倍
         float bandHeight = DISPLAY_TILE * 0.85f;
 
-        float posY = (35.0f - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (36.0f - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
 
         var riverObj = new GameObject("LightRiver");
         riverObj.transform.SetParent(tilesContainer.transform, false);
@@ -3226,19 +3271,17 @@ public class MapManager : MonoBehaviour
         glowImg.color = Color.clear;
         glowImg.raycastTarget = false;
 
-        // ゆりかごシンボル
+        // ゆりかご画像
         var symbol = new GameObject("Symbol");
         symbol.transform.SetParent(stellaCradleObj.transform, false);
         var symRect = symbol.AddComponent<RectTransform>();
         symRect.anchoredPosition = Vector2.zero;
-        symRect.sizeDelta = new Vector2(DISPLAY_TILE * 1.5f, DISPLAY_TILE * 1.5f);
-        var symTmp = symbol.AddComponent<TMPro.TextMeshProUGUI>();
-        FontHelper.Apply(symTmp);
-        symTmp.text = "\u2728"; // sparkle
-        symTmp.fontSize = 48;
-        symTmp.alignment = TMPro.TextAlignmentOptions.Center;
-        symTmp.color = new Color(1f, 0.84f, 0f, 0.9f);
-        symTmp.raycastTarget = false;
+        symRect.sizeDelta = new Vector2(DISPLAY_TILE * 2f, DISPLAY_TILE * 2f);
+        var symRaw = symbol.AddComponent<RawImage>();
+        var cradleTex = Resources.Load<Texture2D>("Map/4th/cradle_of_life");
+        if (cradleTex != null)
+            symRaw.texture = cradleTex;
+        symRaw.raycastTarget = false;
 
         // 完了済みなら見た目を変える（グローは既にクリアなので不要）
 
@@ -3280,6 +3323,19 @@ public class MapManager : MonoBehaviour
             yield return null;
         }
 
+        // ゆりかご画像を表示
+        var cradleImgEl = new UIE.VisualElement();
+        cradleImgEl.pickingMode = UIE.PickingMode.Ignore;
+        var cradleTex2 = Resources.Load<Texture2D>("Map/4th/cradle_of_life");
+        if (cradleTex2 != null)
+            cradleImgEl.style.backgroundImage = new UIE.StyleBackground(cradleTex2);
+        cradleImgEl.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+        cradleImgEl.style.width = 300;
+        cradleImgEl.style.height = 300;
+        cradleImgEl.style.alignSelf = UIE.Align.Center;
+        cradleImgEl.style.marginBottom = 20;
+        overlay.Add(cradleImgEl);
+
         if (!bossesVisited && !done)
         {
             // 両ボス未訪問: ゆりかごはまだ使えない
@@ -3302,9 +3358,14 @@ public class MapManager : MonoBehaviour
         {
             string title = DataCarrier.Instance != null ? DataCarrier.Instance.stellaOriginTitle : "";
             var doneLabel = UIHelper.CreateLabel(
-                $"『{title}』の ゆりかごは\nおだやかに 輝いている…", "map-message-text");
+                $"『{title}』の ゆりかご", "map-message-text");
             doneLabel.style.color = new Color(1f, 0.84f, 0f);
+            doneLabel.style.fontSize = 34;
+            doneLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
+            doneLabel.style.width = 800;
+            doneLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
             UIHelper.ApplyFont(doneLabel);
+            UIHelper.ApplyFontBold(doneLabel);
             overlay.Add(doneLabel);
 
             yield return new WaitForSeconds(0.3f);
@@ -3375,12 +3436,34 @@ public class MapManager : MonoBehaviour
                 DataCarrier.Instance.SaveData();
             }
 
-            // 完了演出
+            // 完了演出: ゆりかご画像 + 選んだ称号
+            var cradleImgEl2 = new UIE.VisualElement();
+            cradleImgEl2.pickingMode = UIE.PickingMode.Ignore;
+            if (cradleTex2 != null)
+                cradleImgEl2.style.backgroundImage = new UIE.StyleBackground(cradleTex2);
+            cradleImgEl2.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+            cradleImgEl2.style.width = 300;
+            cradleImgEl2.style.height = 300;
+            cradleImgEl2.style.alignSelf = UIE.Align.Center;
+            cradleImgEl2.style.marginBottom = 20;
+            overlay.Add(cradleImgEl2);
+
+            var titleLabel = UIHelper.CreateLabel(
+                $"『{chosenTitle}』の ゆりかご", "map-message-text");
+            titleLabel.style.color = new Color(1f, 0.84f, 0f);
+            titleLabel.style.fontSize = 34;
+            titleLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
+            titleLabel.style.width = 800;
+            titleLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+            UIHelper.ApplyFont(titleLabel);
+            UIHelper.ApplyFontBold(titleLabel);
+            overlay.Add(titleLabel);
+
             string babyName = DataCarrier.Instance != null ? DataCarrier.Instance.babyName : "???";
             var completeLabel = UIHelper.CreateLabel(
                 Localization.Get("stella_cradle_complete", chosenTitle, babyName), "map-message-text");
-            completeLabel.style.color = new Color(1f, 0.84f, 0f);
-            completeLabel.style.fontSize = 30;
+            completeLabel.style.color = new Color(0.85f, 0.85f, 1f);
+            completeLabel.style.fontSize = 28;
             completeLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
             completeLabel.style.width = 800;
             completeLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
@@ -3465,19 +3548,17 @@ public class MapManager : MonoBehaviour
 
         if (allDone && !stellaGateOpened)
         {
-            // ゲート開放: 天の川(y=35-36) + 門(y=37)をwalkableにする
+            // ゲート開放: 天の川(y=36) + 門(y=37)をwalkableにする
             stellaGateOpened = true;
 
-            // 天の川の橋: y=35-36を歩行可能にする
+            // 天の川の橋: y=36を歩行可能にする
             for (int gx = 11; gx <= 13; gx++)
             {
-                for (int gy = 35; gy <= 36; gy++)
+                int gy = 36;
+                if (gx >= 0 && gx < mapWidth && gy >= 0 && gy < mapHeight)
                 {
-                    if (gx >= 0 && gx < mapWidth && gy >= 0 && gy < mapHeight)
-                    {
-                        mapData[gx, gy] = TILE_CRYSTAL;
-                        walkable[gx, gy] = true;
-                    }
+                    mapData[gx, gy] = TILE_CRYSTAL;
+                    walkable[gx, gy] = true;
                 }
                 // 門本体 (y=37)
                 if (gx >= 0 && gx < mapWidth && 37 < mapHeight)
@@ -3626,13 +3707,48 @@ public class MapManager : MonoBehaviour
     }
 
     // === ラスボス「エゴ・マザー・マシーン」降臨シークエンス ===
+
+    // カットシーン用: Canvas上にスプライトImage(加算合成対応)を生成
+    GameObject cutsceneCanvasRoot;
+    Image CreateCutsceneImage(string resourcePath, Vector2 size, bool additive = false)
+    {
+        if (cutsceneCanvasRoot == null) return null;
+        var obj = new GameObject(resourcePath);
+        obj.transform.SetParent(cutsceneCanvasRoot.transform, false);
+        var rect = obj.AddComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = size;
+        var img = obj.AddComponent<Image>();
+        img.raycastTarget = false;
+        Sprite spr = Resources.Load<Sprite>(resourcePath);
+        if (spr == null)
+        {
+            var tex = Resources.Load<Texture2D>(resourcePath);
+            if (tex != null && tex.isReadable)
+                spr = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+        }
+        if (spr != null)
+        {
+            img.sprite = spr;
+            img.preserveAspect = true;
+        }
+        img.type = Image.Type.Simple;
+        img.color = new Color(1, 1, 1, 0); // 初期は完全透明
+        if (spr == null)
+            img.color = Color.clear; // spriteなしなら常にクリア
+        if (additive && stellaAdditiveMat != null)
+            img.material = stellaAdditiveMat;
+        return img;
+    }
+
     IEnumerator CosmicGateEntrySequence()
     {
         menuOpen = true;
         if (moveCtrl != null) moveCtrl.IsLocked = true;
 
-        // --- Phase 1: ゲート進入 → 操作無効 → カメラ北へズーム ---
-        // プレイヤーをゲート内へ歩かせる
+        // --- Phase 1: ゲート進入 ---
         float gateY = (stellaCosmicGateY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
         float gatePosX = (stellaCosmicGateX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
         playerTileX = stellaCosmicGateX;
@@ -3647,60 +3763,65 @@ public class MapManager : MonoBehaviour
             yield return null;
         }
         playerRect.anchoredPosition = gatePos;
-
         yield return new WaitForSeconds(0.3f);
 
-        // UI Toolkitオーバーレイ: 全画面演出レイヤー
-        var cutsceneOverlay = new UIE.VisualElement();
-        cutsceneOverlay.AddToClassList("fill");
-        cutsceneOverlay.style.position = UIE.Position.Absolute;
-        cutsceneOverlay.style.backgroundColor = new Color(0, 0, 0, 0);
-        cutsceneOverlay.pickingMode = UIE.PickingMode.Ignore;
-        overlayRoot.Add(cutsceneOverlay);
+        // カットシーン専用Canvas（ソート順を最前面に）
+        cutsceneCanvasRoot = new GameObject("CutsceneCanvas");
+        var cCanvas = cutsceneCanvasRoot.AddComponent<Canvas>();
+        cCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        cCanvas.sortingOrder = 999;
+        var cScaler = cutsceneCanvasRoot.AddComponent<UnityEngine.UI.CanvasScaler>();
+        cScaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        cScaler.referenceResolution = new Vector2(1080, 1920);
+        cutsceneCanvasRoot.AddComponent<UnityEngine.UI.GraphicRaycaster>();
 
-        // --- Phase 2: 黄金の盲目フラッシュ(Blinding Light) ---
-        // 暗転 → 一瞬の黄金閃光
-        float fadeEl = 0f;
-        while (fadeEl < 1f)
-        {
-            fadeEl += Time.deltaTime;
-            float t = Mathf.Clamp01(fadeEl / 1f);
-            cutsceneOverlay.style.backgroundColor = new Color(0, 0, 0, t);
-            yield return null;
-        }
+        // 黒幕（全画面、最初から黒）
+        var blackObj = new GameObject("Black");
+        blackObj.transform.SetParent(cutsceneCanvasRoot.transform, false);
+        var blackRect = blackObj.AddComponent<RectTransform>();
+        blackRect.anchorMin = Vector2.zero; blackRect.anchorMax = Vector2.one;
+        blackRect.sizeDelta = Vector2.zero;
+        var blackImg = blackObj.AddComponent<Image>();
+        blackImg.color = Color.black;
+        blackImg.raycastTarget = false;
 
+        // --- Phase 2: レンズフレア明滅 ---
         yield return new WaitForSeconds(0.5f);
 
-        // 黄金フラッシュ: 複数回明滅
+        // ② 黄金のレンズフレア（加算合成）
+        var lensFlareImg = CreateCutsceneImage("Map/4th/黄金のレンズフレア", new Vector2(1200, 1200), true);
+        var lensFlareRect = lensFlareImg.GetComponent<RectTransform>();
+
+        // 明滅3回
         for (int flash = 0; flash < 3; flash++)
         {
             float flashIn = 0f;
             while (flashIn < 0.15f)
             {
                 flashIn += Time.deltaTime;
-                float a = Mathf.Clamp01(flashIn / 0.15f);
-                cutsceneOverlay.style.backgroundColor = new Color(1f, 0.84f, 0f, a * 0.9f);
+                lensFlareImg.color = new Color(1, 1, 1, Mathf.Clamp01(flashIn / 0.15f) * 0.9f);
                 yield return null;
             }
             float flashOut = 0f;
             while (flashOut < 0.2f)
             {
                 flashOut += Time.deltaTime;
-                float a = 1f - Mathf.Clamp01(flashOut / 0.2f);
-                cutsceneOverlay.style.backgroundColor = new Color(1f, 0.84f, 0f, a * 0.9f);
+                lensFlareImg.color = new Color(1, 1, 1, (1f - Mathf.Clamp01(flashOut / 0.2f)) * 0.9f);
                 yield return null;
             }
-            cutsceneOverlay.style.backgroundColor = new Color(0, 0, 0, 0.9f);
+            lensFlareImg.color = new Color(1, 1, 1, 0);
             yield return new WaitForSeconds(0.1f);
         }
 
-        // 黄金フルブラスト
-        fadeEl = 0f;
+        // フルブラスト
+        float fadeEl = 0f;
         while (fadeEl < 0.5f)
         {
             fadeEl += Time.deltaTime;
             float t = Mathf.Clamp01(fadeEl / 0.5f);
-            cutsceneOverlay.style.backgroundColor = new Color(1f, 0.84f + 0.16f * t, t * 0.3f, 0.95f);
+            lensFlareImg.color = new Color(1, 1, 1, t * 0.95f);
+            float scale = 1f + t * 0.3f;
+            lensFlareRect.localScale = new Vector3(scale, scale, 1f);
             yield return null;
         }
 
@@ -3710,109 +3831,79 @@ public class MapManager : MonoBehaviour
             seSource.pitch = 0.2f;
             seSource.PlayOneShot(seQuizCorrect, 1f);
         }
-
         yield return new WaitForSeconds(1f);
 
-        // --- Phase 3: 渦巻く銀河 + ラスボスシルエット浮上 ---
-        // 背景を銀河渦巻きに切り替え
-        cutsceneOverlay.style.backgroundColor = new Color(0.02f, 0.01f, 0.06f, 1f);
+        // レンズフレアをフェードアウト
+        fadeEl = 0f;
+        while (fadeEl < 0.5f)
+        {
+            fadeEl += Time.deltaTime;
+            lensFlareImg.color = new Color(1, 1, 1, 0.95f * (1f - Mathf.Clamp01(fadeEl / 0.5f)));
+            yield return null;
+        }
+        lensFlareImg.color = new Color(1, 1, 1, 0);
 
-        // 渦巻く星パーティクル
-        var galaxyParticles = new List<(UIE.VisualElement el, float angle, float radius, float speed)>();
+        // --- Phase 3: 深宇宙の星雲 + ゴッドレイ + ボス浮上 ---
+
+        // ① 深宇宙の星雲（最背面、ゆっくり拡大）
+        var nebulaImg = CreateCutsceneImage("Map/4th/深宇宙の星雲", new Vector2(1200, 2100), false);
+        var nebulaRect = nebulaImg.GetComponent<RectTransform>();
+        nebulaImg.color = new Color(1, 1, 1, 0);
+        nebulaImg.transform.SetSiblingIndex(1); // 黒幕の直上
+
+        // 渦巻く星パーティクル（星雲の上に）
+        var galaxyParticles = new List<(RectTransform rt, Image img, float angle, float radius, float speed)>();
         for (int i = 0; i < 80; i++)
         {
-            var star = new UIE.VisualElement();
+            var starObj = new GameObject($"Star_{i}");
+            starObj.transform.SetParent(cutsceneCanvasRoot.transform, false);
+            var srt = starObj.AddComponent<RectTransform>();
             float size = Random.Range(2f, 6f);
-            star.style.width = size;
-            star.style.height = size;
-            star.style.borderTopLeftRadius = size;
-            star.style.borderTopRightRadius = size;
-            star.style.borderBottomLeftRadius = size;
-            star.style.borderBottomRightRadius = size;
-            star.style.position = UIE.Position.Absolute;
+            srt.sizeDelta = new Vector2(size, size);
+            var simg = starObj.AddComponent<Image>();
+            simg.raycastTarget = false;
+            if (stellaAdditiveMat != null) simg.material = stellaAdditiveMat;
             float b = Random.Range(0.5f, 1f);
             bool isGold = Random.value < 0.4f;
-            star.style.backgroundColor = isGold
-                ? new Color(1f, 0.84f * b, 0f, b)
-                : new Color(b, b, b * 0.9f + 0.1f, b * 0.8f);
-            cutsceneOverlay.Add(star);
+            simg.color = isGold
+                ? new Color(1f, 0.84f * b, 0f, 0)
+                : new Color(b, b, b * 0.9f + 0.1f, 0);
             float ang = Random.Range(0f, Mathf.PI * 2f);
             float rad = Random.Range(50f, 450f);
             float spd = Random.Range(0.3f, 1.2f);
-            galaxyParticles.Add((star, ang, rad, spd));
+            galaxyParticles.Add((srt, simg, ang, rad, spd));
         }
 
-        // 中心に向かう吸引パーティクル
-        var suckParticles = new List<(UIE.VisualElement el, float angle, float startR, float life)>();
+        // 吸引パーティクル
+        var suckParticles = new List<(RectTransform rt, Image img, float angle, float startR, float life)>();
         for (int i = 0; i < 40; i++)
         {
-            var p = new UIE.VisualElement();
+            var pObj = new GameObject($"Suck_{i}");
+            pObj.transform.SetParent(cutsceneCanvasRoot.transform, false);
+            var prt = pObj.AddComponent<RectTransform>();
             float size = Random.Range(3f, 8f);
-            p.style.width = size;
-            p.style.height = size;
-            p.style.borderTopLeftRadius = size;
-            p.style.borderTopRightRadius = size;
-            p.style.borderBottomLeftRadius = size;
-            p.style.borderBottomRightRadius = size;
-            p.style.position = UIE.Position.Absolute;
-            p.style.backgroundColor = new Color(1f, 0.84f, 0f, Random.Range(0.3f, 0.7f));
-            cutsceneOverlay.Add(p);
-            suckParticles.Add((p, Random.Range(0f, Mathf.PI * 2f), Random.Range(300f, 500f), Random.Range(0f, 1f)));
+            prt.sizeDelta = new Vector2(size, size);
+            var pimg = pObj.AddComponent<Image>();
+            pimg.raycastTarget = false;
+            if (stellaAdditiveMat != null) pimg.material = stellaAdditiveMat;
+            pimg.color = new Color(1f, 0.84f, 0f, 0);
+            suckParticles.Add((prt, pimg, Random.Range(0f, Mathf.PI * 2f), Random.Range(300f, 500f), Random.Range(0f, 1f)));
         }
 
-        // ボスシルエット（中央、最初は下方に隠れている）
-        var bossContainer = new UIE.VisualElement();
-        bossContainer.style.position = UIE.Position.Absolute;
-        bossContainer.style.width = 320;
-        bossContainer.style.height = 320;
-        bossContainer.style.left = UIE.Length.Percent(50);
-        bossContainer.style.top = UIE.Length.Percent(50);
-        bossContainer.style.translate = new UIE.StyleTranslate(new UIE.Translate(-160, 300)); // 画面下に隠す
-        cutsceneOverlay.Add(bossContainer);
+        // ③ 放射状の光（ボスの直背後、加算合成、回転）
+        var godRayImg = CreateCutsceneImage("Map/4th/放射状の光", new Vector2(600, 600), true);
+        var godRayRect = godRayImg.GetComponent<RectTransform>();
+        godRayImg.color = new Color(1, 1, 1, 0);
+        godRayRect.anchoredPosition = new Vector2(0, 300); // 画面下に隠す
 
-        // ボスのシルエット暗影
-        var bossShadow = new UIE.VisualElement();
-        bossShadow.style.width = UIE.Length.Percent(100);
-        bossShadow.style.height = UIE.Length.Percent(100);
-        bossShadow.style.borderTopLeftRadius = 48;
-        bossShadow.style.borderTopRightRadius = 48;
-        bossShadow.style.borderBottomLeftRadius = 48;
-        bossShadow.style.borderBottomRightRadius = 48;
-        bossShadow.style.backgroundColor = new Color(0, 0, 0, 0.85f);
-        bossContainer.Add(bossShadow);
+        // ④ ボス画像（ego-mother）1.5倍サイズ
+        var bossImg = CreateCutsceneImage("EnemyBabys/boss/ego-mother", new Vector2(480, 480), false);
+        var bossImgRect = bossImg.GetComponent<RectTransform>();
+        bossImg.color = new Color(1, 1, 1, 0);
+        bossImgRect.anchoredPosition = new Vector2(0, 300); // 画面下に隠す
 
-        // ボスのスプライト（シルエットの中に）
-        var bossSpriteEl = new UIE.VisualElement();
-        bossSpriteEl.style.position = UIE.Position.Absolute;
-        bossSpriteEl.style.width = UIE.Length.Percent(90);
-        bossSpriteEl.style.height = UIE.Length.Percent(90);
-        bossSpriteEl.style.left = UIE.Length.Percent(5);
-        bossSpriteEl.style.top = UIE.Length.Percent(5);
-        bossSpriteEl.style.opacity = 0f;
-        var bossSprite = Resources.Load<Sprite>("EnemyBabys/boss/ego-mother-machine");
-        if (bossSprite != null)
-        {
-            bossSpriteEl.style.backgroundImage = new UIE.StyleBackground(bossSprite);
-            bossSpriteEl.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
-        }
-        bossContainer.Add(bossSpriteEl);
-
-        // 黄金のオーラ(ボスの後ろ)
-        var bossAura = new UIE.VisualElement();
-        bossAura.style.position = UIE.Position.Absolute;
-        bossAura.style.width = 400;
-        bossAura.style.height = 400;
-        bossAura.style.left = -40;
-        bossAura.style.top = -40;
-        bossAura.style.borderTopLeftRadius = 200;
-        bossAura.style.borderTopRightRadius = 200;
-        bossAura.style.borderBottomLeftRadius = 200;
-        bossAura.style.borderBottomRightRadius = 200;
-        bossAura.style.backgroundColor = new Color(1f, 0.84f, 0f, 0f);
-        bossContainer.Insert(0, bossAura); // シルエットの後ろに
-
-        // アニメーション: 銀河回転 + ボス浮上 (4秒)
-        float phase3Dur = 4f;
+        // アニメーション: 星雲拡大 + 銀河回転 + ボス浮上 (5秒)
+        float phase3Dur = 5f;
         float phase3El = 0f;
         float galaxyTime = 0f;
 
@@ -3822,39 +3913,50 @@ public class MapManager : MonoBehaviour
             galaxyTime += Time.deltaTime;
             float t = Mathf.Clamp01(phase3El / phase3Dur);
 
-            // 銀河渦巻き回転
-            float cx = 540f, cy = 960f; // 画面中央付近（概算）
-            foreach (var (el, ang, rad, spd) in galaxyParticles)
+            // 星雲: フェードイン + ゆっくり拡大 (1.0→1.2)
+            float nebulaAlpha = Mathf.Clamp01(t / 0.3f);
+            nebulaImg.color = new Color(1, 1, 1, nebulaAlpha);
+            float nebulaScale = 1f + t * 0.2f;
+            nebulaRect.localScale = new Vector3(nebulaScale, nebulaScale, 1f);
+
+            // パーティクル: 徐々に表示
+            float particleAlpha = Mathf.Clamp01((t - 0.1f) / 0.2f);
+            foreach (var (srt, simg, ang, rad, spd) in galaxyParticles)
             {
                 float curAngle = ang + galaxyTime * spd;
-                float curRad = rad * (1f - t * 0.3f); // 少し中心に吸引
-                el.style.left = cx + Mathf.Cos(curAngle) * curRad;
-                el.style.top = cy + Mathf.Sin(curAngle) * curRad;
+                float curRad = rad * (1f - t * 0.3f);
+                srt.anchoredPosition = new Vector2(
+                    Mathf.Cos(curAngle) * curRad,
+                    Mathf.Sin(curAngle) * curRad);
+                var sc = simg.color;
+                simg.color = new Color(sc.r, sc.g, sc.b, particleAlpha * (sc.r > 0.9f ? 0.8f : 0.6f));
             }
-
-            // 吸引パーティクル: 外から中心へ
-            foreach (var (el, ang, startR, life) in suckParticles)
+            foreach (var (prt, pimg, ang, startR, life) in suckParticles)
             {
                 float lt = Mathf.Repeat(galaxyTime * 0.5f + life, 1f);
                 float curR = startR * (1f - lt);
-                el.style.left = cx + Mathf.Cos(ang + galaxyTime * 0.3f) * curR;
-                el.style.top = cy + Mathf.Sin(ang + galaxyTime * 0.3f) * curR;
-                el.style.opacity = lt < 0.8f ? 1f : (1f - (lt - 0.8f) / 0.2f);
+                prt.anchoredPosition = new Vector2(
+                    Mathf.Cos(ang + galaxyTime * 0.3f) * curR,
+                    Mathf.Sin(ang + galaxyTime * 0.3f) * curR);
+                float pa = particleAlpha * (lt < 0.8f ? 0.7f : (1f - (lt - 0.8f) / 0.2f) * 0.7f);
+                pimg.color = new Color(1f, 0.84f, 0f, pa);
             }
 
-            // ボス浮上: 下から中央へ (ease-out)
-            float riseT = t < 0.3f ? 0f : Mathf.Clamp01((t - 0.3f) / 0.7f);
-            float easeRise = 1f - Mathf.Pow(1f - riseT, 3f); // ease-out cubic
-            float yOffset = Mathf.Lerp(300f, -160f, easeRise);
-            bossContainer.style.translate = new UIE.StyleTranslate(new UIE.Translate(-160, yOffset));
+            // ボス浮上: 下(y=300)→中央(y=0) ease-out cubic
+            float riseT = t < 0.25f ? 0f : Mathf.Clamp01((t - 0.25f) / 0.6f);
+            float easeRise = 1f - Mathf.Pow(1f - riseT, 3f);
+            float bossY = Mathf.Lerp(300f, 0f, easeRise);
+            bossImgRect.anchoredPosition = new Vector2(0, bossY);
+            bossImg.color = new Color(1, 1, 1, riseT);
 
-            // ボスシルエット → 徐々に明らかに
-            bossShadow.style.backgroundColor = new Color(0, 0, 0, 0.85f * (1f - riseT * 0.6f));
-            bossSpriteEl.style.opacity = riseT * 0.8f;
-
-            // ボスオーラ: 徐々に光る
-            float auraA = riseT * 0.15f;
-            bossAura.style.backgroundColor = new Color(1f, 0.84f, 0f, auraA);
+            // ゴッドレイ: ボスに追従 + 回転
+            godRayRect.anchoredPosition = new Vector2(0, bossY);
+            godRayRect.localRotation = Quaternion.Euler(0, 0, galaxyTime * 15f);
+            float godRayAlpha = riseT * 0.7f;
+            godRayImg.color = new Color(1, 1, 1, godRayAlpha);
+            // ゴッドレイを少し拡大
+            float grScale = 1f + riseT * 0.5f;
+            godRayRect.localScale = new Vector3(grScale, grScale, 1f);
 
             yield return null;
         }
@@ -3867,64 +3969,60 @@ public class MapManager : MonoBehaviour
         }
 
         // ボス完全表示
-        bossShadow.style.backgroundColor = new Color(0, 0, 0, 0.1f);
-        bossSpriteEl.style.opacity = 1f;
-        bossAura.style.backgroundColor = new Color(1f, 0.84f, 0f, 0.25f);
+        bossImg.color = Color.white;
+        godRayImg.color = new Color(1, 1, 1, 0.8f);
 
         yield return new WaitForSeconds(0.5f);
 
-        // --- Phase 4: タイトルタイポグラフィ ---
-        // 銀河を暗くする
-        foreach (var (el, _, _, _) in galaxyParticles)
-            el.style.opacity = 0.3f;
+        // --- Phase 4: ロゴタイトル ---
+        // パーティクルを暗くする
+        foreach (var (_, simg, _, _, _) in galaxyParticles)
+        {
+            var sc = simg.color;
+            simg.color = new Color(sc.r, sc.g, sc.b, sc.a * 0.3f);
+        }
 
-        var titleContainer = new UIE.VisualElement();
-        titleContainer.style.position = UIE.Position.Absolute;
-        titleContainer.style.width = UIE.Length.Percent(100);
-        titleContainer.style.height = UIE.Length.Percent(100);
-        titleContainer.style.flexDirection = UIE.FlexDirection.Column;
-        titleContainer.style.justifyContent = UIE.Justify.FlexStart;
-        titleContainer.style.alignItems = UIE.Align.Center;
-        titleContainer.style.paddingTop = 120;
-        titleContainer.pickingMode = UIE.PickingMode.Ignore;
-        cutsceneOverlay.Add(titleContainer);
+        // ⑤ 質感のあるロゴテキスト画像（RawImageで背景色なし）
+        var logoObj = new GameObject("ego_mother_logo");
+        logoObj.transform.SetParent(cutsceneCanvasRoot.transform, false);
+        var logoRect = logoObj.AddComponent<RectTransform>();
+        logoRect.anchorMin = new Vector2(0.5f, 0.5f);
+        logoRect.anchorMax = new Vector2(0.5f, 0.5f);
+        logoRect.sizeDelta = new Vector2(900, 450);
+        logoRect.anchoredPosition = new Vector2(0, 700);
+        var logoRaw = logoObj.AddComponent<RawImage>();
+        logoRaw.raycastTarget = false;
+        var logoTex = Resources.Load<Texture2D>("Map/4th/ego_mother_logo");
+        if (logoTex != null)
+            logoRaw.texture = logoTex;
+        logoRaw.color = new Color(1, 1, 1, 0); // 初期透明
+        // ロゴ背後の小さなレンズフレア（加算合成）
+        var logoFlareImg = CreateCutsceneImage("Map/4th/黄金のレンズフレア", new Vector2(500, 500), true);
+        var logoFlareRect = logoFlareImg.GetComponent<RectTransform>();
+        logoFlareRect.anchoredPosition = new Vector2(0, 700);
+        logoFlareImg.transform.SetSiblingIndex(logoObj.transform.GetSiblingIndex()); // ロゴの後ろに
 
-        // メイン名
-        var bossNameLabel = UIHelper.CreateLabel("", "map-message-text");
-        bossNameLabel.style.color = new Color(1f, 0.84f, 0f, 0f);
-        bossNameLabel.style.fontSize = 48;
-        bossNameLabel.style.letterSpacing = 12;
-        bossNameLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
-        UIHelper.ApplyFontBold(bossNameLabel);
-        titleContainer.Add(bossNameLabel);
-
-        // サブタイトル
-        var subtitleLabel = UIHelper.CreateLabel("", "map-message-text");
-        subtitleLabel.style.color = new Color(0.9f, 0.85f, 0.7f, 0f);
-        subtitleLabel.style.fontSize = 24;
-        subtitleLabel.style.letterSpacing = 8;
-        subtitleLabel.style.marginTop = 16;
-        subtitleLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
-        UIHelper.ApplyFont(subtitleLabel);
-        titleContainer.Add(subtitleLabel);
-
-        // タイトル文字フェードイン
-        bossNameLabel.text = "EGO MOTHER MACHINE";
-        subtitleLabel.text = "- THE FINAL DESTINY -";
-
+        // ロゴフェードイン + ゴッドレイ回転継続
         fadeEl = 0f;
         while (fadeEl < 1.5f)
         {
             fadeEl += Time.deltaTime;
             float t = Mathf.Clamp01(fadeEl / 1.5f);
-            bossNameLabel.style.color = new Color(1f, 0.84f, 0f, t);
-            // サブタイトルは少し遅れて
-            float st = Mathf.Clamp01((fadeEl - 0.5f) / 1f);
-            subtitleLabel.style.color = new Color(0.9f, 0.85f, 0.7f, st);
+            galaxyTime += Time.deltaTime;
 
-            // ボスオーラ脈動
-            float pulse = 0.2f + 0.1f * Mathf.Sin(fadeEl * 4f);
-            bossAura.style.backgroundColor = new Color(1f, 0.84f, 0f, pulse);
+            // ロゴ画像フェードイン
+            logoRaw.color = new Color(1, 1, 1, t);
+
+            // ロゴ背後フレア: 少し遅れてフェードイン + 脈動
+            float flareT = Mathf.Clamp01((fadeEl - 0.3f) / 1f);
+            float flarePulse = flareT * (0.3f + 0.1f * Mathf.Sin(fadeEl * 4f));
+            logoFlareImg.color = new Color(1, 1, 1, flarePulse);
+
+            // ゴッドレイ回転継続 + 脈動
+            godRayRect.localRotation = Quaternion.Euler(0, 0, galaxyTime * 15f);
+            float grPulse = 0.7f + 0.15f * Mathf.Sin(fadeEl * 3f);
+            godRayImg.color = new Color(1, 1, 1, grPulse);
+
             yield return null;
         }
 
@@ -3933,20 +4031,40 @@ public class MapManager : MonoBehaviour
         // SE pitch戻す
         if (seSource != null) seSource.pitch = 1f;
 
-        // --- Phase 5: 画面フェードアウト → バトルシーンへ遷移 ---
+        // --- Phase 5: レンズフレア → ブラックアウト ---
+        // レンズフレアを全画面に拡大しながらフェードアウト
+        lensFlareRect.localScale = Vector3.one;
         fadeEl = 0f;
         while (fadeEl < 1.2f)
         {
             fadeEl += Time.deltaTime;
             float t = Mathf.Clamp01(fadeEl / 1.2f);
-            // 黄金フラッシュからブラックアウト
-            float r = Mathf.Lerp(1f, 0f, t);
-            float g = Mathf.Lerp(0.84f, 0f, t);
-            cutsceneOverlay.style.backgroundColor = new Color(r, g, 0f, 1f);
+            galaxyTime += Time.deltaTime;
+
+            // レンズフレア: 拡大しながら輝く→消える
+            float flareAlpha = t < 0.4f ? t / 0.4f : 1f - (t - 0.4f) / 0.6f;
+            lensFlareImg.color = new Color(1, 1, 1, flareAlpha * 0.8f);
+            float flareScale = 1f + t * 1.5f;
+            lensFlareRect.localScale = new Vector3(flareScale, flareScale, 1f);
+
+            // 他の要素をフェードアウト
+            float fadeOut = Mathf.Clamp01((t - 0.3f) / 0.7f);
+            nebulaImg.color = new Color(1, 1, 1, 1f - fadeOut);
+            bossImg.color = new Color(1, 1, 1, 1f - fadeOut);
+            godRayImg.color = new Color(1, 1, 1, (1f - fadeOut) * 0.7f);
+            logoRaw.color = new Color(1, 1, 1, 1f - fadeOut);
+            logoFlareImg.color = new Color(1, 1, 1, (1f - fadeOut) * 0.3f);
+
+            // 黒幕を徐々に重ねる
+            blackImg.color = new Color(0, 0, 0, fadeOut);
+
+            // ゴッドレイ回転
+            godRayRect.localRotation = Quaternion.Euler(0, 0, galaxyTime * 15f);
+
             yield return null;
         }
 
-        cutsceneOverlay.style.backgroundColor = new Color(0, 0, 0, 1f);
+        blackImg.color = Color.black;
 
         // DataCarrier設定
         if (DataCarrier.Instance != null)
@@ -3957,6 +4075,11 @@ public class MapManager : MonoBehaviour
         }
 
         yield return StartCoroutine(CaptureMapScreenshot());
+
+        // カットシーンCanvas破棄
+        Destroy(cutsceneCanvasRoot);
+        cutsceneCanvasRoot = null;
+
         SceneManager.LoadScene("BattleScene");
     }
 
@@ -4041,6 +4164,46 @@ public class MapManager : MonoBehaviour
         if (stellaBgRect != null)
         {
             stellaBgRect.localRotation = Quaternion.Euler(0, 0, stellaCrystalPulseTime * 6f);
+        }
+
+        // ■1. 虹色（レインボー）明滅: パステルピンク〜青〜紫を緩やかにクロスフェード
+        if (stellaBgImg != null)
+        {
+            float hue = Mathf.Repeat(stellaCrystalPulseTime * 0.03f, 1f); // 約33秒で1周
+            float emission = 0.35f + 0.15f * Mathf.Sin(stellaCrystalPulseTime * 0.5f); // 明滅
+            Color rainbow = Color.HSVToRGB(hue, 0.25f, emission + 0.3f);
+            stellaBgImg.color = rainbow;
+        }
+
+        // ■2. 視差効果（パララックス）: カメラ移動の5%分だけ背景を逆方向にずらす
+        if (stellaBgRect != null)
+        {
+            float camX = (playerTileX - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+            float camY = (playerTileY - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+            Vector2 parallaxOffset = new Vector2(-camX * 0.05f, -camY * 0.05f);
+            stellaBgRect.anchoredPosition = stellaBgBasePos + parallaxOffset;
+            if (stellaDarkOverlayRect != null)
+                stellaDarkOverlayRect.anchoredPosition = stellaDarkBasePos + parallaxOffset * 0.5f;
+        }
+
+        // ■3. グリッター（光の瞬き）: sin波による明滅＋微細なUVドリフト
+        for (int gi = 0; gi < stellaGlitters.Count; gi++)
+        {
+            var (grt, gimg, gphase, gspeed) = stellaGlitters[gi];
+            if (grt == null) continue;
+
+            // 明滅: ゆっくり現れて消える
+            float glitterAlpha = Mathf.Max(0f,
+                Mathf.Sin(stellaCrystalPulseTime * gspeed + gphase));
+            glitterAlpha = glitterAlpha * glitterAlpha * 0.8f; // 二乗で鋭いきらめき
+            var gc = gimg.color;
+            gimg.color = new Color(gc.r, gc.g, gc.b, glitterAlpha);
+
+            // UVドリフト: 極めてゆっくりsin波で揺れる
+            var pos = grt.anchoredPosition;
+            pos.x += Mathf.Cos(stellaCrystalPulseTime * 0.01f + gphase) * 0.3f * Time.deltaTime;
+            pos.y += Mathf.Sin(stellaCrystalPulseTime * 0.01f + gphase * 1.3f) * 0.2f * Time.deltaTime;
+            grt.anchoredPosition = pos;
         }
 
         // ガーディアンオーラリング回転
@@ -5170,9 +5333,9 @@ public class MapManager : MonoBehaviour
 
         playerImage = playerObj.AddComponent<Image>();
         playerImage.raycastTarget = false;
-        playerImage.enabled = false; // 背景は不要、パーツで描画
 
-        GenerateRpgCharacter(playerObj.transform);
+        LoadPlayerSprites();
+        ApplyPlayerSprite();
 
         // ステラ・オリジン: オーラ削除済み
 
@@ -5238,293 +5401,42 @@ public class MapManager : MonoBehaviour
 
     void RebuildPlayerSprite()
     {
-        if (playerObj == null) return;
-        crawlHandL = crawlHandR = null;
-        crawlKneeL = crawlKneeR = null;
-        // 子オブジェクト（キャラパーツ）を全削除
-        for (int i = playerObj.transform.childCount - 1; i >= 0; i--)
-            Destroy(playerObj.transform.GetChild(i).gameObject);
-        GenerateRpgCharacter(playerObj.transform);
+        if (playerImage == null) return;
+        int dir = playerDirection; // 0=south,1=north,2=west,3=east
+        if (playerIdleSprites[dir] != null)
+        {
+            playerImage.sprite = playerIdleSprites[dir];
+        }
+        walkFrameIndex = 0;
+        walkFrameTimer = 0f;
     }
 
-    // SDチビキャラ生成（4方向対応）
-    void GenerateRpgCharacter(Transform parent)
+    void LoadPlayerSprites()
     {
-        string gender = "男の子";
-        bool godBaby = false;
-        int intelligence = 60;
-
-        if (DataCarrier.Instance != null)
+        string[] dirNames = { "south", "north", "west", "east" };
+        for (int i = 0; i < 4; i++)
         {
-            gender = DataCarrier.Instance.babyGender;
-            godBaby = DataCarrier.Instance.isGodBaby;
-            intelligence = DataCarrier.Instance.babyIntelligence;
-        }
-
-        bool isFemale = gender == "女の子";
-        int dir = playerDirection; // 0=下, 1=上, 2=左, 3=右
-        float s = 1.0f;
-
-        // 色の決定
-        Color skin = new Color(0.98f, 0.89f, 0.82f);
-        Color[] hairTones = {
-            new Color(0.08f, 0.06f, 0.05f),
-            new Color(0.2f, 0.12f, 0.08f),
-            new Color(0.35f, 0.22f, 0.12f),
-            new Color(0.55f, 0.38f, 0.2f)
-        };
-        Color hair = hairTones[Mathf.Clamp(intelligence / 25, 0, 3)];
-        Color clothMain = isFemale
-            ? new Color(0.95f, 0.45f, 0.6f)
-            : new Color(0.3f, 0.5f, 0.85f);
-        Color clothDark = isFemale
-            ? new Color(0.8f, 0.3f, 0.45f)
-            : new Color(0.2f, 0.35f, 0.7f);
-        float xFlip = (dir == 3) ? -1f : 1f;
-
-        // STAR BABYオーラ（低重心に合わせて調整）
-        if (godBaby)
-        {
-            var aura = FacePart("Aura", parent, new Vector2(0, -4 * s), new Vector2(76 * s, 56 * s));
-            aura.AddComponent<Image>().color = new Color(1f, 0.85f, 0.2f, 0.18f);
-        }
-
-        // === 影（四つん這いなので横に広い） ===
-        FacePart("Shadow", parent, new Vector2(0, -28 * s), new Vector2(48 * s, 10 * s))
-            .AddComponent<Image>().color = new Color(0, 0, 0, 0.25f);
-
-        if (dir == 0) // ===== 正面（手前にはいはい）=====
-        {
-            // 膝（地面）
-            var kneeLObj0 = FacePart("KneeL", parent, new Vector2(-8 * s, -22 * s), new Vector2(10 * s, 8 * s));
-            kneeLObj0.AddComponent<Image>().color = clothDark;
-            crawlKneeL = kneeLObj0.GetComponent<RectTransform>();
-            crawlKneeLBase = crawlKneeL.anchoredPosition;
-            var kneeRObj0 = FacePart("KneeR", parent, new Vector2(8 * s, -22 * s), new Vector2(10 * s, 8 * s));
-            kneeRObj0.AddComponent<Image>().color = clothDark;
-            crawlKneeR = kneeRObj0.GetComponent<RectTransform>();
-            crawlKneeRBase = crawlKneeR.anchoredPosition;
-
-            // 武器（背中に横に寝かせる：胴体の後ろ）
-            var sword = FacePart("Sword", parent, new Vector2(0, 2 * s), new Vector2(22 * s, 4 * s));
-            sword.AddComponent<Image>().color = new Color(0.75f, 0.75f, 0.8f);
-            FacePart("SwordHilt", parent, new Vector2(14 * s, 2 * s), new Vector2(4 * s, 8 * s))
-                .AddComponent<Image>().color = new Color(0.55f, 0.35f, 0.15f);
-
-            // 胴体（横長）
-            FacePart("Body", parent, new Vector2(0, -4 * s), new Vector2(30 * s, 18 * s))
-                .AddComponent<Image>().color = clothMain;
-            if (godBaby)
+            playerIdleSprites[i] = Resources.Load<Sprite>("Character/cute_baby/rotations/" + dirNames[i]);
+            var frames = new List<Sprite>();
+            for (int f = 0; f < 6; f++)
             {
-                FacePart("BodyTrim", parent, new Vector2(0, -4 * s), new Vector2(34 * s, 20 * s))
-                    .AddComponent<Image>().color = new Color(1f, 0.84f, 0f, 0.3f);
-                FacePart("BodyOver", parent, new Vector2(0, -4 * s), new Vector2(30 * s, 18 * s))
-                    .AddComponent<Image>().color = clothMain;
+                var spr = Resources.Load<Sprite>(
+                    "Character/cute_baby/animations/walk/" + dirNames[i] + "/frame_00" + f);
+                if (spr != null) frames.Add(spr);
             }
-
-            // 腕（体の横から地面へ）
-            FacePart("ArmL", parent, new Vector2(-18 * s, -8 * s), new Vector2(8 * s, 14 * s))
-                .AddComponent<Image>().color = clothDark;
-            FacePart("ArmR", parent, new Vector2(18 * s, -8 * s), new Vector2(8 * s, 14 * s))
-                .AddComponent<Image>().color = clothDark;
-            // 手（地面に）
-            var handLObj0 = FacePart("HandL", parent, new Vector2(-18 * s, -18 * s), new Vector2(8 * s, 8 * s));
-            handLObj0.AddComponent<Image>().color = skin;
-            crawlHandL = handLObj0.GetComponent<RectTransform>();
-            crawlHandLBase = crawlHandL.anchoredPosition;
-            var handRObj0 = FacePart("HandR", parent, new Vector2(18 * s, -18 * s), new Vector2(8 * s, 8 * s));
-            handRObj0.AddComponent<Image>().color = skin;
-            crawlHandR = handRObj0.GetComponent<RectTransform>();
-            crawlHandRBase = crawlHandR.anchoredPosition;
-
-            // 頭（大きめ、持ち上げてる）
-            FacePart("Head", parent, new Vector2(0, 12 * s), new Vector2(36 * s, 32 * s))
-                .AddComponent<Image>().color = skin;
-            // 耳
-            FacePart("EarL", parent, new Vector2(-19 * s, 10 * s), new Vector2(6 * s, 10 * s))
-                .AddComponent<Image>().color = skin;
-            FacePart("EarR", parent, new Vector2(19 * s, 10 * s), new Vector2(6 * s, 10 * s))
-                .AddComponent<Image>().color = skin;
-            // 髪
-            FacePart("HairTop", parent, new Vector2(0, 26 * s), new Vector2(40 * s, 14 * s))
-                .AddComponent<Image>().color = hair;
-            FacePart("HairBangs", parent, new Vector2(0, 20 * s), new Vector2(36 * s, 8 * s))
-                .AddComponent<Image>().color = new Color(hair.r * 0.85f, hair.g * 0.85f, hair.b * 0.85f);
-            FacePart("HairSideL", parent, new Vector2(-17 * s, 14 * s), new Vector2(6 * s, 12 * s))
-                .AddComponent<Image>().color = hair;
-            FacePart("HairSideR", parent, new Vector2(17 * s, 14 * s), new Vector2(6 * s, 12 * s))
-                .AddComponent<Image>().color = hair;
-            // 目
-            DrawSdEye(parent, -9 * s, 12 * s, s, isFemale);
-            DrawSdEye(parent, 9 * s, 12 * s, s, isFemale);
-            // 口
-            FacePart("Mouth", parent, new Vector2(0, 2 * s), new Vector2(8 * s, 3 * s))
-                .AddComponent<Image>().color = new Color(0.82f, 0.55f, 0.55f);
-            // ほっぺ
-            float cheekAlpha = isFemale ? 0.4f : 0.15f;
-            Color cheekC = isFemale
-                ? new Color(1f, 0.5f, 0.55f, cheekAlpha)
-                : new Color(1f, 0.7f, 0.7f, cheekAlpha);
-            FacePart("CheekL", parent, new Vector2(-12 * s, 6 * s), new Vector2(8 * s, 6 * s))
-                .AddComponent<Image>().color = cheekC;
-            FacePart("CheekR", parent, new Vector2(12 * s, 6 * s), new Vector2(8 * s, 6 * s))
-                .AddComponent<Image>().color = cheekC;
-        }
-        else if (dir == 1) // ===== 背面（奥にはいはい）=====
-        {
-            // 膝（カメラ側＝手前に見える）
-            var kneeLObj1 = FacePart("KneeL", parent, new Vector2(-8 * s, -22 * s), new Vector2(10 * s, 8 * s));
-            kneeLObj1.AddComponent<Image>().color = clothDark;
-            crawlKneeL = kneeLObj1.GetComponent<RectTransform>();
-            crawlKneeLBase = crawlKneeL.anchoredPosition;
-            var kneeRObj1 = FacePart("KneeR", parent, new Vector2(8 * s, -22 * s), new Vector2(10 * s, 8 * s));
-            kneeRObj1.AddComponent<Image>().color = clothDark;
-            crawlKneeR = kneeRObj1.GetComponent<RectTransform>();
-            crawlKneeRBase = crawlKneeR.anchoredPosition;
-
-            // 手・腕（奥側、胴体に隠れ気味）
-            var handLObj1 = FacePart("HandL", parent, new Vector2(-18 * s, -18 * s), new Vector2(8 * s, 8 * s));
-            handLObj1.AddComponent<Image>().color = skin;
-            crawlHandL = handLObj1.GetComponent<RectTransform>();
-            crawlHandLBase = crawlHandL.anchoredPosition;
-            var handRObj1 = FacePart("HandR", parent, new Vector2(18 * s, -18 * s), new Vector2(8 * s, 8 * s));
-            handRObj1.AddComponent<Image>().color = skin;
-            crawlHandR = handRObj1.GetComponent<RectTransform>();
-            crawlHandRBase = crawlHandR.anchoredPosition;
-            FacePart("ArmL", parent, new Vector2(-16 * s, -10 * s), new Vector2(8 * s, 12 * s))
-                .AddComponent<Image>().color = clothDark;
-            FacePart("ArmR", parent, new Vector2(16 * s, -10 * s), new Vector2(8 * s, 12 * s))
-                .AddComponent<Image>().color = clothDark;
-
-            // 頭（後頭部、胴体より下に隠れ気味）
-            FacePart("Head", parent, new Vector2(0, 6 * s), new Vector2(32 * s, 26 * s))
-                .AddComponent<Image>().color = skin;
-            // 後ろ髪
-            FacePart("HairBack", parent, new Vector2(0, 12 * s), new Vector2(36 * s, 24 * s))
-                .AddComponent<Image>().color = hair;
-            FacePart("HairBackHL", parent, new Vector2(0, 18 * s), new Vector2(30 * s, 10 * s))
-                .AddComponent<Image>().color = new Color(hair.r * 1.15f, hair.g * 1.15f, hair.b * 1.15f);
-
-            // 胴体（横長、頭に被さる）
-            FacePart("Body", parent, new Vector2(0, -4 * s), new Vector2(30 * s, 18 * s))
-                .AddComponent<Image>().color = clothMain;
-            if (godBaby)
-            {
-                FacePart("BodyTrim", parent, new Vector2(0, -4 * s), new Vector2(34 * s, 20 * s))
-                    .AddComponent<Image>().color = new Color(1f, 0.84f, 0f, 0.3f);
-                FacePart("BodyOver", parent, new Vector2(0, -4 * s), new Vector2(30 * s, 18 * s))
-                    .AddComponent<Image>().color = clothMain;
-                // ケープ（背面で見える）
-                FacePart("Cape", parent, new Vector2(0, -2 * s), new Vector2(34 * s, 22 * s))
-                    .AddComponent<Image>().color = new Color(1f, 0.84f, 0f, 0.5f);
-            }
-
-            // 武器（背中の上に見える）
-            var sword = FacePart("Sword", parent, new Vector2(0, 0), new Vector2(22 * s, 4 * s));
-            sword.AddComponent<Image>().color = new Color(0.75f, 0.75f, 0.8f);
-            FacePart("SwordHilt", parent, new Vector2(14 * s, 0), new Vector2(4 * s, 8 * s))
-                .AddComponent<Image>().color = new Color(0.55f, 0.35f, 0.15f);
-
-            // おしり（おむつ風、目立つ位置）
-            FacePart("Butt", parent, new Vector2(0, 8 * s), new Vector2(22 * s, 14 * s))
-                .AddComponent<Image>().color = new Color(
-                    Mathf.Min(clothMain.r * 1.15f, 1f),
-                    Mathf.Min(clothMain.g * 1.15f, 1f),
-                    Mathf.Min(clothMain.b * 1.15f, 1f));
-        }
-        else // ===== 左右（横向き四つん這い）=====
-        {
-            // 膝（後方＝進行方向の逆側）
-            var kneeObjS = FacePart("Knee", parent, new Vector2(12 * xFlip * s, -22 * s), new Vector2(10 * s, 8 * s));
-            kneeObjS.AddComponent<Image>().color = clothDark;
-            crawlKneeL = kneeObjS.GetComponent<RectTransform>();
-            crawlKneeLBase = crawlKneeL.anchoredPosition;
-            crawlKneeR = null;
-
-            // 胴体（横長）
-            FacePart("Body", parent, new Vector2(0, -4 * s), new Vector2(34 * s, 16 * s))
-                .AddComponent<Image>().color = clothMain;
-            if (godBaby)
-            {
-                FacePart("BodyTrim", parent, new Vector2(0, -4 * s), new Vector2(38 * s, 18 * s))
-                    .AddComponent<Image>().color = new Color(1f, 0.84f, 0f, 0.3f);
-                FacePart("BodyOver", parent, new Vector2(0, -4 * s), new Vector2(34 * s, 16 * s))
-                    .AddComponent<Image>().color = clothMain;
-                // ケープ（後方）
-                FacePart("Cape", parent, new Vector2(4 * xFlip * s, 0), new Vector2(26 * s, 18 * s))
-                    .AddComponent<Image>().color = new Color(1f, 0.84f, 0f, 0.5f);
-            }
-
-            // 腕・手（進行方向側、地面に）
-            FacePart("Arm", parent, new Vector2(-14 * xFlip * s, -10 * s), new Vector2(8 * s, 12 * s))
-                .AddComponent<Image>().color = clothDark;
-            var handObjS = FacePart("Hand", parent, new Vector2(-14 * xFlip * s, -20 * s), new Vector2(8 * s, 8 * s));
-            handObjS.AddComponent<Image>().color = skin;
-            crawlHandL = handObjS.GetComponent<RectTransform>();
-            crawlHandLBase = crawlHandL.anchoredPosition;
-            crawlHandR = null;
-
-            // 武器（背中に斜め）
-            var sword = FacePart("Sword", parent, new Vector2(2 * xFlip * s, 2 * s), new Vector2(22 * s, 4 * s));
-            sword.transform.localRotation = Quaternion.Euler(0, 0, -20 * xFlip);
-            sword.AddComponent<Image>().color = new Color(0.75f, 0.75f, 0.8f);
-            FacePart("SwordHilt", parent, new Vector2(12 * xFlip * s, 0), new Vector2(4 * s, 8 * s))
-                .AddComponent<Image>().color = new Color(0.55f, 0.35f, 0.15f);
-
-            // 頭（進行方向側、低め）
-            FacePart("Head", parent, new Vector2(-12 * xFlip * s, 8 * s), new Vector2(32 * s, 28 * s))
-                .AddComponent<Image>().color = skin;
-            // 耳（頭の進行方向側）
-            FacePart("Ear", parent, new Vector2(-26 * xFlip * s, 6 * s), new Vector2(6 * s, 10 * s))
-                .AddComponent<Image>().color = skin;
-            // 髪
-            FacePart("HairTop", parent, new Vector2(-14 * xFlip * s, 20 * s), new Vector2(36 * s, 14 * s))
-                .AddComponent<Image>().color = hair;
-            FacePart("HairFront", parent, new Vector2(-22 * xFlip * s, 14 * s), new Vector2(12 * s, 12 * s))
-                .AddComponent<Image>().color = hair;
-            FacePart("HairBack", parent, new Vector2(-4 * xFlip * s, 10 * s), new Vector2(12 * s, 16 * s))
-                .AddComponent<Image>().color = hair;
-            // 目（頭のカメラ側）
-            DrawSdEye(parent, -8 * xFlip * s, 8 * s, s, isFemale);
-            // ほっぺ
-            if (isFemale)
-            {
-                FacePart("Cheek", parent, new Vector2(-4 * xFlip * s, 2 * s), new Vector2(8 * s, 6 * s))
-                    .AddComponent<Image>().color = new Color(1f, 0.5f, 0.55f, 0.35f);
-            }
-        }
-
-        // === STARオーラ（半透明オーバーレイ、最前面、低重心対応） ===
-        int areaForGodGlow = DataCarrier.Instance != null ? DataCarrier.Instance.currentArea : 0;
-        if (godBaby && areaForGodGlow != 8)
-        {
-            var glow = FacePart("GodGlow", parent, new Vector2(0, -4 * s), new Vector2(56 * s, 50 * s));
-            glow.AddComponent<Image>().color = new Color(1f, 0.9f, 0.4f, 0.1f);
+            playerWalkSprites[i] = frames.ToArray();
         }
     }
 
-    void DrawSdEye(Transform parent, float x, float y, float s, bool isFemale)
+    void ApplyPlayerSprite()
     {
-        // 白目（SD風で大きめ）
-        float ew = 10 * s;
-        float eh = 9 * s;
-        FacePart("EyeW", parent, new Vector2(x, y), new Vector2(ew, eh))
-            .AddComponent<Image>().color = new Color(0.95f, 0.95f, 0.97f);
-        // 虹彩
-        FacePart("Iris", parent, new Vector2(x, y - 1 * s), new Vector2(ew * 0.7f, eh * 0.75f))
-            .AddComponent<Image>().color = new Color(0.18f, 0.12f, 0.08f);
-        // 瞳孔
-        FacePart("Pupil", parent, new Vector2(x, y - 1 * s), new Vector2(ew * 0.3f, eh * 0.3f))
-            .AddComponent<Image>().color = new Color(0.02f, 0.02f, 0.02f);
-        // ハイライト
-        FacePart("HL", parent, new Vector2(x - 2 * s, y + 1 * s), new Vector2(3 * s, 3 * s))
-            .AddComponent<Image>().color = Color.white;
-        // まつげ（女の子）
-        if (isFemale)
-        {
-            FacePart("Lash", parent, new Vector2(x, y + eh * 0.45f), new Vector2(ew * 1.1f, 2 * s))
-                .AddComponent<Image>().color = new Color(0.1f, 0.08f, 0.06f);
-        }
+        if (playerImage == null) return;
+        int dir = playerDirection;
+        playerImage.enabled = true;
+        playerImage.preserveAspect = true;
+        playerImage.color = Color.white;
+        if (playerIdleSprites[dir] != null)
+            playerImage.sprite = playerIdleSprites[dir];
     }
 
     GameObject FacePart(string name, Transform parent, Vector2 pos, Vector2 size)
@@ -6030,19 +5942,16 @@ public class MapManager : MonoBehaviour
             }
         }
 
-        // はいはいアニメーション（手足を交互に動かす：クロスクロール）
-        if (crawlHandL != null)
+        // 歩行スプライトアニメーション
+        if (playerWalkSprites[playerDirection] != null && playerWalkSprites[playerDirection].Length > 0)
         {
-            crawlAnimTime += Time.deltaTime * 10f;
-            float offset = Mathf.Sin(crawlAnimTime) * 6f;
-            // 左手↑ ↔ 右膝↑（交差パターン）
-            crawlHandL.anchoredPosition = crawlHandLBase + new Vector2(0, offset);
-            if (crawlHandR != null)
-                crawlHandR.anchoredPosition = crawlHandRBase + new Vector2(0, -offset);
-            if (crawlKneeL != null)
-                crawlKneeL.anchoredPosition = crawlKneeLBase + new Vector2(0, -offset);
-            if (crawlKneeR != null)
-                crawlKneeR.anchoredPosition = crawlKneeRBase + new Vector2(0, offset);
+            walkFrameTimer += Time.deltaTime;
+            if (walkFrameTimer >= WALK_FRAME_INTERVAL)
+            {
+                walkFrameTimer -= WALK_FRAME_INTERVAL;
+                walkFrameIndex = (walkFrameIndex + 1) % playerWalkSprites[playerDirection].Length;
+                playerImage.sprite = playerWalkSprites[playerDirection][walkFrameIndex];
+            }
         }
 
         if (Vector2.Distance(playerRect.anchoredPosition, targetPosition) < 0.5f)
@@ -6054,12 +5963,11 @@ public class MapManager : MonoBehaviour
                 seSource.Stop();
             // 歩行パーティクル
             SpawnStepParticles(playerRect.anchoredPosition.x, playerRect.anchoredPosition.y);
-            // はいはいアニメーションリセット
-            crawlAnimTime = 0f;
-            if (crawlHandL != null) crawlHandL.anchoredPosition = crawlHandLBase;
-            if (crawlHandR != null) crawlHandR.anchoredPosition = crawlHandRBase;
-            if (crawlKneeL != null) crawlKneeL.anchoredPosition = crawlKneeLBase;
-            if (crawlKneeR != null) crawlKneeR.anchoredPosition = crawlKneeRBase;
+            // 歩行アニメリセット → 静止スプライトに戻す
+            walkFrameIndex = 0;
+            walkFrameTimer = 0f;
+            if (playerIdleSprites[playerDirection] != null)
+                playerImage.sprite = playerIdleSprites[playerDirection];
 
             // 歩行毒ダメージ
             ApplyPoisonStep();

@@ -398,7 +398,7 @@ public class BattleManager : MonoBehaviour
             enemySpeed = 90;
             isDevilEnemy = false;
             enemyBgColor = new Color(0.1f, 0.05f, 0.15f);
-            loadedEnemySprite = Resources.Load<Sprite>("EnemyBabys/boss/ego-mother-machine");
+            loadedEnemySprite = Resources.Load<Sprite>("EnemyBabys/boss/ego-mother");
         }
         else if (fromMap && bossBattle && area == 4)
         {
@@ -602,13 +602,39 @@ public class BattleManager : MonoBehaviour
 
         var battleRoot = new UIE.VisualElement();
         battleRoot.AddToClassList("battle-root");
+        bool isFinalBossUI = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle && DataCarrier.Instance.currentArea == 8;
+        if (isFinalBossUI)
+            battleRoot.AddToClassList("battle-dark-theme");
         root.Add(battleRoot);
 
         // 背景（マップスクショがあれば使用 — ぼかし＋暗く）
         battleBgEl = new UIE.VisualElement();
         battleBgEl.AddToClassList("battle-bg");
         battleBgEl.pickingMode = UIE.PickingMode.Ignore;
-        if (DataCarrier.Instance != null && DataCarrier.Instance.battleBgTexture != null)
+        bool isFinalBoss = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle && DataCarrier.Instance.currentArea == 8;
+        if (isFinalBoss)
+        {
+            // エゴマザー戦: background.png + 暗いオーバーレイ
+            var bgSprite = Resources.Load<Sprite>("Map/4th/background");
+            if (bgSprite != null)
+                battleBgEl.style.backgroundImage = new UIE.StyleBackground(bgSprite);
+            else
+            {
+                var bgTex = Resources.Load<Texture2D>("Map/4th/background");
+                if (bgTex != null) battleBgEl.style.backgroundImage = new UIE.StyleBackground(bgTex);
+            }
+            battleBgEl.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
+
+            // 暗いオーバーレイをバトル背景の上に重ねる
+            var battleDarkLayer = new UIE.VisualElement();
+            battleDarkLayer.pickingMode = UIE.PickingMode.Ignore;
+            battleDarkLayer.style.position = UIE.Position.Absolute;
+            battleDarkLayer.style.left = 0; battleDarkLayer.style.top = 0;
+            battleDarkLayer.style.right = 0; battleDarkLayer.style.bottom = 0;
+            battleDarkLayer.style.backgroundColor = new Color(0, 0, 0, 0.75f);
+            battleBgEl.Add(battleDarkLayer);
+        }
+        else if (DataCarrier.Instance != null && DataCarrier.Instance.battleBgTexture != null)
         {
             var blurred = BlurTexture(DataCarrier.Instance.battleBgTexture, 4);
             var sprite = Sprite.Create(blurred, new Rect(0, 0, blurred.width, blurred.height), new Vector2(0.5f, 0.5f));
@@ -630,6 +656,10 @@ public class BattleManager : MonoBehaviour
         enemyAreaEl.style.opacity = 0;
         battleRoot.Add(enemyAreaEl);
         enemyPanel = BuildCharPanel(enemyAreaEl, false);
+        if (isFinalBossUI && enemyFaceMask != null)
+        {
+            enemyFaceMask.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(1.2f, 1.2f, 1f)));
+        }
 
         // 中央エリア（VS + ログ）
         centerAreaEl = new UIE.VisualElement();
@@ -2661,37 +2691,42 @@ public class BattleManager : MonoBehaviour
         {
             encounterImg.style.backgroundColor = enemyBgColor;
         }
-        encounterOverlay.Add(encounterImg);
+        bool isEgoMother = enemyName == "エゴ・マザー・マシーン";
 
-        // テキスト（クラウドプレートで包む）
-        var encounterPlate = new UIE.VisualElement();
-        encounterPlate.AddToClassList("battle-encounter-plate");
-        encounterPlate.pickingMode = UIE.PickingMode.Ignore;
-        var encounterText = new UIE.Label();
-        encounterText.AddToClassList("battle-encounter-text");
-        UIHelper.ApplyFontBold(encounterText);
-        encounterText.text = Localization.GetEnemy(enemyName) + " が あそびにきたよ！ ✨";
-        encounterPlate.Add(encounterText);
-        encounterOverlay.Add(encounterPlate);
+        if (isEgoMother)
+        {
+            // エゴマザー: エンカウント画面をスキップ（MapSceneの降臨演出で十分）
+        }
+        else
+        {
+            encounterOverlay.Add(encounterImg);
 
-        overlayRoot.Add(encounterOverlay);
+            var encounterPlate = new UIE.VisualElement();
+            encounterPlate.AddToClassList("battle-encounter-plate");
+            encounterPlate.pickingMode = UIE.PickingMode.Ignore;
+            var encounterText = new UIE.Label();
+            encounterText.AddToClassList("battle-encounter-text");
+            UIHelper.ApplyFontBold(encounterText);
+            encounterText.text = Localization.GetEnemy(enemyName) + " が あそびにきたよ！ ✨";
+            encounterPlate.Add(encounterText);
+            encounterOverlay.Add(encounterPlate);
 
-        // ハート・キラキラパーティクル放射（エンカウント開始時）
-        StartCoroutine(EncounterSparkleEffect(encounterOverlay));
+            overlayRoot.Add(encounterOverlay);
 
-        // バウンス登場アニメーション
-        yield return null;
-        yield return StartCoroutine(BounceInEffect(encounterImg));
+            // 通常エンカウント演出
+            StartCoroutine(EncounterSparkleEffect(encounterOverlay));
 
-        // プレートフェードイン
-        encounterPlate.AddToClassList("battle-encounter-plate-visible");
+            yield return null;
+            yield return StartCoroutine(BounceInEffect(encounterImg));
 
-        yield return new WaitForSeconds(0.8f);
+            encounterPlate.AddToClassList("battle-encounter-plate-visible");
 
-        // フェードアウト
-        encounterOverlay.AddToClassList("battle-encounter-overlay-hide");
-        yield return new WaitForSeconds(0.5f);
-        encounterOverlay.RemoveFromHierarchy();
+            yield return new WaitForSeconds(0.8f);
+
+            encounterOverlay.AddToClassList("battle-encounter-overlay-hide");
+            yield return new WaitForSeconds(0.5f);
+            encounterOverlay.RemoveFromHierarchy();
+        }
 
         // ボス戦前イントロ台詞
         bool isBossStart = DataCarrier.Instance != null && DataCarrier.Instance.isBossBattle;
@@ -2699,10 +2734,7 @@ public class BattleManager : MonoBehaviour
         {
             yield return StartCoroutine(ShowDevilLadyIntro());
         }
-        else if (isBossStart && enemyName == "エゴ・マザー・マシーン")
-        {
-            yield return StartCoroutine(ShowEgoMotherIntro());
-        }
+        // エゴ・マザー・マシーン: イントロカット（MapSceneの降臨演出で十分）
 
         // バトルUI フェードイン
         battleBgEl.AddToClassList("battle-ui-fadein");
