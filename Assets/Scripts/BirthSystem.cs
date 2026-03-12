@@ -4171,22 +4171,7 @@ public class BirthSystem : MonoBehaviour
         UIHelper.ApplyFont(skipBtn);
         btnRow.Add(skipBtn);
 
-        // dev用: デッサン風フィルター
-        var dessinBtn = new UIE.Button(() => OnEyeMarkConfirmDessin());
-        dessinBtn.style.height = 60;
-        dessinBtn.style.paddingLeft = 16;
-        dessinBtn.style.paddingRight = 16;
-        dessinBtn.style.marginTop = 8;
-        dessinBtn.style.backgroundColor = new UIE.StyleColor(new Color(0.85f, 0.85f, 0.85f));
-        dessinBtn.style.color = new UIE.StyleColor(Color.black);
-        dessinBtn.style.fontSize = 24;
-        dessinBtn.style.borderTopLeftRadius = 30;
-        dessinBtn.style.borderTopRightRadius = 30;
-        dessinBtn.style.borderBottomLeftRadius = 30;
-        dessinBtn.style.borderBottomRightRadius = 30;
-        dessinBtn.text = "[DEV] デッサン風";
-        UIHelper.ApplyFont(dessinBtn);
-        card.Add(dessinBtn);
+        // アニメ風ボタンは合成結果表示後に配置（DisplaySynthesizedBaby内）
     }
 
     void OnEyeMarkTap(UIE.PointerDownEvent evt)
@@ -4334,38 +4319,81 @@ public class BirthSystem : MonoBehaviour
         StartCoroutine(ApplyFilterAndComposite(leftEye, rightEye));
     }
 
-    void OnEyeMarkConfirmDessin()
+    IEnumerator ApplyAnimeToCurrentFace()
     {
-        Vector2 leftEye = eyePos1.x >= 0 ? eyePos1 : new Vector2(0.35f, 0.38f);
-        Vector2 rightEye = eyePos2.x >= 0 ? eyePos2 : new Vector2(0.65f, 0.38f);
-
-        if (eyePos1.x >= 0 && eyePos2.x >= 0)
+        // 合成済み画像（おくるみ+顔）を取得
+        Texture2D composite = babySynthesizer.CaptureToTexture2D();
+        if (composite == null)
         {
-            Vector2 eyeMid = (leftEye + rightEye) * 0.5f;
-            float eyeDist = Vector2.Distance(leftEye, rightEye);
-            detectedFaceLandmarks = new FaceLandmarkResult
+            Debug.LogError("[BirthSystem] composite texture is null");
+            yield break;
+        }
+
+        ShowFilterLoadingOverlay();
+        yield return null;
+
+        Debug.Log($"[BirthSystem] AnimeGAN input (composite): {composite.width}x{composite.height}");
+
+        // 合成済み画像全体にAnimeGAN適用
+        Texture2D filtered = AnimeGANFilter.Apply(composite);
+        Destroy(composite);
+
+        if (filtered == null)
+        {
+            Debug.LogError("[BirthSystem] AnimeGAN filter failed");
+            HideFilterLoadingOverlay();
+            yield break;
+        }
+
+        HideFilterLoadingOverlay();
+
+        // おくるみなしでアニメ風画像をそのまま表示
+        DisplayAnimeResult(filtered);
+
+        if (seKirakira != null && seSource != null)
+            seSource.PlayOneShot(seKirakira, 1f);
+
+        Debug.Log("[BirthSystem] AnimeGAN applied to composite");
+    }
+
+    void DisplayAnimeResult(Texture2D animeTexture)
+    {
+        if (birthResultCard == null) return;
+
+        var photoBtn = UIE.UQueryExtensions.Q<UIE.Button>(birthResultCard, className: "birth-polaroid-photo");
+        if (photoBtn == null) return;
+
+        photoBtn.Clear();
+
+        if (synthBabyImageEl != null)
+            synthBabyImageEl.RemoveFromHierarchy();
+
+        Sprite animeSprite = Sprite.Create(animeTexture,
+            new Rect(0, 0, animeTexture.width, animeTexture.height),
+            new Vector2(0.5f, 0.5f), 100);
+
+        synthBabyImageEl = new UIE.VisualElement();
+        synthBabyImageEl.name = "synth-baby-image";
+        synthBabyImageEl.pickingMode = UIE.PickingMode.Ignore;
+        synthBabyImageEl.AddToClassList("birth-polaroid-image");
+        synthBabyImageEl.style.backgroundImage = new UIE.StyleBackground(animeSprite);
+        photoBtn.Add(synthBabyImageEl);
+
+        // アニメボタンを「もどす」に変更
+        var animeBtn = UIE.UQueryExtensions.Q<UIE.Button>(birthResultCard, name: "anime-filter-btn");
+        if (animeBtn != null)
+        {
+            animeBtn.text = "もどす";
+            animeBtn.clickable = new UIE.Clickable(() =>
             {
-                faceBounds = new Rect(
-                    eyeMid.x - eyeDist, eyeMid.y - eyeDist * 0.5f,
-                    eyeDist * 2f, eyeDist * 2.5f),
-                leftEyeCenter = leftEye,
-                rightEyeCenter = rightEye,
-                mouthCenter = new Vector2(eyeMid.x, eyeMid.y + eyeDist * 1.0f),
-                noseCenter = new Vector2(eyeMid.x, eyeMid.y + eyeDist * 0.5f),
-                leftCheek = new Vector2(leftEye.x - eyeDist * 0.3f, eyeMid.y + eyeDist * 0.4f),
-                rightCheek = new Vector2(rightEye.x + eyeDist * 0.3f, eyeMid.y + eyeDist * 0.4f),
-                jawlinePoints = new Vector2[0],
-            };
+                // 元の合成画像に戻す
+                Sprite originalSprite = babySynthesizer.GetCompositeSprite();
+                if (originalSprite != null)
+                    DisplaySynthesizedBaby(originalSprite);
+            });
         }
 
-        if (eyeMarkOverlayEl != null)
-        {
-            eyeMarkOverlayEl.RemoveFromHierarchy();
-            eyeMarkOverlayEl = null;
-        }
-        eyeMarkPreview = null;
-
-        StartCoroutine(ApplyFilterAndComposite(leftEye, rightEye, useDessin: true));
+        Debug.Log("[BirthSystem] Anime result displayed (no swaddle)");
     }
 
     void OnEyeMarkSkip()
@@ -4387,42 +4415,11 @@ public class BirthSystem : MonoBehaviour
         ShowFilterLoadingOverlay();
         yield return null;
 
-        // フィルター適用
-        Texture2D filtered;
-        if (useDessin)
-        {
-            filtered = BabySynthesizer.CreateDessinFilteredTexture(
-                originalFaceTexture, leftEye, rightEye,
-                detectedFaceLandmarks.HasValue ? detectedFaceLandmarks.Value : (FaceLandmarkResult?)null);
-        }
-        else if (detectedFaceLandmarks.HasValue)
-        {
-            filtered = BabySynthesizer.CreateBabyFilteredTexture(
-                originalFaceTexture, leftEye, rightEye, detectedFaceLandmarks.Value);
-        }
-        else
-        {
-            filtered = BabySynthesizer.CreateBabyFilteredTexture(
-                originalFaceTexture, leftEye, rightEye);
-        }
-        if (filtered == null)
-        {
-            HideFilterLoadingOverlay();
-            yield break;
-        }
-
-        // 保存
-        string fileName = "baby_custom.png";
-        File.WriteAllBytes(Path.Combine(Application.persistentDataPath, fileName), filtered.EncodeToPNG());
-        if (DataCarrier.Instance != null)
-            DataCarrier.Instance.customBabyImagePath = fileName;
-
-        // ★ BabyMorph は一旦全て無効化（エフェクトなしでクロップのみ）
+        // フィルターなし — 元画像をそのまま使用
         babySynthesizer.DisableBabyMorph();
 
-        // 合成（ユーザーが調整したズーム・オフセットを維持）
         float savedScale = eyeMarkSavedScale > 0.01f ? eyeMarkSavedScale : 1f;
-        babySynthesizer.SetCustomFaceTexture(filtered, eyeMarkSavedOffsetX, eyeMarkSavedOffsetY, savedScale);
+        babySynthesizer.SetCustomFaceTexture(originalFaceTexture, eyeMarkSavedOffsetX, eyeMarkSavedOffsetY, savedScale);
 
         Sprite updatedSprite = babySynthesizer.GetCompositeSprite();
 
@@ -4446,8 +4443,7 @@ public class BirthSystem : MonoBehaviour
             StartCoroutine(NamingButtonBounceAnimation());
         }
 
-        Destroy(filtered);
-        Debug.Log($"[BirthSystem] Filter applied with eyes: L({leftEye.x:F2},{leftEye.y:F2}) R({rightEye.x:F2},{rightEye.y:F2})");
+        Debug.Log("[BirthSystem] No filter applied (original face used)");
     }
 
     void UpdateBabyFaceWithCustomImage(Sprite spr)
@@ -4922,12 +4918,91 @@ public class BirthSystem : MonoBehaviour
         lightLeak.AddToClassList("birth-light-leak-overlay");
         photoBtn.Add(lightLeak);
 
+        // アニメ風ボタン（ポラロイド下に配置）
+        var existingAnimeBtn = UIE.UQueryExtensions.Q<UIE.Button>(birthResultCard, name: "anime-filter-btn");
+        if (existingAnimeBtn != null) existingAnimeBtn.RemoveFromHierarchy();
+
+        var animeBtn = new UIE.Button(() => StartCoroutine(ApplyAnimeToCurrentFace()));
+        animeBtn.name = "anime-filter-btn";
+        animeBtn.style.height = 60;
+        animeBtn.style.paddingLeft = 24;
+        animeBtn.style.paddingRight = 24;
+        animeBtn.style.marginTop = 12;
+        animeBtn.style.backgroundColor = new UIE.StyleColor(new Color(1f, 0.718f, 0.773f));
+        animeBtn.style.color = new UIE.StyleColor(Color.white);
+        animeBtn.style.fontSize = 24;
+        animeBtn.style.borderTopLeftRadius = 30;
+        animeBtn.style.borderTopRightRadius = 30;
+        animeBtn.style.borderBottomLeftRadius = 30;
+        animeBtn.style.borderBottomRightRadius = 30;
+        animeBtn.text = "アニメ風";
+        UIHelper.ApplyFont(animeBtn);
+        birthResultCard.Add(animeBtn);
+
         // バウンド・アニメーション（SE同期）
         birthResultCard.style.scale = new UIE.StyleScale(
             new UIE.Scale(new Vector3(0.8f, 0.8f, 1f)));
         StartCoroutine(PolaroidBounceAnimation());
 
         Debug.Log("[BirthSystem] Synthesized baby displayed in polaroid");
+    }
+
+    void AddParentItemOverlays(UIE.VisualElement parent)
+    {
+        string fatherItemPath = lastSynthParams.fatherItemPath;
+        string motherItemPath = lastSynthParams.motherItemPath;
+
+        Sprite fatherItem = !string.IsNullOrEmpty(fatherItemPath) ? Resources.Load<Sprite>(fatherItemPath) : null;
+        Sprite motherItem = !string.IsNullOrEmpty(motherItemPath) ? Resources.Load<Sprite>(motherItemPath) : null;
+
+        if (fatherItem == null && motherItem == null) return;
+
+        int itemCount = (fatherItem != null ? 1 : 0) + (motherItem != null ? 1 : 0);
+
+        // 王冠判定（イザナミ = 頭の上に配置）
+        bool motherIsCrown = motherItemPath != null && motherItemPath.Contains("Izanami");
+
+        // 父アイテム: 左下寄り
+        if (fatherItem != null)
+        {
+            float leftPct = itemCount == 1 ? 50f : 28f; // 1個なら中央、2個なら左寄り
+            var el = CreateItemOverlay(fatherItem, leftPct, 78f, 22f, -8f);
+            parent.Add(el);
+        }
+
+        // 母アイテム
+        if (motherItem != null)
+        {
+            if (motherIsCrown)
+            {
+                // 王冠: 頭の上に被せる
+                var el = CreateItemOverlay(motherItem, 50f, 8f, 26f, 0f);
+                parent.Add(el);
+            }
+            else
+            {
+                float leftPct = itemCount == 1 ? 50f : 72f; // 1個なら中央、2個なら右寄り
+                var el = CreateItemOverlay(motherItem, leftPct, 78f, 22f, 8f);
+                parent.Add(el);
+            }
+        }
+    }
+
+    UIE.VisualElement CreateItemOverlay(Sprite sprite, float leftPct, float topPct, float sizePct, float rotation)
+    {
+        var el = new UIE.VisualElement();
+        el.name = "parent-item-overlay";
+        el.pickingMode = UIE.PickingMode.Ignore;
+        el.style.position = UIE.Position.Absolute;
+        el.style.width = UIE.Length.Percent(sizePct);
+        el.style.height = UIE.Length.Percent(sizePct);
+        el.style.left = UIE.Length.Percent(leftPct - sizePct / 2f);
+        el.style.top = UIE.Length.Percent(topPct - sizePct / 2f);
+        el.style.backgroundImage = new UIE.StyleBackground(sprite);
+        el.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+        if (Mathf.Abs(rotation) > 0.1f)
+            el.style.rotate = new UIE.StyleRotate(new UIE.Rotate(rotation));
+        return el;
     }
 
     IEnumerator PolaroidBounceAnimation()

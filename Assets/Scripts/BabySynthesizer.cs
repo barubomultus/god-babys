@@ -177,9 +177,6 @@ public class BabySynthesizer : MonoBehaviour
         // Layer 3: アタッチメント
         DrawAttachment(pixels, p);
 
-        // Layer 3.5: 親アイテムバッジ（おくるみの四隅）
-        DrawParentItemBadges(pixels, p);
-
         // Layer 4: 出生届フレーム
         DrawCertificate(pixels);
 
@@ -241,7 +238,6 @@ public class BabySynthesizer : MonoBehaviour
             DrawSwaddleAndFace(pixels, rank, hasCustomFace, p);
         }
         DrawAttachment(pixels, p);
-        DrawParentItemBadges(pixels, p);
         DrawCertificate(pixels);
 
         // Baby Morph 自動適用（透過版にも同じ変形を適用）
@@ -1064,38 +1060,101 @@ public class BabySynthesizer : MonoBehaviour
 
     // ===== Parent Item Badges =====
 
-    void DrawParentItemBadges(Color[] pixels, SynthesizeParams p)
+    /// <summary>
+    /// カバーモード座標を計算して顔穴のキャンバス座標を返す
+    /// </summary>
+    void GetFaceHoleCanvasCoords(out float faceCx, out float faceCy, out float faceR)
     {
-        Sprite fatherItem = null;
-        Sprite motherItem = null;
+        EnsureFaceHoleParams();
+        Sprite wearSprite = LoadWearSprite(DetermineRank(lastParams.fortune));
+        if (wearSprite == null || !wearSprite.texture.isReadable)
+        {
+            faceCx = TEX_SIZE * 0.5f;
+            faceCy = TEX_SIZE * 0.55f;
+            faceR = TEX_SIZE * 0.15f;
+            return;
+        }
+        int srcW = wearSprite.texture.width;
+        int srcH = wearSprite.texture.height;
+        float trimRatio = 0.05f;
+        float trimX = srcW * trimRatio;
+        float trimY = srcH * trimRatio;
+        float croppedW = srcW - trimX * 2f;
+        float croppedH = srcH - trimY;
+        float coverScale = Mathf.Max((float)TEX_SIZE / croppedW, (float)TEX_SIZE / croppedH);
+        float visibleW = TEX_SIZE / coverScale;
+        float visibleH = TEX_SIZE / coverScale;
+        float coverOffsetX = trimX + (croppedW - visibleW) * 0.5f;
+        float coverOffsetY = (srcH - trimY) - visibleH;
 
-        if (!string.IsNullOrEmpty(p.fatherItemPath))
-            fatherItem = Resources.Load<Sprite>(p.fatherItemPath);
-        if (!string.IsNullOrEmpty(p.motherItemPath))
-            motherItem = Resources.Load<Sprite>(p.motherItemPath);
+        faceCx = (FACE_HOLE_CX * srcW - coverOffsetX) * coverScale;
+        faceCy = (FACE_HOLE_CY * srcH - coverOffsetY) * coverScale;
+        faceR = Mathf.Max(FACE_HOLE_RX * srcW, FACE_HOLE_RY * srcH) * coverScale;
+    }
+
+    /// <summary>
+    /// おくるみの下に描画するアイテム（胸元に抱えている感じ）。
+    /// おくるみが上から被さるので端が自然に隠れる。
+    /// 王冠(イザナミ)は除外（上レイヤーで別処理）。
+    /// </summary>
+    void DrawParentItemsBelow(Color[] pixels, SynthesizeParams p)
+    {
+        Sprite fatherItem = LoadParentItem(p.fatherItemPath);
+        Sprite motherItem = LoadParentItem(p.motherItemPath);
+        bool motherIsCrown = p.motherItemPath != null && p.motherItemPath.Contains("Izanami");
+        if (motherIsCrown) motherItem = null;
 
         if (fatherItem == null && motherItem == null) return;
 
-        int badgeSize = TEX_SIZE * 11 / 100; // ~120px
+        GetFaceHoleCanvasCoords(out float faceCx, out float faceCy, out float faceR);
 
-        // おくるみの四隅に配置（対角に同じ親のアイテム）
-        // 左上肩 & 右下足元 = 父アイテム
-        // 右上肩 & 左下足元 = 母アイテム
-        int shoulderY = TEX_SIZE * 40 / 100;
-        int footY     = TEX_SIZE * 10 / 100;
-        int leftX     = TEX_SIZE * 8 / 100;
-        int rightX    = TEX_SIZE * 81 / 100;
+        int itemCount = (fatherItem != null ? 1 : 0) + (motherItem != null ? 1 : 0);
+        int badgeSize = (int)(faceR * 0.9f); // 顔穴半径の90%
 
-        if (fatherItem != null && fatherItem.texture.isReadable)
+        // 顔穴の下端からアイテム1個分下 = 胸元
+        int chestY = (int)(faceCy - faceR) - badgeSize * 3 / 4;
+        int centerX = (int)faceCx;
+
+        if (itemCount == 1)
         {
-            BlitSpriteToCanvas(pixels, fatherItem, leftX, shoulderY, badgeSize, badgeSize);
-            BlitSpriteToCanvas(pixels, fatherItem, rightX, footY, badgeSize, badgeSize);
+            Sprite item = fatherItem ?? motherItem;
+            BlitSpriteToCanvas(pixels, item, centerX - badgeSize / 2, chestY, badgeSize, badgeSize);
         }
-        if (motherItem != null && motherItem.texture.isReadable)
+        else
         {
-            BlitSpriteToCanvas(pixels, motherItem, rightX, shoulderY, badgeSize, badgeSize);
-            BlitSpriteToCanvas(pixels, motherItem, leftX, footY, badgeSize, badgeSize);
+            int spacing = badgeSize * 2 / 3;
+            BlitSpriteToCanvas(pixels, fatherItem, centerX - spacing - badgeSize / 2, chestY, badgeSize, badgeSize);
+            BlitSpriteToCanvas(pixels, motherItem, centerX + spacing - badgeSize / 2, chestY, badgeSize, badgeSize);
         }
+    }
+
+    /// <summary>
+    /// おくるみの上に描画するアイテム（王冠など頭上装着系）。
+    /// おくるみの上端と重なるように配置。
+    /// </summary>
+    void DrawParentItemsAbove(Color[] pixels, SynthesizeParams p)
+    {
+        bool motherIsCrown = p.motherItemPath != null && p.motherItemPath.Contains("Izanami");
+        if (!motherIsCrown) return;
+
+        Sprite crown = LoadParentItem(p.motherItemPath);
+        if (crown == null) return;
+
+        GetFaceHoleCanvasCoords(out float faceCx, out float faceCy, out float faceR);
+
+        int crownSize = (int)(faceR * 1.3f); // 顔穴より少し大きめ
+        int centerX = (int)faceCx;
+        // 顔穴の上端に半分重なるように配置
+        int crownY = (int)(faceCy + faceR) - crownSize / 3;
+
+        BlitSpriteToCanvas(pixels, crown, centerX - crownSize / 2, crownY, crownSize, crownSize);
+    }
+
+    Sprite LoadParentItem(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return null;
+        Sprite s = Resources.Load<Sprite>(path);
+        return (s != null && s.texture.isReadable) ? s : null;
     }
 
     // ===== Face Loading =====
@@ -1151,6 +1210,61 @@ public class BabySynthesizer : MonoBehaviour
     {
         if (original == null) return null;
         return ApplyDessinFilter(original, leftEye, rightEye, landmarks);
+    }
+
+    /// <summary>アニメ風フィルター（テスト用：stagesビットマスクで制御）</summary>
+    public static Texture2D CreateAnimeFilteredTexture(Texture2D original,
+        Vector2 leftEye, Vector2 rightEye, int stages)
+    {
+        if (original == null) return null;
+        int origW = original.width;
+        int origH = original.height;
+        Color[] origPixels = original.GetPixels();
+
+        int workSize = FILTER_WORK_SIZE;
+        Color[] work = DownscaleToWorkSize(origPixels, origW, origH, workSize);
+        Color[] edgeSrc = (Color[])work.Clone(); // 輪郭線用のオリジナル保持
+
+        // bit0: Bilateral x1 (軽いスムーズ)
+        if ((stages & (1 << 0)) != 0)
+            work = ApplyBilateralFilter(work, workSize, workSize, 3, 0.15f);
+
+        // bit1: EdgePreservingSmooth (エッジ保持ブラー)
+        if ((stages & (1 << 1)) != 0)
+            work = EdgePreservingSmooth(work, workSize, workSize);
+
+        // bit2: BabySoft (ふんわり明るく)
+        if ((stages & (1 << 2)) != 0)
+            ApplyBabySoft(work, workSize, workSize);
+
+        // bit3: SaturationBoost (彩度UP)
+        if ((stages & (1 << 3)) != 0)
+            ApplySaturationBoost(work, workSize, workSize, DESSIN_SATURATION_BOOST);
+
+        // bit4: CelShading (デッサン風3階調)
+        if ((stages & (1 << 4)) != 0)
+            ApplyCelShading(work, workSize, workSize);
+
+        // bit5: GhibliCelShading (ジブリ風3階調)
+        if ((stages & (1 << 5)) != 0)
+            ApplyGhibliCelShading(work, workSize, workSize);
+
+        // bit6: Outlines (輪郭線)
+        if ((stages & (1 << 6)) != 0)
+            ApplyOutlines(work, edgeSrc, workSize, workSize);
+
+        // bit7: CheekPink (ほっぺピンク)
+        if ((stages & (1 << 7)) != 0)
+            ApplyGhibliCheekPink(work, workSize, workSize, leftEye, rightEye);
+
+        // bit8: SpecularHighlights (目ハイライト)
+        if ((stages & (1 << 8)) != 0)
+            ApplySpecularHighlights(work, workSize, workSize, leftEye, rightEye, null);
+
+        var filtered = new Texture2D(workSize, workSize, TextureFormat.RGBA32, false);
+        filtered.SetPixels(work);
+        filtered.Apply();
+        return filtered;
     }
 
     /// <summary>旧API互換（破壊的適用、目拡大なし）</summary>
@@ -1507,6 +1621,13 @@ public class BabySynthesizer : MonoBehaviour
     const float DESSIN_EDGE_SENSITIVITY  = 0.12f;
     const float DESSIN_OUTLINE_OPACITY   = 0.55f;
 
+    // ─── 赤ちゃん風フィルター ステージ制御 ───
+    // 全ビットON = 全ステージ適用。個別テスト時に特定ビットだけONにする
+    // bit0=BabyMorph, bit1=BabySoft, bit2=LightLeak,
+    // bit3=Bilateral, bit4=IdealSkinTone, bit5=GhibliCelShading,
+    // bit6=PeachToneMapping, bit7=EyeDetailUp, bit8=MouthSimplify, bit9=CheekPink
+    public static int babyFilterStages = 0x3FF; // 全ON
+
     // ─── ジブリ風（セルルック）フィルター定数 ───
     const int   GHIBLI_WORK_SIZE         = 512;      // 顔クロップ後の正方形サイズ（バイラテラル高速化）
     const float GHIBLI_SKIN_BLEND        = 0.80f;    // 理想肌色への置換強度（強く）
@@ -1680,10 +1801,52 @@ public class BabySynthesizer : MonoBehaviour
             work = DownscaleKeepAspect(cropped, minDim, minDim, workSize, workSize);
         }
 
-        // ═══ フィルター全段無効化: まずクロップだけ確認 ═══
-        // TODO: クロップ確認後、フィルターを段階的に有効化
+        // ═══ フィルターパイプライン（babyFilterStages で個別ON/OFF可能）═══
+        // bit0=BabyMorph, bit1=BabySoft, bit2=LightLeak,
+        // bit3=Bilateral, bit4=IdealSkinTone, bit5=GhibliCelShading,
+        // bit6=PeachToneMapping, bit7=EyeDetailUp, bit8=MouthSimplify, bit9=CheekPink
+        int stages = babyFilterStages;
 
-        // 楕円マスクのみ適用（白い背景防止）
+        if ((stages & (1 << 0)) != 0)
+        {
+            if (landmarks.HasValue)
+                work = ApplyBabyMorphLandmark(work, workSize, workSize, leftEye, rightEye, landmarks.Value);
+            else
+                work = ApplyBabyMorph(work, workSize, workSize, leftEye, rightEye);
+        }
+
+        if ((stages & (1 << 1)) != 0)
+            ApplyBabySoft(work, workSize, workSize);
+
+        if ((stages & (1 << 2)) != 0)
+            ApplyLightLeak(work, workSize, workSize);
+
+        if ((stages & (1 << 3)) != 0)
+        {
+            work = ApplyBilateralFilter(work, workSize, workSize, 3, 0.15f);
+            work = ApplyBilateralFilter(work, workSize, workSize, 3, 0.15f);
+            work = ApplyBilateralFilter(work, workSize, workSize, 3, 0.15f);
+        }
+
+        if ((stages & (1 << 4)) != 0)
+            ApplyIdealSkinTone(work, workSize, workSize, GHIBLI_SKIN_BLEND);
+
+        if ((stages & (1 << 5)) != 0)
+            ApplyGhibliCelShading(work, workSize, workSize);
+
+        if ((stages & (1 << 6)) != 0)
+            ApplyPeachToneMapping(work, workSize, workSize);
+
+        if ((stages & (1 << 7)) != 0)
+            ApplyEyeDetailUp(work, workSize, workSize, leftEye, rightEye);
+
+        if ((stages & (1 << 8)) != 0 && landmarks.HasValue)
+            ApplyMouthSimplify(work, workSize, workSize, leftEye, rightEye, landmarks);
+
+        if ((stages & (1 << 9)) != 0)
+            ApplyGhibliCheekPink(work, workSize, workSize, leftEye, rightEye);
+
+        // 楕円マスク（常に適用）
         ApplyEllipticalAlphaMask(work, workSize, workSize, leftEye, rightEye);
 
         var filtered = new Texture2D(workSize, workSize, TextureFormat.RGBA32, false);
