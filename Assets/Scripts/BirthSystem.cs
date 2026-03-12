@@ -4393,7 +4393,13 @@ public class BirthSystem : MonoBehaviour
             });
         }
 
-        Debug.Log("[BirthSystem] Anime result displayed (no swaddle)");
+        // アニメ画像をバトル/マップ用に保存（synth_baby.png + 透過版）
+        byte[] pngBytes = animeTexture.EncodeToPNG();
+        string savePath = Path.Combine(Application.persistentDataPath, "synth_baby.png");
+        File.WriteAllBytes(savePath, pngBytes);
+        string transPath = Path.Combine(Application.persistentDataPath, "synth_baby_transparent.png");
+        File.WriteAllBytes(transPath, pngBytes);
+        Debug.Log("[BirthSystem] Anime result saved to synth_baby.png + transparent");
     }
 
     void OnEyeMarkSkip()

@@ -5341,7 +5341,8 @@ public class MapManager : MonoBehaviour
 
         playerRect = playerObj.AddComponent<RectTransform>();
         UpdatePlayerPosition();
-        playerRect.sizeDelta = new Vector2(DISPLAY_TILE - 4, DISPLAY_TILE - 4);
+        float playerSize = (DISPLAY_TILE - 4) * 0.8f; // 20% smaller
+        playerRect.sizeDelta = new Vector2(playerSize, playerSize);
 
         playerImage = playerObj.AddComponent<Image>();
         playerImage.raycastTarget = false;
@@ -7267,7 +7268,7 @@ public class MapManager : MonoBehaviour
         overlay.style.flexDirection = UIE.FlexDirection.Column;
         overlay.style.justifyContent = UIE.Justify.Center;
         overlay.style.alignItems = UIE.Align.Center;
-        overlay.style.backgroundColor = new Color(0, 0, 0, 0);
+        overlay.style.backgroundColor = new Color(0.969f, 0.906f, 0.808f, 0); // #F7E7CE
         overlayRoot.Add(overlay);
 
         // 中央に卵画像を配置
@@ -7291,13 +7292,13 @@ public class MapManager : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / 0.6f);
-            overlay.style.backgroundColor = new Color(0, 0, 0, 0.6f * t);
+            overlay.style.backgroundColor = new Color(0.969f, 0.906f, 0.808f, 0.85f * t);
             eggEl.style.opacity = t;
             float s = 0.5f + 0.5f * t;
             eggEl.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(s, s, 1f)));
             yield return null;
         }
-        overlay.style.backgroundColor = new Color(0, 0, 0, 0.6f);
+        overlay.style.backgroundColor = new Color(0.969f, 0.906f, 0.808f, 0.85f);
         eggEl.style.opacity = 1f;
         eggEl.style.scale = new UIE.StyleScale(new UIE.Scale(Vector3.one));
 
@@ -7369,7 +7370,7 @@ public class MapManager : MonoBehaviour
         textContainer.style.bottom = UIE.Length.Percent(22);
         textContainer.style.left = UIE.Length.Percent(50);
         textContainer.style.translate = new UIE.StyleTranslate(new UIE.Translate(UIE.Length.Percent(-50), 0));
-        textContainer.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+        textContainer.style.backgroundColor = new Color(1f, 1f, 1f, 0.7f);
         textContainer.style.paddingTop = 16;
         textContainer.style.paddingBottom = 16;
         textContainer.style.paddingLeft = 40;
@@ -7383,7 +7384,7 @@ public class MapManager : MonoBehaviour
         var titleLabel = UIHelper.CreateLabel("", "");
         titleLabel.text = Localization.Get("map_golden_egg");
         titleLabel.style.fontSize = 34;
-        titleLabel.style.color = new Color(1f, 0.84f, 0f);
+        titleLabel.style.color = new Color(0.8f, 0.6f, 0f);
         titleLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
         UIHelper.ApplyFontBold(titleLabel);
         textContainer.Add(titleLabel);
@@ -7391,14 +7392,14 @@ public class MapManager : MonoBehaviour
         var hintLabel = UIHelper.CreateLabel("", "");
         hintLabel.text = Localization.Get("map_golden_egg_hint");
         hintLabel.style.fontSize = 26;
-        hintLabel.style.color = Color.white;
+        hintLabel.style.color = Color.black;
         hintLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
         hintLabel.style.marginTop = 12;
         textContainer.Add(hintLabel);
 
         var tapHint = UIHelper.CreateLabel("\u25BC \u30BF\u30C3\u30D7\u3067\u3068\u3058\u308B", "");
         tapHint.style.fontSize = 22;
-        tapHint.style.color = new Color(1f, 1f, 1f, 0.6f);
+        tapHint.style.color = new Color(0f, 0f, 0f, 0.5f);
         tapHint.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
         tapHint.style.marginTop = 8;
         textContainer.Add(tapHint);
@@ -7430,8 +7431,8 @@ public class MapManager : MonoBehaviour
             eggEl.style.opacity = 1f - t;
             glowEl.style.opacity = 1f - t;
             textContainer.style.opacity = 1f - t;
-            float bgA = 0.6f * (1f - t);
-            overlay.style.backgroundColor = new Color(0, 0, 0, bgA);
+            float bgA = 0.85f * (1f - t);
+            overlay.style.backgroundColor = new Color(0.969f, 0.906f, 0.808f, bgA);
             yield return null;
         }
 

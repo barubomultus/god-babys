@@ -281,6 +281,7 @@ public class BattleManager : MonoBehaviour
             }
             else
             {
+                playerAtk = (int)(playerAtk * 1.3f);
                 playerEvasion = 15;
             }
 
