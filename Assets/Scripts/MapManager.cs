@@ -56,6 +56,7 @@ public class MapManager : MonoBehaviour
     const int TILE_CHAMPAGNE = 31; // 儀式の回廊用シャンパン柵
     const int TILE_CRYSTAL = 32;     // ステラ・オリジン: クリスタルの床
     const int TILE_CRYSTAL_WALL = 33; // ステラ・オリジン: 宇宙の壁（通行不可）
+    const int TILE_MONUMENT = 36;   // 縁の石碑
     // TILE 34, 35: 廃止（光の川・音叉ワープ）
 
     // マップデータ
@@ -150,6 +151,10 @@ public class MapManager : MonoBehaviour
     bool kaguyaDialogueActive = false;
     TMPro.TextMeshProUGUI[] kaguyaHearts;
     TMPro.TextMeshProUGUI[] poolBubbles;
+
+    // 縁の石碑
+    GameObject monumentObj;
+    UIE.VisualElement monumentOverlayEl;
 
     // 門番（長老）NPC
     GameObject elderNpcObj;
@@ -404,6 +409,7 @@ public class MapManager : MonoBehaviour
             CreateStellaGuardianNPCs();
             CreateStellaCradle();
             CreateStellaCosmicGate();
+            CreateMonument();
         }
         else if (area == 7)
         {
@@ -2520,6 +2526,11 @@ public class MapManager : MonoBehaviour
 
         // --- 南の着地広場: 3x3 (center: 12,3) ---
         placePlaza(12, 3);
+
+        // --- 縁の石碑（着地広場の南、中央） ---
+        placeCrystal(12, 1);
+        mapData[12, 1] = TILE_MONUMENT;
+        walkable[12, 1] = false;
 
         // --- Phase 1: 南から蛇行して西の音叉へ ---
         // 着地点から北へ (12, 4→7)
@@ -5316,6 +5327,7 @@ public class MapManager : MonoBehaviour
             case TILE_CHAMPAGNE: return new Color(0.95f, 0.85f, 0.55f); // シャンパンゴールド
             case TILE_CRYSTAL: return new Color(0.15f, 0.18f, 0.35f, 0.3f);       // クリスタル床（半透明）
             case TILE_CRYSTAL_WALL: return new Color(0.02f, 0.01f, 0.06f, 0f);    // 宇宙壁（透明）
+            case TILE_MONUMENT: return new Color(0.15f, 0.18f, 0.35f, 0.3f); // 石碑の下地はクリスタル床色
             default: return Color.magenta;
         }
     }
@@ -5630,6 +5642,11 @@ public class MapManager : MonoBehaviour
         if (shopOverlayEl != null)
         {
             if (escPressed) CloseWeaponShop();
+            return;
+        }
+        if (monumentOverlayEl != null)
+        {
+            if (escPressed) CloseMonumentPanel();
             return;
         }
 
@@ -5980,6 +5997,9 @@ public class MapManager : MonoBehaviour
 
             // 長老NPC判定
             CheckElderNPC();
+
+            // 石碑隣接判定
+            CheckMonumentAdjacent();
 
             // 母親NPC判定
             CheckMotherNPC();
@@ -6468,6 +6488,13 @@ public class MapManager : MonoBehaviour
                 ShowMessage("たくさんの おもちゃが\nきれいに ならべられている🧸");
                 return;
             }
+        }
+
+        // 縁の石碑
+        if (IsAdjacentTo(TILE_MONUMENT))
+        {
+            ShowMonumentPanel();
+            return;
         }
 
         int tileType = mapData[playerTileX, playerTileY];
@@ -8636,6 +8663,758 @@ public class MapManager : MonoBehaviour
             .AddComponent<Image>().color = new Color(1f, 0.7f, 0.7f, 0.5f);
         FacePart("CheekR", parent, new Vector2(10 * s, 10 * s), new Vector2(6 * s, 4 * s))
             .AddComponent<Image>().color = new Color(1f, 0.7f, 0.7f, 0.5f);
+    }
+
+    // ===== 縁の石碑 =====
+
+    void CreateMonument()
+    {
+        if (tilesContainer == null) return;
+
+        int mx = 12, my = 1;
+        monumentObj = new GameObject("Monument");
+        monumentObj.transform.SetParent(tilesContainer.transform, false);
+
+        var rect = monumentObj.AddComponent<RectTransform>();
+        float posX = (mx - mapWidth / 2f + 0.5f) * DISPLAY_TILE;
+        float posY = (my - mapHeight / 2f + 0.5f) * DISPLAY_TILE;
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(DISPLAY_TILE, DISPLAY_TILE);
+
+        var btnImg = monumentObj.AddComponent<Image>();
+        btnImg.color = new Color(0, 0, 0, 0);
+        var btn = monumentObj.AddComponent<Button>();
+        btn.transition = Selectable.Transition.None;
+        btn.onClick.AddListener(() => ShowMonumentPanel());
+
+        DrawMonument(monumentObj.transform, 0.9f);
+        monumentObj.transform.SetAsLastSibling();
+    }
+
+    void DrawMonument(Transform parent, float scale)
+    {
+        float s = scale;
+        // 光の影
+        FacePart("Shadow", parent, new Vector2(0, -30 * s), new Vector2(32 * s, 8 * s))
+            .AddComponent<Image>().color = new Color(0.6f, 0.7f, 1f, 0.15f);
+        // 台座（クリスタル）
+        FacePart("Base", parent, new Vector2(0, -24 * s), new Vector2(36 * s, 12 * s))
+            .AddComponent<Image>().color = new Color(0.4f, 0.45f, 0.65f, 0.8f);
+        // 石碑本体（透明感のあるクリスタル）
+        FacePart("Stone", parent, new Vector2(0, 0), new Vector2(28 * s, 40 * s))
+            .AddComponent<Image>().color = new Color(0.55f, 0.6f, 0.85f, 0.7f);
+        // 石碑上部（光沢）
+        FacePart("StoneTop", parent, new Vector2(0, 20 * s), new Vector2(28 * s, 12 * s))
+            .AddComponent<Image>().color = new Color(0.7f, 0.75f, 0.95f, 0.6f);
+        // 「縁」文字
+        var textObj = FacePart("Text", parent, new Vector2(0, 4 * s), new Vector2(20 * s, 24 * s));
+        var tmp = textObj.AddComponent<TMPro.TextMeshProUGUI>();
+        FontHelper.Apply(tmp);
+        tmp.text = "縁";
+        tmp.fontSize = 18 * s;
+        tmp.alignment = TMPro.TextAlignmentOptions.Center;
+        tmp.color = new Color(1f, 0.95f, 0.8f);
+        tmp.raycastTarget = false;
+    }
+
+    void ShowMonumentPanel()
+    {
+        if (monumentOverlayEl != null) return;
+        menuOpen = true;
+        SetTouchControlsVisible(false);
+
+        var dc = DataCarrier.Instance;
+        string fatherName = dc != null ? dc.fatherName : "???";
+        string motherName = dc != null ? dc.motherName : "???";
+        string babyName = dc != null ? dc.babyName : "???";
+
+        var overlay = UIHelper.CreateOverlay();
+        overlay.RegisterCallback<UIE.ClickEvent>(evt =>
+        {
+            if (evt.target == overlay) CloseMonumentPanel();
+        });
+
+        monumentOverlayEl = new UIE.VisualElement();
+        monumentOverlayEl.AddToClassList("map-detail-panel");
+
+        var title = UIHelper.CreateLabel("縁の石碑", "map-detail-title");
+        monumentOverlayEl.Add(title);
+
+        var subtitle = UIHelper.CreateLabel($"{babyName}の たびの きろく", "");
+        subtitle.style.fontSize = 26;
+        subtitle.style.color = new Color(0.5f, 0.5f, 0.6f, 1f);
+        subtitle.style.unityTextAlign = TextAnchor.MiddleCenter;
+        subtitle.style.marginBottom = 12;
+        monumentOverlayEl.Add(subtitle);
+
+        var scroll = new UIE.ScrollView(UIE.ScrollViewMode.Vertical);
+        scroll.style.maxHeight = 800;
+        scroll.style.width = new UIE.StyleLength(UIE.Length.Percent(100));
+        monumentOverlayEl.Add(scroll);
+
+        // ===== 両親（最初に表示） =====
+        AddMonumentSection(scroll, "💗 おうちの ひとたち", new Color(1f, 0.72f, 0.77f, 1f));
+
+        // 父親
+        string fatherImgKey = GetParentImageNameForMap(fatherName);
+        Sprite fatherSpr = Resources.Load<Sprite>("Parents/" + fatherImgKey);
+        string fatherMsg = GetFatherMonumentMessage(fatherName, babyName);
+        AddMonumentCharEntry(scroll, $"パパ「{fatherName}」", fatherMsg, fatherSpr);
+
+        // 母親
+        string motherImgKey = GetParentImageNameForMap(motherName);
+        Sprite motherSpr = Resources.Load<Sprite>("Parents/" + motherImgKey);
+        string motherMsg = GetMotherMonumentMessage(motherName, babyName);
+        AddMonumentCharEntry(scroll, $"ママ「{motherName}」", motherMsg, motherSpr);
+
+        // ===== かぐやちゃん（相思相愛の場合） =====
+        bool kaguyaLover = dc != null && dc.kaguyaLover;
+        int kaguyaMet = dc != null ? dc.kaguyaMetCount : 0;
+        if (kaguyaMet > 0)
+        {
+            AddMonumentSection(scroll, "💗 かぐやちゃん", new Color(1f, 0.85f, 0.9f, 1f));
+
+            string kaguyaMsg;
+            if (kaguyaLover)
+                kaguyaMsg = "はじめて であった ときは はずかしくて にげちゃった。\n" +
+                    "2かいめは うれしくて、でも やっぱり はずかしくて…\n" +
+                    "3かいめ、プールの おくで みつけてくれた とき、\n" +
+                    "もう にげたくない って おもったの。\n\n" +
+                    "ほんきで あそんで、まけちゃったけど…\n" +
+                    "ほんとは まけたかった。\n" +
+                    $"だって、{babyName}の こと ずっと すきだったから。\n\n" +
+                    $"いまは {babyName}の いちばん ちかくで\n" +
+                    "おうえん できるのが しあわせ💗";
+            else if (kaguyaMet >= 2)
+                kaguyaMsg = "もう 2かいも みつけて くれたね。\n" +
+                    "はずかしいけど… うれしいよ。\n" +
+                    "つぎ あえたら、わたしの ほんき みせるから……💗";
+            else
+                kaguyaMsg = "あ……！ み、見つかっちゃった。\n" +
+                    "わたし かぐや。\n" +
+                    $"{babyName}の こと、ずっと みてたの……💗";
+
+            Sprite kaguyaSpr = Resources.Load<Sprite>("MapCharacters/heroine/kaguya3");
+            AddMonumentCharEntry(scroll, "かぐやちゃん", kaguyaMsg, kaguyaSpr);
+        }
+
+        // ===== 出会ったNPC =====
+        string[] metNpcs = dc != null ? dc.GetMetNpcList() : new string[0];
+        if (metNpcs.Length > 0)
+        {
+            AddMonumentSection(scroll, "🤝 であった ひとたち", new Color(0.67f, 0.94f, 0.82f, 1f));
+            foreach (var npc in metNpcs)
+            {
+                if (string.IsNullOrEmpty(npc)) continue;
+                // かぐや関連・内部フラグ・親（別セクション表示）はスキップ
+                if (npc.Contains("kaguya") || npc.Contains("gorgeous_intro") || npc == "かぐやちゃん") continue;
+                if (npc == fatherName || npc == motherName) continue;
+                string displayName = GetNpcDisplayName(npc);
+                string npcMsg = GetNpcMonumentMessage(npc, babyName);
+                Sprite npcSpr = GetNpcSpriteForMonument(npc);
+                AddMonumentCharEntry(scroll, displayName, npcMsg, npcSpr);
+            }
+        }
+
+        // ===== 倒した敵 =====
+        string[] enemies = dc != null ? dc.GetDefeatedEnemyList() : new string[0];
+        if (enemies.Length > 0)
+        {
+            AddMonumentSection(scroll, "⭐ あそんだ おともだち", new Color(1f, 0.92f, 0.7f, 1f));
+            foreach (var enemy in enemies)
+            {
+                if (string.IsNullOrEmpty(enemy)) continue;
+                if (enemy == "かぐやちゃん") continue; // 別セクションで表示
+                string msg = GetEnemyMonumentMessage(enemy, babyName);
+                Sprite enemySpr = GetEnemySpriteForMonument(enemy);
+                AddMonumentCharEntry(scroll, enemy, msg, enemySpr);
+            }
+        }
+
+        // まだ誰にも会っていない場合
+        if (metNpcs.Length == 0 && enemies.Length == 0 && kaguyaMet == 0)
+        {
+            var emptyLabel = UIHelper.CreateLabel(
+                "まだ たびは はじまった ばかり…\nこれから たくさんの えんが\nきざまれるでしょう", "");
+            emptyLabel.style.fontSize = 26;
+            emptyLabel.style.color = new Color(0.4f, 0.4f, 0.4f, 1f);
+            emptyLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            emptyLabel.style.marginTop = 30;
+            emptyLabel.style.marginBottom = 30;
+            emptyLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
+            scroll.Add(emptyLabel);
+        }
+
+        var closeBtnRow = new UIE.VisualElement();
+        closeBtnRow.style.flexShrink = 0;
+        closeBtnRow.style.flexDirection = UIE.FlexDirection.Row;
+        closeBtnRow.style.justifyContent = UIE.Justify.Center;
+        closeBtnRow.style.marginTop = 20;
+
+        var closeBtn = new UIE.Button();
+        closeBtn.AddToClassList("pill-button");
+        UIHelper.ApplyFont(closeBtn);
+        closeBtn.text = "とじる";
+        closeBtn.clicked += CloseMonumentPanel;
+        closeBtnRow.Add(closeBtn);
+        monumentOverlayEl.Add(closeBtnRow);
+
+        overlay.Add(monumentOverlayEl);
+        overlayRoot.Add(overlay);
+    }
+
+    void AddMonumentSection(UIE.ScrollView scroll, string sectionTitle, Color bgColor)
+    {
+        var section = new UIE.VisualElement();
+        section.style.backgroundColor = bgColor;
+        section.style.borderTopLeftRadius = 16; section.style.borderTopRightRadius = 16;
+        section.style.borderBottomLeftRadius = 16; section.style.borderBottomRightRadius = 16;
+        section.style.paddingTop = 8; section.style.paddingBottom = 8;
+        section.style.paddingLeft = 16; section.style.paddingRight = 16;
+        section.style.marginTop = 16; section.style.marginBottom = 4;
+
+        var label = UIHelper.CreateLabel(sectionTitle, "");
+        label.style.fontSize = 30;
+        label.style.unityFontStyleAndWeight = FontStyle.Bold;
+        label.style.color = new Color(0f, 0f, 0f, 1f);
+        section.Add(label);
+        scroll.Add(section);
+    }
+
+    string GetFatherMonumentMessage(string father, string baby)
+    {
+        switch (father)
+        {
+            case "タケシ":
+                return $"……{baby}。おまえが ここまで たどり着くとはな。\n" +
+                    "パパは かくとうぎで せかいの てっぺんに たったけど、\n" +
+                    "おまえの この たびのほうが よっぽど すげえよ。\n\n" +
+                    "「つよさとは まもるために ある」って\n" +
+                    "パパは ずっと しんじてきた。\n" +
+                    $"おまえは もう じゅうぶん つよい。\n{baby}、ほこりに おもうぞ。";
+            case "ユウキ":
+                return $"{baby}、ここまで来たのか。\n" +
+                    "パパは 5さいで プログラミングをおぼえて、\n" +
+                    "せかいじゅうの バグを なおしてきた。\n" +
+                    "でもな、おまえの ぼうけんだけは\n" +
+                    "パパの コードじゃ かけないんだ。\n\n" +
+                    "おまえが じぶんで えらんで、じぶんで すすんだ みちだ。\n" +
+                    $"……かっこいいぜ、{baby}。";
+            case "ゴウ":
+                return $"{baby}。おまえも ぼうけんかだな。\n" +
+                    "パパは 100いじょうの ぼうけんを こなしてきたけど、\n" +
+                    "いちども しっぱいしなかったのは\n" +
+                    "あきらめなかったから、それだけだ。\n\n" +
+                    "「ほんとうの つよさは たたかわずに すむ ちからだ」\n" +
+                    "パパの くちぐせ、おぼえてるか？\n" +
+                    $"おまえは もう わかってるはずだ。がんばれ、{baby}。";
+            case "シンジ":
+                return $"{baby}、きみの たびの データを ずっと かんさつしていたよ。\n" +
+                    "パパの IQ250でも よそくできなかった。\n" +
+                    "きみが こんなにも たくましく なるなんて。\n\n" +
+                    "うちゅうの しんりを とくより むずかしいもの、\n" +
+                    "それは こどもの せいちょうだ。\n" +
+                    "……なんてね。くつを さゆう まちがえる パパだけど、\n" +
+                    $"{baby}の ことだけは ぜったい まちがえない。";
+            case "リョウマ":
+                return $"{baby}。パパは 15さいで はだかいっかんから はじめて、\n" +
+                    "せかいいちの じつぎょうかに なった。\n" +
+                    "でもな、ほんとうの たからは カネじゃない。\n\n" +
+                    "おまえが うまれた ひ、パパは はじめて なみだを ながした。\n" +
+                    "43ちょうえんより おまえの えがおの ほうが かちがある。\n" +
+                    $"さいごまで いけ、{baby}。パパが ついてる。";
+            case "テツヤ":
+                return $"{baby}。パパも いちど ぜんぶ うしないかけたことがある。\n" +
+                    "ステージに たてなく なって、くらいときが あった。\n" +
+                    "でも 「Rebirth」って きょくを つくって もどってこれた。\n\n" +
+                    "おまえの たびも おなじだ。\n" +
+                    "つらいときも あっただろう。でも おまえは ここにいる。\n" +
+                    $"おまえの ものがたりは パパの どの きょくより かっこいいよ、{baby}。";
+            case "ゼニガタ":
+                return $"{baby}。パパは 「カネで かえないものは ない」と\n" +
+                    "ずっと いってきた。だが ひとつだけ かえないものが あった。\n" +
+                    "おまえの せいちょうだ。\n\n" +
+                    "プラチナの ゆりかごより、おまえが ハイハイした ゆかのほうが\n" +
+                    "パパには たからものだった。\n" +
+                    $"さいごまで つっぱしれ、{baby}。カネなら いくらでも だすからな。";
+            case "ツクモ":
+                return $"……{baby}。パパには みえていたよ。\n" +
+                    "おまえが ここに たどりつく みらいが。\n" +
+                    "……うそだ。ほんとは みえて なかった。\n\n" +
+                    "うちゅうと こうしんしても、こどもの せいちょうだけは\n" +
+                    "よげん できなかった。まいにちが おどろきだった。\n" +
+                    $"おまえは パパの いちばんの ふかしぎだよ、{baby}。";
+            case "サトウ":
+                return $"{baby}。パパは とくべつな にんげんじゃない。\n" +
+                    "さいたまけん しゅっしんで、30ねん むちこく むけっきんの\n" +
+                    "ふつうの かかりちょうだ。\n\n" +
+                    "でもな、「ふつう」の パパにも わかることが ある。\n" +
+                    "おまえは ぜんぜん ふつうじゃない。すごいやつだ。\n" +
+                    $"ママの てりょうりと おまえの えがおが あれば、パパは それで いい。\nがんばれ、{baby}。";
+            case "イワオ":
+                return $"……{baby}。パパは ことばが にがてだ。\n" +
+                    "がっこうにも いかず、いしを わって そだった おとこだからな。\n\n" +
+                    "でも おまえが ハイハイで すすんでいく すがたを みて、\n" +
+                    "パパは はじめて 「まもりたい」と おもった。\n" +
+                    "りくいしを もちあげる ちからより、おまえの ゆうきの ほうが つよい。\n" +
+                    $"……いってこい、{baby}。パパの せなかで おうえんしてる。";
+            case "アキトシ":
+                return $"{baby}！ おまえ、まじで ここまで きたのか！？\n" +
+                    "パパは じんせいの ギャンブルに まけつづけて\n" +
+                    "つうちょう ざんだかは いつも ゼロだけどな、\n" +
+                    "おまえを そだてたのだけは だいあたりだった。\n\n" +
+                    "しんぶんしの おくるみで そだてて わるかったな。\n" +
+                    "でも おまえの えがおが いちばんの ジャックポットだ。\n" +
+                    $"ぜんぶ かけろ、{baby}！ パパが ついてるからな！";
+            case "ネオ":
+                return $"……{baby}。パパは 30ねんかん じたくから でなかった おとこだ。\n" +
+                    "おむつを かいに コンビニまで あるいたのが\n" +
+                    "パパにとっては だいぼうけんだった。\n\n" +
+                    "それにくらべたら おまえの ぼうけんは……すごすぎる。\n" +
+                    "パパの ぶんまで せかいを みてきてくれ。\n" +
+                    $"おうえんしてる。ふとんのなかから、だけど。\nがんばれ、{baby}。";
+            default:
+                return $"{baby}、ここまで よく がんばったな。\n" +
+                    "パパは おまえの せいちょうを みられて\n" +
+                    "ほんとうに しあわせだ。\n" +
+                    $"さいごまで おうえんしてるぞ、{baby}。";
+        }
+    }
+
+    string GetMotherMonumentMessage(string mother, string baby)
+    {
+        switch (mother)
+        {
+            case "サクラ":
+                return $"{baby}。ママは ぶじゅつの さいきょうの けいしょうしゃ だけど、\n" +
+                    "おまえの まえでは ただの ママだよ。\n\n" +
+                    "ぜんせん むてきの こぶしも、おまえを だっこするためなら\n" +
+                    "いくらでも やさしく なれる。\n" +
+                    "しゅぎょうの あとに たべる パフェより、\n" +
+                    $"おまえの えがおの ほうが ずっと あまいよ。\nがんばれ、{baby}💗";
+            case "ヒナタ":
+                return $"{baby}。ママは 28ちょうえんの びようていこくを きずいたけど、\n" +
+                    "おまえの ほっぺの やわらかさには かなわない。\n\n" +
+                    "「うつくしさは ちから」って ママは しんじてる。\n" +
+                    "でも ほんとうの うつくしさは\n" +
+                    $"おまえの いっしょうけんめいな すがただよ。\n{baby}、ママの いちばんの じまん💗";
+            case "アキラ":
+                return $"{baby}！ やったね、ここまで きたんだ！\n" +
+                    "ママは きんメダル 7こ とったけど、\n" +
+                    "おまえの この たびは どの きんメダルより かがやいてるよ。\n\n" +
+                    "「どりょくしない てんさいに かちは ない」って\n" +
+                    "ママの くちぐせ、おぼえてる？\n" +
+                    $"おまえは ちゃんと どりょくした。すばらしいよ、{baby}💗";
+            case "ミサト":
+                return $"{baby}。ママは うちゅうの しくみを しりたくて\n" +
+                    "ずっと けんきゅうしつに こもってきた。\n" +
+                    "ねこたちと いっしょにね。\n\n" +
+                    "でも おまえの せいちょうだけは\n" +
+                    "どんな りろんでも せつめいできなかった。\n" +
+                    "まいにちが はっけんだった。\n" +
+                    $"おまえこそ ママの いちばんの けんきゅうテーマだよ、{baby}💗";
+            case "カエデ":
+                return $"{baby}。ママは てんさい げかいとして\n" +
+                    "「このてが うごくかぎり、ひとりも しなせない」と\n" +
+                    "ちかって きた。\n\n" +
+                    "でもね、おまえを そだてて わかったの。\n" +
+                    "いのちを すくうより、いのちを そだてるほうが\n" +
+                    "ずっと むずかしくて、ずっと うれしい。\n" +
+                    $"やまの てっぺんの コーヒーより、おまえの ねがおが しあわせ💗\nがんばれ、{baby}。";
+            case "ルナ":
+                return $"{baby}。ママは 「あるく げいじゅつひん」なんて よばれてるけど、\n" +
+                    "いちど モデルを やめようと おもったことが あるの。\n\n" +
+                    "でも 「じぶんの うつくしさで だれかを ゆうきづけたい」\n" +
+                    "そう おもって もどってきた。\n" +
+                    "いまは おまえの ゆうきに ママが はげまされてる。\n" +
+                    $"さいごまで かがやいて、{baby}💗";
+            case "イザナミ":
+                return $"……{baby}。このイザナミが みとめた こ。\n" +
+                    "「こおりの じょてい」と おそれられる ママだけど、\n" +
+                    "おまえの まえでだけは べつじんに なってしまう。\n\n" +
+                    "てずから りにゅうしょくを つくっていたこと、\n" +
+                    "そくきんすら しらない ひみつ。\n" +
+                    "おまえは 「せかいを すべるもの」に なると きたいしている。\n" +
+                    $"でも ほんとは、ただ ぶじで いてくれれば いい💗";
+            case "ミク":
+                return $"{baby}！ ママ みてるよー！ いいね！ いいね！💗\n" +
+                    "……なんてね。カメラが まわってない ときの ママは\n" +
+                    "いがいと ふつうで やさしいでしょ？\n\n" +
+                    "フォロワー 500まんにん いるけど、\n" +
+                    "ほんとの じぶんを みせられるのは おまえだけ。\n" +
+                    $"おまえが いちばんの フォロワーだよ、{baby}💗";
+            case "カヨコ":
+                return $"{baby}。ママは まいあさ 5じに おきて\n" +
+                    "おそうざいを つくって、365にち やすみなしで はたらいてる。\n" +
+                    "でもね、おきゃくさんの「おいしい」より\n" +
+                    "おまえの「おいしい」の ほうが 100ばい うれしいの。\n\n" +
+                    "ひとを えがおにする りょうりを おしえたかった。\n" +
+                    $"でも おまえは もう、りょうり なんか なくても\nみんなを えがおに してるよ、{baby}💗";
+            case "フクトク":
+                return $"{baby}。ママは うんだけで いきてきた おんな。\n" +
+                    "たからくじ いっとう 2かい あたって、\n" +
+                    "じゃんけんは しょうがい むはい。\n\n" +
+                    "でもね、おまえが うまれたのは うん なんかじゃない。\n" +
+                    "あいが あったからだよ。\n" +
+                    "「うんが なくても あいが あれば だいじょうぶ」\n" +
+                    $"ママの ことば、おぼえててね、{baby}💗";
+            case "ヨネ":
+                return $"{baby}。ママは ないしょくの おに。\n" +
+                    "ティッシュは 1にち 5000まい おるし、\n" +
+                    "ミシンの ぬいめは 0.1ミリも くるわない。\n\n" +
+                    "おまえの おくるみも ほにゅうびんカバーも\n" +
+                    "ぜんぶ てぬい。「かえるものより つくれるもののほうが あたたかい」\n" +
+                    "ママの ミシンの おと、こもりうたに きこえてた？\n" +
+                    $"さいごまで いってらっしゃい、{baby}💗";
+            case "ドクコ":
+                return $"{baby}。ママは こわい かおで\n" +
+                    "やみきんの とりたてを してるけどね、\n" +
+                    "おまえが ねつを だしたときは ひとばんじゅう かんびょうしたよ。\n\n" +
+                    "「どくと くすりは かみひとえ」\n" +
+                    "おまえに のませた やくそうちゃ、にがかったでしょ。\n" +
+                    "でも ぜんぶ あい。\n" +
+                    $"トイチ……じゃなくて、{baby}、がんばっておいで💗";
+            default:
+                return $"{baby}、ここまで よく がんばったね。\n" +
+                    "ママは おまえの せいちょうが\n" +
+                    "なにより うれしいよ。\n" +
+                    $"さいごまで おうえんしてるからね、{baby}💗";
+        }
+    }
+
+    void AddMonumentCharEntry(UIE.ScrollView scroll, string name, string message, Sprite sprite)
+    {
+        var entry = new UIE.VisualElement();
+        entry.style.marginLeft = 12; entry.style.marginRight = 12;
+        entry.style.marginTop = 8; entry.style.marginBottom = 4;
+        entry.style.paddingTop = 14; entry.style.paddingBottom = 14;
+        entry.style.paddingLeft = 16; entry.style.paddingRight = 16;
+        entry.style.backgroundColor = new Color(1f, 1f, 1f, 0.6f);
+        entry.style.borderTopLeftRadius = 12; entry.style.borderTopRightRadius = 12;
+        entry.style.borderBottomLeftRadius = 12; entry.style.borderBottomRightRadius = 12;
+
+        var topRow = new UIE.VisualElement();
+        topRow.style.flexDirection = UIE.FlexDirection.Row;
+        topRow.style.alignItems = UIE.Align.Center;
+        topRow.style.marginBottom = 10;
+
+        if (sprite != null)
+        {
+            var img = new UIE.VisualElement();
+            img.style.width = 80; img.style.height = 80;
+            img.style.borderTopLeftRadius = 40;
+            img.style.borderTopRightRadius = 40;
+            img.style.borderBottomLeftRadius = 40;
+            img.style.borderBottomRightRadius = 40;
+            img.style.backgroundImage = new UIE.StyleBackground(sprite);
+            img.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+            img.style.marginRight = 12;
+            img.style.flexShrink = 0;
+            topRow.Add(img);
+        }
+
+        var nameLabel = UIHelper.CreateLabel(name, "");
+        nameLabel.style.fontSize = 26;
+        nameLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+        nameLabel.style.color = new Color(0f, 0f, 0f, 1f);
+        topRow.Add(nameLabel);
+        entry.Add(topRow);
+
+        var msgLabel = UIHelper.CreateLabel(message, "");
+        msgLabel.style.fontSize = 22;
+        msgLabel.style.color = new Color(0.3f, 0.3f, 0.3f, 1f);
+        msgLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
+        entry.Add(msgLabel);
+
+        scroll.Add(entry);
+    }
+
+    void AddMonumentEntry(UIE.ScrollView scroll, string name, string message)
+    {
+        var entry = new UIE.VisualElement();
+        entry.style.marginLeft = 12; entry.style.marginRight = 12;
+        entry.style.marginTop = 8; entry.style.marginBottom = 4;
+        entry.style.paddingTop = 10; entry.style.paddingBottom = 10;
+        entry.style.paddingLeft = 16; entry.style.paddingRight = 16;
+        entry.style.backgroundColor = new Color(1f, 1f, 1f, 0.6f);
+        entry.style.borderTopLeftRadius = 12; entry.style.borderTopRightRadius = 12;
+        entry.style.borderBottomLeftRadius = 12; entry.style.borderBottomRightRadius = 12;
+
+        var nameLabel = UIHelper.CreateLabel(name, "");
+        nameLabel.style.fontSize = 26;
+        nameLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+        nameLabel.style.color = new Color(0f, 0f, 0f, 1f);
+        nameLabel.style.marginBottom = 4;
+        entry.Add(nameLabel);
+
+        var msgLabel = UIHelper.CreateLabel(message, "");
+        msgLabel.style.fontSize = 22;
+        msgLabel.style.color = new Color(0.3f, 0.3f, 0.3f, 1f);
+        msgLabel.style.whiteSpace = UIE.WhiteSpace.Normal;
+        entry.Add(msgLabel);
+
+        scroll.Add(entry);
+    }
+
+    string GetNpcDisplayName(string npcKey)
+    {
+        if (npcKey == "ミルク母さん") return "ミルク母さん";
+        if (npcKey == "長老") return "長老";
+        if (npcKey == "おあそびどうぐやさん") return "おあそびどうぐやさん";
+        if (npcKey == "じゅくの先生") return "じゅくの先生";
+        if (npcKey == "金の卵の老人") return "金の卵の老人";
+        return npcKey;
+    }
+
+    Sprite GetNpcSpriteForMonument(string npcName)
+    {
+        string path = null;
+        if (npcName == "長老") path = "MapCharacters/Old_Men";
+        else if (npcName == "ミルク母さん") path = "MapCharacters/Milk_Mother";
+        else if (npcName == "おあそびどうぐやさん") path = "MapCharacters/Weapon_men";
+        else if (npcName == "じゅくの先生") path = "MapCharacters/Teacher_Lady";
+        else if (npcName == "金の卵の老人") path = "MapCharacters/Old_Men";
+        if (path != null) return Resources.Load<Sprite>(path);
+        return null;
+    }
+
+    string GetNpcMonumentMessage(string npcName, string babyName)
+    {
+        switch (npcName)
+        {
+            case "長老":
+                return $"はじめて {babyName}が やってきた ときのことを おぼえておるよ。\n" +
+                    "ちいさな あしで おそるおそる あるいてきおった。\n" +
+                    "それが いまや ほしの はてまで たどりつくとは……\n\n" +
+                    "わしの ながい ながい いのちで みてきた なかで\n" +
+                    $"いちばん うつくしい たびじゃった。ありがとう、{babyName}。";
+            case "ミルク母さん":
+                return $"あらあら、{babyName}。\n" +
+                    "あの ころは おなかが すくと すぐ なきだして、\n" +
+                    "ミルクを あげると にこーって わらって……\n\n" +
+                    "いま おもいだすと むねが あったかくなるの。\n" +
+                    "いつでも かえっておいで。ミルクは いつでも あるからね💗";
+            case "おあそびどうぐやさん":
+                return $"おっ！ {babyName}じゃないか！\n" +
+                    "はじめて うちに きたとき、めを キラキラさせて\n" +
+                    "ぜんぶの おもちゃに さわってたなぁ。\n\n" +
+                    "おまえさんに うった どうぐが\n" +
+                    "やくに たってると いいんだが……\n" +
+                    "って、ここまで こられたんだ。じゅうぶんだな！✨";
+            case "じゅくの先生":
+                return $"{babyName}さん。せんせい うれしいわ。\n" +
+                    "さいしょは すうじも よめなかった のに、\n" +
+                    "いまは じぶんで かんがえて すすめるように なったのね。\n\n" +
+                    "せんせいが おしえたのは ちしきだけど、\n" +
+                    "それを つかって ここまで きたのは\n" +
+                    $"{babyName}さん じしんの ちからよ。ほんとうに えらい✨";
+            case "金の卵の老人":
+                return $"ほっほっほ。{babyName}よ。\n" +
+                    "あのとき わたした きんの たまご、\n" +
+                    "たいせつに してくれたかの？\n\n" +
+                    "たまごの なかみは 「きぼう」じゃよ。\n" +
+                    "おまえさんが ここまで これたのは\n" +
+                    "その きぼうを わすれなかった からじゃ。";
+            default:
+                // 父母NPCの場合
+                if (npcName.Contains("パパ") || npcName.Contains("ママ"))
+                    return $"「{babyName}の ことを ずっと おもっているよ」";
+                return $"「{babyName}と であえた きせきに かんしゃ」";
+        }
+    }
+
+    Sprite GetEnemySpriteForMonument(string enemyName)
+    {
+        string path = null;
+        switch (enemyName)
+        {
+            // ボス
+            case "青年のシバ": path = "EnemyBabys/boss/first-boss-shiba"; break;
+            case "デヴィル夫人": path = "EnemyBabys/boss/devil-wife"; break;
+            case "メロディアス女王": path = "EnemyBabys/boss/melodias"; break;
+            case "エゴ・マザー・マシーン": path = "EnemyBabys/boss/ego-mother"; break;
+            // 通常（よちよちの里）
+            case "えんえんベイビー": path = "EnemyBabys/common-nakimushi"; break;
+            case "うずうずベイビー": path = "EnemyBabys/common-yantya"; break;
+            case "ぷんぷんベイビー": path = "EnemyBabys/first-enemy"; break;
+            case "いやだいやだベイビー": path = "EnemyBabys/common-wagamama"; break;
+            case "どたばたベイビー": path = "EnemyBabys/common-abarennbou"; break;
+            // 毒（悪魔村）
+            case "にがにがベイビー": path = "EnemyBabys/poison/doku-baby"; break;
+            case "ぐちぐちベイビー": path = "EnemyBabys/poison/noroi-baby"; break;
+            case "どよよんベイビー": path = "EnemyBabys/poison/yami-baby"; break;
+            case "つんつんベイビー": path = "EnemyBabys/poison/akuma-baby"; break;
+            case "いじいじベイビー": path = "EnemyBabys/poison/jyaaku-baby"; break;
+            case "ごーじゃすベイビー": path = "EnemyBabys/poison/maou-baby"; break;
+            // 小悪魔（小悪魔の街）
+            case "小悪魔ひとみ": path = "EnemyBabys/cute/hitomi"; break;
+            case "小悪魔あやか": path = "EnemyBabys/cute/ayaka"; break;
+            case "小悪魔りん": path = "EnemyBabys/cute/rin"; break;
+            case "小悪魔みく": path = "EnemyBabys/cute/miku"; break;
+            case "小悪魔なな": path = "EnemyBabys/cute/nana"; break;
+            case "小悪魔れい": path = "EnemyBabys/cute/rei"; break;
+            // 傭兵
+            case "デヴィル傭兵A": path = "EnemyBabys/poison/katchu-a"; break;
+            case "デヴィル傭兵B": path = "EnemyBabys/poison/katchu-b"; break;
+        }
+        if (path != null) return Resources.Load<Sprite>(path);
+        return null;
+    }
+
+    string GetEnemyMonumentMessage(string enemyName, string babyName)
+    {
+        switch (enemyName)
+        {
+            // ボス
+            case "青年のシバ":
+                return $"おまえが はじめて たちむかった あいて、おれだったな。\n" +
+                    "あのとき おまえは ちっちゃくて、でも めだけは まっすぐで。\n" +
+                    "おれは あのひ から おまえの ことを わすれたことがない。\n\n" +
+                    $"つよくなったな、{babyName}。おまえの かちだ。";
+            case "デヴィル夫人":
+                return $"あら……{babyName}。まだ おぼえてるのね。\n" +
+                    "わたしの どくに たえて、にげなかった あのこ。\n" +
+                    "くやしいけど みとめるわ。\n\n" +
+                    "あなたの つよさは ほんもの。\n" +
+                    "わたしの やかたは いまでも あなたを まってるわよ💗";
+            case "メロディアス女王":
+                return $"ふふ……{babyName}。わたしの うたに まけなかったのね。\n" +
+                    "みわくの メロディに のまれず、\n" +
+                    "じぶんの リズムを つらぬいた あなた。\n\n" +
+                    "いつか また うたいましょう。\n" +
+                    "こんどは たたかいの うたではなく、\n" +
+                    "ふたりの おもいでの うたを……🎵";
+            case "エゴ・マザー・マシーン":
+                return "わたしは すべてを しはいしようと した。\n" +
+                    "あいも、いのちも、うんめいさえも。\n\n" +
+                    $"でも {babyName}、あなたが おしえてくれた。\n" +
+                    "ほんとうの あいは しばらない ものだと。\n" +
+                    "ありがとう……そして、ごめんなさい。";
+            // 傭兵
+            case "デヴィル傭兵A":
+                return $"おれたちは めいれいで たたかっただけだ。\n" +
+                    "でも おまえの あの ひっしな かおは わすれられねえ。\n" +
+                    $"つよいやつだ、{babyName}。\nおれたちの まけだ。";
+            case "デヴィル傭兵B":
+                return $"あにきと ふたりがかりでも だめだったな。\n" +
+                    "ちいさいのに おそろしい やつだぜ。\n" +
+                    $"こんど あったら おれたちの ほうから にげるかもな、{babyName}。";
+            // 通常（よちよちの里）
+            case "えんえんベイビー":
+                return $"えーん、えーん！ また あえて うれしい……！\n" +
+                    "あの ときは いっぱい ないちゃった けど、\n" +
+                    $"{babyName}と あそんだ あとは なんだか すっきりしたの。\n\n" +
+                    "もう なかないよ。……たぶん💗";
+            case "うずうずベイビー":
+                return $"うずうず うずうず！ じっとしてられない！\n" +
+                    $"{babyName}と あそんだ ひは いちばん たのしかった！\n\n" +
+                    "ぼくも いつか {babyName}みたいに\n" +
+                    "とおくまで いけるかなぁ……✨";
+            case "ぷんぷんベイビー":
+                return $"ぷんぷん！ まけたの まだ おこってるんだからね！\n" +
+                    "……うそ。ほんとは ちょっと かっこいいと おもった。\n\n" +
+                    $"{babyName}って つよいけど やさしいよね。\n" +
+                    "それが いちばん むかつく……じゃなくて、すごいとこ。";
+            case "いやだいやだベイビー":
+                return $"いやだ いやだ！ まけるのは いやだ！\n" +
+                    "……って おもってたけど、まけた あと\n" +
+                    "なんか すっきりした のは なんでだろ。\n\n" +
+                    $"{babyName}、ありがと。もう いやだ って いわない……かも。";
+            case "どたばたベイビー":
+                return $"どたどた ばたばた！ まいにち たいへん！\n" +
+                    $"でも {babyName}と あそんだ ひは\n" +
+                    "いちばん どたばた してて いちばん たのしかった！\n\n" +
+                    "またいつか どたばた しよーね！✨";
+            // 毒（悪魔村）
+            case "にがにがベイビー":
+                return $"にがい おくすり みたいな ぼくだけど、\n" +
+                    $"{babyName}は にげなかった。\n" +
+                    "はじめてだよ、さいごまで あそんでくれたの。\n\n" +
+                    "にがい ものも なれると へいきに なるって\n" +
+                    "おしえて もらった みたい。";
+            case "ぐちぐちベイビー":
+                return $"ぐちぐち もんくばっかり いってた ぼくに\n" +
+                    $"{babyName}は まっすぐ むかってきた。\n\n" +
+                    "あれから ぐちを いうのが すこし へったよ。\n" +
+                    "……すこしだけね。";
+            case "どよよんベイビー":
+                return $"どよよん……くらい きもちで いっぱいだった ぼく。\n" +
+                    $"{babyName}と あそんだら すこしだけ はれたんだ。\n\n" +
+                    "くもの むこうにも そらが あるって\n" +
+                    "しらなかったよ。ありがとう。";
+            case "つんつんベイビー":
+                return $"ふん。べつに {babyName}の ことなんか。\n" +
+                    "……うそ。ほんとは あのとき すごく たのしかった。\n\n" +
+                    "つよくて やさしい やつは きらいじゃない。\n" +
+                    "……って いったら わらう？";
+            case "いじいじベイビー":
+                return "いじいじ してばかりの ぼくだったけど、\n" +
+                    $"{babyName}が あそんでくれて\n" +
+                    "すこしだけ ゆうきが でたの。\n\n" +
+                    "いまは いじいじ するひが すこし へったよ。\n" +
+                    "ぜんぶ あのひの おかげ。";
+            case "ごーじゃすベイビー":
+                return $"ごーじゃすに まけるなんて しんじられなかった。\n" +
+                    $"でも {babyName}の つよさは ほんものだった。\n\n" +
+                    "このよで いちばん ごーじゃすなのは\n" +
+                    "あきらめない こころだって わかったわ✨";
+            // 小悪魔（小悪魔の街）
+            case "小悪魔ひとみ":
+                return $"あら、{babyName}。おぼえてる？\n" +
+                    "わたしの め、こわかった？ ふふ。\n\n" +
+                    "でも あなたは にげなかった。\n" +
+                    "あの まっすぐな めが わすれられないの💗";
+            case "小悪魔あやか":
+                return $"あやかし の ちからに たえるなんて、\n" +
+                    $"{babyName}って ほんと すごい。\n\n" +
+                    "わたしも すこし まじめに なろうかな。\n" +
+                    "あなたを みてると そう おもうの。";
+            case "小悪魔りん":
+                return $"りん♪ って よばれるのが すきなの。\n" +
+                    $"{babyName}と あそんだ ときの おとが\n" +
+                    "いちばん きれいな りん♪ だった。\n\n" +
+                    "また あの おとを きかせてね🎵";
+            case "小悪魔みく":
+                return $"みくは つよい こが すき。\n" +
+                    $"だから {babyName}の こと……すきかも。\n\n" +
+                    "なーんて。おこらないでよ？\n" +
+                    "でも ほんとに つよかった。みとめる✨";
+            case "小悪魔なな":
+                return $"なな つの ひみつを もってるの。\n" +
+                    $"そのうちの ひとつは……{babyName}に まけたこと。\n\n" +
+                    "でも いちばんの ひみつは\n" +
+                    "まけて うれしかった こと、かな💗";
+            case "小悪魔れい":
+                return "わたしは つめたい って いわれるけど、\n" +
+                    $"あのとき {babyName}に まけて\n" +
+                    "はじめて あつい なみだが でた。\n\n" +
+                    "ありがとう。あなたの おかげで\n" +
+                    "すこしだけ あたたかく なれた きがする。";
+            // かぐや（バトルで倒した場合）
+            case "かぐやちゃん":
+                return ""; // かぐやセクションで別途表示
+            default:
+                return $"「{babyName}と であえた ことは わすれないよ」";
+        }
+    }
+
+    void CheckMonumentAdjacent()
+    {
+        if (monumentObj == null) return;
+        if (monumentOverlayEl != null) return;
+        if (menuOpen) return;
+        if (!IsAdjacentTo(TILE_MONUMENT)) return;
+        ShowMonumentPanel();
+    }
+
+    void CloseMonumentPanel()
+    {
+        if (monumentOverlayEl == null) return;
+        var overlay = monumentOverlayEl.parent;
+        if (overlay != null) overlay.RemoveFromHierarchy();
+        monumentOverlayEl = null;
+        menuOpen = false;
+        SetTouchControlsVisible(true);
     }
 
     // ===== 門番（長老）NPC =====

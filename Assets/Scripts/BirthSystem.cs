@@ -621,6 +621,9 @@ public class BirthSystem : MonoBehaviour
             customImagePath = DataCarrier.Instance != null ? DataCarrier.Instance.customBabyImagePath : "",
             fatherItemPath = GetParentItemPath(father.imageName, true),
             motherItemPath = GetParentItemPath(mother.imageName, false),
+            faceOffsetX = eyeMarkSavedOffsetX,
+            faceOffsetY = eyeMarkSavedOffsetY,
+            faceScale = eyeMarkSavedScale,
         };
         lastSynthParams = synthParams;
         Sprite synthSprite = babySynthesizer.Synthesize(synthParams);
@@ -1592,6 +1595,9 @@ public class BirthSystem : MonoBehaviour
             customImagePath = DataCarrier.Instance != null ? DataCarrier.Instance.customBabyImagePath : "",
             fatherItemPath = GetParentItemPath(father.imageName, true),
             motherItemPath = GetParentItemPath(mother.imageName, false),
+            faceOffsetX = eyeMarkSavedOffsetX,
+            faceOffsetY = eyeMarkSavedOffsetY,
+            faceScale = eyeMarkSavedScale,
         };
         lastSynthParams = synthParams;
         Sprite synthSprite = babySynthesizer.Synthesize(synthParams);
@@ -4128,30 +4134,38 @@ public class BirthSystem : MonoBehaviour
         UIHelper.ApplyFont(subtitle);
         card.Add(subtitle);
 
-        // プレビュー（元画像を表示）
-        eyeMarkPreview = new UIE.VisualElement();
-        eyeMarkPreview.style.width = 600;
-        eyeMarkPreview.style.height = 600;
-        eyeMarkPreview.style.backgroundImage = new UIE.StyleBackground(originalFaceTexture);
-        eyeMarkPreview.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
-        eyeMarkPreview.style.alignSelf = UIE.Align.Center;
-        eyeMarkPreview.style.position = UIE.Position.Relative;
-        card.Add(eyeMarkPreview);
+        // プレビュー（ズーム・オフセット反映）
+        float emScale = eyeMarkSavedScale > 0.01f ? eyeMarkSavedScale : 1f;
+        float emImgSize = 600f * emScale;
+        float emOffPxX = eyeMarkSavedOffsetX * emImgSize;
+        float emOffPxY = -eyeMarkSavedOffsetY * emImgSize;
 
-        // タップイベント
-        eyeMarkPreview.RegisterCallback<UIE.PointerDownEvent>(OnEyeMarkTap);
+        var previewWrapper = new UIE.VisualElement();
+        previewWrapper.style.width = 600;
+        previewWrapper.style.height = 600;
+        previewWrapper.style.overflow = UIE.Overflow.Hidden;
+        previewWrapper.style.alignSelf = UIE.Align.Center;
+        previewWrapper.style.position = UIE.Position.Relative;
+        card.Add(previewWrapper);
+
+        eyeMarkPreview = new UIE.VisualElement();
+        eyeMarkPreview.style.position = UIE.Position.Absolute;
+        eyeMarkPreview.style.width = emImgSize;
+        eyeMarkPreview.style.height = emImgSize;
+        eyeMarkPreview.style.left = (600f - emImgSize) / 2f + emOffPxX;
+        eyeMarkPreview.style.top = (600f - emImgSize) / 2f + emOffPxY;
+        eyeMarkPreview.style.backgroundImage = new UIE.StyleBackground(originalFaceTexture);
+        eyeMarkPreview.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
+        previewWrapper.Add(eyeMarkPreview);
+
+        // タップイベント（wrapper側で受け取り、座標を元画像空間に変換）
+        previewWrapper.RegisterCallback<UIE.PointerDownEvent>(OnEyeMarkTap);
 
         // ボタン行
         var btnRow = new UIE.VisualElement();
         btnRow.AddToClassList("face-adjust-btn-row");
         btnRow.style.marginTop = 16;
         card.Add(btnRow);
-
-        var applyBtn = new UIE.Button(() => OnEyeMarkConfirm());
-        applyBtn.AddToClassList("face-adjust-confirm-btn");
-        applyBtn.text = "\u2726 魔法をかける";
-        UIHelper.ApplyFont(applyBtn);
-        btnRow.Add(applyBtn);
 
         var skipBtn = new UIE.Button(() => OnEyeMarkSkip());
         skipBtn.AddToClassList("face-adjust-cancel-btn");
@@ -4181,33 +4195,39 @@ public class BirthSystem : MonoBehaviour
     {
         if (eyeMarkPreview == null) return;
 
-        // タップ位置をプレビュー内の正規化座標に変換
+        // タップ位置(wrapper空間)をズーム前の元画像正規化座標に変換
         Vector2 local = evt.localPosition;
-        float previewW = eyeMarkPreview.resolvedStyle.width;
-        float previewH = eyeMarkPreview.resolvedStyle.height;
-        if (previewW <= 0 || previewH <= 0) return;
+        float emScale = eyeMarkSavedScale > 0.01f ? eyeMarkSavedScale : 1f;
+        float emImgSize = 600f * emScale;
+        float emOffPxX = eyeMarkSavedOffsetX * emImgSize;
+        float emOffPxY = -eyeMarkSavedOffsetY * emImgSize;
+        float imgLeft = (600f - emImgSize) / 2f + emOffPxX;
+        float imgTop = (600f - emImgSize) / 2f + emOffPxY;
 
-        // ScaleToFitの実際の描画領域を計算
+        // wrapper座標 → face image内の正規化座標
+        float faceLocalX = local.x - imgLeft;
+        float faceLocalY = local.y - imgTop;
+
+        // ScaleAndCropの描画領域を考慮（正方形クロップ）
         float texAspect = (float)originalFaceTexture.width / originalFaceTexture.height;
-        float previewAspect = previewW / previewH;
         float drawW, drawH, drawX, drawY;
-        if (texAspect > previewAspect)
+        if (texAspect > 1f)
         {
-            drawW = previewW;
-            drawH = previewW / texAspect;
+            drawW = emImgSize;
+            drawH = emImgSize / texAspect;
             drawX = 0;
-            drawY = (previewH - drawH) * 0.5f;
+            drawY = (emImgSize - drawH) * 0.5f;
         }
         else
         {
-            drawH = previewH;
-            drawW = previewH * texAspect;
-            drawX = (previewW - drawW) * 0.5f;
+            drawH = emImgSize;
+            drawW = emImgSize * texAspect;
+            drawX = (emImgSize - drawW) * 0.5f;
             drawY = 0;
         }
 
-        float nx = (local.x - drawX) / drawW;
-        float ny = (local.y - drawY) / drawH;
+        float nx = (faceLocalX - drawX) / drawW;
+        float ny = (faceLocalY - drawY) / drawH;
         if (nx < 0 || nx > 1 || ny < 0 || ny > 1) return;
 
         eyeTapCount++;
@@ -4229,8 +4249,8 @@ public class BirthSystem : MonoBehaviour
             eyeTapCount = 1;
             eyePos1 = new Vector2(nx, ny);
             eyePos2 = new Vector2(-1, -1);
-            // マーカー全削除して新しく追加
-            var markers = UIE.UQueryExtensions.Query(eyeMarkPreview, className: "eye-marker-dot").ToList();
+            // マーカー全削除して新しく追加（wrapper上のマーカーを検索）
+            var markers = UIE.UQueryExtensions.Query(eyeMarkPreview.parent, className: "eye-marker-dot").ToList();
             foreach (var m in markers) m.RemoveFromHierarchy();
             AddEyeMarker(local.x, local.y, "L");
         }
@@ -4270,7 +4290,11 @@ public class BirthSystem : MonoBehaviour
         text.pickingMode = UIE.PickingMode.Ignore;
         marker.Add(text);
 
-        eyeMarkPreview.Add(marker);
+        // wrapper(親)に追加（wrapper空間の座標で配置）
+        if (eyeMarkPreview.parent != null)
+            eyeMarkPreview.parent.Add(marker);
+        else
+            eyeMarkPreview.Add(marker);
     }
 
     void OnEyeMarkConfirm()

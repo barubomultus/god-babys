@@ -60,6 +60,28 @@ public class TitleManager : MonoBehaviour
         bg.AddToClassList("bg-screen");
         root.Add(bg);
 
+        // top.png 背景画像（上下8pxトリミング）
+        var topTex = Resources.Load<Texture2D>("BackGrounds/top");
+        if (topTex != null)
+        {
+            var topBg = new UIE.VisualElement();
+            topBg.pickingMode = UIE.PickingMode.Ignore;
+            topBg.style.position = UIE.Position.Absolute;
+            topBg.style.left = 0;
+            topBg.style.right = 0;
+            topBg.style.top = 0;
+            topBg.style.bottom = 0;
+            // 上下8pxトリミング: UV rectで表現
+            float trimPx = 8f;
+            float trimU = trimPx / topTex.height;
+            topBg.style.backgroundImage = new UIE.StyleBackground(topTex);
+            topBg.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
+            // USS sliceでは厳密トリミングできないので、少し拡大して上下の余白を隠す
+            float scaleY = 1f + (trimPx * 2f) / topTex.height;
+            topBg.style.scale = new UIE.StyleScale(new UIE.Scale(new Vector3(1f, scaleY, 1f)));
+            root.Add(topBg);
+        }
+
         // フレックスボックスのルートコンテナ
         var titleRoot = new UIE.VisualElement();
         titleRoot.AddToClassList("title-root");
@@ -75,45 +97,71 @@ public class TitleManager : MonoBehaviour
 
         CreateDevResetButton(topRow);
 
-        // --- 中央: ロゴ + ボタン群 ---
-        var center = new UIE.VisualElement();
-        center.AddToClassList("title-center");
-        titleRoot.Add(center);
-
-        // タイトルロゴ
+        // --- ロゴ: 中央から15%上に配置 ---
         var logoSprite = Resources.Load<Sprite>("UI/title-logo");
         if (logoSprite != null)
         {
             var logo = new UIE.VisualElement();
             logo.AddToClassList("title-logo");
             logo.style.backgroundImage = new UIE.StyleBackground(logoSprite);
-            center.Add(logo);
+            logo.style.position = UIE.Position.Absolute;
+            logo.style.alignSelf = UIE.Align.Center;
+            logo.style.top = new UIE.StyleLength(new UIE.Length(27, UIE.LengthUnit.Percent));
+            titleRoot.Add(logo);
         }
 
-        // ボタン群コンテナ
+        // --- 「わくわくの旅へ。」テキスト: 中央から10%下 ---
         hasProfile = DataCarrier.HasProfile();
+        string startText = Localization.Get(hasProfile ? "title_tap_start" : "title_new_game");
 
-        titleButtons = new UIE.VisualElement();
-        titleButtons.AddToClassList("title-buttons");
-        center.Add(titleButtons);
+        // 縁取り用コンテナ（黒アウトライン + 白文字）
+        var textContainer = new UIE.VisualElement();
+        textContainer.pickingMode = UIE.PickingMode.Ignore;
+        textContainer.style.position = UIE.Position.Absolute;
+        textContainer.style.alignSelf = UIE.Align.Center;
+        textContainer.style.top = new UIE.StyleLength(new UIE.Length(75, UIE.LengthUnit.Percent));
+        textContainer.style.alignItems = UIE.Align.Center;
+        textContainer.style.justifyContent = UIE.Justify.Center;
 
-        if (hasProfile)
+        // 黒縁取り: 8方向にオフセットした黒ラベルを重ねる
+        int outlineW = 4;
+        int[] offsets = { -outlineW, 0, outlineW };
+        foreach (int ox in offsets)
         {
-            CreateStartButton();
-        }
-        else
-        {
-            bool hasSave = DataCarrier.HasAnySaveData();
-            if (hasSave)
+            foreach (int oy in offsets)
             {
-                CreateSaveDataButton();
-                CreateStartButton();
-            }
-            else
-            {
-                CreateStartButton();
+                if (ox == 0 && oy == 0) continue;
+                var shadow = new UIE.Label();
+                shadow.text = startText;
+                shadow.pickingMode = UIE.PickingMode.Ignore;
+                shadow.style.position = UIE.Position.Absolute;
+                shadow.style.fontSize = 42;
+                shadow.style.unityFontStyleAndWeight = UnityEngine.FontStyle.Bold;
+                shadow.style.color = Color.black;
+                shadow.style.translate = new UIE.StyleTranslate(new UIE.Translate(ox, oy));
+                shadow.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+                shadow.style.letterSpacing = 4;
+                UIHelper.ApplyFontBold(shadow);
+                textContainer.Add(shadow);
             }
         }
+
+        // 白文字（前面）
+        var mainLabel = new UIE.Label();
+        mainLabel.text = startText;
+        mainLabel.pickingMode = UIE.PickingMode.Ignore;
+        mainLabel.style.fontSize = 42;
+        mainLabel.style.unityFontStyleAndWeight = UnityEngine.FontStyle.Bold;
+        mainLabel.style.color = Color.white;
+        mainLabel.style.unityTextAlign = UnityEngine.TextAnchor.MiddleCenter;
+        mainLabel.style.letterSpacing = 4;
+        UIHelper.ApplyFontBold(mainLabel);
+        textContainer.Add(mainLabel);
+
+        titleRoot.Add(textContainer);
+
+        // 画面全体タップでスタート
+        titleRoot.RegisterCallback<UIE.ClickEvent>(evt => StartGame());
 
         // --- 下部: 言語ボタン ---
         var langPanel = new UIE.VisualElement();

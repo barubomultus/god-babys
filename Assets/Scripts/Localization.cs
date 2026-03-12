@@ -27,7 +27,7 @@ public static class Localization
         // ===== Title Scene =====
         Add("title_save_data", "つづきから", "Continue");
         Add("title_new_game", "はじめから", "New Game");
-        Add("title_tap_start", "タップでスタート", "Tap to Start");
+        Add("title_tap_start", "わくわくの旅へ。", "Start Adventure!");
         Add("title_reset_profile", "ユーザー名リセット", "Reset Profile");
         Add("title_save_data_list", "セーブデータ一覧", "Save Data List");
         Add("title_slot_empty", "スロット {0}: 空き", "Slot {0}: Empty");

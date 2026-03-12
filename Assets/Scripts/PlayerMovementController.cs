@@ -235,14 +235,35 @@ public class PlayerMovementController
         if (tapTile.x < 0 || tapTile.x >= mapWidth || tapTile.y < 0 || tapTile.y >= mapHeight)
             return;
 
+        Vector2Int targetTile = tapTile;
+
+        // walkableでないタイルをタップした場合、隣接する最も近いwalkableタイルを探す
         if (!isWalkable(tapTile.x, tapTile.y))
+        {
+            var from = getPlayerTile();
+            Vector2Int best = new Vector2Int(-1, -1);
+            float bestDist = float.MaxValue;
+            int[] ddx = { 0, 0, -1, 1 };
+            int[] ddy = { 1, -1, 0, 0 };
+            for (int i = 0; i < 4; i++)
+            {
+                int nx = tapTile.x + ddx[i];
+                int ny = tapTile.y + ddy[i];
+                if (nx >= 0 && nx < mapWidth && ny >= 0 && ny < mapHeight && isWalkable(nx, ny))
+                {
+                    float d = Mathf.Abs(from.x - nx) + Mathf.Abs(from.y - ny);
+                    if (d < bestDist) { bestDist = d; best = new Vector2Int(nx, ny); }
+                }
+            }
+            if (best.x < 0) return;
+            targetTile = best;
+        }
+
+        var start = getPlayerTile();
+        if (start.x == targetTile.x && start.y == targetTile.y)
             return;
 
-        var from = getPlayerTile();
-        if (from.x == tapTile.x && from.y == tapTile.y)
-            return;
-
-        var path = FindPath(from, tapTile);
+        var path = FindPath(start, targetTile);
         if (path == null || path.Count == 0)
             return;
 
@@ -250,7 +271,7 @@ public class PlayerMovementController
         foreach (var step in path)
             pathQueue.Enqueue(step);
 
-        ShowMarker(tapTile.x, tapTile.y);
+        ShowMarker(targetTile.x, targetTile.y);
     }
 
     Vector2Int ScreenToTile(Vector2 screenPos)

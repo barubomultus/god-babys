@@ -885,7 +885,7 @@ public class BabySynthesizer : MonoBehaviour
             // カスタム顔がない場合 → おくるみのみ描画
             if (faceTex == null)
             {
-                BlitSpriteToCanvas(pixels, wearSprite, 0, 0, TEX_SIZE, TEX_SIZE, coverMode: true);
+                BlitSpriteToCanvas(pixels, wearSprite, 0, 0, TEX_SIZE, TEX_SIZE, coverMode: true, coverTopAlign: true);
                 return;
             }
 
@@ -899,16 +899,7 @@ public class BabySynthesizer : MonoBehaviour
             float faceCropOffsetX = (faceTexW - faceCropSize) * 0.5f;
             float faceCropOffsetY = (faceTexH - faceCropSize) * 0.5f;
 
-            float faceCx = TEX_SIZE * FACE_HOLE_CX;
-            float faceCy = TEX_SIZE * FACE_HOLE_CY;
-            float faceRx = TEX_SIZE * FACE_HOLE_RX * 1.05f;
-            float faceRy = TEX_SIZE * FACE_HOLE_RY * 1.05f;
-            float uniformR = Mathf.Max(faceRx, faceRy);
-            float faceScale = p.faceScale > 0.01f ? p.faceScale : 1.0f;
-
-
             // スキャンラインで各行の不透明境界を事前計算（外周透過 vs 顔穴透過の区別用）
-            // 各行で左端・右端の不透明ピクセル位置を記録し、その間の透過=顔穴、外側の透過=背景
             int[] rowLeftOpaque = new int[srcH];
             int[] rowRightOpaque = new int[srcH];
             for (int y = 0; y < srcH; y++)
@@ -925,12 +916,27 @@ public class BabySynthesizer : MonoBehaviour
                 }
             }
 
-            // おくるみのアスペクト比を維持してキャンバスにフィット（cover mode）
-            float coverScale = Mathf.Max((float)TEX_SIZE / srcW, (float)TEX_SIZE / srcH);
+            // おくるみのアスペクト比を維持してキャンバスにフィット（cover mode, 上寄せ, 5%トリミング）
+            float trimRatio = 0.05f;
+            float trimX = srcW * trimRatio; // 左右5%カット
+            float trimY = srcH * trimRatio; // 上端5%カット
+            float croppedW = srcW - trimX * 2f;
+            float croppedH = srcH - trimY; // 上端のみカット
+            float coverScale = Mathf.Max((float)TEX_SIZE / croppedW, (float)TEX_SIZE / croppedH);
             float visibleW = TEX_SIZE / coverScale;
             float visibleH = TEX_SIZE / coverScale;
-            float coverOffsetX = (srcW - visibleW) * 0.5f;
-            float coverOffsetY = (srcH - visibleH) * 0.5f;
+            float coverOffsetX = trimX + (croppedW - visibleW) * 0.5f;
+            float coverOffsetY = (srcH - trimY) - visibleH; // 上寄せ（上端5%カット後）
+
+            // 顔穴座標を元画像→キャンバス座標に変換（cover mode + 上寄せ + 5%トリミング対応）
+            float faceCx = (FACE_HOLE_CX * srcW - coverOffsetX) * coverScale;
+            float faceCy = (FACE_HOLE_CY * srcH - coverOffsetY) * coverScale;
+            // プレビューのオフセットマッピングと一致する基本サイズ
+            float baseUniformR = TEX_SIZE * Mathf.Max(FACE_HOLE_RX, FACE_HOLE_RY) * 1.05f;
+            // cover modeで顔穴が拡大される分を補正（穴を確実に埋める）
+            float holeR = Mathf.Max(FACE_HOLE_RX * srcW, FACE_HOLE_RY * srcH) * coverScale * 1.05f;
+            float uniformR = Mathf.Max(baseUniformR, holeR);
+            float faceScale = p.faceScale > 0.01f ? p.faceScale : 1.0f;
 
             // 1パスで合成
             for (int dy = 0; dy < TEX_SIZE; dy++)
@@ -2782,7 +2788,7 @@ public class BabySynthesizer : MonoBehaviour
         }
     }
 
-    void BlitSpriteToCanvas(Color[] canvas, Sprite sprite, int dstX, int dstY, int dstW, int dstH, bool coverMode = false)
+    void BlitSpriteToCanvas(Color[] canvas, Sprite sprite, int dstX, int dstY, int dstW, int dstH, bool coverMode = false, bool coverTopAlign = false)
     {
         var tex = sprite.texture;
         int srcW = tex.width;
@@ -2793,9 +2799,24 @@ public class BabySynthesizer : MonoBehaviour
         float cvScale = 1f, cvOffX = 0f, cvOffY = 0f;
         if (coverMode && (srcW != dstW || srcH != dstH))
         {
-            cvScale = Mathf.Max((float)dstW / srcW, (float)dstH / srcH);
-            cvOffX = (srcW - dstW / cvScale) * 0.5f;
-            cvOffY = (srcH - dstH / cvScale) * 0.5f;
+            if (coverTopAlign)
+            {
+                // 上寄せ + 5%トリミング（おくるみ用）
+                float trimRatio = 0.05f;
+                float trimX = srcW * trimRatio;
+                float trimY = srcH * trimRatio;
+                float croppedW = srcW - trimX * 2f;
+                float croppedH = srcH - trimY;
+                cvScale = Mathf.Max((float)dstW / croppedW, (float)dstH / croppedH);
+                cvOffX = trimX + (croppedW - dstW / cvScale) * 0.5f;
+                cvOffY = (srcH - trimY) - dstH / cvScale;
+            }
+            else
+            {
+                cvScale = Mathf.Max((float)dstW / srcW, (float)dstH / srcH);
+                cvOffX = (srcW - dstW / cvScale) * 0.5f;
+                cvOffY = (srcH - dstH / cvScale) * 0.5f;
+            }
         }
 
         for (int dy = 0; dy < dstH; dy++)
