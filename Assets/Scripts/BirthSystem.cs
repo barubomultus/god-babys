@@ -172,17 +172,15 @@ public class BirthSystem : MonoBehaviour
     UIE.VisualElement diagnosisOverlayEl;
     Coroutine diagnosisTypewriterCoroutine;
 
-    // DrawFace と同じ定数からプレビューサイズを計算（BabySynthesizerの検出値を使用）
+    // カバーモード対応のプレビューサイズ（合成と一致させるため）
+    float facePreviewUniformSize = -1f;
     float GetFacePreviewUniform()
     {
+        if (facePreviewUniformSize > 0f) return facePreviewUniformSize;
+        // フォールバック: カバーモード計算前
         float rx = babySynthesizer != null ? babySynthesizer.GetFaceHoleRX() : 0.13f;
         float ry = babySynthesizer != null ? babySynthesizer.GetFaceHoleRY() : 0.12f;
         return Mathf.Max(rx, ry) * 1.05f * 2f * 700f;
-    }
-    float GetFaceHoleTopPct()
-    {
-        float cy = babySynthesizer != null ? babySynthesizer.GetFaceHoleCY() : 0.68f;
-        return (1f - cy) * 100f;
     }
 
     // 背景
@@ -4422,8 +4420,9 @@ public class BirthSystem : MonoBehaviour
         // ★ BabyMorph は一旦全て無効化（エフェクトなしでクロップのみ）
         babySynthesizer.DisableBabyMorph();
 
-        // 合成（フィルターが顔中心クロップ済みなのでオフセット/スケールはリセット）
-        babySynthesizer.SetCustomFaceTexture(filtered, 0f, 0f, 1f);
+        // 合成（ユーザーが調整したズーム・オフセットを維持）
+        float savedScale = eyeMarkSavedScale > 0.01f ? eyeMarkSavedScale : 1f;
+        babySynthesizer.SetCustomFaceTexture(filtered, eyeMarkSavedOffsetX, eyeMarkSavedOffsetY, savedScale);
 
         Sprite updatedSprite = babySynthesizer.GetCompositeSprite();
 
@@ -4556,15 +4555,60 @@ public class BirthSystem : MonoBehaviour
         preview.style.overflow = UIE.Overflow.Hidden;
         card.Add(preview);
 
-        // 顔画像の基準位置（ピクセル）— BabySynthesizerの検出値に基づく
-        float faceCenterX = 700f * (babySynthesizer != null ? babySynthesizer.GetFaceHoleCX() : 0.50f);
-        float faceCenterY = 700f * GetFaceHoleTopPct() / 100f;
+        // おくるみのカバーモード計算（合成と同じ: 上寄せ + 5%トリミング）
+        var rank = BabySynthesizer.DetermineRank(lastSynthParams.fortune);
+        Sprite wearSprite = BabySynthesizer.LoadWearSprite(rank);
+        float cx = babySynthesizer != null ? babySynthesizer.GetFaceHoleCX() : 0.50f;
+        float cy = babySynthesizer != null ? babySynthesizer.GetFaceHoleCY() : 0.68f;
+        float rx = babySynthesizer != null ? babySynthesizer.GetFaceHoleRX() : 0.13f;
+        float ry = babySynthesizer != null ? babySynthesizer.GetFaceHoleRY() : 0.12f;
+
+        float wearLeft = 0f, wearTop = 0f, wearDispW = 700f, wearDispH = 700f;
+        float faceCenterX = 350f, faceCenterY = 350f;
+        float facePreviewSize;
+
+        if (wearSprite != null && wearSprite.texture.isReadable)
+        {
+            int wearW = wearSprite.texture.width;
+            int wearH = wearSprite.texture.height;
+            float trimRatio = 0.05f;
+            float trimX = wearW * trimRatio;
+            float trimY = wearH * trimRatio;
+            float croppedW = wearW - trimX * 2f;
+            float croppedH = wearH - trimY;
+            float coverSc = Mathf.Max(700f / croppedW, 700f / croppedH);
+            wearDispW = wearW * coverSc;
+            wearDispH = wearH * coverSc;
+            float visibleW = 700f / coverSc;
+            float coverOffsetX = trimX + (croppedW - visibleW) * 0.5f;
+            wearLeft = -(coverOffsetX * coverSc);
+            wearTop = -(trimY * coverSc);
+
+            // 顔穴中心（カバーモード、top-left origin）
+            faceCenterX = cx * wearW * coverSc + wearLeft;
+            faceCenterY = (1f - cy) * wearH * coverSc + wearTop;
+
+            // 合成の uniformR と一致するプレビューサイズ
+            // 合成: uniformR = Max(baseR, holeR), baseR = TEX_SIZE * Max(rx,ry) * 1.05
+            //       holeR = Max(rx*srcW, ry*srcH) * synthCoverScale * 1.05
+            // プレビュー: TEX_SIZE の代わりに 700 基準でスケール
+            float synthCoverScale = Mathf.Max(1080f / croppedW, 1080f / croppedH);
+            float baseR = 1080f * Mathf.Max(rx, ry) * 1.05f;
+            float holeR = Mathf.Max(rx * wearW, ry * wearH) * synthCoverScale * 1.05f;
+            float synthUniformR = Mathf.Max(baseR, holeR);
+            facePreviewSize = synthUniformR * 2f * 700f / 1080f;
+        }
+        else
+        {
+            facePreviewSize = Mathf.Max(rx, ry) * 1.05f * 2f * 700f;
+        }
+
+        facePreviewUniformSize = facePreviewSize;
         facePreviewCenterX = faceCenterX;
         facePreviewCenterY = faceCenterY;
-        float facePreviewSize = GetFacePreviewUniform();
         float halfFace = facePreviewSize / 2f;
 
-        // Layer 1: 顔画像（最背面）— DrawFace の uniformR*2 に対応する正方形
+        // Layer 1: 顔画像（最背面）
         facePreviewImage = new UIE.VisualElement();
         facePreviewImage.AddToClassList("face-adjust-face-img");
         facePreviewImage.style.position = UIE.Position.Absolute;
@@ -4573,27 +4617,23 @@ public class BirthSystem : MonoBehaviour
         facePreviewImage.style.width = facePreviewSize;
         facePreviewImage.style.height = facePreviewSize;
         facePreviewImage.style.backgroundImage = new UIE.StyleBackground(pendingFaceTexture);
-        // ★ DrawFace の正方形中央クロップと同じ表示にする（StretchToFill だと非正方形画像で歪む）
         facePreviewImage.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
         facePreviewImage.pickingMode = UIE.PickingMode.Ignore;
         preview.Add(facePreviewImage);
 
-        // Layer 2: BabyWear オーバーレイ（顔穴をくり抜いた状態）
-        var rank = BabySynthesizer.DetermineRank(lastSynthParams.fortune);
-        Sprite wearSprite = BabySynthesizer.LoadWearSprite(rank);
+        // Layer 2: BabyWear オーバーレイ（カバーモード: 上寄せ + 5%トリミング）
         if (wearSprite != null && wearSprite.texture.isReadable)
         {
-            // BabyWearテクスチャの顔穴をくり抜いたコピーを作成
             if (hollowWearTexture != null) Destroy(hollowWearTexture);
             hollowWearTexture = CreateHollowWearTexture(wearSprite.texture);
 
             var wearImg = new UIE.VisualElement();
             wearImg.AddToClassList("face-adjust-wear");
             wearImg.style.position = UIE.Position.Absolute;
-            wearImg.style.left = 0;
-            wearImg.style.top = 0;
-            wearImg.style.width = 700;
-            wearImg.style.height = 700;
+            wearImg.style.left = wearLeft;
+            wearImg.style.top = wearTop;
+            wearImg.style.width = wearDispW;
+            wearImg.style.height = wearDispH;
             wearImg.style.backgroundImage = new UIE.StyleBackground(hollowWearTexture);
             wearImg.pickingMode = UIE.PickingMode.Ignore;
             preview.Add(wearImg);
@@ -4760,6 +4800,7 @@ public class BirthSystem : MonoBehaviour
         eyeMarkSavedOffsetX = faceAdjOffsetX;
         eyeMarkSavedOffsetY = faceAdjOffsetY;
         eyeMarkSavedScale = faceAdjScale;
+        facePreviewUniformSize = -1f; // リセット
 
         pendingFaceTexture = null;
 
